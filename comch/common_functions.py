@@ -249,8 +249,8 @@ def section(u: SurjectionElement) -> BarrattEcclesElement:
 ## Some computation of the comodule structure
 def comod_surj(
     u: SurjectionElement,
-) -> list[tuple[BarrattEcclesElement, SurjectionElement]]:
-    """Compute the E-comodule of a SurjectionElement u."""
+) -> list[tuple[SurjectionElement, SurjectionElement]]:
+    """Compute the E-comodule of a SurjectionElement u, then apply the table reduction morphism."""
     r = u.arity
     assert (
         r is not None
@@ -277,4 +277,4 @@ def comod_surj(
                 result.append(((perm,) + sub_perm, sub_s))
         return result
 
-    return [(rho(perms, r), s) for perms, s in helper(u)]
+    return [(rho(perms, r).table_reduction(), s) for perms, s in helper(u)]

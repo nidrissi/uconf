@@ -17,3 +17,4 @@
 *.out
 *-SAVE-ERROR
 __latexindent_temp*.tex
+__pycache__
