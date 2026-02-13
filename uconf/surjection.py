@@ -1,4 +1,7 @@
+import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
+from typing import Iterator
+
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
@@ -73,17 +76,15 @@ class Surjection(CombinatorialFreeModule):
                     f"Basis key must be a tuple of integers. Got {p} ({type(p)})."
                 )
 
+        # Non-surjective maps yield zero
         if set(basis_tuple) != set(range(1, self.arity() + 1)):
-            raise ValueError(
-                f"Basis key must contain all integers from 1 to {self.arity()} exactly once. "
-                f"Got {basis_tuple}."
-            )
+            return None
 
         # Check for consecutive identical integers
         if len(basis_tuple) > 0:
             for i in range(len(basis_tuple) - 1):
+                # Consecutive identical integers yield zero
                 if basis_tuple[i] == basis_tuple[i + 1]:
-                    # Consecutive identical integers yield zero
                     return None
         return tuple(basis_tuple)
 
@@ -93,6 +94,18 @@ class Surjection(CombinatorialFreeModule):
     @staticmethod
     def unit() -> "Surjection.Element":
         return Surjection(1)((1,))
+
+    def basis_it(self, d: int) -> Iterator[Surjection.Element]:
+        assert d >= 0, "d must be a non-negative integer, got d={d}."
+        r = self.arity()
+        for values in itertools.product(range(1, r + 1), repeat=r + d):
+            # Check if the surjection is valid (no consecutive repeats and hits all values)
+            res = self(values)
+            if res != self.zero():
+                yield res
+
+    def planar_basis_it(self, d: int) -> Iterator[Surjection.Element]:
+        return filter(lambda u: u.is_planar(), self.basis_it(d))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         return len(basis_element) - self.arity()
@@ -243,3 +256,30 @@ class Surjection(CombinatorialFreeModule):
                     yield (permuted_basis, coeff)
 
             return self.parent().sum_of_terms(permuted_term_generator())
+
+        def is_planar(self) -> bool:
+            """
+            Checks if the element is planar by verifying that, for each tuple in
+            self.support(), the first occurrences of each integer appear in
+            increasing order. Returns True if all tuples satisfy this condition.
+            """
+            r = self.arity()
+
+            def _planar(l: tuple[int, ...]) -> bool:
+                """Check if the first occurrence of each integer in l are in increasing order."""
+                first_occurrences = {}
+                for i, val in enumerate(l):
+                    if val not in first_occurrences:
+                        first_occurrences[val] = i
+
+                first_indices = [
+                    first_occurrences[i]
+                    for i in range(1, r + 1)
+                    if i in first_occurrences
+                ]
+                return all(
+                    earlier < later
+                    for earlier, later in zip(first_indices, first_indices[1:])
+                )
+
+            return all(_planar(key) for key in self.support())
