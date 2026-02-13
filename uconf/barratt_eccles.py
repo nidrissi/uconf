@@ -24,7 +24,7 @@ class BarrattEccles(CombinatorialFreeModule):
             on_basis=self._table_reduction_on_basis, codomain=Surjection(n)
         )
 
-    def _element_constructor_(self, x: "BarrattEccles.Element | dict | tuple | list"):
+    def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
         """
         Intercepts element creation to enforce types.
         x can be:
@@ -64,7 +64,9 @@ class BarrattEccles(CombinatorialFreeModule):
             f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
         )
 
-    def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
+    def _validate_basis_key(
+        self, basis_tuple: tuple | list, keep_dupes=False
+    ) -> tuple[SymmetricGroup] | None:
         """
         Strictly checks that the input is a tuple of S_n elements.
         """
@@ -87,12 +89,29 @@ class BarrattEccles(CombinatorialFreeModule):
                         f"Got {p} ({type(p)})."
                     ) from e
 
-        if len(clean_tuple) > 0:
+        if len(clean_tuple) > 0 and not keep_dupes:
             for i in range(len(clean_tuple) - 1):
                 if clean_tuple[i] == clean_tuple[i + 1]:
                     # Consecutive identical permutations yield zero
                     return None
         return tuple(clean_tuple)
+
+    def rho(self, data: tuple | list) -> BarrattEccles.Element:
+        """
+        Constructs the element corresponding to the input data.
+        The input should be a tuple of tuples, where each inner tuple represents a permutation in S_n.
+        Example: rho(((1,2,3), (1,3,2))) corresponds to the basis element with those two permutations in sequence.
+        """
+        clean_data = self._validate_basis_key(data, keep_dupes=True)
+        if clean_data is None:
+            return self.zero()
+        id = self._symmetric_group.identity()
+        if id in clean_data:
+            return self.zero()
+        ret = [id]
+        for perm in clean_data:
+            ret.append(perm * ret[-1])
+        return self.term(tuple(ret))
 
     def arity(self) -> int:
         return self._arity
