@@ -2,6 +2,8 @@ import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
 from typing import Iterator
 
+# BROKEN: circular dependency
+from barratt_eccles import BarrattEccles
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
@@ -222,6 +224,48 @@ class Surjection(CombinatorialFreeModule):
 
         return target.sum_of_terms(term_generator())
 
+    @staticmethod
+    def _caesuras(u: tuple[int, ...]) -> list[int]:
+        """Return the list of caesuras in a surjection u,
+        i.e. the indices that are NOT the last occurrences of an element.
+        Indices are 0-based and returned in increasing order.
+
+        Args:
+            u: A tuple representing the surjection.
+        """
+        seen: set[int] = set()
+        res: list[int] = []
+        for i in range(len(u) - 1, -1, -1):
+            if u[i] in seen:
+                res.append(i)
+            else:
+                seen.add(u[i])
+        res.reverse()
+        return res
+
+    def _section_on_basis(self, u: tuple) -> BarrattEccles.Element:
+        n = self.arity()
+        target = BarrattEccles(n)
+        caesura_indices = Surjection._caesuras(u)
+        sections = [[i for i in range(len(u)) if i not in caesura_indices]]
+        for d in reversed(caesura_indices):
+            # add a new element to section based on the last element
+            # drop the element that maps to u[d]
+            # add d to the new element
+            new_section = sections[-1][:]
+            to_remove = None
+            for i, v in enumerate(new_section):
+                if u[v] == u[d]:
+                    to_remove = i
+                    break
+            assert to_remove is not None
+            new_section.pop(to_remove)
+            new_section.append(d)
+            new_section.sort()
+            sections.append(new_section)
+        sections.reverse()
+        return target(tuple([u[i] for i in section] for section in sections))
+
     class Element(CombinatorialFreeModule.Element):
         def boundary(self):
             return self.parent().boundary(self)
@@ -283,3 +327,12 @@ class Surjection(CombinatorialFreeModule):
                 )
 
             return all(_planar(key) for key in self.support())
+
+        def section(self) -> BarrattEccles.Element:
+            parent = self.parent()
+            if not hasattr(parent, "_section"):
+                parent._section = parent.module_morphism(
+                    on_basis=parent._section_on_basis,
+                    codomain=BarrattEccles(parent.arity()),
+                )
+            return self.parent()._section(self)
