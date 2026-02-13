@@ -1,5 +1,6 @@
 from itertools import combinations, pairwise, permutations
-from typing import ClassVar
+import itertools
+from typing import ClassVar, Iterator
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 from surjection import Surjection
@@ -120,6 +121,24 @@ class BarrattEccles(CombinatorialFreeModule):
     @staticmethod
     def unit() -> "BarrattEccles.Element":
         return BarrattEccles(1)(((1,),))
+
+    def planar_basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
+        assert d >= 0, f"d must be a non-negative integer. Got d={d}."
+        perm = permutations(range(1, self._arity + 1))
+        u = self._symmetric_group.identity()
+        u_tup = u.tuple()
+        for values in itertools.product(perm, repeat=d):
+            if (
+                all(values[i] != values[i + 1] for i in range(len(values) - 1))
+                and values[0] != u_tup
+            ):
+                yield self((u,) + tuple(list(v) for v in values))
+
+    def basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
+        assert d >= 0, f"d must be a non-negative integer. Got d={d}."
+        perm = permutations(range(1, self._arity + 1))
+        for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
+            yield x.permute(sigma)
 
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
