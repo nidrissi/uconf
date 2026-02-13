@@ -9,6 +9,7 @@ class BarrattEccles(CombinatorialFreeModule):
     name: ClassVar[str] = "BE"
 
     def __init__(self, n, base_ring=QQ):
+        assert n >= 0, f"Arity must be non-negative. Got {n}."
         super().__init__(
             base_ring,
             tuple,
