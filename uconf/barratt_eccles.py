@@ -91,6 +91,10 @@ class BarrattEccles(CombinatorialFreeModule):
                     return None
         return tuple(clean_tuple)
 
+    @staticmethod
+    def unit() -> "BarrattEccles.Element":
+        return BarrattEccles(1)(((1,),))
+
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
         res = self.zero()
