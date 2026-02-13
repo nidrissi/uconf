@@ -1,11 +1,12 @@
 from itertools import combinations, pairwise, permutations
+from typing import ClassVar
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 from surjection import Surjection
 
 
 class BarrattEccles(CombinatorialFreeModule):
-    name = "BE"
+    name: ClassVar[str] = "BE"
 
     def __init__(self, n, base_ring=QQ):
         super().__init__(
