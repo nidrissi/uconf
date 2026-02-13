@@ -1,3 +1,4 @@
+from itertools import combinations, pairwise
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
@@ -10,6 +11,7 @@ class Surjection(CombinatorialFreeModule):
             category=GradedModulesWithBasis(base_ring),
         )
         self.arity = n
+        self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
         )
@@ -102,10 +104,21 @@ class Surjection(CombinatorialFreeModule):
         def term_generator():
             for idx in range(0, len(basis_element)):
                 bdry_summand = basis_element[:idx] + basis_element[idx + 1 :]
-                if basis_element[idx] in bdry_summand:
+                if (
+                    basis_element[idx] in bdry_summand
+                    and self._validate_basis_key(bdry_summand) is not None
+                ):
                     yield (bdry_summand, signs[idx])
 
         return self.sum_of_terms(term_generator())
+
+    def _complexity_on_basis(self, basis_element: tuple) -> int:
+        result = 0
+        for i, j in combinations(range(self.arity), 2):
+            seq = [x for x in basis_element if x == i or x == j]
+            complexity = len([k for k, l in pairwise(seq) if k != l])
+            result = max(result, complexity)
+        return result
 
     class Element(CombinatorialFreeModule.Element):
         def boundary(self):
@@ -113,3 +126,31 @@ class Surjection(CombinatorialFreeModule):
 
         def arity(self):
             return self.parent().arity
+
+        def complexity(self) -> int:
+            return max(
+                (self.parent()._complexity_on_basis(basis) for basis in self.support()),
+                default=0,
+            )
+
+        def permute(self, sigma) -> Surjection.Element:
+            """
+            Permutes the basis elements of self by precomposing with sigma.
+            """
+            if isinstance(sigma, (list, tuple)):
+                sigma = self.parent()._symmetric_group(sigma)
+            elif not (
+                hasattr(sigma, "parent")
+                and sigma.parent() == self.parent()._symmetric_group
+            ):
+                raise TypeError(
+                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity}. Got {sigma} ({type(sigma)})."
+                )
+
+            def permuted_term_generator():
+                for u, coeff in self:
+                    # Precompose each permutation in the basis tuple with sigma
+                    permuted_basis = tuple(sigma(i) for i in u)
+                    yield (permuted_basis, coeff)
+
+            return self.parent().sum_of_terms(permuted_term_generator())
