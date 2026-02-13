@@ -12,6 +12,7 @@ class BarrattEccles(CombinatorialFreeModule):
             prefix=f"BE{n}",
             category=GradedModulesWithBasis(base_ring),
         )
+        self.name = f"BE{n}"
         self.arity = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
