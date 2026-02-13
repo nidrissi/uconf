@@ -1,4 +1,4 @@
-from itertools import combinations, pairwise
+from itertools import combinations, combinations_with_replacement, pairwise
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
@@ -120,10 +120,90 @@ class Surjection(CombinatorialFreeModule):
             result = max(result, complexity)
         return result
 
+    @staticmethod
+    def compose(
+        x: Surjection.Element, input: int, y: Surjection.Element
+    ) -> Surjection.Element:
+        """
+        Composes x and y by inserting y into the i-th input of x.
+        """
+        m = x.arity
+        n = y.arity
+        assert 1 <= input <= m, f"Index i must be between 1 and {m}. Got {input}."
+        target = Surjection(m + n - 1)
+
+        def _compose_basis_tuple(x_tuple: tuple[int, ...], y_tuple: tuple[int, ...]):
+            def bf_sign(
+                p1: tuple[int, ...],
+                k1: tuple[int, ...],
+                p2: tuple[int, ...],
+                k2: tuple[int],
+            ) -> int:
+                """Sign associated to the Berger-Fresse composition."""
+
+                def caesuras(k: tuple[int, ...]):
+                    """Returns the caesuras of a basis element."""
+                    caesuras: list[int] = []
+                    for idx, i in enumerate(k):
+                        if i in k[idx + 1 :]:
+                            caesuras.append(idx)
+                    return caesuras
+
+                def weights(cae: list[int], p: tuple[int, ...]):
+                    """Returns the weights of the splitting knowing the caesuras."""
+                    weights: list[int] = []
+                    for i, j in pairwise(p):
+                        closed_open = len([e for e in cae if i <= e < j])
+                        weights.append(closed_open)
+                    return [value % 2 for value in weights]
+
+                p1 = (0,) + p1 + (len(k1) - 1,)
+                cae1 = caesuras(k1)
+                w1 = weights(cae1, p1)
+                cae2 = caesuras(k2)
+                w2 = weights(cae2, p2)
+                sign_exp = 0
+                for idx, w in enumerate(w2):
+                    if w:
+                        sign_exp += sum(w1[idx + 1 :]) % 2
+                return (-1) ** sign_exp
+
+            positions = [idx for idx, i in enumerate(x_tuple) if i == input]
+            for p in combinations_with_replacement(
+                range(len(y_tuple)), len(positions) - 1
+            ):
+                p = (0,) + p + (len(y_tuple) - 1,)
+                split = []
+                for a, b in pairwise(p):
+                    split.append(tuple(y_tuple[a : b + 1]))
+                to_insert = (tuple(j + input - 1 for j in part) for part in split)
+                new_k = []
+                for j in x_tuple:
+                    if j < input:
+                        new_k.append(j)
+                    elif j == input:
+                        new_k += next(to_insert)
+                    else:
+                        new_k.append(j + n - 1)
+                new_k = tuple(new_k)
+                yield new_k, bf_sign(p, x_tuple, y_tuple, new_k)
+
+        def term_generator():
+            for x_tuple, x_coeff in x:
+                for y_tuple, y_coeff in y:
+                    for new_k, sign in _compose_basis_tuple(x_tuple, y_tuple):
+                        # Validate the new basis key before yielding
+                        if target._validate_basis_key(new_k) is None:
+                            continue
+                        yield (new_k, sign * x_coeff * y_coeff)
+
+        return target.sum_of_terms(term_generator())
+
     class Element(CombinatorialFreeModule.Element):
         def boundary(self):
             return self.parent().boundary(self)
 
+        @property
         def arity(self):
             return self.parent().arity
 

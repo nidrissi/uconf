@@ -104,10 +104,10 @@ class BarrattEccles(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
-        n = x.parent().arity
-        m = y.parent().arity
-        target = BarrattEccles(n + m - 1)
-        assert 1 <= i <= n, f"Index i must be between 1 and {n}. Got {i}."
+        m = x.parent().arity
+        n = y.parent().arity
+        assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
+        target = BarrattEccles(m + n - 1)
 
         # --- Helper: Composition of single permutations ---
         def _compose_perm_tuple(sigma, idx, tau):
@@ -202,6 +202,7 @@ class BarrattEccles(CombinatorialFreeModule):
         def boundary(self):
             return self.parent().boundary(self)
 
+        @property
         def arity(self):
             return self.parent().arity
 
