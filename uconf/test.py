@@ -1,4 +1,4 @@
-from operads import *
+from uconf import *
 
 SE2 = Surjection(2)
 u = SE2([1, 2])
