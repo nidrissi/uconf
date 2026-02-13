@@ -4,7 +4,7 @@ from sage.combinat.rooted_tree import LabelledRootedTree
 
 
 class BarConstruction(CombinatorialFreeModule):
-    def __init__(self, operad: OperadProtocol, n: int, base_ring=QQ):
+    def __init__(self, operad: type[OperadProtocol], n: int, base_ring=QQ):
         indices = Set(LabelledRootedTree)
         super().__init__(
             base_ring,

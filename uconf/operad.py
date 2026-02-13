@@ -1,4 +1,4 @@
-from typing import Protocol, Any, TypeVar, runtime_checkable
+from typing import ClassVar, Protocol, Any, TypeVar, runtime_checkable
 
 
 P = TypeVar("P", bound="OperadProtocol")
@@ -10,8 +10,12 @@ class OperadProtocol(Protocol[P]):
     Formal definition of what a Python object must do to be an 'Operad'.
     """
 
-    name: str
+    name: ClassVar[str]
     """Name of the operad, used for printing."""
+
+    def __init__(self, n, base_ring):
+        """Initializes the operad in arity n over the given base ring."""
+        ...
 
     def arity(self) -> int:
         """Returns the arity of this operad."""
