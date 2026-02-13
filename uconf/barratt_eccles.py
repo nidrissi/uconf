@@ -1,5 +1,7 @@
-from itertools import combinations, pairwise
+from itertools import combinations, pairwise, permutations
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
+
+from surjection import Surjection
 
 
 class BarrattEccles(CombinatorialFreeModule):
@@ -14,6 +16,9 @@ class BarrattEccles(CombinatorialFreeModule):
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
+        )
+        self.table_reduction = self.module_morphism(
+            on_basis=self._table_reduction_on_basis, codomain=Surjection(n)
         )
 
     def _element_constructor_(self, x: "BarrattEccles.Element | dict | tuple | list"):
@@ -198,13 +203,43 @@ class BarrattEccles(CombinatorialFreeModule):
             result = max(result, complexity)
         return result
 
-    class Element(CombinatorialFreeModule.Element):
-        def boundary(self):
-            return self.parent().boundary(self)
+    def _table_reduction_on_basis(self, basis_element: tuple) -> Surjection.Element:
+        n = self.arity
+        d = len(basis_element) - 1
+        target = Surjection(n)
 
+        def term_generator():
+            for pi_ord in Partitions(
+                d + n, length=d + 1  # pyright: ignore[reportCallIssue]
+            ):
+                for pi in set(permutations(pi_ord)):
+                    k2, removed = [], []
+                    degenerate = False
+                    for idx, i in enumerate(pi):
+                        filtered = [
+                            i for i in basis_element[idx].tuple() if i not in removed
+                        ]
+                        if idx > 0 and k2[-1] == filtered[0]:
+                            degenerate = True
+                            break
+                        if i > 1:
+                            removed += filtered[: i - 1]
+                        k2 += filtered[:i]
+                    if not degenerate:
+                        yield tuple(k2), 1
+
+        return target.sum_of_terms(term_generator())
+
+    class Element(CombinatorialFreeModule.Element):
         @property
         def arity(self):
             return self.parent().arity
+
+        def boundary(self):
+            return self.parent().boundary(self)
+
+        def table_reduction(self):
+            return self.parent().table_reduction(self)
 
         def complexity(self) -> int:
             return max(
