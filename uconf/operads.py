@@ -239,3 +239,34 @@ class BarrattEccles(CombinatorialFreeModule):
                     yield (permuted_basis, coeff)
 
             return self.parent().sum_of_terms(permuted_term_generator())
+
+        def diagonal(self):
+            """
+            Computes the Alexander-Whitney diagonal: E -> E (x) E.
+            """
+            # 1. Construct the Tensor Product Parent
+            # Sage handles this automatically: self.tensor(self) creates the module E (x) E
+
+            tensor_module = self.parent().tensor(self.parent())
+
+            result = tensor_module.zero()
+
+            # 2. Iterate linearly
+            for basis_tuple, coeff in self:
+                k = len(basis_tuple)  # Degree
+
+                # 3. Apply formula: Sum (front_face) (x) (back_face)
+                for i in range(k + 1):
+                    # Left side: (sigma_0 ... sigma_i)
+                    left_basis = basis_tuple[: i + 1]
+
+                    # Right side: (sigma_i ... sigma_k)
+                    right_basis = basis_tuple[i:]
+
+                    # Create the tensor element
+                    # In Sage, tensor basis is ((left_key, right_key))
+                    tensor_term = tensor_module.term((left_basis, right_basis))
+
+                    result += coeff * tensor_term
+
+            return result
