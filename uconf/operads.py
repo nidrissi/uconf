@@ -42,8 +42,8 @@ class BarrattEccles(CombinatorialFreeModule):
             # Simple heuristic: is the first element a Permutation or convertable to one?
             try:
                 clean_key = self._validate_basis_key(x)
+                # Check for consecutive identical permutations
                 if self._has_consecutive_identical(clean_key):
-                    # Check for consecutive identical permutations
                     return self.zero()
                 else:
                     # Return the monomial 1 * basis_element
@@ -82,6 +82,8 @@ class BarrattEccles(CombinatorialFreeModule):
         """
         Checks if the basis tuple has two consecutive identical permutations.
         """
+        if len(basis_tuple) <= 1:
+            return False
         for i in range(len(basis_tuple) - 1):
             if basis_tuple[i] == basis_tuple[i + 1]:
                 return True
@@ -200,7 +202,12 @@ class BarrattEccles(CombinatorialFreeModule):
         n = self.arity
 
         for i, j in combinations(range(1, n + 1), 2):
-            seq = (filter(lambda x: x == i or x == j, perm.tuple()) for perm in element)
+            seq = list(
+                filter(
+                    lambda x: x == i or x == j,
+                    (val for perm in element for val in perm.tuple()),
+                )
+            )
             complexity = len([p for p, q in pairwise(seq) if p != q])
             result = max(result, complexity)
         return result
