@@ -10,6 +10,7 @@ class Surjection(CombinatorialFreeModule):
             prefix=f"S{n}",
             category=GradedModulesWithBasis(base_ring),
         )
+        self.name = f"S{n}"
         self.arity = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
