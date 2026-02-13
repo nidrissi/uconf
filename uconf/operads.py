@@ -29,6 +29,9 @@ class BarrattEccles(CombinatorialFreeModule):
             clean_dict = {}
             for key, coeff in x.items():
                 clean_key = self._validate_basis_key(key)
+                if self._has_consecutive_identical(clean_key):
+                    # Skip zero terms
+                    continue
                 clean_dict[clean_key] = coeff
             return super()._element_constructor_(clean_dict)
 
@@ -39,8 +42,12 @@ class BarrattEccles(CombinatorialFreeModule):
             # Simple heuristic: is the first element a Permutation or convertable to one?
             try:
                 clean_key = self._validate_basis_key(x)
-                # Return the monomial 1 * basis_element
-                return self.term(clean_key)
+                if self._has_consecutive_identical(clean_key):
+                    # Check for consecutive identical permutations
+                    return self.zero()
+                else:
+                    # Return the monomial 1 * basis_element
+                    return self.term(clean_key)
             except (ValueError, TypeError) as e:
                 raise TypeError(
                     f"Item is not a valid element of S_{self.arity}. Got {x} ({type(x)})"
@@ -70,6 +77,15 @@ class BarrattEccles(CombinatorialFreeModule):
                     ) from e
 
         return tuple(clean_tuple)
+
+    def _has_consecutive_identical(self, basis_tuple: tuple) -> bool:
+        """
+        Checks if the basis tuple has two consecutive identical permutations.
+        """
+        for i in range(len(basis_tuple) - 1):
+            if basis_tuple[i] == basis_tuple[i + 1]:
+                return True
+        return False
 
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
