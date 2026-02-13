@@ -3,6 +3,8 @@ from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
 class Surjection(CombinatorialFreeModule):
+    name = "S"
+
     def __init__(self, n, base_ring=QQ):
         super().__init__(
             base_ring,
@@ -10,8 +12,7 @@ class Surjection(CombinatorialFreeModule):
             prefix=f"S{n}",
             category=GradedModulesWithBasis(base_ring),
         )
-        self.name = f"S{n}"
-        self.arity = n
+        self._arity = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
@@ -51,7 +52,7 @@ class Surjection(CombinatorialFreeModule):
                     return self.term(clean_key)
             except (ValueError, TypeError) as e:
                 raise TypeError(
-                    f"Item is not a valid element of S_{self.arity}. Got {x} ({type(x)})"
+                    f"Item is not a valid element of S_{self.arity()}. Got {x} ({type(x)})"
                 ) from e
 
         raise TypeError(
@@ -60,7 +61,7 @@ class Surjection(CombinatorialFreeModule):
 
     def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
         """
-        Strictly checks that the input is a list of integers which contain all elements from 1 to self.arity.
+        Strictly checks that the input is a list of integers which contain all elements from 1 to self.arity().
         """
         if not isinstance(basis_tuple, (tuple, list)):
             raise TypeError(f"Basis key must be a tuple, got {type(basis_tuple)}")
@@ -71,9 +72,9 @@ class Surjection(CombinatorialFreeModule):
                     f"Basis key must be a tuple of integers. Got {p} ({type(p)})."
                 )
 
-        if set(basis_tuple) != set(range(1, self.arity + 1)):
+        if set(basis_tuple) != set(range(1, self.arity() + 1)):
             raise ValueError(
-                f"Basis key must contain all integers from 1 to {self.arity} exactly once. "
+                f"Basis key must contain all integers from 1 to {self.arity()} exactly once. "
                 f"Got {basis_tuple}."
             )
 
@@ -85,12 +86,15 @@ class Surjection(CombinatorialFreeModule):
                     return None
         return tuple(basis_tuple)
 
+    def arity(self):
+        return self._arity
+
     @staticmethod
     def unit() -> "Surjection.Element":
         return Surjection(1)((1,))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
-        return len(basis_element) - self.arity
+        return len(basis_element) - self.arity()
 
     def _boundary_on_basis(self, basis_element: tuple) -> "Surjection.Element":
         # determining the signs of the summands
@@ -119,7 +123,7 @@ class Surjection(CombinatorialFreeModule):
 
     def _complexity_on_basis(self, basis_element: tuple) -> int:
         result = 0
-        for i, j in combinations(range(self.arity), 2):
+        for i, j in combinations(range(self.arity()), 2):
             seq = [x for x in basis_element if x == i or x == j]
             complexity = len([k for k, l in pairwise(seq) if k != l])
             result = max(result, complexity)
@@ -132,8 +136,8 @@ class Surjection(CombinatorialFreeModule):
         """
         Composes x and y by inserting y into the i-th input of x.
         """
-        m = x.arity
-        n = y.arity
+        m = x.arity()
+        n = y.arity()
         assert 1 <= input <= m, f"Index i must be between 1 and {m}. Got {input}."
         target = Surjection(m + n - 1)
 
@@ -208,9 +212,8 @@ class Surjection(CombinatorialFreeModule):
         def boundary(self):
             return self.parent().boundary(self)
 
-        @property
         def arity(self):
-            return self.parent().arity
+            return self.parent().arity()
 
         def complexity(self) -> int:
             return max(
@@ -229,7 +232,7 @@ class Surjection(CombinatorialFreeModule):
                 and sigma.parent() == self.parent()._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             def permuted_term_generator():

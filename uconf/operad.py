@@ -10,11 +10,12 @@ class OperadProtocol(Protocol[P]):
     Formal definition of what a Python object must do to be an 'Operad'.
     """
 
-    arity: int
-    """Arity of the operad. For example, the Barratt-Eccles operad has arity n for each n."""
-
     name: str
     """Name of the operad, used for printing."""
+
+    def arity(self) -> int:
+        """Returns the arity of this operad."""
+        ...
 
     @staticmethod
     def compose(x: P, i: int, y: P) -> P:

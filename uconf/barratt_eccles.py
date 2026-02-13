@@ -5,6 +5,8 @@ from surjection import Surjection
 
 
 class BarrattEccles(CombinatorialFreeModule):
+    name = "BE"
+
     def __init__(self, n, base_ring=QQ):
         super().__init__(
             base_ring,
@@ -12,8 +14,7 @@ class BarrattEccles(CombinatorialFreeModule):
             prefix=f"BE{n}",
             category=GradedModulesWithBasis(base_ring),
         )
-        self.name = f"BE{n}"
-        self.arity = n
+        self._arity = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
@@ -92,6 +93,9 @@ class BarrattEccles(CombinatorialFreeModule):
                     return None
         return tuple(clean_tuple)
 
+    def arity(self) -> int:
+        return self._arity
+
     @staticmethod
     def unit() -> "BarrattEccles.Element":
         return BarrattEccles(1)(((1,),))
@@ -114,8 +118,8 @@ class BarrattEccles(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
-        m = x.parent().arity
-        n = y.parent().arity
+        m = x.parent().arity()
+        n = y.parent().arity()
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
         target = BarrattEccles(m + n - 1)
 
@@ -195,7 +199,7 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def _complexity_on_basis(self, element: tuple) -> int:
         result = 0
-        n = self.arity
+        n = self.arity()
 
         for i, j in combinations(range(1, n + 1), 2):
             seq = list(
@@ -209,7 +213,7 @@ class BarrattEccles(CombinatorialFreeModule):
         return result
 
     def _table_reduction_on_basis(self, basis_element: tuple) -> Surjection.Element:
-        n = self.arity
+        n = self.arity()
         d = len(basis_element) - 1
         target = Surjection(n)
 
@@ -237,13 +241,13 @@ class BarrattEccles(CombinatorialFreeModule):
 
     class Element(CombinatorialFreeModule.Element):
         @property
-        def arity(self):
-            return self.parent().arity
+        def arity(self) -> int:
+            return self.parent().arity()
 
-        def boundary(self):
+        def boundary(self) -> "BarrattEccles.Element":
             return self.parent().boundary(self)
 
-        def table_reduction(self):
+        def table_reduction(self) -> Surjection.Element:
             return self.parent().table_reduction(self)
 
         def complexity(self) -> int:
