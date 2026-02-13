@@ -58,7 +58,7 @@ class BarrattEccles(CombinatorialFreeModule):
                     return self.term(clean_key)
             except (ValueError, TypeError) as e:
                 raise TypeError(
-                    f"Item is not a valid element of S_{self.arity}. Got {x} ({type(x)})"
+                    f"Item is not a valid element of S_{self.arity()}. Got {x} ({type(x)})"
                 ) from e
         raise TypeError(
             f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
@@ -83,7 +83,7 @@ class BarrattEccles(CombinatorialFreeModule):
                     clean_tuple.append(p_converted)
                 except (ValueError, TypeError) as e:
                     raise TypeError(
-                        f"Item {i} in basis tuple is not a valid element of S_{self.arity}. "
+                        f"Item {i} in basis tuple is not a valid element of S_{self.arity()}. "
                         f"Got {p} ({type(p)})."
                     ) from e
 
@@ -241,7 +241,6 @@ class BarrattEccles(CombinatorialFreeModule):
         return target.sum_of_terms(term_generator())
 
     class Element(CombinatorialFreeModule.Element):
-        @property
         def arity(self) -> int:
             return self.parent().arity()
 
@@ -268,7 +267,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 and sigma.parent() == self.parent()._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             def permuted_term_generator():
