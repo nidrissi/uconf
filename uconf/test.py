@@ -1,4 +1,4 @@
-from operads import *
+from uconf.barratt_eccles import *
 
 BE3 = BarrattEccles(3)
 x = BE3(([1, 2, 3], [2, 3, 1], [3, 1, 2]))
