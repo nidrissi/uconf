@@ -107,6 +107,7 @@ class BarrattEccles(CombinatorialFreeModule):
         n = x.parent().arity
         m = y.parent().arity
         target = BarrattEccles(n + m - 1)
+        assert 1 <= i <= n, f"Index i must be between 1 and {n}. Got {i}."
 
         # --- Helper: Composition of single permutations ---
         def _compose_perm_tuple(sigma, idx, tau):
@@ -124,7 +125,10 @@ class BarrattEccles(CombinatorialFreeModule):
                 else:  # val == idx
                     # Insert tau shifted by idx - 1
                     res.extend([t + idx - 1 for t in tau.tuple()])
-            return tuple(res)
+            # We must return a list, not a tuple!
+            # SymmetricGroup(3)([1,2,3]) is the identity permutation
+            # SymmetricGroup(3)((1,2,3)) is a cycle of length 3
+            return res
 
         # --- Helper: Eilenberg-Zilber Logic ---
         def term_generator():
@@ -172,9 +176,10 @@ class BarrattEccles(CombinatorialFreeModule):
                             # Compose the permutations at the current grid point
                             comp = _compose_perm_tuple(x_basis[ix], i, y_basis[iy])
                             path.append(comp)
-
+                        path = target._validate_basis_key(path)
                         # Yield the constructed basis tuple and the combined coefficient
-                        yield (tuple(path), x_coeff * y_coeff * sign)
+                        if path is not None:
+                            yield (tuple(path), x_coeff * y_coeff * sign)
 
         return target.sum_of_terms(term_generator())
 
@@ -206,7 +211,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 default=0,
             )
 
-        def permute(self, sigma) -> "BarrattEccles.Element":
+        def permute(self, sigma) -> BarrattEccles.Element:
             """
             Permutes the basis elements of self by precomposing with sigma.
             """
