@@ -1,5 +1,6 @@
 from operads import *
 
-BE2 = BarrattEccles(2)
-x = BE2([[]])
-BarrattEccles.compose(x, 1, x)
+SE2 = Surjection(2)
+u = SE2([1, 2])
+v = SE2([1, 2])
+Surjection.compose(u, 1, v)
