@@ -88,7 +88,7 @@ class BarrattEccles(CombinatorialFreeModule):
         return len(element) - 1
 
     @staticmethod
-    def compose(x: "BarrattEccles", i: int, y: "BarrattEccles") -> "BarrattEccles":
+    def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
         n = x.parent().arity
         m = y.parent().arity
         target = BarrattEccles(n + m - 1)
@@ -201,3 +201,25 @@ class BarrattEccles(CombinatorialFreeModule):
                 (self.parent()._complexity_on_basis(basis) for basis in self.support()),
                 default=0,
             )
+
+        def permute(self, sigma) -> "BarrattEccles.Element":
+            """
+            Permutes the basis elements of self by precomposing with sigma.
+            """
+            if isinstance(sigma, (list, tuple)):
+                sigma = self.parent()._symmetric_group(sigma)
+            elif not (
+                hasattr(sigma, "parent")
+                and sigma.parent() == self.parent()._symmetric_group
+            ):
+                raise TypeError(
+                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity}. Got {sigma} ({type(sigma)})."
+                )
+
+            def permuted_term_generator():
+                for basis, coeff in self:
+                    # Precompose each permutation in the basis tuple with sigma
+                    permuted_basis = tuple(sigma * p for p in basis)
+                    yield (permuted_basis, coeff)
+
+            return self.parent().sum_of_terms(permuted_term_generator())
