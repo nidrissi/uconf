@@ -1,8 +1,10 @@
-from itertools import combinations, pairwise, permutations
 import itertools
+from itertools import combinations, pairwise, permutations
 from typing import ClassVar, Iterator
+
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
+# BROKEN: circular dependency
 from surjection import Surjection
 
 
