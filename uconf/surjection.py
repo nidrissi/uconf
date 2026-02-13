@@ -84,6 +84,10 @@ class Surjection(CombinatorialFreeModule):
                     return None
         return tuple(basis_tuple)
 
+    @staticmethod
+    def unit() -> "Surjection.Element":
+        return Surjection(1)((1,))
+
     def degree_on_basis(self, basis_element: tuple) -> int:
         return len(basis_element) - self.arity
 

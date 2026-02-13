@@ -22,6 +22,11 @@ class OperadProtocol(Protocol[P]):
     arity: int
     """Arity of the operad. For example, the Barratt-Eccles operad has arity n for each n."""
 
+    @staticmethod
+    def unit() -> P:
+        """Returns the unit element of the operad."""
+        ...
+
     class Element:
         def arity(self) -> int:
             """Returns the arity of this element."""
