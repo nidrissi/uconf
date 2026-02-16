@@ -2,15 +2,13 @@ import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
 from typing import Iterator
 
-# BROKEN: circular dependency
-from .barratt_eccles import BarrattEccles
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
 class Surjection(CombinatorialFreeModule):
     name = "S"
 
-    def __init__(self, n, base_ring=QQ):
+    def __init__(self, n: int, base_ring=QQ):
         assert n >= 0, f"Arity must be non-negative. Got {n}."
         super().__init__(
             base_ring,
@@ -18,7 +16,7 @@ class Surjection(CombinatorialFreeModule):
             prefix=f"S{n}",
             category=GradedModulesWithBasis(base_ring),
         )
-        self._arity = n
+        self._arity: int = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
@@ -243,29 +241,6 @@ class Surjection(CombinatorialFreeModule):
         res.reverse()
         return res
 
-    def _section_on_basis(self, u: tuple) -> BarrattEccles.Element:
-        n = self.arity()
-        target = BarrattEccles(n)
-        caesura_indices = Surjection._caesuras(u)
-        sections = [[i for i in range(len(u)) if i not in caesura_indices]]
-        for d in reversed(caesura_indices):
-            # add a new element to section based on the last element
-            # drop the element that maps to u[d]
-            # add d to the new element
-            new_section = sections[-1][:]
-            to_remove = None
-            for i, v in enumerate(new_section):
-                if u[v] == u[d]:
-                    to_remove = i
-                    break
-            assert to_remove is not None
-            new_section.pop(to_remove)
-            new_section.append(d)
-            new_section.sort()
-            sections.append(new_section)
-        sections.reverse()
-        return target(tuple([u[i] for i in section] for section in sections))
-
     class Element(CombinatorialFreeModule.Element):
         def boundary(self):
             return self.parent().boundary(self)
@@ -328,11 +303,7 @@ class Surjection(CombinatorialFreeModule):
 
             return all(_planar(key) for key in self.support())
 
-        def section(self) -> BarrattEccles.Element:
-            parent = self.parent()
-            if not hasattr(parent, "_section"):
-                parent._section = parent.module_morphism(
-                    on_basis=parent._section_on_basis,
-                    codomain=BarrattEccles(parent.arity()),
-                )
-            return self.parent()._section(self)
+        def section(self):
+            raise NotImplementedError(
+                "Section is not implemented yet. Use the table reduction instead."
+            )
