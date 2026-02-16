@@ -1,6 +1,6 @@
 import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
-from typing import Iterator
+from typing import ClassVar, Iterator
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -10,16 +10,18 @@ from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
 class Surjection(CombinatorialFreeModule):
-    name = "S"
+    name: ClassVar[str] = "S"
 
     def __init__(self, n: int, base_ring=QQ):
         assert n >= 0, f"Arity must be non-negative. Got {n}."
+        name = f"{self.name}{n}"
         super().__init__(
             base_ring,
             tuple,
-            prefix=f"S{n}",
+            prefix=name,
             category=GradedModulesWithBasis(base_ring),
         )
+        self.rename(name)
         self._arity: int = n
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
@@ -60,7 +62,7 @@ class Surjection(CombinatorialFreeModule):
                     return self.term(clean_key)
             except (ValueError, TypeError) as e:
                 raise TypeError(
-                    f"Item is not a valid element of S_{self.arity()}. Got {x} ({type(x)})"
+                    f"Item is not a valid element of {self}. Got {x} ({type(x)})"
                 ) from e
 
         raise TypeError(
