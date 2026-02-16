@@ -1,6 +1,10 @@
 import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
 from typing import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .barratt_eccles import BarrattEccles
 
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
@@ -303,5 +307,5 @@ class Surjection(CombinatorialFreeModule):
 
             return all(_planar(key) for key in self.support())
 
-        def section(self):
+        def section(self) -> BarrattEccles.Element:
             raise NotImplementedError("Section is not implemented yet")
