@@ -1,6 +1,10 @@
 import itertools
 from itertools import combinations, pairwise, permutations
 from typing import ClassVar, Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .surjection import Surjection
 
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
@@ -314,5 +318,5 @@ class BarrattEccles(CombinatorialFreeModule):
 
             return result
 
-        def table_reduction(self):
+        def table_reduction(self) -> Surjection.Element:
             raise NotImplementedError("Table reduction is not implemented yet")
