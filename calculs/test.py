@@ -1,11 +1,23 @@
 from uconf import *
 
-BBE3 = BarConstruction(BarrattEccles, 3)
-x = BBE3(LabelledOrderedTree([], 42))
-print(x)
-
+S1 = Surjection(1)
 S2 = Surjection(2)
-u = S2([1, 2, 1])
-print(u)
-print(u.section())
-print(u.section().table_reduction())
+S1_1 = tensor([S1, S1])
+
+
+def ff(x):
+    a, b = x
+    print(a)
+    print(type(a))
+    print(b)
+    print(type(x))
+    return S2((1, 1))
+
+
+f = S1_1.module_morphism(on_basis=ff, codomain=S2)
+x = S1([1])
+z = f(tensor([x, x]))
+print(z)
+print(z.parent())
+print(type(z))
+print(z + x)
