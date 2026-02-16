@@ -313,3 +313,6 @@ class BarrattEccles(CombinatorialFreeModule):
                     result += coeff * tensor_term
 
             return result
+
+        def table_reduction(self):
+            raise NotImplementedError("Table reduction is not implemented yet")

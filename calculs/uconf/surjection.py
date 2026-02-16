@@ -304,6 +304,4 @@ class Surjection(CombinatorialFreeModule):
             return all(_planar(key) for key in self.support())
 
         def section(self):
-            raise NotImplementedError(
-                "Section is not implemented yet. Use the table reduction instead."
-            )
+            raise NotImplementedError("Section is not implemented yet")
