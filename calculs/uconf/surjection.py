@@ -3,7 +3,7 @@ from itertools import combinations, combinations_with_replacement, pairwise
 from typing import Iterator
 
 # BROKEN: circular dependency
-from barratt_eccles import BarrattEccles
+from .barratt_eccles import BarrattEccles
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 

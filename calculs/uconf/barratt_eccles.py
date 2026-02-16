@@ -5,7 +5,7 @@ from typing import ClassVar, Iterator
 from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 # BROKEN: circular dependency
-from surjection import Surjection
+from .surjection import Surjection
 
 
 class BarrattEccles(CombinatorialFreeModule):
