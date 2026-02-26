@@ -258,7 +258,7 @@ class BarrattEccles(CombinatorialFreeModule):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "BarrattEccles.Element":
+        def boundary(self) -> BarrattEccles.Element:
             return self.parent().boundary(self)
 
         def complexity(self) -> int:
