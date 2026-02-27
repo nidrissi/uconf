@@ -24,8 +24,13 @@ class Surjection(CombinatorialFreeModule):
         self.rename(name)
         self._arity: int = n
         self._symmetric_group = SymmetricGroup(n)
+        self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
+        )
+        self.planarize = self.module_morphism(
+            on_basis=self._planarize_on_basis,
+            codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
 
     def _element_constructor_(self, x: "Surjection.Element | dict | tuple | list"):
@@ -112,6 +117,27 @@ class Surjection(CombinatorialFreeModule):
 
     def planar_basis_it(self, d: int) -> Iterator[Surjection.Element]:
         return filter(lambda u: u.is_planar(), self.basis_it(d))
+
+    def _planarize_on_basis(self, basis_element: tuple):
+        n = self.arity()
+        first_occurrence = []
+        seen = set()
+        for val in basis_element:
+            if val not in seen:
+                seen.add(val)
+                first_occurrence.append(val)
+            if len(first_occurrence) == n:
+                break
+            if len(first_occurrence) == n:
+                break
+        # first_occurrence is a permutation of (1,...,n)
+        sigma = self._symmetric_group(first_occurrence)
+        sigma_inv = sigma.inverse()
+        # Permute the basis element back into planar form
+        planar_basis = tuple(sigma_inv(p) for p in basis_element)
+        planar_element = self.term(planar_basis)
+        sigma_module = self._symmetric_group_algebra
+        return planar_element.tensor(sigma_module(sigma))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         return len(basis_element) - self.arity()
@@ -253,6 +279,9 @@ class Surjection(CombinatorialFreeModule):
 
         def arity(self) -> int:
             return self.parent().arity()
+
+        def planarize(self):
+            return self.parent().planarize(self)
 
         def complexity(self) -> int:
             return max(
