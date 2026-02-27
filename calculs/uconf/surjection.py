@@ -1,5 +1,7 @@
 """Surjection operad model on nondegenerate surjective words."""
 
+from __future__ import annotations
+
 import itertools
 from functools import reduce
 from itertools import combinations, combinations_with_replacement, pairwise, product
