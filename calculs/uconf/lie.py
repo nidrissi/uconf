@@ -19,9 +19,28 @@ class Lie(CombinatorialFreeModule):
 
     Basis keys are permutations of ``(1, ..., n-1)`` and encode nested brackets
     ``[x_i, -]`` ending in ``x_n``.
+
+    Computational data (PBW matrix, its left-inverse, word/basis-key lists, and
+    associative expansions) are cached at the **class level**, keyed by
+    ``(arity, base_ring)``.  This means the expensive one-time computations are
+    shared across all ``Lie(n)`` instances constructed with the same parameters,
+    which is important because :meth:`compose` creates a fresh target module on
+    every call.
     """
 
     name: ClassVar[str] = "Lie"
+
+    # Class-level caches keyed by (n, base_ring).
+    # _cls_basis_keys: (n, base_ring) -> list[tuple[int, ...]]
+    _cls_basis_keys: ClassVar[dict] = {}
+    # _cls_word_basis: (n, base_ring) -> list[tuple[int, ...]]
+    _cls_word_basis: ClassVar[dict] = {}
+    # _cls_pbw_matrix: (n, base_ring) -> sage Matrix
+    _cls_pbw_matrix: ClassVar[dict] = {}
+    # _cls_pbw_left_inv: (n, base_ring) -> sage Matrix
+    _cls_pbw_left_inv: ClassVar[dict] = {}
+    # _cls_assoc: (n, base_ring) -> {basis_key: {word: coefficient}}
+    _cls_assoc: ClassVar[dict] = {}
 
     def __init__(self, n, base_ring=QQ):
         """Initialize ``Lie(n)`` over ``base_ring``."""
@@ -44,17 +63,19 @@ class Lie(CombinatorialFreeModule):
     def _basis_keys(self) -> list[tuple[int, ...]]:
         """Return and cache the list of basis keys in this arity."""
 
-        if hasattr(self, "_basis_keys_cache"):
-            return self._basis_keys_cache
+        cache_key = (int(self.arity()), self.base_ring())
+        if cache_key in Lie._cls_basis_keys:
+            return Lie._cls_basis_keys[cache_key]
 
         n = int(self.arity())
         if n == 0:
-            self._basis_keys_cache: list[tuple[int, ...]] = []
+            result: list[tuple[int, ...]] = []
         elif n == 1:
-            self._basis_keys_cache = [()]
+            result = [()]
         else:
-            self._basis_keys_cache = list(py_itertools.permutations(range(1, n), n - 1))
-        return self._basis_keys_cache
+            result = list(py_itertools.permutations(range(1, n), n - 1))
+        Lie._cls_basis_keys[cache_key] = result
+        return result
 
     def _validate_basis_key(self, basis_key: tuple | list) -> tuple[int, ...] | None:
         """Validate and normalize a basis key.
@@ -133,50 +154,68 @@ class Lie(CombinatorialFreeModule):
     def _assoc_from_basis_key(
         self, basis_key: tuple[int, ...]
     ) -> dict[tuple[int, ...], Any]:
-        """Expand one Lie basis element into the associative word basis."""
+        """Expand one Lie basis element into the associative word basis.
+
+        Results are cached at the class level (keyed by ``(arity, base_ring,
+        basis_key)``) so repeated calls—including from :meth:`compose` and
+        :meth:`Element.permute`—never recompute the same expansion.
+        """
+
+        cache_key = (int(self.arity()), self.base_ring())
+        if cache_key not in Lie._cls_assoc:
+            Lie._cls_assoc[cache_key] = {}
+        per_arity = Lie._cls_assoc[cache_key]
+        if basis_key in per_arity:
+            return per_arity[basis_key]
 
         n = int(self.arity())
         if n == 0:
-            return {}
-        if n == 1:
-            return {(1,): self.base_ring().one()}
+            result: dict[tuple[int, ...], Any] = {}
+        elif n == 1:
+            result = {(1,): self.base_ring().one()}
+        else:
+            seq = basis_key + (n,)
+            current: dict[tuple[int, ...], Any] = {(seq[-1],): self.base_ring().one()}
+            for a in reversed(seq[:-1]):
+                current = self._bracket({(a,): self.base_ring().one()}, current)
+            result = current
 
-        seq = basis_key + (n,)
-        current: dict[tuple[int, ...], Any] = {(seq[-1],): self.base_ring().one()}
-        for a in reversed(seq[:-1]):
-            current = self._bracket({(a,): self.base_ring().one()}, current)
-        return current
+        per_arity[basis_key] = result
+        return result
 
     def _word_basis(self) -> list[tuple[int, ...]]:
         """Return and cache the associative word basis in arity ``n``."""
 
-        if hasattr(self, "_word_basis_cache"):
-            return self._word_basis_cache
+        cache_key = (int(self.arity()), self.base_ring())
+        if cache_key in Lie._cls_word_basis:
+            return Lie._cls_word_basis[cache_key]
 
         n = int(self.arity())
         if n == 0:
-            self._word_basis_cache: list[tuple[int, ...]] = []
+            result: list[tuple[int, ...]] = []
         else:
-            self._word_basis_cache = list(py_itertools.permutations(range(1, n + 1), n))
-        return self._word_basis_cache
+            result = list(py_itertools.permutations(range(1, n + 1), n))
+        Lie._cls_word_basis[cache_key] = result
+        return result
 
     def _pbw_matrix(self):
         """Return the PBW change-of-basis matrix from Lie to words."""
 
-        if hasattr(self, "_pbw_matrix_cache"):
-            return self._pbw_matrix_cache
+        cache_key = (int(self.arity()), self.base_ring())
+        if cache_key in Lie._cls_pbw_matrix:
+            return Lie._cls_pbw_matrix[cache_key]
 
         words = self._word_basis()
         keys = self._basis_keys()
 
         if self.arity() == 0:
             mat = matrix(self.base_ring(), 0, 0, [])
-            self._pbw_matrix_cache = mat
+            Lie._cls_pbw_matrix[cache_key] = mat
             return mat
 
         if self.arity() == 1:
             mat = matrix(self.base_ring(), 1, 1, [1])
-            self._pbw_matrix_cache = mat
+            Lie._cls_pbw_matrix[cache_key] = mat
             return mat
 
         data = []
@@ -186,11 +225,42 @@ class Lie(CombinatorialFreeModule):
                     self._assoc_from_basis_key(key).get(w, self.base_ring().zero())
                 )
         mat = matrix(self.base_ring(), len(words), len(keys), data)
-        self._pbw_matrix_cache = mat
+        Lie._cls_pbw_matrix[cache_key] = mat
         return mat
 
+    def _pbw_left_inverse(self):
+        """Return the left-inverse ``L`` of the PBW matrix, cached at class level.
+
+        ``L`` satisfies ``L * M = I`` where ``M`` is the PBW matrix
+        (shape ``n! × (n-1)!``).  It is computed once per ``(arity, base_ring)``
+        as ``L = (M^T M)^{-1} M^T`` and stored in :attr:`_cls_pbw_left_inv`.
+        Applying ``L`` as a matrix–vector product replaces the per-call
+        ``solve_right`` (fresh Gaussian elimination) in
+        :meth:`_element_from_assoc`.
+        """
+
+        cache_key = (int(self.arity()), self.base_ring())
+        if cache_key in Lie._cls_pbw_left_inv:
+            return Lie._cls_pbw_left_inv[cache_key]
+
+        pbw = self._pbw_matrix()
+
+        if self.arity() <= 1:
+            # Square 1×1 or 0×0 — the matrix is already its own inverse.
+            Lie._cls_pbw_left_inv[cache_key] = pbw
+            return pbw
+
+        pbw_T = pbw.transpose()
+        left_inv = (pbw_T * pbw).inverse() * pbw_T
+        Lie._cls_pbw_left_inv[cache_key] = left_inv
+        return left_inv
+
     def _element_from_assoc(self, assoc: dict[tuple[int, ...], Any]) -> "Lie.Element":
-        """Reconstruct a Lie element from associative coefficients."""
+        """Reconstruct a Lie element from associative coefficients.
+
+        Uses the precomputed left-inverse of the PBW matrix (a single
+        matrix–vector multiply) instead of a fresh ``solve_right`` call.
+        """
 
         if not assoc:
             return self.zero()
@@ -206,8 +276,8 @@ class Lie(CombinatorialFreeModule):
         if self.arity() == 1:
             return vec[0] * self.term(())
 
-        pbw = self._pbw_matrix()
-        coords = pbw.solve_right(vec)
+        left_inv = self._pbw_left_inverse()
+        coords = left_inv * vec
         keys = self._basis_keys()
         return self.sum_of_terms(
             (keys[i], coords[i]) for i in range(len(keys)) if coords[i] != 0
@@ -268,7 +338,20 @@ class Lie(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: "Lie.Element", i: int, y: "Lie.Element") -> "Lie.Element":
-        """Operadic composition ``x \\circ_i y`` in the Lie operad."""
+        """Operadic composition ``x \\circ_i y`` in the Lie operad.
+
+        The implementation follows the algorithmic approach described in
+        Bremner–Dotsenko *Algebraic Operads: An Algorithmic Companion*:
+
+        1. Expand ``x`` and ``y`` into the associative word basis *once* each,
+           combining all terms into single dicts before the composition loop.
+           This avoids calling :meth:`_assoc_from_basis_key` redundantly for
+           every outer word of ``x`` (the bottleneck in the original code).
+        2. Perform variable-substitution and renaming in a single double loop
+           over the pre-aggregated word dicts.
+        3. Recover the Lie coordinates via a pre-cached left-inverse matrix
+           (one matrix–vector multiply) rather than a fresh linear solve.
+        """
 
         x_parent = x.parent()
         y_parent = y.parent()
@@ -281,28 +364,41 @@ class Lie(CombinatorialFreeModule):
         ), "Both elements must have the same base ring."
 
         target = Lie(m + n - 1, base_ring=x_parent.base_ring())
-        result_assoc: dict[tuple[int, ...], Any] = {}
+        base_ring = target.base_ring()
 
+        # --- Step 1: aggregate the full associative expansion of x ------------
+        x_assoc: dict[tuple[int, ...], Any] = {}
         for x_key, x_coeff in x:
-            outer_assoc = x_parent._assoc_from_basis_key(x_key)
-            for outer_word, outer_coeff in outer_assoc.items():
-                pos = outer_word.index(i)
-                left = outer_word[:pos]
-                right = outer_word[pos + 1 :]
+            for word, coeff in x_parent._assoc_from_basis_key(x_key).items():
+                c = x_coeff * coeff
+                x_assoc[word] = x_assoc.get(word, base_ring.zero()) + c
+        x_assoc = {w: c for w, c in x_assoc.items() if c != 0}
 
-                shifted_left = tuple(j if j < i else j + n - 1 for j in left)
-                shifted_right = tuple(j if j < i else j + n - 1 for j in right)
+        # --- Step 2: aggregate the full associative expansion of y, pre-shifted
+        #             so that variable k in y becomes variable k + i - 1 ---------
+        y_assoc_shifted: dict[tuple[int, ...], Any] = {}
+        for y_key, y_coeff in y:
+            for word, coeff in y_parent._assoc_from_basis_key(y_key).items():
+                shifted = tuple(k + i - 1 for k in word)
+                c = y_coeff * coeff
+                y_assoc_shifted[shifted] = (
+                    y_assoc_shifted.get(shifted, base_ring.zero()) + c
+                )
+        y_assoc_shifted = {w: c for w, c in y_assoc_shifted.items() if c != 0}
 
-                for y_key, y_coeff in y:
-                    inner_assoc = y_parent._assoc_from_basis_key(y_key)
-                    for inner_word, inner_coeff in inner_assoc.items():
-                        shifted_inner = tuple(j + i - 1 for j in inner_word)
-                        new_word = shifted_left + shifted_inner + shifted_right
-                        coeff = x_coeff * y_coeff * outer_coeff * inner_coeff
-                        result_assoc[new_word] = (
-                            result_assoc.get(new_word, target.base_ring().zero())
-                            + coeff
-                        )
+        # --- Step 3: substitute position i in each outer word with each inner --
+        result_assoc: dict[tuple[int, ...], Any] = {}
+        for outer_word, outer_coeff in x_assoc.items():
+            pos = outer_word.index(i)
+            shifted_left = tuple(j if j < i else j + n - 1 for j in outer_word[:pos])
+            shifted_right = tuple(
+                j if j < i else j + n - 1 for j in outer_word[pos + 1 :]
+            )
+
+            for shifted_inner, inner_coeff in y_assoc_shifted.items():
+                new_word = shifted_left + shifted_inner + shifted_right
+                c = outer_coeff * inner_coeff
+                result_assoc[new_word] = result_assoc.get(new_word, base_ring.zero()) + c
 
         result_assoc = {w: c for w, c in result_assoc.items() if c != 0}
         return target._element_from_assoc(result_assoc)
