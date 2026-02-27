@@ -10,7 +10,6 @@ on:
             - .github/workflows/copilot-setup-steps.yml
 
 jobs:
-    # IMPORTANT: This job name MUST be exactly "copilot-setup-steps"
     copilot-setup-steps:
         runs-on: ubuntu-latest
         permissions:
@@ -19,10 +18,21 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v5
 
+            - name: Setup Conda and Create Environment
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  miniforge-version: latest
+                  activate-environment: sage
+                  python-version: "3.11"
+                  channels: conda-forge,nodefaults
+
+            # The `bash -el {0}` shell is strictly required for Conda commands
+            # to execute properly inside GitHub Actions/Copilot environments!
             - name: Install SageMath
+              shell: bash -el {0}
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y sagemath
+                  conda install sage
 
             - name: Verify SageMath Installation
+              shell: bash -el {0}
               run: sage --version
