@@ -117,6 +117,8 @@ class SimplicialChains(CombinatorialFreeModule):
             # Empty simplex → degenerate
             if len(s) == 0:
                 return None
+            if any((not isinstance(v, int)) or v < 0 for v in s):
+                return None
             # Strictly increasing ⇔ non-degenerate
             if any(a >= b for a, b in pairwise(s)):
                 return None

@@ -64,6 +64,12 @@ def test_surjection_basic_composition() -> None:
     assert _as_dict(composed) == {(1, 2, 3): 1}, "Expected basis element (1,2,3)."
 
 
+def test_surjection_complexity_uses_full_label_range() -> None:
+    s2 = Surjection(2)
+    x = s2((1, 2, 1))
+    assert x.complexity() == 2
+
+
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
     s3 = Surjection(3)

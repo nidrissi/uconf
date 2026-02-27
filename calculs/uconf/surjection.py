@@ -198,7 +198,7 @@ class Surjection(CombinatorialFreeModule):
         """Return pairwise complexity of one basis surjection."""
 
         result = 0
-        for i, j in combinations(range(self.arity()), 2):
+        for i, j in combinations(range(1, self.arity() + 1), 2):
             seq = [x for x in basis_element if x == i or x == j]
             complexity = len([k for k, l in pairwise(seq) if k != l])
             result = max(result, complexity)
