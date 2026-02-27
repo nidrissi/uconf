@@ -38,8 +38,13 @@ def test_permutation_sign_twist_on_lie() -> None:
 def test_composition_sign_shift_lie() -> None:
     shifted = ShiftedOperad(Lie, 1)
     x = shifted(2)((1,))
+    assert x.arity() == 2
+    assert x.degree() == 1
 
     composed = shifted.compose(x, 2, x)
+    assert composed.arity() == 3
+    assert composed.degree() == 2
+
     base_composed = Lie.compose(Lie(2)((1,)), 2, Lie(2)((1,)))
 
     assert _as_dict(composed.base_element()) == _as_dict(-base_composed)
