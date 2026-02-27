@@ -1,23 +1,33 @@
-"""Port of core tests from comch/test.ipynb to current uconf operads.
-
-Notes:
-- This file ports the tests that map directly to current APIs.
-- Old notebook tests relying on removed helpers/properties (e.g. filtration,
-  planarize_surjection, comod_surj) are intentionally omitted.
-- Permutations are handled via current Sage permutation objects.
-"""
+"""Regression tests for the Surjection operad."""
 
 from collections.abc import Iterable
 import math
 
 import pytest
 
-from uconf import BarrattEccles, Surjection
+from uconf import Surjection
 
 
 def _degree_matches(element, d: int) -> bool:
     parent = element.parent()
     return all(parent.degree_on_basis(key) == d for key in element.support())
+
+
+def _canonical_basis_key(basis):
+    if not isinstance(basis, tuple):
+        return basis
+
+    canonical = []
+    for item in basis:
+        if hasattr(item, "tuple"):
+            canonical.append(tuple(item.tuple()))
+        else:
+            canonical.append(item)
+    return tuple(canonical)
+
+
+def _as_dict(x):
+    return {_canonical_basis_key(basis): coeff for basis, coeff in x}
 
 
 def usual_planar_test(rmax: int, dmax: int) -> Iterable[Surjection.Element]:
@@ -31,25 +41,41 @@ PLANAR_SMALL = tuple(usual_planar_test(4, 3))
 PLANAR_LARGE = tuple(usual_planar_test(6, 3))
 
 
-@pytest.mark.parametrize("r", range(1, 5))
-@pytest.mark.parametrize("d", range(0, 3))
-def test_be_basis(r: int, d: int) -> None:
-    basis = list(BarrattEccles(r).basis_it(d))
-    if r == 1:
-        expected_size = 1 if d == 0 else 0
-    else:
-        expected_size = math.factorial(r) * (math.factorial(r) - 1) ** d
-    assert len(basis) == expected_size, f"Unexpected basis size for r={r}, d={d}."
+def test_surjection_unit() -> None:
+    u = Surjection.unit()
+    assert _as_dict(u) == {(1,): 1}, "Surjection unit should be (1,)."
 
-    for el in basis:
-        assert isinstance(
-            el, BarrattEccles.Element
-        ), "Non-BarrattEccles element found in basis_it"
-        assert el != el.parent().zero(), "Zero element found in basis_it"
-        assert el.arity() == r, "Element with incorrect arity in basis_it"
-        assert _degree_matches(
-            el, d
-        ), "Element with incorrect degree in BarrattEccles basis_it"
+
+@pytest.mark.parametrize("sigma", ([2, 1],))
+def test_surjection_permutation_action(sigma: list[int]) -> None:
+    s2 = Surjection(2)
+    x = s2((1, 2))
+    swapped = x.permute(sigma)
+    assert _as_dict(swapped) == {(2, 1): 1}, "Expected transposed surjection tuple."
+    assert _as_dict(swapped.permute(sigma)) == _as_dict(
+        x
+    ), "Applying the same transposition twice should return the original element."
+
+
+def test_surjection_basic_composition() -> None:
+    s2 = Surjection(2)
+    x = s2((1, 2))
+    composed = Surjection.compose(x, 1, x)
+    assert _as_dict(composed) == {(1, 2, 3): 1}, "Expected basis element (1,2,3)."
+
+
+@pytest.mark.parametrize("input_pos", [1, 2, 3])
+def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
+    s3 = Surjection(3)
+    x = s3((1, 2, 3))
+    one = Surjection.unit()
+
+    left = Surjection.compose(one, 1, x)
+    right = Surjection.compose(x, input_pos, one)
+
+    x_dict = _as_dict(x)
+    assert _as_dict(left) == x_dict, "Left unit axiom failed for Surjection."
+    assert _as_dict(right) == x_dict, f"Right unit axiom failed at input {input_pos}."
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -71,8 +97,16 @@ def test_surjection_basis(r: int, d: int) -> None:
 @pytest.mark.parametrize("r", range(2, 5))
 @pytest.mark.parametrize("d", range(1, 4))
 def test_planar_surjection_basis(r: int, d: int) -> None:
-    basis = list(Surjection(r).planar_basis_it(d))
-    for el in basis:
+    planar_basis = list(Surjection(r).planar_basis_it(d))
+    basis = list(Surjection(r).basis_it(d))
+    assert set(planar_basis).issubset(
+        basis
+    ), "Planar basis should be a subset of the full basis."
+    assert len(planar_basis) * math.factorial(r) == len(
+        basis
+    ), "Planar basis size should be full basis size divided by r!."
+
+    for el in planar_basis:
         assert el.is_planar(), "Non-planar element found in planar_basis_it"
 
 
