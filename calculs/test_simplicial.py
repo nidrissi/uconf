@@ -187,18 +187,14 @@ class TestSurjectionAction:
         result = Surjection.act(u, x)
         assert result.arity() == 2
 
-    @pytest.mark.xfail(
-        reason="Exact BF sign/join normalization still being aligned with BF04"
-    )
     def test_action_zero_on_low_degree(self):
-        """θ_u(x) = 0 if |x| < |u| (pending exact BF normalization)."""
+        """θ_u(x) = 0 if |x| < |u|."""
         S2 = Surjection(2)
         u = S2((1, 2, 1))  # degree 1
         x = SimplicialChains.standard_element(0)  # degree 0
         result = Surjection.act(u, x)
         assert result == SimplicialChains(r=2).zero()
 
-    @pytest.mark.xfail(reason="BF chain-map sign correction pending exact derivation")
     def test_chain_map_property_small(self):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for small examples.
 
@@ -218,7 +214,6 @@ class TestSurjectionAction:
                     rhs
                 ), f"Chain map failed: u={list(u.support())}, n={n}"
 
-    @pytest.mark.xfail(reason="BF chain-map sign correction pending exact derivation")
     def test_chain_map_property_degree2(self):
         """Chain map property for degree-2 surjections in arity 2."""
         S2 = Surjection(2)
@@ -234,7 +229,6 @@ class TestSurjectionAction:
                     rhs
                 ), f"Chain map failed: u={list(u.support())}, n={n}"
 
-    @pytest.mark.xfail(reason="BF chain-map sign correction pending exact derivation")
     def test_chain_map_arity3(self):
         """Chain map property for arity-3 surjections."""
         S3 = Surjection(3)
