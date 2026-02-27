@@ -5,6 +5,8 @@ Using tuples may be interpreted by Sage in cycle-style constructors and can lead
 to ambiguous behavior in tests.
 """
 
+import pytest
+
 from uconf import Lie
 
 
@@ -17,11 +19,12 @@ def test_unit() -> None:
     assert _as_dict(u) == {(): 1}, "Unit should be the arity-1 generator x1."
 
 
-def test_antisymmetry_via_permutation() -> None:
+@pytest.mark.parametrize("sigma", ([2, 1],))
+def test_antisymmetry_via_permutation(sigma: list[int]) -> None:
     l2 = Lie(2)
     bracket = l2((1,))
     assert (
-        bracket.permute([2, 1]) == -bracket
+        bracket.permute(sigma) == -bracket
     ), "Swapping x1 and x2 must negate [x1,x2]."
 
 
@@ -36,21 +39,20 @@ def test_basic_composition() -> None:
     ), "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
 
 
-def test_operadic_unit_axioms() -> None:
+@pytest.mark.parametrize("input_pos", [1, 2, 3])
+def test_operadic_unit_axioms(input_pos: int) -> None:
     l3 = Lie(3)
     x = l3((1, 2))
     unit = Lie.unit()
 
     left = Lie.compose(unit, 1, x)
-    right_1 = Lie.compose(x, 1, unit)
-    right_2 = Lie.compose(x, 2, unit)
-    right_3 = Lie.compose(x, 3, unit)
+    right = Lie.compose(x, input_pos, unit)
 
     x_dict = _as_dict(x)
     assert _as_dict(left) == x_dict, "Left unit axiom failed: 1∘1 x = x."
-    assert _as_dict(right_1) == x_dict, "Right unit axiom failed at input 1: x∘1 1 = x."
-    assert _as_dict(right_2) == x_dict, "Right unit axiom failed at input 2: x∘2 1 = x."
-    assert _as_dict(right_3) == x_dict, "Right unit axiom failed at input 3: x∘3 1 = x."
+    assert _as_dict(right) == x_dict, (
+        f"Right unit axiom failed at input {input_pos}: x∘{input_pos} 1 = x."
+    )
 
 
 def test_jacobi_identity() -> None:
@@ -64,16 +66,3 @@ def test_jacobi_identity() -> None:
         + jacobi_generator.permute([3, 1, 2])
     )
     assert _as_dict(jacobi) == {}, "Jacobi identity failed in arity 4."
-
-
-def run_all_tests() -> None:
-    test_unit()
-    test_antisymmetry_via_permutation()
-    test_basic_composition()
-    test_operadic_unit_axioms()
-    test_jacobi_identity()
-
-
-if __name__ == "__main__":
-    run_all_tests()
-    print("All Lie operad tests passed.")
