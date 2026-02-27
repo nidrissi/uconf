@@ -6,6 +6,7 @@ to ambiguous behavior in tests.
 """
 
 import math
+import time
 
 import pytest
 
@@ -76,3 +77,96 @@ def test_jacobi_identity() -> None:
         + jacobi_generator.permute([3, 1, 2])
     )
     assert _as_dict(jacobi) == {}, "Jacobi identity failed in arity 4."
+
+
+# ---------------------------------------------------------------------------
+# Stress tests: correctness and timing at higher arities
+# ---------------------------------------------------------------------------
+# Each test checks an algebraic identity that requires Lie.compose to produce
+# elements in arities 4–6, confirming both correctness and that the
+# class-level caches keep per-call times well under practical limits.
+# Time limits are intentionally generous (10 s / 30 s) so they remain green
+# on slow CI machines while still catching catastrophic regressions.
+
+
+def test_sequential_associativity_arity4() -> None:
+    """Verify the operad sequential-associativity axiom at arity 4.
+
+    For any μ ∈ Lie(2) the identity
+    ``(μ ∘_1 μ) ∘_1 μ  =  μ ∘_1 (μ ∘_1 μ)``
+    must hold in Lie(4).  Both sides require compositions through
+    Lie(3) → Lie(4), exercising the full compose/project pipeline.
+    """
+
+    bracket = Lie(2)((1,))
+
+    t0 = time.perf_counter()
+    lhs = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)
+    rhs = Lie.compose(bracket, 1, Lie.compose(bracket, 1, bracket))
+    elapsed = time.perf_counter() - t0
+
+    assert lhs == rhs, "Sequential associativity failed at arity 4."
+    assert elapsed < 10, f"compose took {elapsed:.2f} s at arity 4 (limit: 10 s)."
+
+
+def test_sequential_associativity_arity5() -> None:
+    """Verify the operad sequential-associativity axiom at arity 5.
+
+    Uses ``(μ ∘_1 (μ ∘_1 μ)) ∘_1 μ = μ ∘_1 ((μ ∘_1 μ) ∘_1 μ)`` in Lie(5),
+    a non-trivial identity requiring four composition calls in Lie(3)–Lie(5).
+    """
+
+    bracket = Lie(2)((1,))
+    mu3 = Lie.compose(bracket, 1, bracket)      # Lie(3)
+
+    t0 = time.perf_counter()
+    lhs = Lie.compose(Lie.compose(bracket, 1, mu3), 1, bracket)  # Lie(4)→Lie(5)
+    rhs = Lie.compose(bracket, 1, Lie.compose(mu3, 1, bracket))  # Lie(4)→Lie(5)
+    elapsed = time.perf_counter() - t0
+
+    assert lhs == rhs, "Sequential associativity failed at arity 5."
+    assert elapsed < 10, f"compose took {elapsed:.2f} s at arity 5 (limit: 10 s)."
+
+
+def test_compose_full_basis_arity5() -> None:
+    """Composition of full-basis-sum elements from Lie(3) lands in Lie(5).
+
+    Builds the sum of all basis elements in Lie(3) and composes it with
+    itself to produce an element of Lie(5).  The result must be non-zero
+    and the call must complete quickly after caches are warm.
+    """
+
+    l3 = Lie(3)
+    x = sum((l3(k) for k in l3._basis_keys()), l3.zero())  # sum all 2! basis elts
+    assert x != l3.zero(), "Sum of Lie(3) basis should be non-zero."
+
+    Lie.compose(x, 1, x)  # warm-up: build arity-5 caches
+
+    t0 = time.perf_counter()
+    result = Lie.compose(x, 1, x)
+    elapsed = time.perf_counter() - t0
+
+    assert result.parent().arity() == 5, "Compose of Lie(3)⊗Lie(3) must land in Lie(5)."
+    assert elapsed < 10, f"compose took {elapsed:.2f} s at arity 5 warm (limit: 10 s)."
+
+
+def test_compose_full_basis_arity6() -> None:
+    """Composition of full-basis-sum elements from Lie(3) and Lie(4) lands in Lie(6).
+
+    This exercises the arity-6 cache path (PBW matrix 720×120, left-inverse
+    120×720).  The warm call should complete in well under 30 seconds.
+    """
+
+    l3 = Lie(3)
+    l4 = Lie(4)
+    x = sum((l3(k) for k in l3._basis_keys()), l3.zero())
+    y = sum((l4(k) for k in l4._basis_keys()), l4.zero())
+
+    Lie.compose(x, 1, y)  # warm-up: build arity-6 caches
+
+    t0 = time.perf_counter()
+    result = Lie.compose(x, 1, y)
+    elapsed = time.perf_counter() - t0
+
+    assert result.parent().arity() == 6, "Compose of Lie(3)⊗Lie(4) must land in Lie(6)."
+    assert elapsed < 30, f"compose took {elapsed:.2f} s at arity 6 warm (limit: 30 s)."

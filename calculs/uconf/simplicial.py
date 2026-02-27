@@ -5,6 +5,8 @@ basis elements are tensor products of non-degenerate simplices, and
 :class:`CosimplicialCochains`, the linear dual over a fixed standard simplex.
 """
 
+from __future__ import annotations
+
 from itertools import combinations, combinations_with_replacement, pairwise, product
 
 from sage.all import (
