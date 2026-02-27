@@ -3,6 +3,7 @@
 import math
 
 import pytest
+from sage.all import ZZ
 
 from uconf import BarrattEccles
 
@@ -77,6 +78,13 @@ def test_barratt_eccles_basic_composition() -> None:
     assert _as_dict(composed) == {
         ((3, 2, 1),): 1
     }, "Expected canonical key of ((1,3),) in arity 3."
+
+
+def test_barratt_eccles_compose_requires_same_base_ring() -> None:
+    x = BarrattEccles(2)(((1, 2),))
+    y = BarrattEccles(2, base_ring=ZZ)(((1, 2),))
+    with pytest.raises(TypeError, match="same base ring"):
+        BarrattEccles.compose(x, 1, y)
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])

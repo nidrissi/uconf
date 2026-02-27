@@ -9,6 +9,7 @@ import math
 import time
 
 import pytest
+from sage.all import ZZ
 
 from uconf import Lie
 
@@ -48,6 +49,13 @@ def test_basic_composition() -> None:
     assert _as_dict(composed) == _as_dict(
         expected
     ), "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
+
+
+def test_compose_requires_same_base_ring() -> None:
+    x = Lie(2)((1,))
+    y = Lie(2, base_ring=ZZ)((1,))
+    with pytest.raises(TypeError, match="same base ring"):
+        Lie.compose(x, 1, y)
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
@@ -117,7 +125,7 @@ def test_sequential_associativity_arity5() -> None:
     """
 
     bracket = Lie(2)((1,))
-    mu3 = Lie.compose(bracket, 1, bracket)      # Lie(3)
+    mu3 = Lie.compose(bracket, 1, bracket)  # Lie(3)
 
     t0 = time.perf_counter()
     lhs = Lie.compose(Lie.compose(bracket, 1, mu3), 1, bracket)  # Lie(4)→Lie(5)

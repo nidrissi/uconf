@@ -1,5 +1,8 @@
 """Tests for the shifted-operad wrapper."""
 
+import pytest
+from sage.all import ZZ
+
 from uconf import Lie, ShiftedOperad, Surjection
 
 
@@ -61,6 +64,14 @@ def test_composition_sign_shift_surjection_nonzero_degree() -> None:
     )
 
     assert _as_dict(composed.base_element()) == _as_dict(-base_composed)
+
+
+def test_compose_requires_same_base_ring() -> None:
+    shifted = ShiftedOperad(Surjection, 1)
+    x = shifted(2)((1, 2))
+    y = shifted(2, base_ring=ZZ)((1, 2))
+    with pytest.raises(TypeError, match="same base ring"):
+        shifted.compose(x, 1, y)
 
 
 def test_readme_example_smoke() -> None:

@@ -192,10 +192,12 @@ class BarrattEccles(CombinatorialFreeModule):
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
         """Operadic composition ``x \\circ_i y`` using shuffle/EZ lifting."""
 
+        if x.parent().base_ring() != y.parent().base_ring():
+            raise TypeError("Both elements must have the same base ring.")
         m = x.parent().arity()
         n = y.parent().arity()
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
-        target = BarrattEccles(m + n - 1)
+        target = BarrattEccles(m + n - 1, base_ring=x.parent().base_ring())
 
         # --- Helper: Composition of single permutations ---
         def _compose_perm_tuple(sigma, idx, tau):

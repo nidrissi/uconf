@@ -359,9 +359,8 @@ class Lie(CombinatorialFreeModule):
         n = y_parent.arity()
 
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
-        assert (
-            x_parent.base_ring() == y_parent.base_ring()
-        ), "Both elements must have the same base ring."
+        if x_parent.base_ring() != y_parent.base_ring():
+            raise TypeError("Both elements must have the same base ring.")
 
         target = Lie(m + n - 1, base_ring=x_parent.base_ring())
         base_ring = target.base_ring()
@@ -398,7 +397,9 @@ class Lie(CombinatorialFreeModule):
             for shifted_inner, inner_coeff in y_assoc_shifted.items():
                 new_word = shifted_left + shifted_inner + shifted_right
                 c = outer_coeff * inner_coeff
-                result_assoc[new_word] = result_assoc.get(new_word, base_ring.zero()) + c
+                result_assoc[new_word] = (
+                    result_assoc.get(new_word, base_ring.zero()) + c
+                )
 
         result_assoc = {w: c for w, c in result_assoc.items() if c != 0}
         return target._element_from_assoc(result_assoc)
