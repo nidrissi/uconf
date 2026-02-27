@@ -1,5 +1,7 @@
 """Barratt--Eccles operad model on sequences of permutations."""
 
+from __future__ import annotations
+
 import itertools
 from itertools import combinations, pairwise, permutations
 from typing import TYPE_CHECKING, ClassVar, Iterator
