@@ -287,7 +287,7 @@ class SimplicialChains(CombinatorialFreeModule):
 # ---------------------------------------------------------------------------
 
 
-class CosimplicialCochains(CombinatorialFreeModule):
+class SimplicialCochains(CombinatorialFreeModule):
     r"""Normalised cochains on `\Delta^N`, with tensor products.
 
     The dual of :class:`SimplicialChains` restricted to simplices with
@@ -415,7 +415,7 @@ class CosimplicialCochains(CombinatorialFreeModule):
     @staticmethod
     def dual_basis_it(N: int, r: int = 1):
         """Iterate over the dual basis cochains on `\\Delta^N` in arity *r*."""
-        parent = CosimplicialCochains(N=N, r=r)
+        parent = SimplicialCochains(N=N, r=r)
         simplices = []
         for k in range(1, N + 2):
             simplices.extend(combinations(range(N + 1), k))

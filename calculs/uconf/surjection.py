@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
     from .barratt_eccles import BarrattEccles
-    from .simplicial import CosimplicialCochains, SimplicialChains
+    from .simplicial import SimplicialCochains, SimplicialChains
 
 from sage.all import (
     QQ,
@@ -447,8 +447,8 @@ class Surjection(CombinatorialFreeModule):
     @staticmethod
     def coact(
         surj: "Surjection.Element",
-        cochains: "tuple[CosimplicialCochains.Element, ...]",
-    ) -> "CosimplicialCochains.Element":
+        cochains: "tuple[SimplicialCochains.Element, ...]",
+    ) -> "SimplicialCochains.Element":
         r"""Dual action: cochains side.
 
         Given `u \in \mathcal{X}(r)_d` and cochains
@@ -473,12 +473,12 @@ class Surjection(CombinatorialFreeModule):
         CosimplicialCochains.Element
             The resulting cochain on `\Delta^N`.
         """
-        from .simplicial import CosimplicialCochains, SimplicialChains
+        from .simplicial import SimplicialCochains, SimplicialChains
 
         r = surj.arity()
         assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."
         N = cochains[0].parent().simplex_dim()
-        target = CosimplicialCochains(N=N, r=1)
+        target = SimplicialCochains(N=N, r=1)
 
         # For each chain basis element x of Delta^N, compute (f1⊗…⊗fr)(θ_u(x))
         result_dict: dict[tuple, int] = {}
