@@ -24,8 +24,13 @@ class BarrattEccles(CombinatorialFreeModule):
         self.rename(name)
         self._arity = n
         self._symmetric_group = SymmetricGroup(n)
+        self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
+        )
+        self.planarize = self.module_morphism(
+            on_basis=self._planarize_on_basis,
+            codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
 
     def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
@@ -140,6 +145,12 @@ class BarrattEccles(CombinatorialFreeModule):
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
             yield x.permute(sigma)
+
+    def _planarize_on_basis(self, basis_element: tuple):
+        perm = basis_element[0]
+        perm_inverse = perm.inverse()
+        permuted = tuple(perm_inverse * p for p in basis_element)
+        return self.term(permuted).tensor(self._symmetric_group_algebra(perm))
 
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
@@ -256,6 +267,9 @@ class BarrattEccles(CombinatorialFreeModule):
     class Element(CombinatorialFreeModule.Element):
         def arity(self) -> int:
             return self.parent().arity()
+
+        def planarize(self):
+            return self.parent().planarize(self)
 
         def boundary(self) -> BarrattEccles.Element:
             return self.parent().boundary(self)
