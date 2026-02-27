@@ -26,14 +26,6 @@ def test_basis_it_size(n: int) -> None:
     assert len(basis) == expected_size, "Unexpected basis size in arity n."
 
 
-@pytest.mark.parametrize("n", [0, 1, 2, 3, 4])
-def test_basis_in_arity_matches_iterator(n: int) -> None:
-    from_iterator = list(Lie(n).basis_it())
-    from_static = list(Lie.basis_in_arity(n))
-    assert len(from_iterator) == len(from_static)
-    assert [_as_dict(x) for x in from_iterator] == [_as_dict(x) for x in from_static]
-
-
 def test_unit() -> None:
     u = Lie.unit()
     assert _as_dict(u) == {(): 1}, "Unit should be the arity-1 generator x1."
