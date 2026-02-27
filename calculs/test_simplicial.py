@@ -3,7 +3,7 @@
 import pytest
 from itertools import combinations
 
-from uconf import SimplicialChains, CosimplicialCochains, Surjection
+from uconf import SimplicialChains, SimplicialCochains, Surjection
 
 
 # ===========================================================================
@@ -274,12 +274,12 @@ class TestSurjectionAction:
 
 class TestCosimplicialCochains:
     def test_construction(self):
-        C = CosimplicialCochains(N=2, r=1)
+        C = SimplicialCochains(N=2, r=1)
         f = C(((0, 1),))
         assert f != C.zero()
 
     def test_coboundary_squared_zero(self):
-        C = CosimplicialCochains(N=3, r=1)
+        C = SimplicialCochains(N=3, r=1)
         for simplex_tuple in combinations(range(4), 2):
             f = C((simplex_tuple,))
             assert f.coboundary().coboundary() == C.zero()
@@ -287,25 +287,25 @@ class TestCosimplicialCochains:
     def test_evaluate_pairing(self):
         """⟨[0,1]*, [0,1]⟩ = 1 and ⟨[0,1]*, [0,2]⟩ = 0."""
         C_chain = SimplicialChains(r=1)
-        C_cochain = CosimplicialCochains(N=2, r=1)
+        C_cochain = SimplicialCochains(N=2, r=1)
         f = C_cochain(((0, 1),))
         x = C_chain(((0, 1),))
         y = C_chain(((0, 2),))
-        assert CosimplicialCochains.evaluate(f, x) == 1
-        assert CosimplicialCochains.evaluate(f, y) == 0
+        assert SimplicialCochains.evaluate(f, x) == 1
+        assert SimplicialCochains.evaluate(f, y) == 0
 
     def test_coboundary_is_boundary_transpose(self):
         """⟨δf, σ⟩ = ⟨f, ∂σ⟩ for all f, σ."""
         N = 3
-        C = CosimplicialCochains(N=N, r=1)
+        C = SimplicialCochains(N=N, r=1)
         C_chain = SimplicialChains(r=1)
         # For each 1-cochain f and 2-chain σ
         for edge in combinations(range(N + 1), 2):
             f = C((edge,))
             for triangle in combinations(range(N + 1), 3):
                 sigma = C_chain((triangle,))
-                lhs = CosimplicialCochains.evaluate(f.coboundary(), sigma)
-                rhs = CosimplicialCochains.evaluate(f, sigma.boundary())
+                lhs = SimplicialCochains.evaluate(f.coboundary(), sigma)
+                rhs = SimplicialCochains.evaluate(f, sigma.boundary())
                 assert lhs == rhs, f"Transpose failed: f={edge}, σ={triangle}"
 
     def test_cochain_action(self):
@@ -313,7 +313,7 @@ class TestCosimplicialCochains:
         S2 = Surjection(2)
         u = S2((1, 2, 1))  # arity 2, degree 1, so acts on (deg q1 + deg q2 + 1)-chains
         N = 3
-        C = CosimplicialCochains(N=N, r=1)
+        C = SimplicialCochains(N=N, r=1)
         f1 = C(((0, 1),))  # degree 1
         f2 = C(((1, 2),))  # degree 1
         result = Surjection.coact(u, (f1, f2))
