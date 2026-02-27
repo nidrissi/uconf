@@ -248,10 +248,10 @@ class Surjection(CombinatorialFreeModule):
         return res
 
     class Element(CombinatorialFreeModule.Element):
-        def boundary(self):
+        def boundary(self) -> Surjection.Element:
             return self.parent().boundary(self)
 
-        def arity(self):
+        def arity(self) -> int:
             return self.parent().arity()
 
         def complexity(self) -> int:

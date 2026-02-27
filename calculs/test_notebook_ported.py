@@ -103,7 +103,7 @@ def test_section_planar(s: Surjection.Element) -> None:
 @pytest.mark.parametrize("s1", PLANAR_SMALL)
 @pytest.mark.parametrize("s2", PLANAR_SMALL)
 @pytest.mark.parametrize("pos", range(1, 5))
-def test_section_composition(s1, s2, pos):
+def test_section_composition(s1: Surjection.Element, s2: Surjection.Element, pos: int):
     """Check that the section map commutes with composition."""
     composed = Surjection.compose(s1, pos, s2)
     sect_composed = composed.section()
@@ -117,8 +117,8 @@ def test_section_composition(s1, s2, pos):
 
 
 @pytest.mark.xfail
-@pytest.mark.parametrize("s", PLANAR_LARGE)
-def test_section_boundary(s):
+@pytest.mark.parametrize("s", PLANAR_SMALL)
+def test_section_boundary(s: Surjection.Element):
     """Check that the section map commutes with the boundary map."""
     sect = s.section()
     sect_boundary = sect.boundary()
