@@ -33,9 +33,7 @@ class Lie(CombinatorialFreeModule):
         elif n == 1:
             self._basis_keys_cache = [()]
         else:
-            self._basis_keys_cache = list(
-                py_itertools.permutations(range(1, n), n - 1)
-            )
+            self._basis_keys_cache = list(py_itertools.permutations(range(1, n), n - 1))
         return self._basis_keys_cache
 
     def _validate_basis_key(self, basis_key: tuple | list) -> tuple[int, ...] | None:
@@ -85,7 +83,9 @@ class Lie(CombinatorialFreeModule):
             f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
         )
 
-    def _bracket(self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]):
+    def _bracket(
+        self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]
+    ):
         out: dict[tuple[int, ...], Any] = {}
         for wl, cl in left.items():
             for wr, cr in right.items():
@@ -100,7 +100,9 @@ class Lie(CombinatorialFreeModule):
 
         return {w: c for w, c in out.items() if c != 0}
 
-    def _assoc_from_basis_key(self, basis_key: tuple[int, ...]) -> dict[tuple[int, ...], Any]:
+    def _assoc_from_basis_key(
+        self, basis_key: tuple[int, ...]
+    ) -> dict[tuple[int, ...], Any]:
         n = int(self.arity())
         if n == 0:
             return {}
@@ -121,9 +123,7 @@ class Lie(CombinatorialFreeModule):
         if n == 0:
             self._word_basis_cache: list[tuple[int, ...]] = []
         else:
-            self._word_basis_cache = list(
-                py_itertools.permutations(range(1, n + 1), n)
-            )
+            self._word_basis_cache = list(py_itertools.permutations(range(1, n + 1), n))
         return self._word_basis_cache
 
     def _pbw_matrix(self):
@@ -146,7 +146,9 @@ class Lie(CombinatorialFreeModule):
         data = []
         for w in words:
             for key in keys:
-                data.append(self._assoc_from_basis_key(key).get(w, self.base_ring().zero()))
+                data.append(
+                    self._assoc_from_basis_key(key).get(w, self.base_ring().zero())
+                )
         mat = matrix(self.base_ring(), len(words), len(keys), data)
         self._pbw_matrix_cache = mat
         return mat
@@ -159,7 +161,9 @@ class Lie(CombinatorialFreeModule):
             return self.zero()
 
         words = self._word_basis()
-        vec = vector(self.base_ring(), [assoc.get(w, self.base_ring().zero()) for w in words])
+        vec = vector(
+            self.base_ring(), [assoc.get(w, self.base_ring().zero()) for w in words]
+        )
 
         if self.arity() == 1:
             return vec[0] * self.term(())
@@ -254,9 +258,9 @@ class Lie(CombinatorialFreeModule):
         def boundary(self) -> "Lie.Element":
             return self.parent().boundary(self)
 
-        def permute(self, sigma: Permutation) -> "Lie.Element":
+        def permute(self, sigma: Permutation | list | tuple) -> "Lie.Element":
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma_perm: Permutation = self.parent()._symmetric_group(sigma)
             elif not (
                 hasattr(sigma, "parent")
                 and sigma.parent() == self.parent()._symmetric_group
@@ -264,12 +268,14 @@ class Lie(CombinatorialFreeModule):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
                 )
+            else:
+                sigma_perm: Permutation = sigma
 
             assoc: dict[tuple[int, ...], Any] = {}
             for key, coeff in self:
                 key_assoc = self.parent()._assoc_from_basis_key(key)
                 for word, word_coeff in key_assoc.items():
-                    permuted_word = tuple(sigma(i) for i in word)
+                    permuted_word = tuple(sigma_perm(i) for i in word)
                     assoc[permuted_word] = (
                         assoc.get(permuted_word, self.base_ring().zero())
                         + coeff * word_coeff
