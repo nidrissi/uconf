@@ -15,7 +15,7 @@ from sage.all import (
     GradedModulesWithBasis,
     QQ,
     SymmetricGroup,
-)  # pyright: ignore[reportWildcardImportFromLibrary]
+)
 
 
 def _permutation_signature(sigma: Any) -> int:

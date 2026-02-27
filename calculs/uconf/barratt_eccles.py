@@ -2,13 +2,20 @@
 
 import itertools
 from itertools import combinations, pairwise, permutations
-from typing import ClassVar, Iterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
     from .surjection import Surjection
 
-from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
+from sage.all import (
+    QQ,
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    Permutations,
+    SymmetricGroup,
+    SymmetricGroupAlgebra,
+    tensor,
+)
 
 
 class BarrattEccles(CombinatorialFreeModule):
