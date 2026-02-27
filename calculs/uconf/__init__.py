@@ -1,3 +1,21 @@
+"""Utilities and operadic models for configuration-space computations.
+
+This package exposes several operads and related constructions used in the
+project:
+
+- :class:`Surjection`
+- :class:`BarrattEccles`
+- :class:`Lie`
+- :class:`BarConstruction`
+
+It also wires two standard maps at import time:
+
+- ``BarrattEccles.Element.table_reduction -> Surjection.Element``
+- ``Surjection.Element.section -> BarrattEccles.Element``
+
+These are implemented as lazy module morphisms cached on the parent objects.
+"""
+
 from .bar import *
 from .barratt_eccles import *
 from .lie import *
@@ -6,7 +24,14 @@ from .surjection import *
 
 
 def _table_reduction_on_basis(self: BarrattEccles):
+    """Create the basis-level table-reduction map ``E_n -> S_n``.
+
+    Returns a callable compatible with ``module_morphism(on_basis=...)``.
+    """
+
     def _compute_table_reduction(basis_element: tuple) -> Surjection.Element:
+        """Compute table reduction on one Barratt--Eccles basis element."""
+
         n = self.arity()
         d = len(basis_element) - 1
         target = Surjection(n)
@@ -37,6 +62,8 @@ def _table_reduction_on_basis(self: BarrattEccles):
 
 
 def _table_reduction(self: BarrattEccles.Element) -> Surjection.Element:
+    """Evaluate table reduction on an element of the Barratt--Eccles operad."""
+
     parent = self.parent()
     if not hasattr(parent, "_table_reduction"):
         parent._table_reduction = parent.module_morphism(
@@ -50,7 +77,14 @@ BarrattEccles.Element.table_reduction = _table_reduction
 
 
 def _section_on_basis(self: Surjection):
+    """Create the basis-level section map ``S_n -> E_n``.
+
+    Returns a callable compatible with ``module_morphism(on_basis=...)``.
+    """
+
     def _compute_section(u: tuple) -> BarrattEccles.Element:
+        """Compute the section image of one surjection basis element."""
+
         n = self.arity()
         target = BarrattEccles(n)
         caesura_indices = Surjection._caesuras(u)
@@ -77,6 +111,8 @@ def _section_on_basis(self: Surjection):
 
 
 def _section(self: Surjection.Element) -> BarrattEccles.Element:
+    """Evaluate the section map on an element of the surjection operad."""
+
     parent = self.parent()
     if not hasattr(parent, "_section"):
         parent._section = parent.module_morphism(
