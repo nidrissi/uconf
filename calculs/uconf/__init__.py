@@ -20,6 +20,7 @@ from .bar import *
 from .barratt_eccles import *
 from .lie import *
 from .operad import *
+from .shifted_operad import *
 from .surjection import *
 
 

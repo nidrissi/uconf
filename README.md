@@ -12,6 +12,7 @@ dans les calculs.
 - `lie.py` : composantes de l'opérade de Lie (`Lie`).
 - `bar.py` : construction bar d'une opérade (`BarConstruction`).
 - `operad.py` : protocole de typage (`OperadProtocol`) pour homogénéiser l'API.
+- `shifted_operad.py` : décalage opéradique (`ShiftedOperad`) avec signes de suspension.
 
 ### API commune (éléments)
 
@@ -37,3 +38,35 @@ dynamiquement :
 
 Ces morphismes sont construits paresseusement et mis en cache au niveau des
 parents (`module_morphism`).
+
+### Opérade décalée (`ShiftedOperad`)
+
+On peut construire une opérade décalée à partir d'une opérade existante
+(`Lie`, `Surjection`, etc.) et d'un entier `d`.
+
+Exemple minimal :
+
+```python
+from uconf import Lie, ShiftedOperad
+
+# Σ^d Lie
+ShiftLie = ShiftedOperad(Lie, 1)
+
+# Composantes d'arité fixée
+L2 = ShiftLie(2)
+x = L2((1,))
+
+# Action symétrique tordue par sgn(σ)^d
+xp = x.permute([2, 1])
+
+# Composition partielle avec signe de décalage
+z = ShiftLie.compose(x, 2, x)
+```
+
+Conventions implémentées (type Loday--Vallette) :
+
+- degré : `|a|_shift = |a| + d (n - 1)` en arité `n` ;
+- action de `S_n` : facteur `sgn(σ)^d` ;
+- composition : facteur
+	`(-1)^(d ((i-1)(n-1) + (m-1)|y|))` pour `x \circ_i y`, avec
+	`m = arité(x)`, `n = arité(y)` et `|y|` degré dans l'opérade de base.
