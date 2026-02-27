@@ -2,6 +2,7 @@
 
 import pytest
 from itertools import combinations, product
+from sage.all import ZZ
 
 from uconf import SimplicialChains, SimplicialCochains, Surjection
 
@@ -439,3 +440,17 @@ class TestCosimplicialCochains:
                         (f1, f2, f3), Surjection.act(u, x)
                     )
                     assert lhs == rhs
+
+    def test_act_requires_same_base_ring(self):
+        u = Surjection(2)((1, 2))
+        x = SimplicialChains(r=1, base_ring=ZZ)(((0, 1),))
+        with pytest.raises(TypeError, match="same base ring"):
+            Surjection.act(u, x)
+
+    def test_coact_requires_same_base_ring(self):
+        u = Surjection(2)((1, 2))
+        C = SimplicialCochains(N=2, r=1, base_ring=ZZ)
+        f1 = C(((0, 1),))
+        f2 = C(((1, 2),))
+        with pytest.raises(TypeError, match="same base ring"):
+            Surjection.coact(u, (f1, f2))

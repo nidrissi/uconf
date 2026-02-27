@@ -76,6 +76,8 @@ class ShiftedOperad:
 
         if x_parent.factory is not self or y_parent.factory is not self:
             raise TypeError("Both elements must belong to this shifted operad.")
+        if x_parent.base_ring() != y_parent.base_ring():
+            raise TypeError("Both elements must have the same base ring.")
 
         m = x_parent.arity()
         n = y_parent.arity()

@@ -4,6 +4,7 @@ from collections.abc import Iterable
 import math
 
 import pytest
+from sage.all import ZZ
 
 from uconf import Surjection
 
@@ -68,6 +69,13 @@ def test_surjection_complexity_uses_full_label_range() -> None:
     s2 = Surjection(2)
     x = s2((1, 2, 1))
     assert x.complexity() == 2
+
+
+def test_surjection_compose_requires_same_base_ring() -> None:
+    x = Surjection(2)((1, 2))
+    y = Surjection(2, base_ring=ZZ)((1, 2))
+    with pytest.raises(TypeError, match="same base ring"):
+        Surjection.compose(x, 1, y)
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])

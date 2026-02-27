@@ -209,10 +209,12 @@ class Surjection(CombinatorialFreeModule):
         x: Surjection.Element, input: int, y: Surjection.Element
     ) -> Surjection.Element:
         """Compose surjections by Berger--Fresse insertion at input ``i``."""
+        if x.parent().base_ring() != y.parent().base_ring():
+            raise TypeError("Both elements must have the same base ring.")
         m = x.arity()
         n = y.arity()
         assert 1 <= input <= m, f"Index i must be between 1 and {m}. Got {input}."
-        target = Surjection(m + n - 1)
+        target = Surjection(m + n - 1, base_ring=x.parent().base_ring())
 
         def _compose_basis_tuple(x_tuple: tuple[int, ...], y_tuple: tuple[int, ...]):
             def bf_sign(
@@ -329,10 +331,13 @@ class Surjection(CombinatorialFreeModule):
         """
         from .simplicial import SimplicialChains
 
+        if surj.parent().base_ring() != chain.parent().base_ring():
+            raise TypeError("Surjection and chain must have the same base ring.")
+
         r = surj.arity()
         t = chain.arity()
         assert 1 <= coord <= t, f"coord={coord} out of range [1, {t}]"
-        target = SimplicialChains(r=t + r - 1)
+        target = SimplicialChains(r=t + r - 1, base_ring=surj.parent().base_ring())
 
         # --- input checks ---
         if not surj or not chain:
@@ -493,8 +498,24 @@ class Surjection(CombinatorialFreeModule):
 
         r = surj.arity()
         assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."
+        if r == 0:
+            raise ValueError("Coaction requires surjection arity at least 1.")
+
+        cochain_base_ring = cochains[0].parent().base_ring()
+        if surj.parent().base_ring() != cochain_base_ring:
+            raise TypeError("Surjection and cochains must have the same base ring.")
+
         N = cochains[0].parent().simplex_dim()
-        target = SimplicialCochains(N=N, r=1)
+        for c in cochains:
+            if c.parent().base_ring() != cochain_base_ring:
+                raise TypeError("All cochains must have the same base ring.")
+            if c.parent().simplex_dim() != N:
+                raise ValueError("All cochains must be on the same simplex dimension.")
+
+        if surj.parent().base_ring() == QQ:
+            target = SimplicialCochains(N=N, r=1)
+        else:
+            target = SimplicialCochains(N=N, r=1, base_ring=surj.parent().base_ring())
 
         # For each chain basis element x of Delta^N, compute (f1⊗…⊗fr)(θ_u(x))
         result_dict: dict[tuple, int] = {}
@@ -510,7 +531,12 @@ class Surjection(CombinatorialFreeModule):
 
         # Iterate over all (chain_deg)-dimensional simplices of Delta^N
         for simplex_tuple in combinations(range(N + 1), chain_deg + 1):
-            chain_parent = SimplicialChains(r=1)
+            if surj.parent().base_ring() == QQ:
+                chain_parent = SimplicialChains(r=1)
+            else:
+                chain_parent = SimplicialChains(
+                    r=1, base_ring=surj.parent().base_ring()
+                )
             x = chain_parent((simplex_tuple,))
             theta = Surjection.act(surj, x)
             # Evaluate f1⊗…⊗fr on theta
