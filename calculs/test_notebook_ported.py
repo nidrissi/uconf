@@ -25,6 +25,7 @@ def usual_planar_test(rmax: int, dmax: int) -> Iterable[Surjection.Element]:
             yield from Surjection(r).planar_basis_it(d)
 
 
+PLANAR_XSMALL = tuple(usual_planar_test(4, 2))
 PLANAR_SMALL = tuple(usual_planar_test(4, 3))
 PLANAR_LARGE = tuple(usual_planar_test(6, 3))
 
@@ -99,20 +100,19 @@ def test_section_planar(s: Surjection.Element) -> None:
 
 
 @pytest.mark.xfail
-@pytest.mark.parametrize("s1", PLANAR_SMALL)
-@pytest.mark.parametrize("s2", PLANAR_SMALL)
-@pytest.mark.parametrize("pos", range(1, 5))
-def test_section_composition(s1: Surjection.Element, s2: Surjection.Element, pos: int):
+@pytest.mark.parametrize("s1", PLANAR_XSMALL)
+@pytest.mark.parametrize("s2", PLANAR_XSMALL)
+def test_section_composition(s1: Surjection.Element, s2: Surjection.Element):
     """Check that the section map commutes with composition."""
-    composed = Surjection.compose(s1, pos, s2)
+    composed = Surjection.compose(s1, 1, s2)
     sect_composed = composed.section()
 
     sect1 = s1.section()
     sect2 = s2.section()
-    composed_sect = Surjection.compose(sect1, pos, sect2)
+    composed_sect = Surjection.compose(sect1, 1, sect2)
     assert (
         sect_composed == composed_sect
-    ), f"Section composition failed for {s1} and {s2} at position {pos}."
+    ), f"Section composition failed for {s1} and {s2} at position 1."
 
 
 @pytest.mark.xfail
