@@ -1,11 +1,13 @@
 """Surjection operad model on nondegenerate surjective words."""
 
 import itertools
-from itertools import combinations, combinations_with_replacement, pairwise
+from functools import reduce
+from itertools import combinations, combinations_with_replacement, pairwise, product
 from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
     from .barratt_eccles import BarrattEccles
+    from .simplicial import CosimplicialCochains, SimplicialChains
 
 from sage.all import (
     QQ,
@@ -276,6 +278,254 @@ class Surjection(CombinatorialFreeModule):
                         yield (new_k, sign * x_coeff * y_coeff)
 
         return target.sum_of_terms(term_generator())
+
+    @staticmethod
+    def act(
+        surj: "Surjection.Element",
+        chain: "SimplicialChains.Element",
+    ) -> "SimplicialChains.Element":
+        r"""Action of the surjection operad on normalised simplicial chains.
+
+        Given a surjection `u \in \mathcal{X}(r)_d` and a chain
+        `x \in C_n(\Delta)`, the action produces an element
+        `\theta_u(x) \in (C^{\otimes r})_{n-d}`.
+
+        **Algorithm** (Berger--Fresse convention, [BF04] §2):
+
+        1. Compute the iterated Alexander--Whitney diagonal
+           `\Delta^{r+d-1}(x)`, producing terms in `C^{\otimes(r+d)}`.
+        2. For each basis surjection `u = (u_1, \ldots, u_{r+d})` and each
+           term `(c_1, \ldots, c_{r+d})` in the diagonal, join the simplices
+           `c_j` for which `u_j = i` (for `i = 1, \ldots, r`).  The join of
+           adjacent simplices is the concatenation with overlapping endpoints.
+        3. Discard degenerate results and accumulate with the BF sign.
+
+        The BF sign consists of two parts:
+
+        * The *ordering (Koszul) sign*: the sign of permuting the factors
+          `(c_1, \ldots, c_{r+d})` to group them by value of `u`, respecting
+          degrees.
+        * The *action sign*: an extra BF-specific sign arising from
+          the insertion of degree-1 "operators" between equal consecutive
+          values of the sorted surjection, weighted by the accumulated
+          degrees to the left.
+
+        Parameters
+        ----------
+        surj : Surjection.Element
+            A homogeneous element of the surjection operad.
+        chain : SimplicialChains.Element
+            A chain in ``SimplicialChains(1)``.
+
+        Returns
+        -------
+        SimplicialChains.Element
+            The action `\theta_u(x)`, in ``SimplicialChains(r)``.
+        """
+        from .simplicial import SimplicialChains
+
+        # --- input checks ---
+        if not surj or not chain:
+            r = surj.arity() if surj else 1
+            return SimplicialChains(r=r).zero()
+
+        r = surj.arity()
+        surj_support = list(surj.support())
+        # Check homogeneity of degree
+        degrees = {surj.parent().degree_on_basis(k) for k in surj_support}
+        assert len(degrees) == 1, "Surjection must be homogeneous in degree."
+        d = degrees.pop()
+
+        target = SimplicialChains(r=r)
+        times = r + d - 1  # AW diagonal produces (times+1) = r+d factors
+
+        # pre-compute the iterated diagonal
+        pre_diag = chain.iterated_diagonal(times=times, coord=1)
+
+        def _compute_bf_sign(surj_tuple, simplex_factors):
+            """Compute the Berger-Fresse sign for a surjection acting on simplex factors.
+
+            Follows [BF04] §2.  The sign has two parts:
+
+            (a) **ordering sign**: Koszul sign of the permutation that sorts the
+                factors ``simplex_factors`` by the value ``surj_tuple[j]``,
+                stably (preserving original order within each group).
+
+            (b) **action (insertion) sign**: for the sorted sequence, whenever
+                two consecutive factors belong to the same group (same value of
+                ``surj_tuple``), an implicit degree-1 operator is inserted
+                between them.  The sign contribution is ``(-1)`` raised to the
+                sum of all degrees to the left of that insertion point.
+            """
+            weights = [len(s) - 1 for s in simplex_factors]  # dim of each simplex
+
+            # (a) ordering sign --
+            # The ordering permutation sends position idx -> sorted position.
+            # We need the sign of this permutation acting on graded objects.
+            indexed = list(enumerate(surj_tuple))
+            # Stable sort by surjection value
+            sorted_indexed = sorted(indexed, key=lambda pair: pair[1])
+            # The ordering permutation in one-line notation:
+            inv_ordering = [pair[0] for pair in sorted_indexed]
+            # ordering_perm[i] = position in the original list of the i-th element
+            #   in sorted order.
+            # Sign = Koszul sign of this permutation with given weights.
+            ordering_sign_exp = 0
+            ordering_perm = [0] * len(inv_ordering)
+            for new_pos, old_pos in enumerate(inv_ordering):
+                ordering_perm[old_pos] = new_pos
+            # Koszul sign: count (weighted) inversions
+            for i in range(len(ordering_perm)):
+                for j in range(i + 1, len(ordering_perm)):
+                    if ordering_perm[i] > ordering_perm[j]:
+                        ordering_sign_exp += weights[i] * weights[j]
+
+            # (b) action sign --
+            # After reordering, the surjection values are sorted:
+            # [1,..,1, 2,..,2, ... r,..,r].
+            # Weights in sorted order:
+            sorted_weights = [weights[i] for i in inv_ordering]
+            sorted_surj = [surj_tuple[i] for i in inv_ordering]
+
+            action_sign_exp = 0
+            for idx in range(len(sorted_surj) - 1):
+                if sorted_surj[idx] == sorted_surj[idx + 1]:
+                    # Insert a degree-1 operator here; sign = (-1)^(sum of weights to the left)
+                    action_sign_exp += sum(sorted_weights[: idx + 1])
+
+            total_sign_exp = (ordering_sign_exp + action_sign_exp) % 2
+            return (-1) ** total_sign_exp
+
+        def _join_simplices(simplex_list):
+            """Join a list of simplices by concatenation, then drop degenerate terms.
+
+            This follows the simplicial join used in ComCH/BF-style formulas:
+            concatenate the vertex tuples and keep the result only if it is
+            nondegenerate (strictly increasing).
+            """
+            if not simplex_list:
+                return None
+            result = reduce(lambda x, y: x + y, simplex_list)
+            # Check non-degeneracy (strictly increasing)
+            if any(a >= b for a, b in pairwise(result)):
+                return None
+            return result
+
+        def term_generator():
+            for surj_tuple, surj_coeff in surj:
+                for diag_key, diag_coeff in pre_diag:
+                    # diag_key is a tuple of r+d simplex-tuples
+                    # Join by surjection grouping
+                    new_factors = []
+                    zero_term = False
+                    for i in range(1, r + 1):
+                        to_join = [
+                            diag_key[idx]
+                            for idx in range(len(surj_tuple))
+                            if surj_tuple[idx] == i
+                        ]
+                        joined = _join_simplices(to_join)
+                        if joined is None:
+                            zero_term = True
+                            break
+                        new_factors.append(joined)
+                    if zero_term:
+                        continue
+                    new_key = tuple(new_factors)
+                    validated = SimplicialChains._validate_basis_key(new_key)
+                    if validated is None:
+                        continue
+                    sign = _compute_bf_sign(surj_tuple, diag_key)
+                    yield (validated, sign * surj_coeff * diag_coeff)
+
+        out = target.sum_of_terms(term_generator())
+        # Touch native tensor conversion (Sage tensor product parent) so this
+        # action stays compatible with tensor-native workflows.
+        _ = out.to_native_tensor()
+        return out
+
+    @staticmethod
+    def coact(
+        surj: "Surjection.Element",
+        cochains: "tuple[CosimplicialCochains.Element, ...]",
+    ) -> "CosimplicialCochains.Element":
+        r"""Dual action: cochains side.
+
+        Given `u \in \mathcal{X}(r)_d` and cochains
+        `f_1, \ldots, f_r \in C^*(\Delta^N)`, the cochain action is
+
+        .. math::
+            \mu_u(f_1 \otimes \cdots \otimes f_r)(x)
+            = (f_1 \otimes \cdots \otimes f_r)(\theta_u(x))
+
+        for every chain `x`.  This returns the resulting cochain of degree
+        `|f_1| + \cdots + |f_r| + d`.
+
+        Parameters
+        ----------
+        surj : Surjection.Element
+            Homogeneous surjection element.
+        cochains : tuple of CosimplicialCochains.Element
+            One cochain per arity slot.
+
+        Returns
+        -------
+        CosimplicialCochains.Element
+            The resulting cochain on `\Delta^N`.
+        """
+        from .simplicial import CosimplicialCochains, SimplicialChains
+
+        r = surj.arity()
+        assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."
+        N = cochains[0].parent().simplex_dim()
+        target = CosimplicialCochains(N=N, r=1)
+
+        # For each chain basis element x of Delta^N, compute (f1⊗…⊗fr)(θ_u(x))
+        result_dict: dict[tuple, int] = {}
+        # The total cochain degree
+        cochain_degrees = [c.degree() for c in cochains]
+        total_deg = sum(cochain_degrees)
+
+        # Iterate over basis chains in the appropriate degree
+        surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
+        assert len(surj_deg) == 1
+        d = surj_deg[0]
+        chain_deg = total_deg + d
+
+        # Iterate over all (chain_deg)-dimensional simplices of Delta^N
+        for simplex_tuple in combinations(range(N + 1), chain_deg + 1):
+            chain_parent = SimplicialChains(r=1)
+            x = chain_parent((simplex_tuple,))
+            theta = Surjection.act(surj, x)
+            # Evaluate f1⊗…⊗fr on theta
+            value = 0
+            for basis_key, coeff in theta:
+                # basis_key = (s_1, ..., s_r)
+                contrib = coeff
+                for slot in range(r):
+                    # f_{slot+1} evaluated on s_{slot+1}
+                    f = cochains[slot]
+                    simplex_key = (basis_key[slot],)
+                    matched = False
+                    for f_key, f_coeff in f:
+                        if f_key == simplex_key:
+                            contrib *= f_coeff
+                            matched = True
+                            break
+                    if not matched:
+                        contrib = 0
+                        break
+                value += contrib
+            if value != 0:
+                result_dict[(simplex_tuple,)] = (
+                    result_dict.get((simplex_tuple,), 0) + value
+                )
+
+        # Clean zeros
+        result_dict = {k: v for k, v in result_dict.items() if v != 0}
+        if not result_dict:
+            return target.zero()
+        return target(result_dict)
 
     @staticmethod
     def _caesuras(u: tuple[int, ...]) -> list[int]:

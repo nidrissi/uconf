@@ -23,6 +23,7 @@ from .barratt_eccles import *
 from .lie import *
 from .operad import *
 from .shifted_operad import *
+from .simplicial import *
 from .surjection import *
 
 
