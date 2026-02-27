@@ -30,9 +30,8 @@ PLANAR_LARGE = tuple(usual_planar_test(6, 3))
 
 
 @pytest.mark.parametrize("r", range(1, 5))
-@pytest.mark.parametrize("d", range(1, 3))
+@pytest.mark.parametrize("d", range(0, 3))
 def test_be_basis(r: int, d: int) -> None:
-    # d starts at 1 because current BarrattEccles.basis_it(0) hits a known edge case.
     basis = list(BarrattEccles(r).basis_it(d))
     for el in basis:
         assert isinstance(

@@ -130,9 +130,8 @@ class BarrattEccles(CombinatorialFreeModule):
         u = self._symmetric_group.identity()
         u_tup = u.tuple()
         for values in itertools.product(perm, repeat=d):
-            if (
-                all(values[i] != values[i + 1] for i in range(len(values) - 1))
-                and values[0] != u_tup
+            if all(values[i] != values[i + 1] for i in range(len(values) - 1)) and (
+                d == 0 or values[0] != u_tup
             ):
                 yield self((u,) + tuple(list(v) for v in values))
 
