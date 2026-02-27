@@ -1,7 +1,7 @@
 """Finite-arity model of the Lie operad in a Hall-type basis."""
 
 import itertools as py_itertools
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Iterator
 
 from sage.all import (
     QQ,
@@ -217,6 +217,12 @@ class Lie(CombinatorialFreeModule):
         """Return the arity of this Lie operad component."""
 
         return self._arity
+
+    def basis_it(self) -> Iterator["Lie.Element"]:
+        """Iterate over the canonical Lie basis in this fixed arity."""
+
+        for key in self._basis_keys():
+            yield self.term(key)
 
     @staticmethod
     def unit():
