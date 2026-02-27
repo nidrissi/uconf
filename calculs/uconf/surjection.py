@@ -2,13 +2,19 @@
 
 import itertools
 from itertools import combinations, combinations_with_replacement, pairwise
-from typing import ClassVar, Iterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
     from .barratt_eccles import BarrattEccles
 
-from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
+from sage.all import (
+    QQ,
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    SymmetricGroupAlgebra,
+    tensor,
+)
 
 
 class Surjection(CombinatorialFreeModule):

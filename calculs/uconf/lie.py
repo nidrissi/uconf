@@ -3,7 +3,15 @@
 import itertools as py_itertools
 from typing import Any, ClassVar
 
-from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
+from sage.all import (
+    QQ,
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    Permutation,
+    SymmetricGroup,
+    matrix,
+    vector,
+)
 
 
 class Lie(CombinatorialFreeModule):
@@ -254,7 +262,7 @@ class Lie(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: "Lie.Element", i: int, y: "Lie.Element") -> "Lie.Element":
-        """Operadic composition ``x \circ_i y`` in the Lie operad."""
+        """Operadic composition ``x \\circ_i y`` in the Lie operad."""
 
         x_parent = x.parent()
         y_parent = y.parent()
