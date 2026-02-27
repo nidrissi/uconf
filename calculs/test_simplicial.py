@@ -67,6 +67,16 @@ class TestSimplicialChains:
         x = C(((),))
         assert x == C.zero()
 
+    def test_negative_vertex_rejected(self):
+        C = SimplicialChains(r=1)
+        x = C(((-1, 0, 1),))
+        assert x == C.zero()
+
+    def test_non_integer_vertex_rejected(self):
+        C = SimplicialChains(r=1)
+        x = C(((0, 1.5, 2),))
+        assert x == C.zero()
+
     def test_degree(self):
         C = SimplicialChains(r=1)
         x = C(((0, 1, 2),))
