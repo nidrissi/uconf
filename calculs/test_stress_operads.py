@@ -186,16 +186,9 @@ def test_stress_barratt_eccles_boundary_squared_zero():
         assert _as_dict(x.boundary().boundary()) == {}
 
 
-@pytest.mark.parametrize("arity", [2, 3, 4])
+@pytest.mark.parametrize("arity", [3, 4])
 def test_stress_lie_jacobi_random_linear(arity: int):
     rng = random.Random(20260304 + arity)
-    parent = Lie(arity)
-
-    # Build random Lie elements and verify Jacobi on arity 2 generators after insertion.
-    # We keep this lightweight: sample random linear combinations and verify the
-    # canonical Jacobi relation in arity 3 is stable under composition.
-    if arity < 3:
-        pytest.skip("Jacobi stress requires arity >= 3")
 
     bracket = Lie(2)((1,))
     jacobi_generator = Lie.compose(bracket, 1, bracket)
