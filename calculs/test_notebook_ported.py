@@ -8,6 +8,7 @@ Notes:
 """
 
 from collections.abc import Iterable
+import math
 
 import pytest
 
@@ -34,6 +35,12 @@ PLANAR_LARGE = tuple(usual_planar_test(6, 3))
 @pytest.mark.parametrize("d", range(0, 3))
 def test_be_basis(r: int, d: int) -> None:
     basis = list(BarrattEccles(r).basis_it(d))
+    if r == 1:
+        expected_size = 1 if d == 0 else 0
+    else:
+        expected_size = math.factorial(r) * (math.factorial(r) - 1) ** d
+    assert len(basis) == expected_size, f"Unexpected basis size for r={r}, d={d}."
+
     for el in basis:
         assert isinstance(
             el, BarrattEccles.Element
