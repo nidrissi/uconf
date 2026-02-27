@@ -192,16 +192,16 @@ def test_stress_lie_jacobi_random_linear(arity: int):
 
     bracket = Lie(2)((1,))
     jacobi_generator = Lie.compose(bracket, 1, bracket)
-    jacobi = (
-        jacobi_generator
-        + jacobi_generator.permute([2, 3, 1])
-        + jacobi_generator.permute([3, 1, 2])
-    )
-    assert _as_dict(jacobi) == {}
+    jacobi = [
+        jacobi_generator,
+        jacobi_generator.permute([2, 3, 1]),
+        jacobi_generator.permute([3, 1, 2]),
+    ]
+    assert _as_dict(sum(jacobi)) == {}
 
     # random insertion stress: J ∘_i x should remain zero for random x
     for _ in range(8):
         x = _random_homogeneous_lie(rng, arity)
         i = rng.randint(1, 3)
-        inserted = Lie.compose(jacobi, i, x)
+        inserted = sum(Lie.compose(y, i, x) for y in jacobi)
         assert _as_dict(inserted) == {}
