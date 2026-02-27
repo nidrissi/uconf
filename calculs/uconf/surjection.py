@@ -283,6 +283,7 @@ class Surjection(CombinatorialFreeModule):
     def act(
         surj: "Surjection.Element",
         chain: "SimplicialChains.Element",
+        coord: int = 1,
     ) -> "SimplicialChains.Element":
         r"""Action of the surjection operad on normalised simplicial chains.
 
@@ -315,7 +316,9 @@ class Surjection(CombinatorialFreeModule):
         surj : Surjection.Element
             A homogeneous element of the surjection operad.
         chain : SimplicialChains.Element
-            A chain in ``SimplicialChains(1)``.
+            A chain in ``SimplicialChains(t)`` for some ``t >= 1``.
+        coord : int, default ``1``
+            Tensor factor (1-based) where the action is applied.
 
         Returns
         -------
@@ -324,23 +327,25 @@ class Surjection(CombinatorialFreeModule):
         """
         from .simplicial import SimplicialChains
 
+        r = surj.arity()
+        t = chain.arity()
+        assert 1 <= coord <= t, f"coord={coord} out of range [1, {t}]"
+        target = SimplicialChains(r=t + r - 1)
+
         # --- input checks ---
         if not surj or not chain:
-            r = surj.arity() if surj else 1
-            return SimplicialChains(r=r).zero()
+            return target.zero()
 
-        r = surj.arity()
         surj_support = list(surj.support())
         # Check homogeneity of degree
         degrees = {surj.parent().degree_on_basis(k) for k in surj_support}
         assert len(degrees) == 1, "Surjection must be homogeneous in degree."
         d = degrees.pop()
 
-        target = SimplicialChains(r=r)
         times = r + d - 1  # AW diagonal produces (times+1) = r+d factors
 
         # pre-compute the iterated diagonal
-        pre_diag = chain.iterated_diagonal(times=times, coord=1)
+        pre_diag = chain.iterated_diagonal(times=times, coord=coord)
 
         def _compute_bf_sign(surj_tuple, simplex_factors):
             """Compute the Berger-Fresse sign for a surjection acting on simplex factors.
@@ -414,13 +419,19 @@ class Surjection(CombinatorialFreeModule):
         def term_generator():
             for surj_tuple, surj_coeff in surj:
                 for diag_key, diag_coeff in pre_diag:
-                    # diag_key is a tuple of r+d simplex-tuples
+                    left_idx = coord - 1
+                    right_idx = left_idx + len(surj_tuple)
+                    left = diag_key[:left_idx]
+                    middle = diag_key[left_idx:right_idx]
+                    right = diag_key[right_idx:]
+
+                    # middle has length r+d simplex-tuples
                     # Join by surjection grouping
                     new_factors = []
                     zero_term = False
                     for i in range(1, r + 1):
                         to_join = [
-                            diag_key[idx]
+                            middle[idx]
                             for idx in range(len(surj_tuple))
                             if surj_tuple[idx] == i
                         ]
@@ -431,11 +442,14 @@ class Surjection(CombinatorialFreeModule):
                         new_factors.append(joined)
                     if zero_term:
                         continue
-                    new_key = tuple(new_factors)
+                    new_key = left + tuple(new_factors) + right
                     validated = SimplicialChains._validate_basis_key(new_key)
                     if validated is None:
                         continue
-                    sign = _compute_bf_sign(surj_tuple, diag_key)
+
+                    sign = _compute_bf_sign(surj_tuple, middle)
+                    deg_left = sum(len(spx) - 1 for spx in left)
+                    sign *= (-1) ** (deg_left * d)
                     yield (validated, sign * surj_coeff * diag_coeff)
 
         out = target.sum_of_terms(term_generator())
