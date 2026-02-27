@@ -1,3 +1,5 @@
+"""Typing protocol for operad-like objects used in this project."""
+
 from typing import ClassVar, Protocol, Any, TypeVar, runtime_checkable
 
 
@@ -6,8 +8,10 @@ P = TypeVar("P", bound="OperadProtocol")
 
 @runtime_checkable
 class OperadProtocol(Protocol[P]):
-    """
-    Formal definition of what a Python object must do to be an 'Operad'.
+    """Structural contract for operad implementations.
+
+    This protocol documents the public operations expected by helper code and
+    constructions in :mod:`uconf`.
     """
 
     name: ClassVar[str]
@@ -36,6 +40,8 @@ class OperadProtocol(Protocol[P]):
         ...
 
     class Element:
+        """Protocol for elements living in an operad object."""
+
         def arity(self) -> int:
             """Returns the arity of this element."""
             ...

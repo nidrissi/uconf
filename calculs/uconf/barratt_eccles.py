@@ -1,3 +1,5 @@
+"""Barratt--Eccles operad model on sequences of permutations."""
+
 import itertools
 from itertools import combinations, pairwise, permutations
 from typing import ClassVar, Iterator
@@ -10,9 +12,17 @@ from sage.all import *  # pyright: ignore[reportWildcardImportFromLibrary]
 
 
 class BarrattEccles(CombinatorialFreeModule):
+    """Barratt--Eccles operad component in fixed arity.
+
+    Basis elements are tuples of permutations in ``S_n`` with no consecutive
+    duplicates.
+    """
+
     name: ClassVar[str] = "BE"
 
     def __init__(self, n, base_ring=QQ):
+        """Initialize ``E_n`` over ``base_ring``."""
+
         assert n >= 0, f"Arity must be non-negative. Got {n}."
         name = f"{self.name}{n}"
         super().__init__(
@@ -34,12 +44,7 @@ class BarrattEccles(CombinatorialFreeModule):
         )
 
     def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
-        """
-        Intercepts element creation to enforce types.
-        x can be:
-          - A basis key (tuple of permutations)
-          - A linear combination (dictionary)
-        """
+        """Build elements from a basis key or a sparse coefficient dictionary."""
         # Case 1: x is a Dictionary (Linear Combination)
         if isinstance(x, dict):
             # Validate keys before passing to super
@@ -76,9 +81,7 @@ class BarrattEccles(CombinatorialFreeModule):
     def _validate_basis_key(
         self, basis_tuple: tuple | list, keep_dupes=False
     ) -> tuple[SymmetricGroup] | None:
-        """
-        Strictly checks that the input is a tuple of S_n elements.
-        """
+        """Validate a basis tuple and coerce entries to elements of ``S_n``."""
         if not isinstance(basis_tuple, (tuple, list)):
             raise TypeError(f"Basis key must be a tuple, got {type(basis_tuple)}")
 
@@ -106,11 +109,7 @@ class BarrattEccles(CombinatorialFreeModule):
         return tuple(clean_tuple)
 
     def rho(self, data: tuple | list) -> BarrattEccles.Element:
-        """
-        Constructs the element corresponding to the input data.
-        The input should be a tuple of tuples, where each inner tuple represents a permutation in S_n.
-        Example: rho(((1,2,3), (1,3,2))) corresponds to the basis element with those two permutations in sequence.
-        """
+        """Build the normalized element ``(id, sigma_1, sigma_1 sigma_2, ...)``."""
         clean_data = self._validate_basis_key(data, keep_dupes=True)
         if clean_data is None:
             return self.zero()
@@ -123,13 +122,19 @@ class BarrattEccles(CombinatorialFreeModule):
         return self.term(tuple(ret))
 
     def arity(self) -> int:
+        """Return the fixed arity of this operad component."""
+
         return self._arity
 
     @staticmethod
     def unit() -> "BarrattEccles.Element":
+        """Return the operadic unit in arity ``1``."""
+
         return BarrattEccles(1)(((1,),))
 
     def planar_basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
+        """Iterate over planar basis elements in degree ``d``."""
+
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         u = self._symmetric_group.identity()
@@ -141,12 +146,16 @@ class BarrattEccles(CombinatorialFreeModule):
                 yield self((u,) + tuple(list(v) for v in values))
 
     def basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
+        """Iterate over all basis elements in degree ``d``."""
+
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
             yield x.permute(sigma)
 
     def _planarize_on_basis(self, basis_element: tuple):
+        """Split a basis element into planar representative and group element."""
+
         perm = basis_element[0]
         perm_inverse = perm.inverse()
         permuted = tuple(perm_inverse * p for p in basis_element)
@@ -166,10 +175,14 @@ class BarrattEccles(CombinatorialFreeModule):
 
     # 2. Implement the hook the Category expects
     def degree_on_basis(self, element: tuple) -> int:
+        """Return homological degree of a basis element."""
+
         return len(element) - 1
 
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
+        """Operadic composition ``x \\circ_i y`` using shuffle/EZ lifting."""
+
         m = x.parent().arity()
         n = y.parent().arity()
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
@@ -250,6 +263,8 @@ class BarrattEccles(CombinatorialFreeModule):
         return target.sum_of_terms(term_generator())
 
     def _complexity_on_basis(self, element: tuple) -> int:
+        """Return pairwise complexity of a basis element."""
+
         result = 0
         n = self.arity()
 
@@ -265,16 +280,26 @@ class BarrattEccles(CombinatorialFreeModule):
         return result
 
     class Element(CombinatorialFreeModule.Element):
+        """Elements of the Barratt--Eccles operad component."""
+
         def arity(self) -> int:
+            """Return the arity of this element."""
+
             return self.parent().arity()
 
         def planarize(self):
+            """Project to planar representative tensored with a group element."""
+
             return self.parent().planarize(self)
 
         def boundary(self) -> BarrattEccles.Element:
+            """Apply the simplicial differential."""
+
             return self.parent().boundary(self)
 
         def complexity(self) -> int:
+            """Return the maximum pairwise complexity on basis support."""
+
             return max(
                 (self.parent()._complexity_on_basis(basis) for basis in self.support()),
                 default=0,
@@ -303,9 +328,7 @@ class BarrattEccles(CombinatorialFreeModule):
             return self.parent().sum_of_terms(permuted_term_generator())
 
         def diagonal(self):
-            """
-            Computes the Alexander-Whitney diagonal: E -> E (x) E.
-            """
+            """Compute the Alexander--Whitney diagonal ``E -> E \\otimes E``."""
             # 1. Construct the Tensor Product Parent
             # Sage handles this automatically: self.tensor(self) creates the module E (x) E
 
@@ -334,4 +357,6 @@ class BarrattEccles(CombinatorialFreeModule):
             return result
 
         def table_reduction(self) -> Surjection.Element:
+            """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
+
             raise NotImplementedError("Table reduction is not implemented yet")
