@@ -173,13 +173,15 @@ class BarrattEccles(CombinatorialFreeModule):
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
         res = self.zero()
-        # Boundary logic (same as before)
         if len(basis_element) <= 1:
             return res
 
         for i in range(len(basis_element)):
             face = basis_element[:i] + basis_element[i + 1 :]
-            res += (-1) ** i * self.term(face)
+            clean_face = self._validate_basis_key(face)
+            if clean_face is None:
+                continue
+            res += (-1) ** i * self.term(clean_face)
         return res
 
     # 2. Implement the hook the Category expects

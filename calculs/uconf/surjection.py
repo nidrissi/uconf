@@ -270,7 +270,7 @@ class Surjection(CombinatorialFreeModule):
                     else:
                         new_k.append(j + n - 1)
                 new_k = tuple(new_k)
-                yield new_k, bf_sign(p, x_tuple, y_tuple, new_k)
+                yield new_k, bf_sign(tuple(positions), x_tuple, p, y_tuple)
 
         def term_generator():
             for x_tuple, x_coeff in x:
