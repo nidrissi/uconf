@@ -439,6 +439,17 @@ def tree_to_string(tree, operad_name: str = "P") -> str:
     return f"({dec_str}; {children_str})"
 
 
+def tree_to_latex(tree, operad_name: str = "P") -> str:
+    """Return a LaTeX representation of a decorated rooted tree."""
+    if is_leaf(tree):
+        return str(tree)
+
+    dec = ",".join(str(i) for i in decoration(tree))
+    dec_str = f"\\operatorname{{{operad_name}}}_{{({dec})}}"
+    children_str = ", ".join(tree_to_latex(c, operad_name) for c in children(tree))
+    return f"\\left({dec_str}; {children_str}\\right)"
+
+
 def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> tuple:
     """Create a tree with the same structure but new decorations.
 
