@@ -173,8 +173,6 @@ class BarConstruction:
             """LaTeX representation of one bar basis tree."""
             return tree_to_latex(basis_element, self.factory.operad_cls.name)
 
-        # TODO Fix the signs
-        # We have d1*d1 = 0, d2*d2 = 0, but d1*d2 + d2*d1 != 0.
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
 
@@ -186,10 +184,10 @@ class BarConstruction:
         def _d1_on_basis(self, tree) -> "BarConstruction.Element":
             """Internal differential: apply operad boundary to each vertex.
 
-            For each vertex v_j in DFS order, the sign is:
-                (-1)^{sum_{l < j} |s p_l|}
+            For each vertex v_j in DFS order (pre-order), the sign is:
+                (-1)^{sum_{l < j} (deg_P(p_l) + 1)}
 
-            where |s p_l| = deg_P(p_l) + 1 is the suspended degree.
+            where deg_P(p_l) + 1 is the uniformly suspended degree of vertex l.
             """
             if is_leaf(tree):
                 return self.zero()
@@ -230,7 +228,20 @@ class BarConstruction:
             return result
 
         def _d2_on_basis(self, tree) -> "BarConstruction.Element":
-            """Structural differential: contract each internal edge."""
+            """Structural differential: contract each internal edge.
+
+            For each internal edge (parent p, position l, child c), the sign is:
+                (-1)^{global_cum(p) + deg_P(p) + |sc| * deg_bar_before(p, l)}
+
+            where:
+            - global_cum(p) = sum_{v before p in DFS} (deg_P(v) + arity(v) - 1)
+                is the total sP̄-degree of all DFS-preceding vertices
+            - deg_P(p) is the P-degree of the parent decoration
+            - |sc| = deg_P(c) + arity(c) - 1 is the sP̄-degree of the child
+            - deg_bar_before(p, l) = sum_{j < l} subtree_degree(child_j of p)
+                is the total bar-degree of the subtrees rooted at siblings of c
+                occupying positions 1, ..., l-1
+            """
             if is_leaf(tree):
                 return self.zero()
 
@@ -240,11 +251,9 @@ class BarConstruction:
 
             result = self.zero()
             base_ring = self.base_ring()
+            verts = vertices_dfs(tree)
 
-            # Compute cumulative degrees for Koszul signs
-            cumulative_degree = 0
-
-            for edge_idx, (parent_vertex, child_pos, child_vertex) in enumerate(edges):
+            for parent_vertex, child_pos, child_vertex in edges:
                 p_arity = vertex_arity(parent_vertex)
                 c_arity = vertex_arity(child_vertex)
                 p_dec = decoration(parent_vertex)
@@ -253,15 +262,30 @@ class BarConstruction:
                 p_parent = self._operad_cls(p_arity, base_ring)
                 c_parent = self._operad_cls(c_arity, base_ring)
 
-                # Degree of child decoration in P
                 p_deg_P = p_parent.degree_on_basis(p_dec)
                 c_deg_P = c_parent.degree_on_basis(c_dec)
 
-                cumulative_sign = sign_from_exponent(cumulative_degree)
-                p_sign = sign_from_exponent(p_deg_P)
-                total_sign = cumulative_sign * p_sign
+                # Global cumulative: sP̄-degree of all DFS vertices before parent
+                global_cum = 0
+                for v in verts:
+                    if v is parent_vertex:
+                        break
+                    v_arity = vertex_arity(v)
+                    v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(
+                        decoration(v)
+                    )
+                    global_cum += v_deg + (v_arity - 1)
 
-                cumulative_degree += c_deg_P + 1  # +1 for suspension in sP̄
+                # Koszul sign: sP̄-degree of child times bar-degree before position l
+                c_sp_deg = c_deg_P + (c_arity - 1)
+                before_deg = sum(
+                    subtree_degree(ch, self._operad_cls, base_ring)
+                    for i, ch in enumerate(children(parent_vertex), start=1)
+                    if i < child_pos
+                )
+                koszul_exp = c_sp_deg * before_deg
+
+                total_sign = sign_from_exponent(global_cum + p_deg_P + koszul_exp)
 
                 # Compute composition p ∘_l c
                 p_elem = p_parent.term(p_dec)
