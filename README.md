@@ -80,7 +80,7 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 - `shifted_cooperad.py` — `ShiftedCooperad(C, d)`
   - Cooperadic shift wrapper with compatible sign rules.
 
-- `hadamard_operad.py` — `HadamardOperad(P, Q)`
+- `hadamard_operad.py` — `HadamardProduct(P, Q)`
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
@@ -126,9 +126,9 @@ z = ShiftLie.compose(x, 2, x)
 ### Hadamard product
 
 ```python
-from uconf import HadamardOperad, Lie, Surjection
+from uconf import HadamardProduct, Lie, Surjection
 
-Had = HadamardOperad(Lie, Surjection)
+Had = HadamardProduct(Lie, Surjection)
 H2 = Had(2)
 
 x = H2(((1,), (1, 2)))

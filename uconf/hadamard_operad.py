@@ -15,18 +15,18 @@ from __future__ import annotations
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
 
 
-class HadamardOperad:
+class HadamardProduct:
     """Factory for Hadamard-product operad components."""
 
     def __init__(self, left_operad_cls, right_operad_cls):
         self.left_operad_cls = left_operad_cls
         self.right_operad_cls = right_operad_cls
-        self.name = f"{left_operad_cls.name}*{right_operad_cls.name}"
+        self.name = f"{left_operad_cls.name}⊙{right_operad_cls.name}"
 
-    def __call__(self, n: int, base_ring=QQ) -> "HadamardOperad.Component":
-        return HadamardOperad.Component(self, n, base_ring)
+    def __call__(self, n: int, base_ring=QQ) -> "HadamardProduct.Component":
+        return HadamardProduct.Component(self, n, base_ring)
 
-    def unit(self, base_ring=QQ) -> "HadamardOperad.Element":
+    def unit(self, base_ring=QQ) -> "HadamardProduct.Element":
         component = self(1, base_ring)
         return component.from_factors(
             self.left_operad_cls.unit(),
@@ -35,10 +35,10 @@ class HadamardOperad:
 
     def compose(
         self,
-        x: "HadamardOperad.Element",
+        x: "HadamardProduct.Element",
         i: int,
-        y: "HadamardOperad.Element",
-    ) -> "HadamardOperad.Element":
+        y: "HadamardProduct.Element",
+    ) -> "HadamardProduct.Element":
         x_parent = x.parent()
         y_parent = y.parent()
 
@@ -84,7 +84,7 @@ class HadamardOperad:
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of ``P ⊙ Q``."""
 
-        def __init__(self, factory: "HadamardOperad", n: int, base_ring=QQ):
+        def __init__(self, factory: "HadamardProduct", n: int, base_ring=QQ):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(
@@ -119,7 +119,7 @@ class HadamardOperad:
             return (left_basis, right_basis)
 
         def _element_constructor_(self, x):
-            if isinstance(x, HadamardOperad.Element):
+            if isinstance(x, HadamardProduct.Element):
                 return self.sum_of_terms((basis, coeff) for basis, coeff in x)
 
             if isinstance(x, dict):
@@ -178,7 +178,9 @@ class HadamardOperad:
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
-        def from_factors(self, left_element, right_element) -> "HadamardOperad.Element":
+        def from_factors(
+            self, left_element, right_element
+        ) -> "HadamardProduct.Element":
             if left_element.parent().arity() != self.arity():
                 raise TypeError(
                     f"Left element arity {left_element.parent().arity()} does not match target arity {self.arity()}."
@@ -203,13 +205,13 @@ class HadamardOperad:
 
         def compose(
             self,
-            x: "HadamardOperad.Element",
+            x: "HadamardProduct.Element",
             i: int,
-            y: "HadamardOperad.Element",
-        ) -> "HadamardOperad.Element":
+            y: "HadamardProduct.Element",
+        ) -> "HadamardProduct.Element":
             return self.factory.compose(x, i, y)
 
-        def unit(self) -> "HadamardOperad.Element":
+        def unit(self) -> "HadamardProduct.Element":
             return self.factory.unit(self.base_ring())
 
     class Element(CombinatorialFreeModule.Element):
@@ -218,10 +220,10 @@ class HadamardOperad:
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "HadamardOperad.Element":
+        def boundary(self) -> "HadamardProduct.Element":
             return self.parent().boundary(self)
 
-        def permute(self, sigma) -> "HadamardOperad.Element":
+        def permute(self, sigma) -> "HadamardProduct.Element":
             if isinstance(sigma, (list, tuple)):
                 sigma = self.parent()._symmetric_group(sigma)
             elif not (
@@ -243,4 +245,4 @@ class HadamardOperad:
             return result
 
 
-HadamardOperad.Component.Element = HadamardOperad.Element
+HadamardProduct.Component.Element = HadamardProduct.Element
