@@ -1,9 +1,12 @@
 """Tests for bar and cobar constructions."""
 
 import pytest
+from sage.all import tensor
 
 from uconf import (
     BarConstruction,
+    CoAssociative,
+    CoCommutative,
     CobarConstruction,
     CooperadProtocol,
     Lie,
@@ -591,6 +594,232 @@ class TestExpandVertex:
         )
         assert weight(expanded) == 2
         assert tree_arity(expanded) == 3
+
+
+class TestBarCoderivation:
+    """Tests that the bar differential is a coderivation of the cooperad."""
+
+    def _check_coderivation(self, factory, tree, i, m, n):
+        """Check Δ(d(x)) == (d⊗id + (-1)^|a| id⊗d)(Δ(x)) for a single tree."""
+        B = factory(m + n - 1)
+        Bm = factory(m)
+        Bn = factory(n)
+        tgt = tensor([Bm, Bn])
+
+        x = B(tree)
+        dx = x.boundary()
+
+        # LHS: Δ_{i;m,n}(d(x)), recast into tgt
+        lhs = tgt.zero()
+        for (ak, bk), coeff in B.infinitesimal_cocompose(dx, i, m, n):
+            lhs += coeff * Bm.term(ak).tensor(Bn.term(bk))
+
+        # RHS: (d⊗id + (-1)^|a| id⊗d)(Δ_{i;m,n}(x))
+        rhs = tgt.zero()
+        for (ak, bk), coeff in B.infinitesimal_cocompose(x, i, m, n):
+            a_deg = Bm.degree_on_basis(ak)
+            for dak, da_coeff in Bm.term(ak).boundary():
+                rhs += coeff * da_coeff * Bm.term(dak).tensor(Bn.term(bk))
+            sign_a = (-1) ** a_deg
+            for dbk, db_coeff in Bn.term(bk).boundary():
+                rhs += coeff * sign_a * db_coeff * Bm.term(ak).tensor(Bn.term(dbk))
+
+        assert lhs == rhs, f"Coderivation property failed for tree {tree}"
+
+    def test_bar_lie_coderivation_weight2_arity3(self):
+        """d is a coderivation: Δ(d(x)) = (d⊗id + (-1)^|a| id⊗d)(Δ(x))."""
+        BLie = BarConstruction(Lie)
+        # weight-2 tree in B(Lie)(3): Δ_{1;2,2} and Δ_{2;2,2}
+        tree = ((1,), ((1,), 1, 2), 3)
+        self._check_coderivation(BLie, tree, 1, 2, 2)
+        self._check_coderivation(BLie, tree, 2, 2, 2)
+
+    def test_bar_lie_coderivation_weight2_arity4(self):
+        """Coderivation property for B(Lie)(4) weight-2 tree."""
+        BLie = BarConstruction(Lie)
+        tree = ((1, 2), ((1,), 1, 2), 3, 4)
+        self._check_coderivation(BLie, tree, 1, 2, 3)
+        self._check_coderivation(BLie, tree, 2, 2, 3)
+        self._check_coderivation(BLie, tree, 1, 3, 2)
+
+    def test_bar_surjection_coderivation_weight1(self):
+        """Coderivation property for weight-1 B(Surjection)(3) tree."""
+        BS = BarConstruction(Surjection)
+        # weight-1 tree: Δ gives 0 (no internal subtree to split off at arity 2)
+        tree = ((1, 2, 3), 1, 2, 3)
+        self._check_coderivation(BS, tree, 1, 2, 2)
+
+    def test_bar_surjection_coderivation_weight2(self):
+        """Coderivation property for weight-2 B(Surjection)(4) tree."""
+        BS = BarConstruction(Surjection)
+        tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        self._check_coderivation(BS, tree, 1, 2, 3)
+        self._check_coderivation(BS, tree, 2, 3, 2)
+
+    def test_bar_surjection_coderivation_nontrivial_d1(self):
+        """Coderivation holds when d_1 is nontrivial (Surjection has d1 ≠ 0)."""
+        BS = BarConstruction(Surjection)
+        # (1,2,1) has nontrivial boundary in Surjection(2)
+        tree = ((1, 2, 1), 1, 2)
+        self._check_coderivation(BS, tree, 1, 1, 2)
+
+
+class TestCoAssociative:
+    """Tests for the CoAssociative cooperad."""
+
+    def test_coassociative_protocol(self):
+        """CoAssociative satisfies CooperadProtocol."""
+        for n in range(1, 4):
+            assert isinstance(CoAssociative(n), CooperadProtocol)
+
+    def test_coassociative_counit(self):
+        """Counit evaluates correctly on arity-1 generator."""
+        C1 = CoAssociative(1)
+        assert CoAssociative.counit(C1((1,))) == 1
+        C2 = CoAssociative(2)
+        assert CoAssociative.counit(C2((1, 2))) == 0
+
+    def test_coassociative_reduced(self):
+        """Reduced kills the arity-1 counit component."""
+        C1 = CoAssociative(1)
+        elem = 3 * C1.term((1,))
+        assert CoAssociative.reduced(elem) == C1.zero()
+        C2 = CoAssociative(2)
+        elem2 = C2((1, 2))
+        assert CoAssociative.reduced(elem2) == elem2
+
+    def test_coassociative_cocompose_arity3(self):
+        """Cocomposition at arity 3: dual of Ass.compose."""
+        from uconf import Associative
+
+        C3 = CoAssociative(3)
+        sigma = C3((1, 2, 3))  # identity permutation in S_3
+
+        # Δ^{1;2,2}((1,2,3)): find (tau, rho) with Ass.compose(tau,1,rho)=(1,2,3)
+        delta = CoAssociative.infinitesimal_cocompose(sigma, 1, 2, 2)
+        assert delta != tensor([CoAssociative(2), CoAssociative(2)]).zero()
+
+        # Verify: composing back should give original basis element
+        for (left_key, right_key), coeff in delta:
+            tau = CoAssociative(2).term(left_key)
+            rho = CoAssociative(2).term(right_key)
+            composed = Associative.compose(tau, 1, rho)
+            assert dict(composed) == {(1, 2, 3): 1}
+
+    def test_cobar_coassociative_d_squared_zero_arity3(self):
+        """d^2 = 0 for Ω(CoAss)(3)."""
+        OmegaCA = CobarConstruction(CoAssociative)
+        O3 = OmegaCA(3)
+        # Weight-1 tree with (1,2,3) decoration
+        tree = ((1, 2, 3), 1, 2, 3)
+        elem = O3(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O3.zero(), f"d^2 != 0 for CoAss: {bdry2}"
+
+    def test_cobar_coassociative_d_squared_zero_arity4(self):
+        """d^2 = 0 for Ω(CoAss)(4)."""
+        OmegaCA = CobarConstruction(CoAssociative)
+        O4 = OmegaCA(4)
+        tree = ((1, 2, 3, 4), 1, 2, 3, 4)
+        elem = O4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O4.zero(), f"d^2 != 0 for CoAss arity 4: {bdry2}"
+
+
+class TestCoCommutative:
+    """Tests for the CoCommutative cooperad."""
+
+    def test_cocommutative_protocol(self):
+        """CoCommutative satisfies CooperadProtocol."""
+        for n in range(1, 4):
+            assert isinstance(CoCommutative(n), CooperadProtocol)
+
+    def test_cocommutative_counit(self):
+        """Counit evaluates correctly on arity-1 generator."""
+        C1 = CoCommutative(1)
+        assert CoCommutative.counit(C1(())) == 1
+        C2 = CoCommutative(2)
+        assert CoCommutative.counit(C2(())) == 0
+
+    def test_cocommutative_reduced(self):
+        """Reduced kills the arity-1 counit component."""
+        C1 = CoCommutative(1)
+        elem = 5 * C1.term(())
+        assert CoCommutative.reduced(elem) == C1.zero()
+        C2 = CoCommutative(2)
+        elem2 = C2(())
+        assert CoCommutative.reduced(elem2) == elem2
+
+    def test_cocommutative_cocompose(self):
+        """Cocomposition maps e_{m+n-1} to e_m ⊗ e_n."""
+        C3 = CoCommutative(3)
+        elem = C3(())
+
+        # For any (i, m, n) with m+n-1=3 and i valid: Δ^{i;2,2}(e_3) = e_2 ⊗ e_2
+        delta = CoCommutative.infinitesimal_cocompose(elem, 1, 2, 2)
+        # delta should have exactly one term: e_2 ⊗ e_2 with coefficient 1
+        assert dict(delta) == {((), ()): 1}
+
+        # Different position i gives the same result (cocommutative)
+        delta2 = CoCommutative.infinitesimal_cocompose(elem, 2, 2, 2)
+        assert dict(delta2) == {((), ()): 1}
+
+    def test_cobar_cocommutative_d_squared_zero_arity3(self):
+        """d^2 = 0 for Ω(CoCom)(3)."""
+        OmegaCC = CobarConstruction(CoCommutative)
+        O3 = OmegaCC(3)
+        # weight-1 tree with decoration () in arity 3
+        tree = ((), 1, 2, 3)
+        elem = O3(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O3.zero(), f"d^2 != 0 for CoCom: {bdry2}"
+
+    def test_cobar_cocommutative_d_squared_zero_arity4(self):
+        """d^2 = 0 for Ω(CoCom)(4) weight-1 tree."""
+        OmegaCC = CobarConstruction(CoCommutative)
+        O4 = OmegaCC(4)
+        tree = ((), 1, 2, 3, 4)
+        elem = O4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O4.zero(), f"d^2 != 0 for CoCom arity 4: {bdry2}"
+
+
+class TestCobarSignFix:
+    """Tests verifying the corrected cumulative-sign in cobar d_2.
+
+    The structural differential d_2 of the cobar construction contributes a
+    factor (-1)^{cumulative_before} where cumulative_before is the sum of
+    s^{-1}C degrees of all DFS-preceding vertices.  Without this factor, d^2
+    can be non-zero.
+
+    The test trees below have a root whose s^{-1}C degree is odd (-1), so the
+    child vertex acquires a non-trivial sign when expanded.  The SurjectionLinearDual
+    decoration (1,2,3,1) in arity 3 has s^{-1}C degree = (4-3) - 2 = -1.
+    """
+
+    def test_cobar_sign_arity5_weight2(self):
+        """d^2 = 0 for a weight-2 tree where the sign fix matters.
+
+        Root: arity 3, dec (1,2,3,1) in S*(3), s^{-1}C degree = -1 (odd).
+        Inner: arity 3, dec (1,2,3) in S*(3), s^{-1}C degree = -2 (even).
+        Without the cumulative_before sign, d^2 would be non-zero for this tree.
+        """
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O5 = OmegaS(5)
+        # root arity 3, inner arity 3 as first child, leaves 4 and 5 as other children
+        tree = ((1, 2, 3, 1), ((1, 2, 3), 1, 2, 3), 4, 5)
+        elem = O5(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O5.zero(), f"d^2 != 0 (sign fix required): {bdry2}"
+
+    def test_cobar_sign_arity5_weight2_inner_dec(self):
+        """d^2 = 0 for a tree where the inner node has high-degree decoration."""
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O5 = OmegaS(5)
+        tree = ((1, 2, 3, 1), ((1, 2, 1, 3), 1, 2, 3), 4, 5)
+        elem = O5(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O5.zero(), f"d^2 != 0 (sign fix required): {bdry2}"
 
 
 if __name__ == "__main__":

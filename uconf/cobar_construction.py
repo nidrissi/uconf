@@ -28,7 +28,7 @@ from sage.all import (
 
 from .signs import (
     shifted_boundary_sign,
-    shifted_operadic_compose_sign,
+    sign_from_exponent,
 )
 from .trees import (
     children,
@@ -287,15 +287,17 @@ class CobarConstruction:
                 dec = decoration(vertex)
                 cooperad_parent = self._cooperad_cls(k, base_ring)
 
-                # Compute cumulative degree of vertices before j for Koszul sign
+                # Compute cumulative s⁻¹C degree of vertices before j.
+                # This gives the sign (-1)^{cumulative_before} for the
+                # derivation formula: d_2(T) = Σ_j (-1)^{|v_0|+...+|v_{j-1}|} T_j
                 cumulative_before = 0
-                for l in range(j):
-                    v_l = verts[l]
-                    v_l_arity = vertex_arity(v_l)
-                    dec_l = decoration(v_l)
-                    parent_l = self._cooperad_cls(v_l_arity, base_ring)
-                    cumulative_before += parent_l.degree_on_basis(dec_l) - (
-                        v_l_arity - 1
+                for jj in range(j):
+                    v_jj = verts[jj]
+                    v_jj_arity = vertex_arity(v_jj)
+                    dec_jj = decoration(v_jj)
+                    parent_jj = self._cooperad_cls(v_jj_arity, base_ring)
+                    cumulative_before += parent_jj.degree_on_basis(dec_jj) - (
+                        v_jj_arity - 1
                     )
 
                 # For each way to split arity k into (a, b) with a + b = k + 1
@@ -319,33 +321,15 @@ class CobarConstruction:
                         if not delta:
                             continue
 
+                        # Sign: (-1)^{cumulative_before + (l-1)(b-1)}
+                        # - cumulative_before: Koszul sign for d_2 as a derivation
+                        # - (l-1)(b-1): sign from operadic composition at position l
+                        total_sign = sign_from_exponent(
+                            cumulative_before + (l - 1) * (b - 1)
+                        )
+
                         for tensor_key, coeff in delta:
                             left_dec, right_dec = tensor_key
-
-                            # Degrees
-                            left_parent = self._cooperad_cls(a, base_ring)
-                            right_parent = self._cooperad_cls(b, base_ring)
-                            right_deg_C = right_parent.degree_on_basis(right_dec)
-                            right_sinv_deg = right_deg_C - (b - 1)
-
-                            # Composition sign from desuspension
-                            compose_sign = shifted_operadic_compose_sign(
-                                -1, l, a, b, right_deg_C
-                            )
-
-                            # Koszul sign from reordering:
-                            # s⁻¹c_right passes s⁻¹decorations of children 1..l-1 of vertex
-                            children_before_l_deg = 0
-                            for idx in range(l - 1):
-                                child = children(vertex)[idx]
-                                children_before_l_deg += subtree_degree_cobar(
-                                    child, self._cooperad_cls, base_ring
-                                )
-
-                            koszul_sign = (-1) ** (
-                                (right_sinv_deg * children_before_l_deg) % 2
-                            )
-                            total_sign = compose_sign * koszul_sign
 
                             # Expand the vertex
                             new_tree = expand_vertex(
