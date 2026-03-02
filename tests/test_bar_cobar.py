@@ -262,6 +262,27 @@ class TestBarConstructionLie:
         for tree, coeff in d2:
             assert weight(tree) == 1
 
+    def test_bar_lie_boundary_squared_zero_arity4_weight2(self):
+        """d^2 = 0 for a weight-2 tree in B(Lie)(4)."""
+        BLie = BarConstruction(Lie)
+        B4 = BLie(4)
+
+        # Root arity 3 with one internal arity-2 child
+        tree = ((1, 2), ((1,), 1, 2), 3, 4)
+        elem = B4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == B4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
+
+    def test_bar_lie_boundary_squared_zero_arity6_weight3(self):
+        """d^2 = 0 for a weight-3 tree in B(Lie)(6)."""
+        BLie = BarConstruction(Lie)
+        B6 = BLie(6)
+
+        tree = ((1, 2, 3), ((1,), 1, 2), ((1,), 3, 4), 5, 6)
+        elem = B6(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == B6.zero(), f"d^2 != 0 in arity 6: {bdry2}"
+
     def test_bar_lie_permute(self):
         """Test leaf permutation."""
         BLie = BarConstruction(Lie)
@@ -361,6 +382,16 @@ class TestBarConstructionSurjection:
         # Should produce trees with different decorations
         assert d1 != B2.zero()
 
+    def test_bar_surjection_boundary_squared_zero_arity4_weight2(self):
+        """d^2 = 0 for a higher-arity, weight-2 tree in B(Surjection)."""
+        BS = BarConstruction(Surjection)
+        B4 = BS(4)
+
+        tree = ((1, 2, 3), ((1, 2, 1), 1, 2), 3, 4)
+        elem = B4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == B4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
+
 
 class TestCobarConstruction:
     """Tests for cobar construction of cooperads."""
@@ -422,6 +453,31 @@ class TestCobarConstruction:
         # Result should be a weight-2 tree
         for tree, coeff in composed:
             assert weight(tree) == 2
+
+    def test_cobar_compose_to_arity5(self):
+        """Compose larger trees and check resulting arity/leaf normalization."""
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O3 = OmegaS(3)
+
+        x = O3(((1, 2, 3), 1, 2, 3))
+        y = O3(((1, 3, 2), 1, 2, 3))
+
+        composed = OmegaS.compose(x, 2, y)
+        assert composed.arity() == 5
+
+        for tree, coeff in composed:
+            assert leaves(tree) == {1, 2, 3, 4, 5}
+            assert weight(tree) == 2
+
+    def test_cobar_boundary_squared_zero_arity4_weight2(self):
+        """d^2 = 0 for a higher-arity, weight-2 tree in Ω(S*)."""
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O4 = OmegaS(4)
+
+        tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        elem = O4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
 
     def test_cobar_pretty_print(self):
         """Cobar terms should display trees and unit as id."""

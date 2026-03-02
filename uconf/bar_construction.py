@@ -250,8 +250,6 @@ class BarConstruction:
 
                 # Degree of child decoration in P
                 c_deg_P = c_parent.degree_on_basis(c_dec)
-                # Degree of child in sP̄
-                c_sp_deg = c_deg_P + (c_arity - 1)
 
                 # Compute S_left: total sP̄-degree of subtrees of parent before child_pos
                 s_left = 0
@@ -263,8 +261,9 @@ class BarConstruction:
                 compose_sign = shifted_operadic_compose_sign(
                     1, child_pos, p_arity, c_arity, c_deg_P
                 )
-                koszul_sign = (-1) ** ((c_sp_deg * s_left) % 2)
-                total_sign = compose_sign * koszul_sign
+                child_degree_sign = (-1) ** (c_deg_P % 2)
+                koszul_sign = (-1) ** ((c_deg_P * s_left) % 2)
+                total_sign = compose_sign * child_degree_sign * koszul_sign
 
                 # Compute composition p ∘_l c
                 p_elem = p_parent.term(p_dec)
