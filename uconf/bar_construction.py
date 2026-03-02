@@ -74,6 +74,17 @@ class BarConstruction:
     def __call__(self, n: int, base_ring=QQ) -> "BarConstruction.Component":
         return BarConstruction.Component(self, n, base_ring)
 
+    def counit_element(self, base_ring=QQ) -> "BarConstruction.Element":
+        """Return the counit element (single leaf tree in arity 1).
+
+        The bar construction B(P) has a canonical counit ε: B(P)(1) → k,
+        which is non-trivial on the single-leaf tree with no internal vertices.
+        This method returns that generator.
+        """
+        component = self(1, base_ring)
+        # The single-leaf tree "1" (no internal vertices)
+        return component.term(1)
+
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of the bar construction cooperad."""
 
@@ -292,19 +303,32 @@ class BarConstruction:
         def counit(x: "BarConstruction.Element"):
             """Cooperadic counit: extracts coefficient of the 'unit' tree.
 
-            For connected operads, B(P)(1) is trivial (no trees), so counit
-            is always 0 for arity >= 1.
+            The counit ε: B(P)(1) → k is non-trivial only on the single-leaf
+            tree (basis key = 1) and returns its coefficient.
+            For arity ≠ 1, the counit is always 0.
             """
-            # For arity 1 with connected operads, there are no valid trees
-            # (all vertices must have arity >= 2, but a tree with one leaf
-            # can only have one vertex of arity 1, which violates connectedness)
-            return x.parent().base_ring().zero()
+            if x.arity() != 1:
+                return x.parent().base_ring().zero()
+            # The single-leaf tree has basis key = 1 (an integer, not a tuple)
+            # Get the coefficient from the element using dict-style access
+            return x[1] if 1 in x.support() else x.parent().base_ring().zero()
 
         @staticmethod
         def reduced(x: "BarConstruction.Element") -> "BarConstruction.Element":
-            """Project to reduced part (kills counit component)."""
-            # For connected operads, counit is always 0, so reduced = identity
-            return x
+            """Project to reduced part (kills counit component).
+
+            For arity 1, removes the coefficient of the single-leaf tree.
+            For other arities, returns x unchanged.
+            """
+            if x.arity() != 1:
+                return x
+            # Remove the single-leaf (basis key = 1) component
+            if 1 not in x.support():
+                return x
+            coeff = x[1]
+            if coeff == 0:
+                return x
+            return x - coeff * x.parent().term(1)
 
         def infinitesimal_cocompose(
             self, x: "BarConstruction.Element", i: int, m: int, n: int
