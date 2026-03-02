@@ -7,6 +7,8 @@ project:
 - :class:`SurjectionLinearDual`
 - :class:`BarrattEccles`
 - :class:`Lie`
+- :class:`Associative`
+- :class:`Commutative`
 - :class:`CooperadProtocol`
 
 It also wires two standard maps at import time:
@@ -20,8 +22,10 @@ These are implemented as lazy module morphisms cached on the parent objects.
 from sage.all import Partitions
 
 from .bar_construction import *
+from .associative import *
 from .barratt_eccles import *
 from .cobar_construction import *
+from .commutative import *
 from .cooperad import *
 from .hadamard_operad import *
 from .lie import *
