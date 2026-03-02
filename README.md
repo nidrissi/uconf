@@ -1,152 +1,177 @@
-# Projet de Najib et Victor
+# Najib and Victor Project
 
-Un super projet sur les espaces de configuration.
+Combinatorial operad/cooperad models (SageMath) for computations in algebraic topology and configuration spaces.
 
-## Package `calculs/uconf`
+## Repository structure
 
-Le dossier `calculs/uconf` contient des modèles combinatoires d'opérades utilisés
-- `surjection.py` : opérade des surjections (`Surjection`).
-- `barratt_eccles.py` : opérade de Barratt-Eccles (`BarrattEccles`).
-- `lie.py` : composantes de l'opérade de Lie (`Lie`).
-- `operad.py` : protocole de typage (`OperadProtocol`) pour homogénéiser l'API.
-- `cooperad.py` : protocole de typage dual (`CooperadProtocol`) pour les constructions bar/cobar.
-- `signs.py` : conventions de signes partagées (suspension/Koszul).
-- `shifted_operad.py` : décalage opéradique (`ShiftedOperad`) avec signes de suspension.
+- `calculs/uconf/`: main implementation (active API).
+- `calculs/test_*.py`: main regression test suite.
+- `calculs/pytest.ini`: pytest configuration (`-q`, `test_*.py`).
+- `calculs/misc.py`, `calculs/misc.ipynb`: drafts/experiments.
+- `old-computations/`: older notebooks/utilities kept for reference.
+- `article.tex`, `article.bib`: project-related scientific writing.
 
-### API commune (éléments)
+## Prerequisites
 
-Les classes d'éléments exposent notamment :
-- `arity()`
-- `boundary()`
-- `permute(...)`
+The project relies on **SageMath** (parents/modules, symmetric groups, tensor products, etc.).
 
-Selon le modèle, on trouve aussi :
-- `planarize()`
-- `complexity()`
-- `diagonal()` (Barratt-Eccles)
+- Key dependency: `sagemath` (see `requirements.txt`).
+- Tests: `pytest`.
+- Optional: `comch` for compatibility tests (`test_comch_compatibility.py`).
 
-### Applications et morphismes déjà branchés
+## `calculs/uconf` package
 
-Au chargement du package (`import uconf`), deux applications sont attachées
-dynamiquement :
+### Operad models
 
-- `BarrattEccles.Element.table_reduction() -> Surjection.Element`
-- `Surjection.Element.section() -> BarrattEccles.Element`
+- `surjection.py` — `Surjection`
+  - Basis: non-degenerate surjective words (no consecutive repetitions).
+  - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_it`.
+  - Extra actions: `act` on `SimplicialChains`, `coact` on `SimplicialCochains`.
 
-Ces morphismes sont construits paresseusement et mis en cache au niveau des
-parents (`module_morphism`).
+- `barratt_eccles.py` — `BarrattEccles`
+  - Basis: sequences of permutations in `S_n` with no consecutive duplicates.
+  - Operations: `unit`, `compose`, `boundary`, `permute`, `diagonal`, `planarize`.
 
-### Opérade décalée (`ShiftedOperad`)
+- `lie.py` — `Lie`
+  - Hall-basis model (nested brackets).
+  - Operations: `unit`, `compose`, `permute` (antisymmetry/Jacobi behavior).
+  - Includes PBW change-of-basis caches to accelerate `compose`.
 
-On peut construire une opérade décalée à partir d'une opérade existante
-Exemple minimal :
+### Cooperad model
 
-```python
-from uconf import Lie, ShiftedOperad
+- `surjection_linear_dual.py` — `SurjectionLinearDual`
+  - Linear dual companion of `Surjection`.
+  - Operations: `counit`, `reduced`, `infinitesimal_cocompose`.
 
-# Σ^d Lie
-ShiftLie = ShiftedOperad(Lie, 1)
+### Simplicial models
 
-# Composantes d'arité fixée
-L2 = ShiftLie(2)
-x = L2((1,))
-# Action symétrique tordue par sgn(σ)^d
-xp = x.permute([2, 1])
+- `simplicial.py`
+  - `SimplicialChains`: normalized chains on standard simplices, tensor differential, iterated AW diagonal.
+  - `SimplicialCochains`: dual cochains, coboundary, Kronecker pairing (`evaluate`).
 
-# Composition partielle avec signe de décalage
-z = ShiftLie.compose(x, 2, x)
+### Protocols and utilities
 
-Conventions implémentées (type Loday--Vallette) :
+- `operad.py` — `OperadProtocol` (minimal structural contract for operads).
+- `cooperad.py` — `CooperadProtocol` (dual cooperadic contract).
+- `signs.py` — shared sign conventions (permutation signature, suspension signs).
 
-- degré : `|a|_shift = |a| + d (n - 1)` en arité `n` ;
-- action de `S_n` : facteur `sgn(σ)^d` ;
-- composition : facteur
-	`(-1)^(d ((i-1)(n-1) + (m-1)|y|))` pour `x \circ_i y`, avec
-	`m = arité(x)`, `n = arité(y)` et `|y|` degré dans l'opérade de base.
+### Wrappers
 
-## Tests
+- `shifted_operad.py` — `ShiftedOperad(P, d)`
+  - Arity-dependent degree shift.
+  - Sign twists for `boundary`, symmetric action, and `compose`.
 
-Les tests principaux sont organisés par opérade :
-- `test_common_operad.py` : tests communs (protocole opéradique).
-- `test_barratt_eccles.py` : tests spécifiques à Barratt-Eccles.
-- `test_surjection.py` : tests spécifiques aux surjections.
-- `test_lie.py` : tests de l'opérade de Lie.
-- `test_shifted_operad.py` : tests de l'opérade décalée.
+- `shifted_cooperad.py` — `ShiftedCooperad(C, d)`
+  - Cooperadic shift wrapper with compatible sign rules.
 
-Exécution recommandée depuis `calculs/` : `cd calculs && pytest`.
+- `hadamard_operad.py` — `HadamardOperad(P, Q)`
+  - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
+  - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
+  - Diagonal symmetric action and diagonal composition.
 
-Pour exécuter seulement le trio commun/Barratt-Eccles/Surjection :
-`cd calculs && pytest -q test_common_operad.py test_barratt_eccles.py test_surjection.py`.
-# Projet de Najib et Victor
+## Dynamic wiring at `import uconf`
 
-Un super projet sur les espaces de configuration.
-
-## Package `calculs/uconf`
-
-Le dossier `calculs/uconf` contient des modèles combinatoires d'opérades utilisés
-dans les calculs.
-
-- `surjection.py` : opérade des surjections (`Surjection`).
-- `barratt_eccles.py` : opérade de Barratt-Eccles (`BarrattEccles`).
-- `lie.py` : composantes de l'opérade de Lie (`Lie`).
-- `operad.py` : protocole de typage (`OperadProtocol`) pour homogénéiser l'API.
-- `cooperad.py` : protocole de typage dual (`CooperadProtocol`) pour les constructions bar/cobar.
-- `signs.py` : conventions de signes partagées (suspension/Koszul).
-- `shifted_operad.py` : décalage opéradique (`ShiftedOperad`) avec signes de suspension.
-
-### API commune (éléments)
-
-Les classes d'éléments exposent notamment :
-
-- `arity()`
-- `boundary()`
-- `permute(...)`
-
-Selon le modèle, on trouve aussi :
-
-- `planarize()`
-- `complexity()`
-- `diagonal()` (Barratt-Eccles)
-
-### Applications et morphismes déjà branchés
-
-Au chargement du package (`import uconf`), deux applications sont attachées
-dynamiquement :
+In `uconf/__init__.py`, two maps are attached dynamically (lazy + parent-level cache):
 
 - `BarrattEccles.Element.table_reduction() -> Surjection.Element`
 - `Surjection.Element.section() -> BarrattEccles.Element`
 
-Ces morphismes sont construits paresseusement et mis en cache au niveau des
-parents (`module_morphism`).
+These maps are built via `module_morphism` on first use.
 
-### Opérade décalée (`ShiftedOperad`)
+## Important conventions
 
-On peut construire une opérade décalée à partir d'une opérade existante
-(`Lie`, `Surjection`, etc.) et d'un entier `d`.
+- Component classes have a **fixed arity** (`self._arity`).
+- Constructors generally accept `dict` (linear combinations) and tuple/list (basis key).
+- Degenerate/invalid keys are normalized to `0` through internal validation.
+- For permutations in tests, use **one-line list notation** (for example `[2, 1]`).
+- Run pytest from `calculs/` so `import uconf` resolves naturally.
 
-Exemple minimal :
+## Quick examples
+
+### Shifted operad
 
 ```python
 from uconf import Lie, ShiftedOperad
 
-# Σ^d Lie
 ShiftLie = ShiftedOperad(Lie, 1)
-
-# Composantes d'arité fixée
 L2 = ShiftLie(2)
 x = L2((1,))
-
-# Action symétrique tordue par sgn(σ)^d
-xp = x.permute([2, 1])
-
-# Composition partielle avec signe de décalage
+y = x.permute([2, 1])
 z = ShiftLie.compose(x, 2, x)
 ```
 
-Conventions implémentées (type Loday--Vallette) :
+### Hadamard product
 
-- degré : `|a|_shift = |a| + d (n - 1)` en arité `n` ;
-- action de `S_n` : facteur `sgn(σ)^d` ;
-- composition : facteur
-	`(-1)^(d ((i-1)(n-1) + (m-1)|y|))` pour `x \circ_i y`, avec
-	`m = arité(x)`, `n = arité(y)` et `|y|` degré dans l'opérade de base.
+```python
+from uconf import HadamardOperad, Lie, Surjection
+
+Had = HadamardOperad(Lie, Surjection)
+H2 = Had(2)
+
+x = H2(((1,), (1, 2)))
+y = H2(((1,), (1, 2, 1)))
+
+z = Had.compose(x, 1, y)
+dx = x.boundary()
+xp = x.permute([2, 1])
+```
+
+### Surjection action on simplicial chains
+
+```python
+from uconf import SimplicialChains, Surjection
+
+u = Surjection(2)((1, 2, 1))
+x = SimplicialChains.standard_element(3)
+res = Surjection.act(u, x)
+```
+
+## Tests (coverage)
+
+### API contracts
+
+- `test_common_operad.py`: `OperadProtocol` conformance (`Surjection`, `BarrattEccles`).
+- `test_common_cooperad.py`: `CooperadProtocol` conformance (`SurjectionLinearDual`).
+
+### Main operads
+
+- `test_surjection.py`: units, symmetric action, composition, planar bases, section/table-reduction.
+  - Includes known `xfail` tests for subtle `section` compatibilities.
+- `test_barratt_eccles.py`: basis cardinalities, unit, symmetric action, composition.
+- `test_lie.py`: unit, antisymmetry, Jacobi, operadic axioms, stress checks in arities 4–6.
+
+### Cooperad and wrappers
+
+- `test_surjection_cooperad.py`: `counit`, `reduced`, duality with `compose` via `infinitesimal_cocompose`.
+- `test_shifted_operad.py`: sign/degree twists and README smoke test.
+- `test_shifted_cooperad.py`: cooperadic shift behavior (`counit`, cocomposition signs).
+- `test_hadamard_operad.py`: additive degree, tensor-differential sign rule, diagonal action/composition.
+
+### Simplicial and external compatibility
+
+- `test_simplicial.py`:
+  - chain/cochain validity,
+  - `∂²=0`,
+  - AW diagonal chain-map property,
+  - surjection action/coaction,
+  - chain-cochain adjointness (pairing checks).
+- `test_comch_compatibility.py` (if `comch` is installed): operation-by-operation comparison with `comch`.
+- `test_stress_operads.py`: deterministic randomized tests (linearity, unit, `∂²=0`, Jacobi).
+
+## Useful commands
+
+From `calculs/`:
+
+- Run all tests:
+  - `pytest`
+- Run wrapper-focused tests:
+  - `pytest -q test_shifted_operad.py test_shifted_cooperad.py test_hadamard_operad.py`
+- Run core operad tests:
+  - `pytest -q test_common_operad.py test_surjection.py test_barratt_eccles.py test_lie.py`
+- Run simplicial tests:
+  - `pytest -q test_simplicial.py`
+
+## Notes
+
+- `calculs/uconf/` is the current source of truth.
+- `old-computations/` is historical material, not the primary target of the current test suite.
