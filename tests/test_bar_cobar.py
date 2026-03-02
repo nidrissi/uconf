@@ -123,6 +123,7 @@ class TestTrees:
 
     def test_validate_tree_lie(self):
         from sage.all import QQ
+
         # Valid Lie tree in arity 3
         tree = ((1, 2), 1, 2, 3)  # root has arity 3, decoration (1, 2)
         validated = validate_tree(tree, 3, Lie, QQ)
@@ -140,6 +141,52 @@ class TestBarConstructionLie:
         BLie = BarConstruction(Lie)
         B2 = BLie(2)
         assert B2.arity() == 2
+
+    def test_bar_lie_counit_element(self):
+        """Test the counit_element method returns the single-leaf tree."""
+        BLie = BarConstruction(Lie)
+        eta = BLie.counit_element()
+        assert eta.arity() == 1
+        # The single leaf has basis key = 1 (integer)
+        assert len(list(eta)) == 1
+        basis, coeff = next(iter(eta))
+        assert basis == 1
+        assert coeff == 1
+
+    def test_bar_lie_counit_extracts_coefficient(self):
+        """Test that counit extracts the coefficient of the single-leaf tree."""
+        BLie = BarConstruction(Lie)
+        B1 = BLie(1)
+
+        # Create element: 3 * (single leaf)
+        elem = 3 * B1.term(1)
+        assert B1.counit(elem) == 3
+
+        # Zero element
+        assert B1.counit(B1.zero()) == 0
+
+    def test_bar_lie_counit_zero_for_higher_arity(self):
+        """Test that counit is zero for arity != 1."""
+        BLie = BarConstruction(Lie)
+        B2 = BLie(2)
+        tree = ((1,), 1, 2)
+        elem = B2(tree)
+        assert B2.counit(elem) == 0
+
+    def test_bar_lie_reduced(self):
+        """Test that reduced removes the counit component."""
+        BLie = BarConstruction(Lie)
+        B1 = BLie(1)
+
+        # Element with only the single-leaf tree
+        elem = 5 * B1.term(1)
+        assert B1.reduced(elem) == B1.zero()
+
+        # For arity 2, reduced is identity
+        B2 = BLie(2)
+        tree = ((1,), 1, 2)
+        elem2 = B2(tree)
+        assert B2.reduced(elem2) == elem2
 
     def test_bar_lie_degree(self):
         BLie = BarConstruction(Lie)
@@ -442,6 +489,7 @@ class TestContractEdge:
         # Result depends on new_decoration
 
         from sage.all import QQ
+
         # Lie.compose(Lie(2).term((1,)), 1, Lie(2).term((1,))) computes the composition
         L2 = Lie(2)
         L3 = Lie(3)
@@ -467,11 +515,13 @@ class TestExpandVertex:
         # Top gets children 1 (the bottom vertex), 3
         # Bottom gets children 1, 2
         expanded = expand_vertex(
-            tree, tree, 1,
+            tree,
+            tree,
+            1,
             left_decoration=(1, 2),  # arity 2
             right_decoration=(1, 2),  # arity 2
             left_arity=2,
-            right_arity=2
+            right_arity=2,
         )
         assert weight(expanded) == 2
         assert tree_arity(expanded) == 3
