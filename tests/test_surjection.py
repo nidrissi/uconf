@@ -170,6 +170,51 @@ def test_section_composition(s1: Surjection.Element, s2: Surjection.Element):
     ), f"Section composition failed for {s1} and {s2} at position 1."
 
 
+@pytest.mark.parametrize("i,j", [(1, 2), (1, 3), (2, 3)])
+def test_surjection_parallel_composition_axiom_arity3(i: int, j: int) -> None:
+    """Parallel composition axiom for p in S(3), q, r in S(2).
+
+    For i < j: (p ∘_i q) ∘_{j + arity(q) - 1} r = (-1)^{|q|*|r|} * (p ∘_j r) ∘_i q
+    """
+    if i >= j:
+        return
+    p = Surjection(3)((1, 2, 3, 1))   # degree 1
+    q = Surjection(2)((1, 2, 1))       # degree 1
+    r = Surjection(2)((1, 2, 1))       # degree 1
+    sign = (-1) ** (q.degree() * r.degree())
+    lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
+    rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
+    assert lhs == rhs, f"Parallel axiom failed for i={i}, j={j}"
+
+
+@pytest.mark.parametrize("i,j", [(1, 2), (1, 3), (2, 3)])
+def test_surjection_parallel_composition_axiom_arity4(i: int, j: int) -> None:
+    """Parallel composition axiom for p in S(4), q in S(3), r in S(2)."""
+    if i >= j:
+        return
+    p = Surjection(4)((1, 2, 3, 4))    # degree 0
+    q = Surjection(3)((1, 2, 3, 1))    # degree 1
+    r = Surjection(2)((1, 2, 1))       # degree 1
+    sign = (-1) ** (q.degree() * r.degree())
+    lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
+    rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
+    assert lhs == rhs, f"Parallel axiom failed for i={i}, j={j}"
+
+
+@pytest.mark.parametrize("i,j", [(1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)])
+def test_surjection_parallel_composition_axiom_arity5(i: int, j: int) -> None:
+    """Parallel composition axiom for p in S(5), q, r in S(2)."""
+    if i >= j:
+        return
+    p = Surjection(5)((1, 2, 3, 4, 5))  # degree 0
+    q = Surjection(2)((1, 2, 1))        # degree 1
+    r = Surjection(2)((1, 2, 1))        # degree 1
+    sign = (-1) ** (q.degree() * r.degree())
+    lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
+    rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
+    assert lhs == rhs, f"Parallel axiom failed for i={i}, j={j}"
+
+
 @pytest.mark.xfail
 @pytest.mark.parametrize("s", PLANAR_SMALL)
 def test_section_boundary(s: Surjection.Element):
