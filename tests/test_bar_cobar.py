@@ -18,7 +18,7 @@ from uconf.trees import (
     decoration,
     expand_vertex,
     graft,
-    internal_edges,
+    internal_edges_dfs,
     is_internal,
     is_leaf,
     leaves,
@@ -95,10 +95,10 @@ class TestTrees:
 
     def test_internal_edges(self):
         tree = ((1, 2), 1, 2)
-        assert internal_edges(tree) == []
+        assert internal_edges_dfs(tree) == []
 
         nested = ((2, 1), ((1,), 1, 2), 3)
-        edges = internal_edges(nested)
+        edges = internal_edges_dfs(nested)
         assert len(edges) == 1
         parent, pos, child = edges[0]
         assert parent is nested
@@ -387,10 +387,20 @@ class TestBarConstructionSurjection:
         BS = BarConstruction(Surjection)
         B4 = BS(4)
 
-        tree = ((1, 2, 3), ((1, 2, 1), 1, 2), 3, 4)
+        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
         elem = B4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == B4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
+
+    def test_bar_surjection_boundary_squared_zero_arity5_weight3(self):
+        """d^2 = 0 for a higher-arity, weight-2 tree in B(Surjection)."""
+        BS = BarConstruction(Surjection)
+        B5 = BS(5)
+
+        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), ((1, 2, 1), 3, 4), 5)
+        elem = B5(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == B5.zero(), f"d^2 != 0 in arity 5: {bdry2}"
 
 
 class TestCobarConstruction:

@@ -109,7 +109,7 @@ def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     return vertex_deg + child_deg
 
 
-def internal_edges(tree) -> list[tuple[tuple, int, tuple]]:
+def internal_edges_dfs(tree) -> list[tuple[tuple, int, tuple]]:
     """Enumerate all internal edges (parent-child pairs between internal vertices).
 
     Returns a list of ``(parent_vertex, child_position, child_vertex)`` tuples
@@ -121,7 +121,7 @@ def internal_edges(tree) -> list[tuple[tuple, int, tuple]]:
     for i, child in enumerate(children(tree), start=1):
         if is_internal(child):
             result.append((tree, i, child))
-            result.extend(internal_edges(child))
+            result.extend(internal_edges_dfs(child))
     return result
 
 
