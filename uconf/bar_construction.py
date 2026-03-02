@@ -30,11 +30,12 @@ from sage.all import (
 from .signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
+    sign_from_exponent,
 )
 from .trees import (
     children,
     decoration,
-    internal_edges,
+    internal_edges_dfs,
     is_internal,
     is_leaf,
     leaves,
@@ -111,6 +112,14 @@ class BarConstruction:
                 on_basis=self._boundary_on_basis,
                 codomain=self,
             )
+            self._d1 = self.module_morphism(
+                on_basis=self._d1_on_basis,
+                codomain=self,
+            )
+            self._d2 = self.module_morphism(
+                on_basis=self._d2_on_basis,
+                codomain=self,
+            )
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
@@ -164,6 +173,8 @@ class BarConstruction:
             """LaTeX representation of one bar basis tree."""
             return tree_to_latex(basis_element, self.factory.operad_cls.name)
 
+        # TODO Fix the signs
+        # We have d1*d1 = 0, d2*d2 = 0, but d1*d2 + d2*d1 != 0.
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
 
@@ -176,10 +187,9 @@ class BarConstruction:
             """Internal differential: apply operad boundary to each vertex.
 
             For each vertex v_j in DFS order, the sign is:
-                (-1)^{1 + sum_{l < j} |s p_l|}
+                (-1)^{sum_{l < j} |s p_l|}
 
-            where |s p_l| = deg_P(p_l) + (arity(v_l) - 1) is the suspended degree.
-            The (-1)^1 comes from shifted_boundary_sign(1).
+            where |s p_l| = deg_P(p_l) + 1 is the suspended degree.
             """
             if is_leaf(tree):
                 return self.zero()
@@ -197,13 +207,11 @@ class BarConstruction:
                 operad_parent = self._operad_cls(v_arity, base_ring)
 
                 # Degree of this vertex in sP̄
-                vertex_sp_degree = operad_parent.degree_on_basis(dec) + (v_arity - 1)
+                vertex_sp_degree = operad_parent.degree_on_basis(dec) + 1
 
                 # Sign: (-1)^{shift_degree + cumulative}
                 # shift_degree = 1 for the suspension
-                sign = shifted_boundary_sign(1)
-                if cumulative_degree % 2 == 1:
-                    sign = -sign
+                sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
                 dec_elem = operad_parent.term(dec)
@@ -222,24 +230,21 @@ class BarConstruction:
             return result
 
         def _d2_on_basis(self, tree) -> "BarConstruction.Element":
-            """Structural differential: contract each internal edge.
-
-            For each internal edge from parent vertex p to its l-th child c:
-            - Composition sign: shifted_operadic_compose_sign(1, l, arity(p), arity(c), deg_P(c))
-            - Koszul sign: (-1)^{|sc| * S_left} where S_left is the total sP̄-degree
-              of siblings to the left of c
-            """
+            """Structural differential: contract each internal edge."""
             if is_leaf(tree):
                 return self.zero()
 
-            edges = internal_edges(tree)
+            edges = internal_edges_dfs(tree)
             if not edges:
                 return self.zero()
 
             result = self.zero()
             base_ring = self.base_ring()
 
-            for parent_vertex, child_pos, child_vertex in edges:
+            # Compute cumulative degrees for Koszul signs
+            cumulative_degree = 0
+
+            for edge_idx, (parent_vertex, child_pos, child_vertex) in enumerate(edges):
                 p_arity = vertex_arity(parent_vertex)
                 c_arity = vertex_arity(child_vertex)
                 p_dec = decoration(parent_vertex)
@@ -249,21 +254,14 @@ class BarConstruction:
                 c_parent = self._operad_cls(c_arity, base_ring)
 
                 # Degree of child decoration in P
+                p_deg_P = p_parent.degree_on_basis(p_dec)
                 c_deg_P = c_parent.degree_on_basis(c_dec)
 
-                # Compute S_left: total sP̄-degree of subtrees of parent before child_pos
-                s_left = 0
-                for i, sibling in enumerate(children(parent_vertex), start=1):
-                    if i < child_pos:
-                        s_left += subtree_degree(sibling, self._operad_cls, base_ring)
+                cumulative_sign = sign_from_exponent(cumulative_degree)
+                p_sign = sign_from_exponent(p_deg_P)
+                total_sign = cumulative_sign * p_sign
 
-                # Signs
-                compose_sign = shifted_operadic_compose_sign(
-                    1, child_pos, p_arity, c_arity, c_deg_P
-                )
-                child_degree_sign = (-1) ** (c_deg_P % 2)
-                koszul_sign = (-1) ** ((c_deg_P * s_left) % 2)
-                total_sign = compose_sign * child_degree_sign * koszul_sign
+                cumulative_degree += c_deg_P + 1  # +1 for suspension in sP̄
 
                 # Compute composition p ∘_l c
                 p_elem = p_parent.term(p_dec)
@@ -446,7 +444,16 @@ class BarConstruction:
             return self.parent().arity()
 
         def boundary(self) -> "BarConstruction.Element":
+            """Apply the bar differential (d_1 + d_2) to this element."""
             return self.parent().boundary(self)
+
+        def d1(self) -> "BarConstruction.Element":
+            """Internal differential: applies operad boundary to vertex decorations."""
+            return self.parent()._d1(self)
+
+        def d2(self) -> "BarConstruction.Element":
+            """Structural differential: contracts internal edges."""
+            return self.parent()._d2(self)
 
         def permute(self, sigma) -> "BarConstruction.Element":
             """Permute leaf labels by sigma (no sign, just relabeling)."""
