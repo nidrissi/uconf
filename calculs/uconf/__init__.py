@@ -18,7 +18,6 @@ These are implemented as lazy module morphisms cached on the parent objects.
 
 from sage.all import Partitions
 
-from .bar import *
 from .barratt_eccles import *
 from .lie import *
 from .operad import *
