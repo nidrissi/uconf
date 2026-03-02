@@ -102,6 +102,3 @@ class SurjectionLinearDual(Surjection):
             """Return the partial cocomposition dual to ``compose``."""
 
             return SurjectionLinearDual.infinitesimal_cocompose(self, i, m, n)
-
-
-SurjectionLinearDual.Element = SurjectionLinearDual.Element
