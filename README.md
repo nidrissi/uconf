@@ -139,6 +139,30 @@ dx = x.boundary()
 xp = x.permute([2, 1])
 ```
 
+### Bar / cobar constructions
+
+```python
+from uconf import BarConstruction, CobarConstruction, Lie, SurjectionLinearDual
+
+# Bar construction B(Lie)
+BLie = BarConstruction(Lie)
+B3 = BLie(3)
+t = B3(((1, 2), 1, 2, 3))
+dt = t.boundary()
+
+# Cobar construction Ω(S*)
+OmegaS = CobarConstruction(SurjectionLinearDual)
+O2 = OmegaS(2)
+x = O2(((1, 2), 1, 2))
+u = OmegaS.unit()
+
+# Free-operad composition (tree grafting)
+comp = OmegaS.compose(x, 1, u)
+
+# Cooperadic infinitesimal cocomposition on bar elements
+delta = t.infinitesimal_cocompose(i=2, m=2, n=2)
+```
+
 ### Surjection action on simplicial chains
 
 ```python
