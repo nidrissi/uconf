@@ -21,6 +21,7 @@ from sage.all import Partitions
 
 from .barratt_eccles import *
 from .cooperad import *
+from .hadamard_operad import *
 from .lie import *
 from .operad import *
 from .shifted_cooperad import *
