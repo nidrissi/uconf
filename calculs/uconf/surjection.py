@@ -221,7 +221,7 @@ class Surjection(CombinatorialFreeModule):
                 p1: tuple[int, ...],
                 k1: tuple[int, ...],
                 p2: tuple[int, ...],
-                k2: tuple[int],
+                k2: tuple[int, ...],
             ) -> int:
                 """Sign associated to the Berger-Fresse composition."""
 
