@@ -8,8 +8,9 @@ Le dossier `calculs/uconf` contient des modèles combinatoires d'opérades utili
 - `surjection.py` : opérade des surjections (`Surjection`).
 - `barratt_eccles.py` : opérade de Barratt-Eccles (`BarrattEccles`).
 - `lie.py` : composantes de l'opérade de Lie (`Lie`).
-- `bar.py` : construction bar d'une opérade (`BarConstruction`).
 - `operad.py` : protocole de typage (`OperadProtocol`) pour homogénéiser l'API.
+- `cooperad.py` : protocole de typage dual (`CooperadProtocol`) pour les constructions bar/cobar.
+- `signs.py` : conventions de signes partagées (suspension/Koszul).
 - `shifted_operad.py` : décalage opéradique (`ShiftedOperad`) avec signes de suspension.
 
 ### API commune (éléments)
@@ -88,8 +89,9 @@ dans les calculs.
 - `surjection.py` : opérade des surjections (`Surjection`).
 - `barratt_eccles.py` : opérade de Barratt-Eccles (`BarrattEccles`).
 - `lie.py` : composantes de l'opérade de Lie (`Lie`).
-- `bar.py` : construction bar d'une opérade (`BarConstruction`).
 - `operad.py` : protocole de typage (`OperadProtocol`) pour homogénéiser l'API.
+- `cooperad.py` : protocole de typage dual (`CooperadProtocol`) pour les constructions bar/cobar.
+- `signs.py` : conventions de signes partagées (suspension/Koszul).
 - `shifted_operad.py` : décalage opéradique (`ShiftedOperad`) avec signes de suspension.
 
 ### API commune (éléments)

@@ -16,29 +16,11 @@ from sage.all import (
     QQ,
     SymmetricGroup,
 )
-
-
-def _permutation_signature(sigma: Any) -> int:
-    """Return the signature of a permutation as ``+1`` or ``-1``."""
-
-    if hasattr(sigma, "signature"):
-        return int(sigma.signature())
-    if hasattr(sigma, "sign"):
-        return int(sigma.sign())
-
-    values = tuple(int(v) for v in sigma.tuple())
-    inversions = 0
-    for i, left in enumerate(values):
-        for right in values[i + 1 :]:
-            if left > right:
-                inversions += 1
-    return -1 if inversions % 2 else 1
-
-
-def _sign_from_exponent(exponent: int) -> int:
-    """Return ``(-1)^exponent`` as ``+1`` or ``-1``."""
-
-    return -1 if exponent % 2 else 1
+from .signs import (
+    shifted_boundary_sign,
+    shifted_operadic_compose_sign,
+    shifted_permutation_sign,
+)
 
 
 class ShiftedOperad:
@@ -90,10 +72,13 @@ class ShiftedOperad:
                 y_term = y_parent.base_parent().term(y_basis)
                 y_degree = y_parent.base_parent().degree_on_basis(y_basis)
                 base_composed = self.operad_cls.compose(x_term, i, y_term)
-                sign_exponent = self.shift_degree * (
-                    (i - 1) * (n - 1) + (m - 1) * y_degree
+                sign = shifted_operadic_compose_sign(
+                    self.shift_degree,
+                    i,
+                    m,
+                    n,
+                    y_degree,
                 )
-                sign = _sign_from_exponent(sign_exponent)
                 accumulated += target.sum_of_terms(
                     (
                         basis,
@@ -156,7 +141,7 @@ class ShiftedOperad:
             return super()._element_constructor_(x)
 
         def _boundary_on_basis(self, basis_element):
-            sign = _sign_from_exponent(self.factory.shift_degree)
+            sign = shifted_boundary_sign(self.factory.shift_degree)
             base_bdry = sign * self._base_parent.boundary(
                 self._base_parent.term(basis_element)
             )
@@ -233,7 +218,7 @@ class ShiftedOperad:
                 .sum_of_terms((basis, coeff) for basis, coeff in self)
                 .permute(sigma)
             )
-            sign = _permutation_signature(sigma) ** self.parent().factory.shift_degree
+            sign = shifted_permutation_sign(self.parent().factory.shift_degree, sigma)
             return self.parent().from_base(sign * base_permuted)
 
         def base_element(self):
