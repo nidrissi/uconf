@@ -239,7 +239,7 @@ class TestSurjectionAction:
         u = S2((1, 2, 1))  # degree 1
         x = SimplicialChains.standard_element(0)  # degree 0
         result = Surjection.act(u, x)
-        assert result == SimplicialChains(r=2).zero()
+        assert _as_dict(result) == {}
 
     def test_chain_map_property_small(self):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for small examples.
