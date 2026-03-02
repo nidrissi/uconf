@@ -4,10 +4,10 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 ## Repository structure
 
-- `calculs/uconf/`: main implementation (active API).
-- `calculs/test_*.py`: main regression test suite.
-- `calculs/pytest.ini`: pytest configuration (`-q`, `test_*.py`).
-- `calculs/misc.py`, `calculs/misc.ipynb`: drafts/experiments.
+- `uconf/`: main implementation (active API).
+- `tests/test_*.py`: main regression test suite.
+- `pytest.ini`: pytest configuration (`-q`, `test_*.py`).
+- `misc.py`, `misc.ipynb`: drafts/experiments.
 - `old-computations/`: older notebooks/utilities kept for reference.
 - `article.tex`, `article.bib`: project-related scientific writing.
 
@@ -19,7 +19,7 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 - Tests: `pytest`.
 - Optional: `comch` for compatibility tests (`test_comch_compatibility.py`).
 
-## `calculs/uconf` package
+## `uconf` package
 
 ### Operad models
 
@@ -108,7 +108,6 @@ These maps are built via `module_morphism` on first use.
 - Constructors generally accept `dict` (linear combinations) and tuple/list (basis key).
 - Degenerate/invalid keys are normalized to `0` through internal validation.
 - For permutations in tests, use **one-line list notation** (for example `[2, 1]`).
-- Run pytest from `calculs/` so `import uconf` resolves naturally.
 
 ## Quick examples
 
@@ -185,8 +184,6 @@ res = Surjection.act(u, x)
 
 ## Useful commands
 
-From `calculs/`:
-
 - Run all tests:
   - `pytest`
 - Run wrapper-focused tests:
@@ -200,5 +197,5 @@ From `calculs/`:
 
 ## Notes
 
-- `calculs/uconf/` is the current source of truth.
+- `uconf/` is the current source of truth.
 - `old-computations/` is historical material, not the primary target of the current test suite.
