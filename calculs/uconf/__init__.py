@@ -19,7 +19,9 @@ These are implemented as lazy module morphisms cached on the parent objects.
 
 from sage.all import Partitions
 
+from .bar_construction import *
 from .barratt_eccles import *
+from .cobar_construction import *
 from .cooperad import *
 from .hadamard_operad import *
 from .lie import *
@@ -30,6 +32,7 @@ from .shifted_operad import *
 from .simplicial import *
 from .surjection import *
 from .surjection_linear_dual import *
+from .trees import *
 
 
 def _table_reduction_on_basis(self: BarrattEccles):

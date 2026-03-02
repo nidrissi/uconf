@@ -43,6 +43,22 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
   - Linear dual companion of `Surjection`.
   - Operations: `counit`, `reduced`, `infinitesimal_cocompose`.
 
+### Bar-cobar constructions
+
+- `bar_construction.py` — `BarConstruction(P)`
+  - Bar construction of a connected dg-operad: `B(P) = (T^c(s\bar{P}), d_1 + d_2)`.
+  - Cooperadic model on decorated rooted trees.
+  - Differential combines internal differential on vertex decorations and edge-contraction terms.
+
+- `cobar_construction.py` — `CobarConstruction(C)`
+  - Cobar construction of a connected dg-cooperad: `\Omega(C) = (T(s^{-1}\bar{C}), d_1 + d_2)`.
+  - Operadic model on decorated rooted trees.
+  - Differential combines internal differential and vertex-expansion terms from infinitesimal cocomposition.
+
+- `trees.py`
+  - Shared rooted-tree combinatorics used by bar/cobar modules.
+  - Utilities for DFS traversal, arity/weight/leaves, grafting, edge contraction, and vertex expansion.
+
 ### Simplicial models
 
 - `simplicial.py`
@@ -68,6 +84,14 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
+
+## Bar-cobar tree conventions
+
+- Trees are encoded as nested tuples.
+  - Leaves are integers in `{1, ..., n}`.
+  - Internal vertices are `(decoration, child_1, ..., child_k)`.
+- In the current implementation, constructions assume connected inputs (`\bar{P}(1)=0`, `\bar{C}(1)=0`), so internal vertex arity is at least `2`.
+- Degree bookkeeping follows suspension/desuspension conventions used in `bar_construction.py` and `cobar_construction.py`.
 
 ## Dynamic wiring at `import uconf`
 
@@ -146,6 +170,7 @@ res = Surjection.act(u, x)
 - `test_shifted_operad.py`: sign/degree twists and README smoke test.
 - `test_shifted_cooperad.py`: cooperadic shift behavior (`counit`, cocomposition signs).
 - `test_hadamard_operad.py`: additive degree, tensor-differential sign rule, diagonal action/composition.
+- `test_bar_cobar.py`: tree utilities, bar/cobar differentials (`d_1 + d_2`), basic composition/cocomposition behavior, and `\partial^2 = 0` checks on sample elements.
 
 ### Simplicial and external compatibility
 
@@ -166,6 +191,8 @@ From `calculs/`:
   - `pytest`
 - Run wrapper-focused tests:
   - `pytest -q test_shifted_operad.py test_shifted_cooperad.py test_hadamard_operad.py`
+- Run bar/cobar tests:
+  - `pytest -q test_bar_cobar.py`
 - Run core operad tests:
   - `pytest -q test_common_operad.py test_surjection.py test_barratt_eccles.py test_lie.py`
 - Run simplicial tests:
