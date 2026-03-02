@@ -266,7 +266,7 @@ class BarConstruction:
                 c_deg_P = c_parent.degree_on_basis(c_dec)
 
                 # Global cumulative: sP̄-degree of all DFS vertices before parent
-                global_cum = 0
+                global_accum = 0
                 for v in verts:
                     if v is parent_vertex:
                         break
@@ -274,7 +274,7 @@ class BarConstruction:
                     v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(
                         decoration(v)
                     )
-                    global_cum += v_deg + (v_arity - 1)
+                    global_accum += v_deg + (v_arity - 1)
 
                 # Koszul sign: sP̄-degree of child times bar-degree before position l
                 c_sp_deg = c_deg_P + (c_arity - 1)
@@ -285,7 +285,7 @@ class BarConstruction:
                 )
                 koszul_exp = c_sp_deg * before_deg
 
-                total_sign = sign_from_exponent(global_cum + p_deg_P + koszul_exp)
+                total_sign = sign_from_exponent(global_accum + p_deg_P + koszul_exp)
 
                 # Compute composition p ∘_l c
                 p_elem = p_parent.term(p_dec)
