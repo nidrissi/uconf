@@ -2,7 +2,7 @@
 
 Provides :class:`SimplicialChains`, a :class:`CombinatorialFreeModule` whose
 basis elements are tensor products of non-degenerate simplices, and
-:class:`CosimplicialCochains`, the linear dual over a fixed standard simplex.
+:class:`SimplicialCochains`, the linear dual over a fixed standard simplex.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from sage.all import (
 
 
 class SimplicialChains(CombinatorialFreeModule):
-    r"""Iterated tensor product of normalised simplicial chains on `\Delta^\infty`.
+    r"""Iterated tensor product of normalized simplicial chains on `\Delta^\infty`.
 
     A basis element is a tuple of *simplices*, where each simplex is itself a
     tuple of strictly-increasing non-negative integers.  For example ::
@@ -287,12 +287,12 @@ class SimplicialChains(CombinatorialFreeModule):
 
 
 # ---------------------------------------------------------------------------
-# CosimplicialCochains
+# SimplicialCochains
 # ---------------------------------------------------------------------------
 
 
 class SimplicialCochains(CombinatorialFreeModule):
-    r"""Normalised cochains on `\Delta^N`, with tensor products.
+    r"""Normalized cochains on `\Delta^N`, with tensor products.
 
     The dual of :class:`SimplicialChains` restricted to simplices with
     vertices in `\{0, \dots, N\}`.  A basis cochain is identified with the

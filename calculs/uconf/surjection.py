@@ -289,7 +289,7 @@ class Surjection(CombinatorialFreeModule):
         chain: "SimplicialChains.Element",
         coord: int = 1,
     ) -> "SimplicialChains.Element":
-        r"""Action of the surjection operad on normalised simplicial chains.
+        r"""Action of the surjection operad on normalized simplicial chains.
 
         Given a surjection `u \in \mathcal{X}(r)_d` and a chain
         `x \in C_n(\Delta)`, the action produces an element
@@ -486,12 +486,12 @@ class Surjection(CombinatorialFreeModule):
         ----------
         surj : Surjection.Element
             Homogeneous surjection element.
-        cochains : tuple of CosimplicialCochains.Element
+        cochains : tuple of SimplicialCochains.Element
             One cochain per arity slot.
 
         Returns
         -------
-        CosimplicialCochains.Element
+        SimplicialCochains.Element
             The resulting cochain on `\Delta^N`.
         """
         from .simplicial import SimplicialCochains, SimplicialChains
