@@ -3,7 +3,7 @@
 import pytest
 from sage.all import ZZ
 
-from uconf import HadamardOperad, Lie, Surjection
+from uconf import HadamardProduct, Lie, Surjection
 
 
 def _as_dict(x):
@@ -11,14 +11,14 @@ def _as_dict(x):
 
 
 def test_degree_is_sum_of_factor_degrees() -> None:
-    had = HadamardOperad(Lie, Surjection)
+    had = HadamardProduct(Lie, Surjection)
     h2 = had(2)
     basis = ((1,), (1, 2, 1))
     assert h2.degree_on_basis(basis) == 1
 
 
 def test_boundary_uses_tensor_sign_rule() -> None:
-    had = HadamardOperad(Surjection, Surjection)
+    had = HadamardProduct(Surjection, Surjection)
     h2 = had(2)
 
     left_basis = (1, 2, 1)
@@ -42,7 +42,7 @@ def test_boundary_uses_tensor_sign_rule() -> None:
 
 
 def test_compose_is_diagonal_on_factors() -> None:
-    had = HadamardOperad(Surjection, Surjection)
+    had = HadamardProduct(Surjection, Surjection)
     h2 = had(2)
 
     x = h2(((1, 2), (1, 2)))
@@ -60,7 +60,7 @@ def test_compose_is_diagonal_on_factors() -> None:
 
 
 def test_permutation_is_diagonal_action() -> None:
-    had = HadamardOperad(Lie, Lie)
+    had = HadamardProduct(Lie, Lie)
     h2 = had(2)
 
     x = h2(((1,), (1,)))
@@ -74,7 +74,7 @@ def test_permutation_is_diagonal_action() -> None:
 
 
 def test_compose_requires_same_base_ring() -> None:
-    had = HadamardOperad(Surjection, Surjection)
+    had = HadamardProduct(Surjection, Surjection)
     x = had(2)(((1, 2), (1, 2)))
     y = had(2, base_ring=ZZ)(((1, 2), (1, 2)))
 
