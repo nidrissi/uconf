@@ -42,6 +42,8 @@ from .trees import (
     split_at_vertex,
     subtree_degree,
     tree_arity,
+    tree_to_latex,
+    tree_to_string,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -142,6 +144,14 @@ class BarConstruction:
             since sum_v (arity(v) - 1) = n - 1 for any tree.
             """
             return subtree_degree(tree, self._operad_cls, self.base_ring())
+
+        def _repr_term(self, basis_element) -> str:
+            """String representation of one bar basis tree."""
+            return tree_to_string(basis_element, self.factory.operad_cls.name)
+
+        def _latex_term(self, basis_element) -> str:
+            """LaTeX representation of one bar basis tree."""
+            return tree_to_latex(basis_element, self.factory.operad_cls.name)
 
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
@@ -368,6 +378,46 @@ class BarConstruction:
 
     class Element(CombinatorialFreeModule.Element):
         """Element of a bar construction cooperad component."""
+
+        def pretty(self) -> str:
+            """Return a readable linear-combination string for this element."""
+            if not self:
+                return "0"
+
+            pieces = []
+            for basis, coeff in self:
+                term = self.parent()._repr_term(basis)
+                if coeff == 1:
+                    pieces.append(term)
+                elif coeff == -1:
+                    pieces.append(f"-{term}")
+                else:
+                    pieces.append(f"{coeff}*{term}")
+            return " + ".join(pieces).replace("+ -", "- ")
+
+        def pretty_latex(self) -> str:
+            """Return a LaTeX linear-combination string for this element."""
+            if not self:
+                return "0"
+
+            pieces = []
+            for basis, coeff in self:
+                term = self.parent()._latex_term(basis)
+                if coeff == 1:
+                    pieces.append(term)
+                elif coeff == -1:
+                    pieces.append(f"-{term}")
+                else:
+                    pieces.append(f"{coeff} \\left({term}\\right)")
+            return " + ".join(pieces).replace("+ -", "- ")
+
+        def _repr_(self) -> str:
+            """Display this bar element as a formatted linear combination."""
+            return self.pretty()
+
+        def _latex_(self) -> str:
+            """LaTeX display for this bar element."""
+            return self.pretty_latex()
 
         def arity(self) -> int:
             return self.parent().arity()
