@@ -4,9 +4,10 @@ This package exposes several operads and related constructions used in the
 project:
 
 - :class:`Surjection`
+- :class:`SurjectionLinearDual`
 - :class:`BarrattEccles`
 - :class:`Lie`
-- :class:`BarConstruction`
+- :class:`CooperadProtocol`
 
 It also wires two standard maps at import time:
 
@@ -19,11 +20,14 @@ These are implemented as lazy module morphisms cached on the parent objects.
 from sage.all import Partitions
 
 from .barratt_eccles import *
+from .cooperad import *
 from .lie import *
 from .operad import *
+from .signs import *
 from .shifted_operad import *
 from .simplicial import *
 from .surjection import *
+from .surjection_linear_dual import *
 
 
 def _table_reduction_on_basis(self: BarrattEccles):
