@@ -27,10 +27,12 @@ from .trees import (
     decoration,
     expand_vertex,
     graft,
+    internal_edges_dfs,
     is_internal,
     is_leaf,
     leaves,
     relabel_leaves,
+    subtree_degree,
     subtree_degree_cobar,
     tree_arity,
     tree_to_latex,
@@ -256,76 +258,52 @@ class CobarConstruction:
             return result
 
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Structural differential: expand vertices using cocomposition.
-
-            For each vertex v with decoration c_v ∈ C̄(k), and for each
-            infinitesimal cocomposition Δ^{l; a, b}(c_v) with a + b = k + 1:
-            - Replace v by two vertices connected at position l
-            - Apply appropriate signs
-            """
+            """Structural differential: expand vertices using cocomposition."""
             if is_leaf(tree):
                 return self.zero()
 
             result = self.zero()
-            verts = vertices_dfs(tree)
             base_ring = self.base_ring()
+            verts = vertices_dfs(tree)
 
-            for j, vertex in enumerate(verts):
-                k = vertex_arity(vertex)
-                dec = decoration(vertex)
-                cooperad_parent = self._cooperad_cls(k, base_ring)
+            for v_idx, curr_vertex in enumerate(verts):
+                curr_arity = vertex_arity(curr_vertex)
+                curr_dec = decoration(curr_vertex)
+                curr_parent = self._cooperad_cls(curr_arity, base_ring)
+                curr_deg_C = curr_parent.degree_on_basis(curr_dec)
 
-                # Compute cumulative s⁻¹C degree of vertices before j.
-                # This gives the sign (-1)^{cumulative_before} for the
-                # derivation formula: d_2(T) = Σ_j (-1)^{|v_0|+...+|v_{j-1}|} T_j
-                cumulative_before = 0
-                for jj in range(j):
-                    v_jj = verts[jj]
-                    v_jj_arity = vertex_arity(v_jj)
-                    dec_jj = decoration(v_jj)
-                    parent_jj = self._cooperad_cls(v_jj_arity, base_ring)
-                    cumulative_before += parent_jj.degree_on_basis(dec_jj) - (
-                        v_jj_arity - 1
+                global_accum = 0
+                for vertex in verts:
+                    if vertex is curr_vertex:
+                        break
+                    v_arity = vertex_arity(vertex)
+                    v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(
+                        decoration(vertex)
                     )
+                    global_accum += v_deg + (v_arity - 1)
 
-                # For each way to split arity k into (a, b) with a + b = k + 1
-                for a in range(2, k + 1):  # a >= 2 (connected)
-                    b = k + 1 - a
-                    if b < 2:  # b >= 2 (connected)
-                        continue
+                c_sc_deg = curr_deg_C + curr_arity + 1
+                total_sign = sign_from_exponent(global_accum + c_sc_deg)
 
-                    # For each position l in {1, ..., a}
-                    for l in range(1, a + 1):
-                        # Infinitesimal cocomposition
-                        dec_elem = cooperad_parent.term(dec)
-
-                        try:
-                            delta = self._cooperad_cls.infinitesimal_cocompose(
-                                dec_elem, l, a, b
-                            )
-                        except (ValueError, AttributeError):
-                            continue
-
-                        if not delta:
-                            continue
-
-                        # Sign: (-1)^{cumulative_before + (l-1)(b-1)}
-                        # - cumulative_before: Koszul sign for d_2 as a derivation
-                        # - (l-1)(b-1): sign from operadic composition at position l
-                        total_sign = sign_from_exponent(
-                            cumulative_before + (l - 1) * (b - 1)
-                        )
-
-                        for tensor_key, coeff in delta:
-                            left_dec, right_dec = tensor_key
-
-                            # Expand the vertex
+                curr_elem = curr_parent.term(curr_dec)
+                for m in range(2, curr_arity):
+                    n = curr_arity - m + 1
+                    for i in range(1, m + 1):
+                        cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
+                        for (dec_left, dec_right), coeff in cocomp:
                             new_tree = expand_vertex(
-                                tree, vertex, l, left_dec, right_dec, a, b
+                                tree, curr_vertex, i, dec_left, dec_right, m, n
                             )
-
+                            new_tree = self._replace_vertex_decoration_by_index(
+                                new_tree, vertices_dfs(new_tree), v_idx, dec_left
+                            )
+                            new_tree = self._replace_vertex_decoration_by_index(
+                                new_tree,
+                                vertices_dfs(new_tree),
+                                v_idx + 1,
+                                dec_right,
+                            )
                             result += total_sign * coeff * self.term(new_tree)
-
             return result
 
         def _replace_vertex_decoration_by_index(
