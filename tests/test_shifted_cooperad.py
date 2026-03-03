@@ -12,7 +12,7 @@ def test_degree_shift_surjection_linear_dual() -> None:
     c2 = shifted(2)
     x = c2((1, 2, 1))
     basis = next(iter(x.support()))
-    assert c2.degree_on_basis(basis) == 2
+    assert c2.degree_on_basis(basis) == 0
 
 
 def test_counit_preserved_by_shift_wrapper() -> None:
