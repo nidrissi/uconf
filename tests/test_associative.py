@@ -134,3 +134,11 @@ def test_associative_equivariance_on_linear_combinations() -> None:
         list(_block_permutation(sigma, i, tau))
     )
     assert _as_dict(lhs) == _as_dict(rhs)
+
+
+@pytest.mark.parametrize("n", range(1, 6))
+def test_associative_differential_squared_zero(n: int) -> None:
+    """d²(x) = 0 for every basis element of Ass(n) (boundary is identically 0)."""
+    zero = Associative(n).zero()
+    for elem in Associative(n).basis_it():
+        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Ass({n})"
