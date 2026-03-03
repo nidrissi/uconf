@@ -24,7 +24,9 @@ from sage.all import Partitions
 from .bar_construction import *
 from .associative import *
 from .barratt_eccles import *
+from .coassociative import *
 from .cobar_construction import *
+from .cocommutative import *
 from .commutative import *
 from .cooperad import *
 from .hadamard_operad import *

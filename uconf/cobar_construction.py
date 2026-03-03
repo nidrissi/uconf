@@ -19,26 +19,20 @@ from __future__ import annotations
 
 from typing import ClassVar, Iterator
 
-from sage.all import (
-    CombinatorialFreeModule,
-    GradedModulesWithBasis,
-    QQ,
-    SymmetricGroup,
-)
+from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
-from .signs import (
-    shifted_boundary_sign,
-    shifted_operadic_compose_sign,
-)
+from .signs import shifted_boundary_sign, sign_from_exponent
 from .trees import (
     children,
     decoration,
     expand_vertex,
     graft,
+    internal_edges_dfs,
     is_internal,
     is_leaf,
     leaves,
     relabel_leaves,
+    subtree_degree,
     subtree_degree_cobar,
     tree_arity,
     tree_to_latex,
@@ -62,6 +56,13 @@ class CobarConstruction:
     vertices are decorated by elements of C̄ (the coaugmentation coideal).
 
     For connected cooperads, C̄(1) = 0, so all internal vertices have arity >= 2.
+
+    Note:
+        Unlike BarConstruction, this does not currently implement automatic
+        shuffle tree normalization. The differential sign formulas need to be
+        reworked to be compatible with shuffle normalization. Use the functions
+        ``to_shuffle_tree_cobar`` and ``is_shuffle_tree`` from ``trees`` module
+        for manual normalization if needed.
     """
 
     def __init__(self, cooperad_cls, max_weight: int = 3):
@@ -138,6 +139,14 @@ class CobarConstruction:
 
             self.boundary = self.module_morphism(
                 on_basis=self._boundary_on_basis,
+                codomain=self,
+            )
+            self._d1 = self.module_morphism(
+                on_basis=self._d1_on_basis,
+                codomain=self,
+            )
+            self._d2 = self.module_morphism(
+                on_basis=self._d2_on_basis,
                 codomain=self,
             )
 
@@ -221,13 +230,7 @@ class CobarConstruction:
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
         def _d1_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Internal differential: apply cooperad boundary to each vertex.
-
-            For each vertex v_j in DFS order, the sign is:
-                (-1)^{-1 + sum_{l < j} |s⁻¹ c_l|}
-
-            where |s⁻¹ c_l| = deg_C(c_l) - (arity(v_l) - 1) is the desuspended degree.
-            """
+            """Internal differential: apply cooperad boundary to each vertex."""
             if is_leaf(tree):
                 return self.zero()
 
@@ -243,15 +246,9 @@ class CobarConstruction:
                 cooperad_parent = self._cooperad_cls(v_arity, base_ring)
 
                 # Degree of this vertex in s⁻¹C̄
-                vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - (
-                    v_arity - 1
-                )
+                vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - 1
 
-                # Sign: (-1)^{-1 + cumulative} = (-1)^{1 + cumulative}
-                # shifted_boundary_sign(-1) = (-1)^{-1} = -1
-                sign = shifted_boundary_sign(-1)
-                if cumulative_degree % 2 == 1:
-                    sign = -sign
+                sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
                 dec_elem = cooperad_parent.term(dec)
@@ -267,93 +264,75 @@ class CobarConstruction:
 
             return result
 
+        # TODO: The d_2 implementation is the most complex part and has sign issues
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
             """Structural differential: expand vertices using cocomposition.
 
-            For each vertex v with decoration c_v ∈ C̄(k), and for each
-            infinitesimal cocomposition Δ^{l; a, b}(c_v) with a + b = k + 1:
-            - Replace v by two vertices connected at position l
-            - Apply appropriate signs
+            For each vertex v with decoration c and arity k, and each way to
+            split it via infinitesimal cocomposition Delta^{i; m, n}(c), the sign is:
+                (-1)^{global_accum + deg_C(c) + koszul_exp + (n - 1)}
+
+            where:
+            - global_accum = sum over DFS-preceding vertices of (deg_C - (arity - 1))
+              is the total s^{-1}C-degree of preceding vertices
+            - deg_C(c) is the C-degree of the current vertex decoration
+            - koszul_exp = right_sinv_deg * before_deg (Koszul sign for position)
+            - (n - 1) accounts for the desuspension shift of the new inner vertex
             """
             if is_leaf(tree):
                 return self.zero()
 
             result = self.zero()
-            verts = vertices_dfs(tree)
             base_ring = self.base_ring()
+            verts = vertices_dfs(tree)
 
-            for j, vertex in enumerate(verts):
-                k = vertex_arity(vertex)
-                dec = decoration(vertex)
-                cooperad_parent = self._cooperad_cls(k, base_ring)
+            for v_idx, curr_vertex in enumerate(verts):
+                curr_arity = vertex_arity(curr_vertex)
+                curr_dec = decoration(curr_vertex)
+                curr_parent = self._cooperad_cls(curr_arity, base_ring)
+                curr_deg_C = curr_parent.degree_on_basis(curr_dec)
 
-                # Compute cumulative degree of vertices before j for Koszul sign
-                cumulative_before = 0
-                for l in range(j):
-                    v_l = verts[l]
-                    v_l_arity = vertex_arity(v_l)
-                    dec_l = decoration(v_l)
-                    parent_l = self._cooperad_cls(v_l_arity, base_ring)
-                    cumulative_before += parent_l.degree_on_basis(dec_l) - (
-                        v_l_arity - 1
+                # Cumulative s^{-1}C-degree of DFS vertices before current
+                global_accum = 0
+                for vertex in verts:
+                    if vertex is curr_vertex:
+                        break
+                    v_arity = vertex_arity(vertex)
+                    v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(
+                        decoration(vertex)
                     )
+                    # s^{-1}C degree = deg_C - (arity - 1)
+                    global_accum += v_deg - (v_arity - 1)
 
-                # For each way to split arity k into (a, b) with a + b = k + 1
-                for a in range(2, k + 1):  # a >= 2 (connected)
-                    b = k + 1 - a
-                    if b < 2:  # b >= 2 (connected)
-                        continue
-
-                    # For each position l in {1, ..., a}
-                    for l in range(1, a + 1):
-                        # Infinitesimal cocomposition
-                        dec_elem = cooperad_parent.term(dec)
-
-                        try:
-                            delta = self._cooperad_cls.infinitesimal_cocompose(
-                                dec_elem, l, a, b
-                            )
-                        except (ValueError, AttributeError):
-                            continue
-
-                        if not delta:
-                            continue
-
-                        for tensor_key, coeff in delta:
-                            left_dec, right_dec = tensor_key
-
-                            # Degrees
-                            left_parent = self._cooperad_cls(a, base_ring)
-                            right_parent = self._cooperad_cls(b, base_ring)
-                            right_deg_C = right_parent.degree_on_basis(right_dec)
-                            right_sinv_deg = right_deg_C - (b - 1)
-
-                            # Composition sign from desuspension
-                            compose_sign = shifted_operadic_compose_sign(
-                                -1, l, a, b, right_deg_C
+                curr_elem = curr_parent.term(curr_dec)
+                for m in range(2, curr_arity):
+                    n = curr_arity - m + 1
+                    for i in range(1, m + 1):
+                        cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
+                        for (dec_left, dec_right), coeff in cocomp:
+                            # s^{-1}C degree of the new inner vertex decoration
+                            right_parent = self._cooperad_cls(n, base_ring)
+                            right_sinv_deg = right_parent.degree_on_basis(dec_right) - (
+                                n - 1
                             )
 
-                            # Koszul sign from reordering:
-                            # s⁻¹c_right passes s⁻¹decorations of children 1..l-1 of vertex
-                            children_before_l_deg = 0
-                            for idx in range(l - 1):
-                                child = children(vertex)[idx]
-                                children_before_l_deg += subtree_degree_cobar(
-                                    child, self._cooperad_cls, base_ring
-                                )
-
-                            koszul_sign = (-1) ** (
-                                (right_sinv_deg * children_before_l_deg) % 2
+                            # Cobar-degree of subtrees at positions 1, ..., i-1
+                            before_deg = sum(
+                                subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                                for j, ch in enumerate(children(curr_vertex), start=1)
+                                if j < i
                             )
-                            total_sign = compose_sign * koszul_sign
 
-                            # Expand the vertex
+                            koszul_exp = right_sinv_deg * before_deg
+                            # Sign includes (n-1) for the desuspension shift
+                            total_sign = sign_from_exponent(
+                                global_accum + curr_deg_C + koszul_exp + (n - 1)
+                            )
+
                             new_tree = expand_vertex(
-                                tree, vertex, l, left_dec, right_dec, a, b
+                                tree, curr_vertex, i, dec_left, dec_right, m, n
                             )
-
                             result += total_sign * coeff * self.term(new_tree)
-
             return result
 
         def _replace_vertex_decoration_by_index(
@@ -434,6 +413,14 @@ class CobarConstruction:
 
         def boundary(self) -> "CobarConstruction.Element":
             return self.parent().boundary(self)
+
+        def d1(self) -> "CobarConstruction.Element":
+            """Internal differential: applies cooperad boundary to vertex decorations."""
+            return self.parent()._d1(self)
+
+        def d2(self) -> "CobarConstruction.Element":
+            """Structural differential: expands internal edges."""
+            return self.parent()._d2(self)
 
         def permute(self, sigma) -> "CobarConstruction.Element":
             """Permute leaf labels by sigma (no sign, just relabeling)."""

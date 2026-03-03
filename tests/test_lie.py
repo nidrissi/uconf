@@ -178,3 +178,111 @@ def test_compose_full_basis_arity6() -> None:
 
     assert result.parent().arity() == 6, "Compose of Lie(3)⊗Lie(4) must land in Lie(6)."
     assert elapsed < 30, f"compose took {elapsed:.2f} s at arity 6 warm (limit: 30 s)."
+
+
+# ===========================================================================
+# Parallel associativity axiom:  (x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y  for i < k
+# ===========================================================================
+
+@pytest.mark.parametrize("i,k", [(1, 2), (1, 3), (2, 3)])
+def test_lie_parallel_associativity_arity4(i: int, k: int) -> None:
+    """Parallel associativity for p ∈ Lie(3), q, r ∈ Lie(2) → Lie(5)."""
+    mu3 = Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,)))  # Lie(3)
+    mu2 = Lie(2)((1,))
+    n = 2
+    lhs = Lie.compose(Lie.compose(mu3, i, mu2), k + n - 1, mu2)
+    rhs = Lie.compose(Lie.compose(mu3, k, mu2), i, mu2)
+    assert lhs == rhs, f"Lie parallel axiom failed for i={i}, k={k} at arity 4"
+
+
+@pytest.mark.parametrize("i,k", [
+    (1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4),
+])
+def test_lie_parallel_associativity_arity5(i: int, k: int) -> None:
+    """Parallel associativity for p ∈ Lie(4), q, r ∈ Lie(2) → Lie(6)."""
+    bracket = Lie(2)((1,))
+    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4)
+    n = 2
+    lhs = Lie.compose(Lie.compose(mu4, i, bracket), k + n - 1, bracket)
+    rhs = Lie.compose(Lie.compose(mu4, k, bracket), i, bracket)
+    assert lhs == rhs, f"Lie parallel axiom failed for i={i}, k={k} at arity 5"
+
+
+# ===========================================================================
+# Equivariance:  (σ·x)∘_i(τ·y) = (σ∘_iτ) · (x∘_{σ^{-1}(i)} y)
+# ===========================================================================
+
+def _block_permutation(sigma: list[int], i: int, tau: list[int]) -> list[int]:
+    """Return the block permutation ``σ ∘_i τ`` in one-line notation."""
+    shift = len(tau) - 1
+    result = []
+    for v in sigma:
+        if v < i:
+            result.append(v)
+        elif v > i:
+            result.append(v + shift)
+        else:
+            result.extend([t + i - 1 for t in tau])
+    return result
+
+
+def _inverse_one_line(sigma: list[int]) -> list[int]:
+    """Return inverse of a one-line permutation."""
+    inv = [0] * len(sigma)
+    for pos, val in enumerate(sigma, start=1):
+        inv[val - 1] = pos
+    return inv
+
+
+@pytest.mark.parametrize("sigma,tau", [
+    ([2, 1, 3], [2, 1]),   # σ ∈ S_3, τ ∈ S_2
+    ([2, 3, 1], [2, 1]),   # σ = 3-cycle, τ = transposition
+    ([3, 1, 2], [2, 1]),
+    ([2, 1, 3], [1, 2]),   # τ = identity
+])
+def test_lie_equivariance_arity3_times_2(sigma: list[int], tau: list[int]) -> None:
+    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(3)×Lie(2)."""
+    x = Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,)))  # Lie(3)
+    y = Lie(2)((1,))
+    sigma_inv = _inverse_one_line(sigma)
+    for i in range(1, 4):
+        lhs = Lie.compose(x.permute(sigma), i, y.permute(tau))
+        bp = _block_permutation(sigma, i, tau)
+        rhs = Lie.compose(x, sigma_inv[i - 1], y).permute(bp)
+        assert lhs == rhs, (
+            f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
+        )
+
+
+@pytest.mark.parametrize("sigma,tau", [
+    ([2, 1, 3, 4], [2, 1]),  # σ ∈ S_4, τ ∈ S_2
+    ([2, 3, 1, 4], [2, 1]),
+    ([4, 1, 2, 3], [2, 1]),
+    ([2, 1, 4, 3], [2, 1]),
+])
+def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> None:
+    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(4)×Lie(2)."""
+    bracket = Lie(2)((1,))
+    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4)
+    y = Lie(2)((1,))
+    sigma_inv = _inverse_one_line(sigma)
+    for i in range(1, 5):
+        lhs = Lie.compose(mu4.permute(sigma), i, y.permute(tau))
+        bp = _block_permutation(sigma, i, tau)
+        rhs = Lie.compose(mu4, sigma_inv[i - 1], y).permute(bp)
+        assert lhs == rhs, (
+            f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
+        )
+
+
+# ===========================================================================
+# Square-zero differential:  d² = 0
+# ===========================================================================
+
+@pytest.mark.parametrize("n", range(0, 7))
+def test_lie_differential_squared_zero(n: int) -> None:
+    """d²(x) = 0 for every basis element of Lie(n) (boundary is identically 0)."""
+    l = Lie(n)
+    zero = l.zero()
+    for elem in l.basis_it():
+        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n})"
