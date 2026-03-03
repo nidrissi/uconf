@@ -797,6 +797,14 @@ class TestCobarSignFix:
     decoration (1,2,3,1) in arity 3 has s^{-1}C degree = (4-3) - 2 = -1.
     """
 
+    def test_cobar_com_square_zero_arity5_weight1(self):
+        OmegaCom = CobarConstruction(CoCommutative)
+        OC5 = OmegaCom(5)
+        tree = ((), 1, 2, 3, 4, 5)
+        elem = OC5(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == OC5.zero(), f"d^2 != 0 for CoCom arity 5: {bdry2}"
+
     def test_cobar_surjection_square_zero_arity4_weight2(self):
         """d^2 = 0 for a weight-2 tree in Ω(S*) where the sign fix matters."""
         OmegaS = CobarConstruction(SurjectionLinearDual)
