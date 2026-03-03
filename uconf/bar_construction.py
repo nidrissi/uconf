@@ -38,10 +38,12 @@ from .trees import (
     internal_edges_dfs,
     is_internal,
     is_leaf,
+    is_shuffle_tree,
     leaves,
     relabel_leaves,
     split_at_vertex,
     subtree_degree,
+    to_shuffle_tree_bar,
     tree_arity,
     tree_to_latex,
     tree_to_string,
@@ -127,8 +129,27 @@ class BarConstruction:
                 basis_key, self._arity, self._operad_cls, self.base_ring()
             )
 
+        def _normalize_to_shuffle(self, tree):
+            """Normalize a tree to shuffle form for the bar construction.
+
+            Returns (shuffle_tree, sign) where shuffle_tree is the normalized
+            tree and sign is the accumulated Koszul and operad action sign.
+
+            A shuffle tree has children at each vertex sorted by min leaf label.
+            This implements the standard basis for the bar construction on a
+            symmetric operad (cf. Bremner-Dotsenko, Loday-Vallette).
+            """
+            if is_leaf(tree):
+                return tree, 1
+            return to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring())
+
         def _element_constructor_(self, x):
-            """Build elements from tree basis keys or sparse dictionaries."""
+            """Build elements from tree basis keys or sparse dictionaries.
+
+            Trees are automatically normalized to shuffle form. The shuffle tree
+            basis identifies trees that differ only by permutations of children
+            at vertices with symmetric decorations.
+            """
             if isinstance(x, BarConstruction.Element):
                 if x.parent().factory is self.factory:
                     return self.sum_of_terms((basis, coeff) for basis, coeff in x)
@@ -140,14 +161,23 @@ class BarConstruction:
                     clean_key = self._validate_basis_key(key)
                     if clean_key is None:
                         continue
-                    clean_dict[clean_key] = clean_dict.get(clean_key, 0) + coeff
+                    # Normalize to shuffle form
+                    shuffle_key, sign = self._normalize_to_shuffle(clean_key)
+                    clean_dict[shuffle_key] = (
+                        clean_dict.get(shuffle_key, 0) + coeff * sign
+                    )
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, tuple):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                return self.term(clean_key)
+                # Normalize to shuffle form
+                shuffle_key, sign = self._normalize_to_shuffle(clean_key)
+                if sign == 1:
+                    return self.term(shuffle_key)
+                else:
+                    return sign * self.term(shuffle_key)
 
             return super()._element_constructor_(x)
 
@@ -207,8 +237,7 @@ class BarConstruction:
                 # Degree of this vertex in sP̄
                 vertex_sp_degree = operad_parent.degree_on_basis(dec) + 1
 
-                # Sign: (-1)^{shift_degree + cumulative}
-                # shift_degree = 1 for the suspension
+                # Sign: (-1)^{cumulative}
                 sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration

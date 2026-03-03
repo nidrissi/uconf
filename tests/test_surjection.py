@@ -224,3 +224,166 @@ def test_section_boundary(s: Surjection.Element):
     s_boundary = s.boundary()
     sect_of_boundary = s_boundary.section()
     assert sect_boundary == sect_of_boundary, f"Section boundary failed for {s}."
+
+
+# ===========================================================================
+# Sequential composition axiom:  (x∘_i y)∘_{i+j-1} z = x∘_i (y∘_j z)
+# ===========================================================================
+
+@pytest.mark.parametrize("x_tuple,y_tuple,z_tuple,m,n,p", [
+    # degree-1 × degree-0 × degree-0
+    ((1, 2, 1),     (1, 2),     (1, 2),     2, 2, 2),
+    # degree-0 × degree-1 × degree-1
+    ((1, 2, 3),     (1, 2, 1),  (1, 2, 1),  3, 2, 2),
+    # degree-0 × degree-0 × degree-0, larger arities
+    ((1, 2, 3, 4),  (1, 2, 3),  (1, 2),     4, 3, 2),
+    ((1, 2, 3, 4),  (1, 2),     (1, 2, 3),  4, 2, 3),
+    # degree-1 × degree-0 × degree-1
+    ((1, 2, 3, 1),  (1, 2),     (1, 2, 1),  3, 2, 2),
+    ((1, 2, 3, 4, 1), (1, 2),   (1, 2, 1),  4, 2, 2),
+    # degree-2 × degree-0 × degree-0
+    ((1, 2, 1, 2),  (1, 2),     (1, 2),     2, 2, 2),
+    # degree-0 × degree-1 × degree-0
+    ((1, 2, 3),     (1, 2, 1),  (1, 2),     3, 2, 2),
+    ((1, 2, 3, 4),  (1, 2, 3, 1), (1, 2),   4, 3, 2),
+])
+def test_surjection_sequential_composition_axiom(
+    x_tuple: tuple, y_tuple: tuple, z_tuple: tuple, m: int, n: int, p: int
+) -> None:
+    """(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z) for all valid i, j."""
+    x = Surjection(m)(x_tuple)
+    y = Surjection(n)(y_tuple)
+    z = Surjection(p)(z_tuple)
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            lhs = Surjection.compose(Surjection.compose(x, i, y), i + j - 1, z)
+            rhs = Surjection.compose(x, i, Surjection.compose(y, j, z))
+            assert lhs == rhs, (
+                f"Sequential axiom failed for x={x_tuple}, y={y_tuple}, "
+                f"z={z_tuple}, i={i}, j={j}"
+            )
+
+
+# ===========================================================================
+# Equivariance:  (σ·x)∘_i(τ·y) = (σ∘_iτ) · (x∘_{σ^{-1}(i)} y)
+# ===========================================================================
+
+def _block_permutation(sigma: list[int], i: int, tau: list[int]) -> list[int]:
+    """Return the block permutation ``σ ∘_i τ`` in one-line notation."""
+    shift = len(tau) - 1
+    result = []
+    for v in sigma:
+        if v < i:
+            result.append(v)
+        elif v > i:
+            result.append(v + shift)
+        else:
+            result.extend([t + i - 1 for t in tau])
+    return result
+
+
+def _inverse_one_line(sigma: list[int]) -> list[int]:
+    """Return inverse of a permutation given in one-line notation."""
+    inv = [0] * len(sigma)
+    for pos, val in enumerate(sigma, start=1):
+        inv[val - 1] = pos
+    return inv
+
+
+@pytest.mark.parametrize("x_tuple,sigma,y_tuple,tau,m,n", [
+    # S(2)×S(2), σ=τ=(2,1), degree 0×0
+    ((1, 2),      [2, 1], (1, 2),      [2, 1], 2, 2),
+    # S(2)×S(2), degree 1×0
+    ((1, 2, 1),   [2, 1], (1, 2),      [2, 1], 2, 2),
+    # S(3)×S(2), σ=(2,3,1), τ=(2,1), degree 0×0
+    ((1, 2, 3),   [2, 3, 1], (1, 2),   [2, 1], 3, 2),
+    # S(3)×S(2), degree 1×0
+    ((1, 2, 3, 1), [2, 3, 1], (1, 2),  [2, 1], 3, 2),
+    # S(3)×S(2), σ=(2,1,3), degree 0×1
+    ((1, 2, 3),   [2, 1, 3], (1, 2, 1), [2, 1], 3, 2),
+    # S(4)×S(2), σ=(2,1,3,4), τ=(2,1), degree 0×0
+    ((1, 2, 3, 4), [2, 1, 3, 4], (1, 2), [2, 1], 4, 2),
+    # S(4)×S(2), degree 1×1
+    ((1, 2, 3, 4, 1), [2, 1, 3, 4], (1, 2, 1), [2, 1], 4, 2),
+    # S(3)×S(3), σ=(3,1,2), τ=(2,3,1), degree 0×0
+    ((1, 2, 3),   [3, 1, 2], (1, 2, 3),  [2, 3, 1], 3, 3),
+    # S(4)×S(3), σ=(2,3,1,4), τ=(3,1,2), degree 0×0
+    ((1, 2, 3, 4), [2, 3, 1, 4], (1, 2, 3), [3, 1, 2], 4, 3),
+])
+def test_surjection_equivariance(
+    x_tuple: tuple, sigma: list[int], y_tuple: tuple, tau: list[int], m: int, n: int
+) -> None:
+    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for all valid i."""
+    x = Surjection(m)(x_tuple)
+    y = Surjection(n)(y_tuple)
+    sigma_inv = _inverse_one_line(sigma)
+    for i in range(1, m + 1):
+        lhs = Surjection.compose(x.permute(sigma), i, y.permute(tau))
+        block = _block_permutation(sigma, i, tau)
+        rhs = Surjection.compose(x, sigma_inv[i - 1], y).permute(block)
+        assert lhs == rhs, (
+            f"Equivariance failed for x={x_tuple}, σ={sigma}, "
+            f"y={y_tuple}, τ={tau}, i={i}"
+        )
+
+
+# ===========================================================================
+# Square-zero differential:  d² = 0
+# ===========================================================================
+
+@pytest.mark.parametrize("n,d", [
+    (2, 0), (2, 1), (2, 2), (2, 3),
+    (3, 0), (3, 1), (3, 2),
+    (4, 0), (4, 1), (4, 2),
+    (5, 0), (5, 1),
+])
+def test_surjection_differential_squared_zero(n: int, d: int) -> None:
+    """d²(x) = 0 for every degree-d basis element of S(n)."""
+    zero = Surjection(n).zero()
+    for elem in Surjection(n).basis_it(d):
+        assert elem.boundary().boundary() == zero, (
+            f"d²({elem}) ≠ 0 in S({n}) degree {d}"
+        )
+
+
+# ===========================================================================
+# Derivation / Leibniz rule:  d(x∘_i y) = d(x)∘_i y + (-1)^|x| x∘_i d(y)
+# ===========================================================================
+
+@pytest.mark.parametrize("x_tuple,y_tuple,m,n", [
+    # degree-1 × degree-0
+    ((1, 2, 1),       (1, 2),       2, 2),
+    ((1, 2, 3, 1),    (1, 2),       3, 2),
+    ((1, 2, 3, 4, 1), (1, 2),       4, 2),
+    # degree-0 × degree-1
+    ((1, 2, 3),       (1, 2, 1),    3, 2),
+    ((1, 2, 3, 4),    (1, 2, 1),    4, 2),
+    ((1, 2, 3),       (1, 2, 3, 1), 3, 3),
+    # degree-1 × degree-1
+    ((1, 2, 3, 1),    (1, 2, 1),    3, 2),
+    ((1, 2, 3, 4, 1), (1, 2, 1),    4, 2),
+    # degree-2 × degree-0
+    ((1, 2, 1, 2),    (1, 2),       2, 2),
+    ((1, 2, 3, 1, 2), (1, 2),       3, 2),
+    # degree-0 × degree-2
+    ((1, 2, 3),       (1, 2, 1, 2), 3, 2),
+    # degree-2 × degree-1
+    ((1, 2, 1, 2),    (1, 2, 1),    2, 2),
+])
+def test_surjection_derivation_property(
+    x_tuple: tuple, y_tuple: tuple, m: int, n: int
+) -> None:
+    """d(x∘_i y) = d(x)∘_i y + (-1)^|x| x∘_i d(y) for all valid i."""
+    x = Surjection(m)(x_tuple)
+    y = Surjection(n)(y_tuple)
+    sign = (-1) ** x.degree()
+    for i in range(1, m + 1):
+        xy = Surjection.compose(x, i, y)
+        lhs = xy.boundary()
+        rhs = (
+            Surjection.compose(x.boundary(), i, y)
+            + sign * Surjection.compose(x, i, y.boundary())
+        )
+        assert lhs == rhs, (
+            f"Derivation failed for x={x_tuple}, y={y_tuple}, i={i}"
+        )
