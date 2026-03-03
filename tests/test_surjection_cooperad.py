@@ -203,16 +203,16 @@ def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
     "n,d",
     [
         (2, 0),
-        (2, 1),
-        (2, 2),
+        (2, -1),
+        (2, -2),
         (3, 0),
-        (3, 1),
-        (3, 2),
+        (3, -1),
+        (3, -2),
         (4, 0),
-        (4, 1),
-        (4, 2),
+        (4, -1),
+        (4, -2),
         (5, 0),
-        (5, 1),
+        (5, -1),
     ],
 )
 def test_differential_squared_zero(n: int, d: int) -> None:
