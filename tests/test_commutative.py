@@ -142,3 +142,24 @@ def test_commutative_equivariance_on_linear_combinations() -> None:
         list(_block_permutation(sigma, i, tau))
     )
     assert _as_dict(lhs) == _as_dict(rhs)
+
+
+@pytest.mark.parametrize("input_pos", range(1, 4))
+def test_commutative_unit_axioms(input_pos: int) -> None:
+    """1∘_1 x = x and x∘_i 1 = x for all valid i."""
+    x = Commutative(3)(())
+    one = Commutative.unit()
+    assert _as_dict(Commutative.compose(one, 1, x)) == _as_dict(x), (
+        "Left unit axiom failed for Commutative."
+    )
+    assert _as_dict(Commutative.compose(x, input_pos, one)) == _as_dict(x), (
+        f"Right unit axiom failed at input {input_pos} for Commutative."
+    )
+
+
+@pytest.mark.parametrize("n", range(1, 6))
+def test_commutative_differential_squared_zero(n: int) -> None:
+    """d²(x) = 0 for every basis element of Com(n) (boundary is identically 0)."""
+    zero = Commutative(n).zero()
+    for elem in [Commutative(n)(())]:
+        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Com({n})"
