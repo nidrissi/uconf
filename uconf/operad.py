@@ -1,5 +1,7 @@
 """Typing protocols for operad-like objects used in this project."""
 
+from __future__ import annotations
+
 from collections.abc import Iterator
 from typing import Any, Protocol, Self, runtime_checkable
 
