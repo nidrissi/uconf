@@ -48,7 +48,7 @@ class CobarConstruction:
     """Factory for cobar construction components of a connected dg-cooperad.
 
     Args:
-        cooperad_cls: Base cooperad class (e.g., ``SurjectionLinearDual``).
+        cooperad_cls: Base cooperad class (e.g., ``SurjectionDual``).
         max_weight: Maximum tree weight for enumeration helpers (default 3).
 
     The cobar construction Ω(C) is a dg-operad whose arity-n component has

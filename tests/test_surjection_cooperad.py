@@ -3,7 +3,7 @@
 The cooperad axioms tested here are:
 
 * **Square-zero differential** – ``d² = 0`` on every basis element of
-  ``SurjectionLinearDual(n)``.
+  ``SurjectionDual(n)``.
 
 * **Sequential coassociativity** – for ``x ∈ S*(m+n+p-2)``, ``1 ≤ i ≤ m``,
   ``1 ≤ j ≤ n``::
@@ -31,7 +31,7 @@ The cooperad axioms tested here are:
 
 import pytest
 
-from uconf import Surjection, SurjectionLinearDual
+from uconf import Surjection, SurjectionDual
 
 
 def _canonical(x):
@@ -55,6 +55,7 @@ def _tensor_coeff(delta, left_basis, right_basis) -> int:
 # Helper: represent a cocomposition as a flat {(left_key, right_key): coeff} dict
 # ---------------------------------------------------------------------------
 
+
 def _flat(delta) -> dict:
     """Return ``{(l_key, r_key): coeff}`` from a degree-2 tensor element."""
     return {(l, r): int(c) for (l, r), c in delta if int(c) != 0}
@@ -62,7 +63,7 @@ def _flat(delta) -> dict:
 
 def _seq_lhs(x, i, j, m, n, p) -> dict:
     """``(id_m ⊗ Δ^{j;n,p}) ∘ Δ^{i;m,n+p-1}(x)`` as a flat triple dict."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     d1 = SL.infinitesimal_cocompose(x, i, m, n + p - 1)
     result: dict = {}
     for (a, d_key), c1 in d1:
@@ -75,7 +76,7 @@ def _seq_lhs(x, i, j, m, n, p) -> dict:
 
 def _seq_rhs(x, i, j, m, n, p) -> dict:
     """``(Δ^{i;m,n} ⊗ id_p) ∘ Δ^{i+j-1;m+n-1,p}(x)`` as a flat triple dict."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     d1 = SL.infinitesimal_cocompose(x, i + j - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
@@ -88,7 +89,7 @@ def _seq_rhs(x, i, j, m, n, p) -> dict:
 
 def _par_lhs(x, i, j, m, n, p) -> dict:
     """``(Δ^{i;m,n} ⊗ id_p) ∘ Δ^{j+n-1;m+n-1,p}(x)`` as flat triple dict."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     d1 = SL.infinitesimal_cocompose(x, j + n - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
@@ -104,7 +105,7 @@ def _par_rhs(x, i, j, m, n, p) -> dict:
 
     ``τ`` swaps the S*(n) and S*(p) factors back to (a, b, c) order.
     """
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     Sn = SL(n)
     Sp = SL(p)
     d1 = SL.infinitesimal_cocompose(x, i, m + p - 1, n)
@@ -122,13 +123,13 @@ def _par_rhs(x, i, j, m, n, p) -> dict:
 
 def _coderivation_lhs(x, i, m, n) -> dict:
     """``Δ^{i;m,n}(d(x))`` as flat dict."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     return _flat(SL.infinitesimal_cocompose(x.boundary(), i, m, n))
 
 
 def _coderivation_rhs(x, i, m, n) -> dict:
     """``(d⊗id + (-1)^{|a|} id⊗d) Δ^{i;m,n}(x)`` as flat dict."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     Sl = SL(m)
     Sr = SL(n)
     result: dict = {}
@@ -160,20 +161,21 @@ def _right_block_perm(tau_oneline: list[int], i: int, m: int, n: int) -> list[in
 # Original unit tests
 # ===========================================================================
 
+
 def test_surjection_counit_unit_and_reduced() -> None:
-    s1 = SurjectionLinearDual(1)
+    s1 = SurjectionDual(1)
     unit = s1((1,))
     x = 3 * unit
 
-    assert SurjectionLinearDual.counit(unit) == 1
+    assert SurjectionDual.counit(unit) == 1
     assert unit.counit() == 1
-    assert SurjectionLinearDual.counit(x) == 3
+    assert SurjectionDual.counit(x) == 3
     assert x.reduced() == s1.zero()
 
 
 def test_surjection_counit_vanishes_outside_arity_one() -> None:
-    x = SurjectionLinearDual(2)((1, 2))
-    assert SurjectionLinearDual.counit(x) == 0
+    x = SurjectionDual(2)((1, 2))
+    assert SurjectionDual.counit(x) == 0
     assert x.reduced() == x
 
 
@@ -187,7 +189,7 @@ def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
     right_basis = next(iter(right.support()))
 
     for u_basis, coeff in composed:
-        u = SurjectionLinearDual(3)(u_basis)
+        u = SurjectionDual(3)(u_basis)
         delta = u.infinitesimal_cocompose(i=i, m=2, n=2)
         assert _tensor_coeff(delta, left_basis, right_basis) == int(coeff)
 
@@ -196,57 +198,70 @@ def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
 # Square-zero differential:  d² = 0
 # ===========================================================================
 
-@pytest.mark.parametrize("n,d", [
-    (2, 0), (2, 1), (2, 2),
-    (3, 0), (3, 1), (3, 2),
-    (4, 0), (4, 1), (4, 2),
-    (5, 0), (5, 1),
-])
+
+@pytest.mark.parametrize(
+    "n,d",
+    [
+        (2, 0),
+        (2, 1),
+        (2, 2),
+        (3, 0),
+        (3, 1),
+        (3, 2),
+        (4, 0),
+        (4, 1),
+        (4, 2),
+        (5, 0),
+        (5, 1),
+    ],
+)
 def test_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S*(n)."""
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     for elem in SL(n).basis_it(d):
         d2 = elem.boundary().boundary()
-        assert d2 == SL(n).zero(), (
-            f"d²({elem}) = {d2} ≠ 0 in S*({n}) degree {d}"
-        )
+        assert d2 == SL(n).zero(), f"d²({elem}) = {d2} ≠ 0 in S*({n}) degree {d}"
 
 
 # ===========================================================================
 # Sequential coassociativity
 # ===========================================================================
 
-@pytest.mark.parametrize("x_tuple,i,j,m,n,p", [
-    # arity 4 = m+n+p-2, degree 0
-    ((1, 2, 3, 4), 1, 1, 2, 2, 2),
-    ((1, 2, 3, 4), 1, 2, 2, 2, 2),
-    ((1, 2, 3, 4), 2, 1, 2, 2, 2),
-    # arity 4, degree 1
-    ((1, 2, 3, 1), 1, 1, 2, 2, 2),
-    ((1, 2, 3, 1), 1, 2, 2, 2, 2),
-    ((2, 3, 1, 2), 2, 1, 2, 2, 2),
-    # arity 5 = 3+2+2-2, m=3,n=2,p=2
-    ((1, 2, 3, 4, 5), 1, 1, 3, 2, 2),
-    ((1, 2, 3, 4, 5), 2, 1, 3, 2, 2),
-    ((1, 2, 3, 4, 5), 3, 2, 3, 2, 2),
-    # arity 5 = 2+3+2-2, m=2,n=3,p=2
-    ((1, 2, 3, 4, 5), 1, 1, 2, 3, 2),
-    ((1, 2, 3, 4, 5), 1, 2, 2, 3, 2),
-    ((1, 2, 3, 4, 5), 2, 3, 2, 3, 2),
-    # arity 5 degree 1
-    ((1, 2, 3, 4, 1), 1, 1, 3, 2, 2),
-    ((1, 2, 3, 4, 1), 2, 1, 3, 2, 2),
-    ((2, 3, 1, 4, 2), 1, 2, 2, 3, 2),
-    # arity 6 = 3+2+3-2, m=3,n=2,p=3, degree 0
-    ((1, 2, 3, 4, 5, 6), 1, 1, 3, 2, 3),
-    ((1, 2, 3, 4, 5, 6), 2, 2, 3, 2, 3),
-    ((1, 2, 3, 4, 5, 6), 3, 1, 3, 2, 3),
-])
+
+@pytest.mark.parametrize(
+    "x_tuple,i,j,m,n,p",
+    [
+        # arity 4 = m+n+p-2, degree 0
+        ((1, 2, 3, 4), 1, 1, 2, 2, 2),
+        ((1, 2, 3, 4), 1, 2, 2, 2, 2),
+        ((1, 2, 3, 4), 2, 1, 2, 2, 2),
+        # arity 4, degree 1
+        ((1, 2, 3, 1), 1, 1, 2, 2, 2),
+        ((1, 2, 3, 1), 1, 2, 2, 2, 2),
+        ((2, 3, 1, 2), 2, 1, 2, 2, 2),
+        # arity 5 = 3+2+2-2, m=3,n=2,p=2
+        ((1, 2, 3, 4, 5), 1, 1, 3, 2, 2),
+        ((1, 2, 3, 4, 5), 2, 1, 3, 2, 2),
+        ((1, 2, 3, 4, 5), 3, 2, 3, 2, 2),
+        # arity 5 = 2+3+2-2, m=2,n=3,p=2
+        ((1, 2, 3, 4, 5), 1, 1, 2, 3, 2),
+        ((1, 2, 3, 4, 5), 1, 2, 2, 3, 2),
+        ((1, 2, 3, 4, 5), 2, 3, 2, 3, 2),
+        # arity 5 degree 1
+        ((1, 2, 3, 4, 1), 1, 1, 3, 2, 2),
+        ((1, 2, 3, 4, 1), 2, 1, 3, 2, 2),
+        ((2, 3, 1, 4, 2), 1, 2, 2, 3, 2),
+        # arity 6 = 3+2+3-2, m=3,n=2,p=3, degree 0
+        ((1, 2, 3, 4, 5, 6), 1, 1, 3, 2, 3),
+        ((1, 2, 3, 4, 5, 6), 2, 2, 3, 2, 3),
+        ((1, 2, 3, 4, 5, 6), 3, 1, 3, 2, 3),
+    ],
+)
 def test_sequential_coassociativity(
     x_tuple: tuple, i: int, j: int, m: int, n: int, p: int
 ) -> None:
     """(id⊗Δ^{j;n,p})∘Δ^{i;m,n+p-1} = (Δ^{i;m,n}⊗id)∘Δ^{i+j-1;m+n-1,p}."""
-    x = SurjectionLinearDual(m + n + p - 2)(x_tuple)
+    x = SurjectionDual(m + n + p - 2)(x_tuple)
     lhs = _seq_lhs(x, i, j, m, n, p)
     rhs = _seq_rhs(x, i, j, m, n, p)
     assert lhs == rhs, (
@@ -259,32 +274,36 @@ def test_sequential_coassociativity(
 # Parallel coassociativity
 # ===========================================================================
 
-@pytest.mark.parametrize("x_tuple,i,j,m,n,p", [
-    # m=2, n=p=2, total arity 4, i=1 < j=2 ≤ m=2
-    ((1, 2, 3, 4), 1, 2, 2, 2, 2),
-    ((1, 2, 3, 1), 1, 2, 2, 2, 2),
-    ((2, 1, 3, 2), 1, 2, 2, 2, 2),
-    # m=3, n=p=2, total arity 5
-    ((1, 2, 3, 4, 5), 1, 2, 3, 2, 2),
-    ((1, 2, 3, 4, 5), 1, 3, 3, 2, 2),
-    ((1, 2, 3, 4, 5), 2, 3, 3, 2, 2),
-    ((1, 2, 3, 4, 1), 1, 2, 3, 2, 2),
-    ((1, 2, 3, 4, 1), 2, 3, 3, 2, 2),
-    # m=4, n=p=2, total arity 6, all i<j pairs
-    ((1, 2, 3, 4, 5, 6), 1, 2, 4, 2, 2),
-    ((1, 2, 3, 4, 5, 6), 1, 3, 4, 2, 2),
-    ((1, 2, 3, 4, 5, 6), 2, 4, 4, 2, 2),
-    ((1, 2, 3, 4, 5, 6), 3, 4, 4, 2, 2),
-    # m=3, n=2, p=3, total arity 6
-    ((1, 2, 3, 4, 5, 6), 1, 2, 3, 2, 3),
-    ((1, 2, 3, 4, 5, 6), 1, 3, 3, 2, 3),
-    ((1, 2, 3, 4, 5, 6), 2, 3, 3, 2, 3),
-])
+
+@pytest.mark.parametrize(
+    "x_tuple,i,j,m,n,p",
+    [
+        # m=2, n=p=2, total arity 4, i=1 < j=2 ≤ m=2
+        ((1, 2, 3, 4), 1, 2, 2, 2, 2),
+        ((1, 2, 3, 1), 1, 2, 2, 2, 2),
+        ((2, 1, 3, 2), 1, 2, 2, 2, 2),
+        # m=3, n=p=2, total arity 5
+        ((1, 2, 3, 4, 5), 1, 2, 3, 2, 2),
+        ((1, 2, 3, 4, 5), 1, 3, 3, 2, 2),
+        ((1, 2, 3, 4, 5), 2, 3, 3, 2, 2),
+        ((1, 2, 3, 4, 1), 1, 2, 3, 2, 2),
+        ((1, 2, 3, 4, 1), 2, 3, 3, 2, 2),
+        # m=4, n=p=2, total arity 6, all i<j pairs
+        ((1, 2, 3, 4, 5, 6), 1, 2, 4, 2, 2),
+        ((1, 2, 3, 4, 5, 6), 1, 3, 4, 2, 2),
+        ((1, 2, 3, 4, 5, 6), 2, 4, 4, 2, 2),
+        ((1, 2, 3, 4, 5, 6), 3, 4, 4, 2, 2),
+        # m=3, n=2, p=3, total arity 6
+        ((1, 2, 3, 4, 5, 6), 1, 2, 3, 2, 3),
+        ((1, 2, 3, 4, 5, 6), 1, 3, 3, 2, 3),
+        ((1, 2, 3, 4, 5, 6), 2, 3, 3, 2, 3),
+    ],
+)
 def test_parallel_coassociativity(
     x_tuple: tuple, i: int, j: int, m: int, n: int, p: int
 ) -> None:
     """(Δ^{i;m,n}⊗id)∘Δ^{j+n-1;m+n-1,p} = (-1)^{|b||c|} τ∘(Δ^{j;m,p}⊗id)∘Δ^{i;m+p-1,n}."""
-    x = SurjectionLinearDual(m + n + p - 2)(x_tuple)
+    x = SurjectionDual(m + n + p - 2)(x_tuple)
     lhs = _par_lhs(x, i, j, m, n, p)
     rhs = _par_rhs(x, i, j, m, n, p)
     assert lhs == rhs, (
@@ -297,27 +316,31 @@ def test_parallel_coassociativity(
 # Equivariance
 # ===========================================================================
 
-@pytest.mark.parametrize("x_tuple,tau_oneline,i,m,n", [
-    # m=n=2, i=1, τ=(2,1) ∈ S_2 swaps the two right inputs
-    ((1, 2, 3),   [2, 1], 1, 2, 2),
-    ((1, 2, 1),   [2, 1], 1, 2, 2),
-    ((2, 1, 2),   [2, 1], 1, 2, 2),
-    # m=2, n=3, i=1, τ=(2,3,1) ∈ S_3
-    ((1, 2, 3, 4), [2, 3, 1], 1, 2, 3),
-    ((1, 2, 3, 1), [2, 3, 1], 1, 2, 3),
-    # m=3, n=2, i=2, τ=(2,1) ∈ S_2 — right block occupies values 2,3 of S*(4)
-    ((1, 2, 3, 4), [2, 1], 2, 3, 2),
-    ((2, 1, 3, 2), [2, 1], 2, 3, 2),
-    # m=3, n=2, i=3, τ=(2,1) ∈ S_2 — right block at positions 3,4
-    ((1, 2, 3, 4), [2, 1], 3, 3, 2),
-    ((1, 2, 3, 1), [2, 1], 3, 3, 2),
-    # m=2, n=3, i=1, τ=(3,1,2) ∈ S_3
-    ((1, 2, 3, 4), [3, 1, 2], 1, 2, 3),
-    ((2, 1, 3, 4), [3, 1, 2], 1, 2, 3),
-    # m=3, n=3, i=1, τ=(2,1,3) ∈ S_3
-    ((1, 2, 3, 4, 5), [2, 1, 3], 1, 3, 3),
-    ((1, 2, 3, 4, 1), [2, 1, 3], 1, 3, 3),
-])
+
+@pytest.mark.parametrize(
+    "x_tuple,tau_oneline,i,m,n",
+    [
+        # m=n=2, i=1, τ=(2,1) ∈ S_2 swaps the two right inputs
+        ((1, 2, 3), [2, 1], 1, 2, 2),
+        ((1, 2, 1), [2, 1], 1, 2, 2),
+        ((2, 1, 2), [2, 1], 1, 2, 2),
+        # m=2, n=3, i=1, τ=(2,3,1) ∈ S_3
+        ((1, 2, 3, 4), [2, 3, 1], 1, 2, 3),
+        ((1, 2, 3, 1), [2, 3, 1], 1, 2, 3),
+        # m=3, n=2, i=2, τ=(2,1) ∈ S_2 — right block occupies values 2,3 of S*(4)
+        ((1, 2, 3, 4), [2, 1], 2, 3, 2),
+        ((2, 1, 3, 2), [2, 1], 2, 3, 2),
+        # m=3, n=2, i=3, τ=(2,1) ∈ S_2 — right block at positions 3,4
+        ((1, 2, 3, 4), [2, 1], 3, 3, 2),
+        ((1, 2, 3, 1), [2, 1], 3, 3, 2),
+        # m=2, n=3, i=1, τ=(3,1,2) ∈ S_3
+        ((1, 2, 3, 4), [3, 1, 2], 1, 2, 3),
+        ((2, 1, 3, 4), [3, 1, 2], 1, 2, 3),
+        # m=3, n=3, i=1, τ=(2,1,3) ∈ S_3
+        ((1, 2, 3, 4, 5), [2, 1, 3], 1, 3, 3),
+        ((1, 2, 3, 4, 1), [2, 1, 3], 1, 3, 3),
+    ],
+)
 def test_equivariance_right_block(
     x_tuple: tuple, tau_oneline: list[int], i: int, m: int, n: int
 ) -> None:
@@ -327,7 +350,7 @@ def test_equivariance_right_block(
     positions i..i+n-1 is equivalent to applying τ to the right factor of
     the cocomposition.
     """
-    SL = SurjectionLinearDual
+    SL = SurjectionDual
     x = SL(m + n - 1)(x_tuple)
     rho = _right_block_perm(tau_oneline, i, m, n)
 
@@ -352,40 +375,44 @@ def test_equivariance_right_block(
 # Coderivation property
 # ===========================================================================
 
-@pytest.mark.parametrize("x_tuple,i,m,n", [
-    # S*(3), degree 1
-    ((1, 2, 1),   1, 2, 2),
-    ((2, 1, 2),   1, 2, 2),
-    ((1, 2, 1),   2, 2, 2),
-    # S*(4), degree 1
-    ((1, 2, 3, 1), 1, 2, 3),
-    ((1, 2, 3, 1), 2, 2, 3),
-    ((1, 2, 3, 1), 1, 3, 2),
-    ((1, 2, 3, 1), 2, 3, 2),
-    ((1, 2, 3, 1), 3, 3, 2),
-    ((2, 3, 1, 2), 1, 2, 3),
-    # S*(4), degree 2
-    ((1, 2, 1, 2), 1, 2, 3),
-    ((1, 2, 1, 2), 2, 2, 3),
-    ((1, 2, 1, 2), 1, 3, 2),
-    # S*(5), degree 1
-    ((1, 2, 3, 4, 1), 1, 3, 3),
-    ((1, 2, 3, 4, 1), 2, 3, 3),
-    ((1, 2, 3, 4, 1), 3, 3, 3),
-    ((1, 2, 3, 4, 1), 1, 2, 4),
-    ((1, 2, 3, 4, 1), 2, 2, 4),
-    # S*(5), degree 2
-    ((1, 2, 3, 1, 2), 1, 2, 4),
-    ((1, 2, 3, 1, 2), 2, 3, 3),
-    ((1, 2, 3, 1, 2), 1, 4, 2),
-    # S*(6), degree 1
-    ((1, 2, 3, 4, 5, 1), 1, 3, 4),
-    ((1, 2, 3, 4, 5, 1), 3, 3, 4),
-    ((1, 2, 3, 4, 5, 1), 1, 4, 3),
-])
+
+@pytest.mark.parametrize(
+    "x_tuple,i,m,n",
+    [
+        # S*(3), degree 1
+        ((1, 2, 1), 1, 2, 2),
+        ((2, 1, 2), 1, 2, 2),
+        ((1, 2, 1), 2, 2, 2),
+        # S*(4), degree 1
+        ((1, 2, 3, 1), 1, 2, 3),
+        ((1, 2, 3, 1), 2, 2, 3),
+        ((1, 2, 3, 1), 1, 3, 2),
+        ((1, 2, 3, 1), 2, 3, 2),
+        ((1, 2, 3, 1), 3, 3, 2),
+        ((2, 3, 1, 2), 1, 2, 3),
+        # S*(4), degree 2
+        ((1, 2, 1, 2), 1, 2, 3),
+        ((1, 2, 1, 2), 2, 2, 3),
+        ((1, 2, 1, 2), 1, 3, 2),
+        # S*(5), degree 1
+        ((1, 2, 3, 4, 1), 1, 3, 3),
+        ((1, 2, 3, 4, 1), 2, 3, 3),
+        ((1, 2, 3, 4, 1), 3, 3, 3),
+        ((1, 2, 3, 4, 1), 1, 2, 4),
+        ((1, 2, 3, 4, 1), 2, 2, 4),
+        # S*(5), degree 2
+        ((1, 2, 3, 1, 2), 1, 2, 4),
+        ((1, 2, 3, 1, 2), 2, 3, 3),
+        ((1, 2, 3, 1, 2), 1, 4, 2),
+        # S*(6), degree 1
+        ((1, 2, 3, 4, 5, 1), 1, 3, 4),
+        ((1, 2, 3, 4, 5, 1), 3, 3, 4),
+        ((1, 2, 3, 4, 5, 1), 1, 4, 3),
+    ],
+)
 def test_coderivation_property(x_tuple: tuple, i: int, m: int, n: int) -> None:
     """Δ(d(x)) = (d⊗id + (-1)^{|a|} id⊗d) Δ(x)."""
-    x = SurjectionLinearDual(m + n - 1)(x_tuple)
+    x = SurjectionDual(m + n - 1)(x_tuple)
     lhs = _coderivation_lhs(x, i, m, n)
     rhs = _coderivation_rhs(x, i, m, n)
     assert lhs == rhs, (

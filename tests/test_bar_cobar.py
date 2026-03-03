@@ -14,7 +14,7 @@ from uconf import (
     OperadProtocol,
     Surjection,
     BarrattEccles,
-    SurjectionLinearDual,
+    SurjectionDual,
 )
 from uconf.trees import (
     children,
@@ -169,11 +169,11 @@ class TestShuffleTrees:
         assert not is_shuffle_tree(((), 1, 3, 2))
 
         # Nested shuffle tree
-        nested_shuffle = (((), ((), 1, 2), 3))
+        nested_shuffle = ((), ((), 1, 2), 3)
         assert is_shuffle_tree(nested_shuffle)
 
         # Nested non-shuffle: inner tree is not shuffle
-        nested_non_shuffle = (((), ((), 2, 1), 3))
+        nested_non_shuffle = ((), ((), 2, 1), 3)
         assert not is_shuffle_tree(nested_non_shuffle)
 
     def test_to_shuffle_tree_bar_commutative(self):
@@ -531,34 +531,34 @@ class TestCobarConstruction:
     """Tests for cobar construction of cooperads."""
 
     def test_cobar_creation(self):
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
         assert O2.arity() == 2
 
     def test_cobar_unit(self):
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         unit = OmegaS.unit()
         assert unit.arity() == 1
         assert unit == OmegaS(1).term(1)
 
     def test_cobar_degree(self):
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
-        # SurjectionLinearDual basis (1, 2) has degree 0
+        # SurjectionDual basis (1, 2) has degree 0
         # s^{-1}C degree = 0 - (2 - 1) = -1
         tree = ((1, 2), 1, 2)
         assert O2.degree_on_basis(tree) == -1
 
     def test_cobar_d_squared_zero_unit(self):
         """d^2 = 0 for the unit."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         unit = OmegaS.unit()
         bdry = unit.boundary()
         assert bdry == OmegaS(1).zero()
 
     def test_cobar_compose(self):
         """Test free operad composition (grafting)."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
         O3 = OmegaS(3)
 
@@ -573,7 +573,7 @@ class TestCobarConstruction:
 
     def test_cobar_compose_two_trees(self):
         """Test composing two nontrivial trees."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
 
         tree1 = ((1, 2), 1, 2)
@@ -590,7 +590,7 @@ class TestCobarConstruction:
 
     def test_cobar_compose_to_arity5(self):
         """Compose larger trees and check resulting arity/leaf normalization."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O3 = OmegaS(3)
 
         x = O3(((1, 2, 3), 1, 2, 3))
@@ -605,7 +605,7 @@ class TestCobarConstruction:
 
     def test_cobar_boundary_squared_zero_arity4_weight2(self):
         """d^2 = 0 for a higher-arity, weight-2 tree in Ω(S*)."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O4 = OmegaS(4)
 
         tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
@@ -615,7 +615,7 @@ class TestCobarConstruction:
 
     def test_cobar_pretty_print(self):
         """Cobar terms should display trees and unit as id."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O1 = OmegaS(1)
         O2 = OmegaS(2)
 
@@ -630,7 +630,7 @@ class TestCobarConstruction:
         """Cobar elements should support direct pretty-printing."""
         from sage.all import latex
 
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
         elem = O2(((1, 2), 1, 2)) + 3 * O2(((1, 2, 1), 1, 2))
 
@@ -656,7 +656,7 @@ class TestProtocolCompliance:
 
     def test_cobar_is_operad(self):
         """CobarConstruction components should satisfy OperadProtocol."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         for n in range(1, 4):
             O = OmegaS(n)
             # Note: OperadProtocol requires compose as static method on type
@@ -910,7 +910,7 @@ class TestCobarSignFix:
 
     def test_cobar_surjection_square_zero_arity4_weight2(self):
         """d^2 = 0 for a weight-2 tree in Ω(S*) where the sign fix matters."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O4 = OmegaS(4)
         # root arity 3 with one internal arity-2 child
         tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
@@ -925,7 +925,7 @@ class TestCobarSignFix:
         Inner: arity 3, dec (1,2,3) in S*(3), s^{-1}C degree = -2 (even).
         Without the cumulative_before sign, d^2 would be non-zero for this tree.
         """
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O5 = OmegaS(5)
         # root arity 3, inner arity 3 as first child, leaves 4 and 5 as other children
         tree = ((1, 2, 3, 1), ((1, 2, 3), 1, 2, 3), 4, 5)
@@ -935,7 +935,7 @@ class TestCobarSignFix:
 
     def test_cobar_sign_arity5_weight2_inner_dec(self):
         """d^2 = 0 for a tree where the inner node has high-degree decoration."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O5 = OmegaS(5)
         tree = ((1, 2, 3, 1), ((1, 2, 1, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
@@ -944,7 +944,7 @@ class TestCobarSignFix:
 
     def test_cobar_sign_arity6_weight3(self):
         """d^2 = 0 for a weight-3 tree where the sign fix matters."""
-        OmegaS = CobarConstruction(SurjectionLinearDual)
+        OmegaS = CobarConstruction(SurjectionDual)
         O6 = OmegaS(6)
         tree = ((1, 2, 3, 1, 4), ((1, 2, 1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
         elem = O6(tree)

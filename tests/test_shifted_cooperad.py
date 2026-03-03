@@ -1,6 +1,6 @@
 """Tests for the shifted-cooperad wrapper."""
 
-from uconf import ShiftedCooperad, SurjectionLinearDual
+from uconf import ShiftedCooperad, SurjectionDual
 
 
 def _as_dict(x):
@@ -8,7 +8,7 @@ def _as_dict(x):
 
 
 def test_degree_shift_surjection_linear_dual() -> None:
-    shifted = ShiftedCooperad(SurjectionLinearDual, 1)
+    shifted = ShiftedCooperad(SurjectionDual, 1)
     c2 = shifted(2)
     x = c2((1, 2, 1))
     basis = next(iter(x.support()))
@@ -16,24 +16,24 @@ def test_degree_shift_surjection_linear_dual() -> None:
 
 
 def test_counit_preserved_by_shift_wrapper() -> None:
-    shifted = ShiftedCooperad(SurjectionLinearDual, 1)
+    shifted = ShiftedCooperad(SurjectionDual, 1)
     x = shifted(1)((1,))
     assert x.counit() == 1
 
 
 def test_shifted_infinitesimal_cocompose_sign() -> None:
-    base = SurjectionLinearDual(3)((1, 2, 3, 2))
-    shifted = ShiftedCooperad(SurjectionLinearDual, 1)
+    base = SurjectionDual(3)((1, 2, 3, 2))
+    shifted = ShiftedCooperad(SurjectionDual, 1)
     shifted_x = shifted(3)((1, 2, 3, 2))
 
-    base_delta = SurjectionLinearDual.infinitesimal_cocompose(base, i=1, m=2, n=2)
+    base_delta = SurjectionDual.infinitesimal_cocompose(base, i=1, m=2, n=2)
     shifted_delta = shifted_x.infinitesimal_cocompose(i=1, m=2, n=2)
 
     b = _as_dict(base_delta)
     s = _as_dict(shifted_delta)
 
     assert b.keys() == s.keys()
-    right_parent = SurjectionLinearDual(2)
+    right_parent = SurjectionDual(2)
     for (left_basis, right_basis), coeff in b.items():
         right_degree = right_parent.degree_on_basis(right_basis)
         expected_sign = -1 if right_degree % 2 else 1

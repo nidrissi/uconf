@@ -7,13 +7,13 @@ from sage.all import tensor
 from .surjection import Surjection
 
 
-class SurjectionLinearDual(Surjection):
+class SurjectionDual(Surjection):
     """Linear dual companion of :class:`uconf.surjection.Surjection`."""
 
     name = "S*"
 
     @staticmethod
-    def counit(x: "SurjectionLinearDual.Element"):
+    def counit(x: "SurjectionDual.Element"):
         """Return the cooperadic counit evaluation."""
 
         if x.arity() != 1:
@@ -25,17 +25,15 @@ class SurjectionLinearDual(Surjection):
         return value
 
     @staticmethod
-    def reduced(x: "SurjectionLinearDual.Element") -> "SurjectionLinearDual.Element":
+    def reduced(x: "SurjectionDual.Element") -> "SurjectionDual.Element":
         """Project to the reduced part (kills the arity-1 unit component)."""
 
         if x.arity() != 1:
             return x
-        return x - SurjectionLinearDual.counit(x) * x.parent()((1,))
+        return x - SurjectionDual.counit(x) * x.parent()((1,))
 
     @staticmethod
-    def infinitesimal_cocompose(
-        x: "SurjectionLinearDual.Element", i: int, m: int, n: int
-    ):
+    def infinitesimal_cocompose(x: "SurjectionDual.Element", i: int, m: int, n: int):
         """Partial cocomposition dual to ``Surjection.compose`` on basis pairing."""
 
         if m <= 0 or n <= 0:
@@ -48,8 +46,8 @@ class SurjectionLinearDual(Surjection):
             )
 
         base_ring = x.parent().base_ring()
-        left_parent = SurjectionLinearDual(m, base_ring=base_ring)
-        right_parent = SurjectionLinearDual(n, base_ring=base_ring)
+        left_parent = SurjectionDual(m, base_ring=base_ring)
+        right_parent = SurjectionDual(n, base_ring=base_ring)
         target = tensor([left_parent, right_parent])
 
         if not x:
@@ -91,14 +89,14 @@ class SurjectionLinearDual(Surjection):
         def counit(self):
             """Return the cooperadic counit evaluation."""
 
-            return SurjectionLinearDual.counit(self)
+            return SurjectionDual.counit(self)
 
-        def reduced(self) -> "SurjectionLinearDual.Element":
+        def reduced(self) -> "SurjectionDual.Element":
             """Project to the reduced part."""
 
-            return SurjectionLinearDual.reduced(self)
+            return SurjectionDual.reduced(self)
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Return the partial cocomposition dual to ``compose``."""
 
-            return SurjectionLinearDual.infinitesimal_cocompose(self, i, m, n)
+            return SurjectionDual.infinitesimal_cocompose(self, i, m, n)
