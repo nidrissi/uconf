@@ -206,14 +206,14 @@ class Surjection(CombinatorialFreeModule):
 
     @staticmethod
     def compose(
-        x: Surjection.Element, input: int, y: Surjection.Element
+        x: Surjection.Element, i: int, y: Surjection.Element
     ) -> Surjection.Element:
         """Compose surjections by Berger--Fresse insertion at input ``i``."""
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
         m = x.arity()
         n = y.arity()
-        assert 1 <= input <= m, f"Index i must be between 1 and {m}. Got {input}."
+        assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
         target = Surjection(m + n - 1, base_ring=x.parent().base_ring())
 
         def _compose_basis_tuple(x_tuple: tuple[int, ...], y_tuple: tuple[int, ...]):
@@ -252,7 +252,7 @@ class Surjection(CombinatorialFreeModule):
                         sign_exp += sum(w1[idx + 1 :]) % 2
                 return (-1) ** sign_exp
 
-            positions = [idx for idx, i in enumerate(x_tuple) if i == input]
+            positions = [idx for idx, i in enumerate(x_tuple) if i == i]
             for p in combinations_with_replacement(
                 range(len(y_tuple)), len(positions) - 1
             ):
@@ -260,12 +260,12 @@ class Surjection(CombinatorialFreeModule):
                 split = []
                 for a, b in pairwise(p):
                     split.append(tuple(y_tuple[a : b + 1]))
-                to_insert = (tuple(j + input - 1 for j in part) for part in split)
+                to_insert = (tuple(j + i - 1 for j in part) for part in split)
                 new_k = []
                 for j in x_tuple:
-                    if j < input:
+                    if j < i:
                         new_k.append(j)
-                    elif j == input:
+                    elif j == i:
                         new_k += next(to_insert)
                     else:
                         new_k.append(j + n - 1)
