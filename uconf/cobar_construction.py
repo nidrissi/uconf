@@ -56,6 +56,13 @@ class CobarConstruction:
     vertices are decorated by elements of C̄ (the coaugmentation coideal).
 
     For connected cooperads, C̄(1) = 0, so all internal vertices have arity >= 2.
+
+    Note:
+        Unlike BarConstruction, this does not currently implement automatic
+        shuffle tree normalization. The differential sign formulas need to be
+        reworked to be compatible with shuffle normalization. Use the functions
+        ``to_shuffle_tree_cobar`` and ``is_shuffle_tree`` from ``trees`` module
+        for manual normalization if needed.
     """
 
     def __init__(self, cooperad_cls, max_weight: int = 3):

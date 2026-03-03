@@ -1,13 +1,14 @@
 """Tests for bar and cobar constructions."""
 
 import pytest
-from sage.all import tensor
+from sage.all import tensor, QQ
 
 from uconf import (
     BarConstruction,
     CoAssociative,
     CoCommutative,
     CobarConstruction,
+    Commutative,
     CooperadProtocol,
     Lie,
     OperadProtocol,
@@ -18,6 +19,10 @@ from uconf import (
 from uconf.trees import (
     children,
     contract_edge,
+    is_shuffle_tree,
+    min_leaf,
+    to_shuffle_tree_bar,
+    to_shuffle_tree_cobar,
     decoration,
     expand_vertex,
     graft,
@@ -135,6 +140,122 @@ class TestTrees:
         # Invalid: wrong leaves
         bad_tree = ((1, 2), 1, 2, 4)
         assert validate_tree(bad_tree, 3, Lie, QQ) is None
+
+
+class TestShuffleTrees:
+    """Tests for shuffle tree normalization."""
+
+    def test_min_leaf(self):
+        """Test min_leaf correctly finds minimum leaf in a tree."""
+        assert min_leaf(1) == 1
+        assert min_leaf(3) == 3
+        assert min_leaf(((), 1, 2)) == 1
+        assert min_leaf(((), 2, 1)) == 1
+        # Nested tree: (((), 3, 4), 1, 2) has min leaf 1
+        assert min_leaf((((), ((), 3, 4), 2), 1)) == 1
+
+    def test_is_shuffle_tree(self):
+        """Test is_shuffle_tree correctly identifies shuffle trees."""
+        # Single leaf is always shuffle
+        assert is_shuffle_tree(1)
+
+        # Shuffle: children sorted by min leaf
+        assert is_shuffle_tree(((), 1, 2))
+        assert is_shuffle_tree(((), 1, 2, 3))
+
+        # NOT shuffle: children not sorted
+        assert not is_shuffle_tree(((), 2, 1))
+        assert not is_shuffle_tree(((), 3, 1, 2))
+        assert not is_shuffle_tree(((), 1, 3, 2))
+
+        # Nested shuffle tree
+        nested_shuffle = (((), ((), 1, 2), 3))
+        assert is_shuffle_tree(nested_shuffle)
+
+        # Nested non-shuffle: inner tree is not shuffle
+        nested_non_shuffle = (((), ((), 2, 1), 3))
+        assert not is_shuffle_tree(nested_non_shuffle)
+
+    def test_to_shuffle_tree_bar_commutative(self):
+        """Test that shuffle normalization works for Commutative operad."""
+        # For Commutative, permuting children has no effect on decoration
+        # ((), 2, 1) should normalize to ((), 1, 2) with sign
+
+        tree = ((), 2, 1)
+        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        # Should be sorted
+        assert is_shuffle_tree(shuffle)
+        assert shuffle == ((), 1, 2)
+
+        # For Com with degree 0 decorations and weight-1 trees,
+        # the Koszul sign is (-1)^{0*0} = 1
+        # and the operad action sign is 1 (trivial action)
+        assert sign == 1
+
+    def test_to_shuffle_tree_bar_nested(self):
+        """Test shuffle normalization on nested trees for Commutative."""
+        # Nested tree: root with two children, child 1 is internal
+        # ((), ((), 3, 4), ((), 1, 2))
+        # Min leaves: child 1 has min 3, child 2 has min 1
+        # Should swap children to get ((), ((), 1, 2), ((), 3, 4))
+
+        tree = ((), ((), 3, 4), ((), 1, 2))
+        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        assert is_shuffle_tree(shuffle)
+        # Children should be swapped: first child has min 1, second has min 3
+        assert min_leaf(shuffle[1]) == 1
+        assert min_leaf(shuffle[2]) == 3
+
+    def test_bar_commutative_shuffle_normalization(self):
+        """Test that BarConstruction normalizes trees to shuffle form."""
+        BCom = BarConstruction(Commutative)
+        B2 = BCom(2)
+
+        # These two trees should be equal after normalization
+        tree1 = ((), 1, 2)
+        tree2 = ((), 2, 1)
+
+        elem1 = B2(tree1)
+        elem2 = B2(tree2)
+
+        # Both should be the same element (up to sign)
+        # For Com, the sign is 1 (trivial action, degree 0)
+        assert elem1 == elem2
+
+    def test_bar_commutative_single_generator_arity2(self):
+        """Test that B(Com)(2) has a single generator in the shuffle basis."""
+        BCom = BarConstruction(Commutative)
+        B2 = BCom(2)
+
+        # The only shuffle tree in arity 2 with weight 1 is ((), 1, 2)
+        shuffle_tree = ((), 1, 2)
+        elem = B2(shuffle_tree)
+
+        # Verify it's non-zero
+        assert elem != B2.zero()
+
+        # The non-shuffle version should give the same element
+        non_shuffle_tree = ((), 2, 1)
+        elem2 = B2(non_shuffle_tree)
+        assert elem == elem2
+
+    def test_bar_lie_shuffle_normalization(self):
+        """Test shuffle normalization for BarConstruction(Lie)."""
+        BLie = BarConstruction(Lie)
+        B2 = BLie(2)
+
+        # Lie(2) has basis key (1,) which is skew-symmetric
+        # Permuting by (12) gives a sign of -1
+        tree1 = ((1,), 1, 2)
+        tree2 = ((1,), 2, 1)
+
+        elem1 = B2(tree1)
+        elem2 = B2(tree2)
+
+        # Lie is skew-symmetric, so elem2 = -elem1
+        assert elem1 == -elem2
 
 
 class TestBarConstructionLie:
