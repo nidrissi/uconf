@@ -552,3 +552,228 @@ def expand_vertex(
         for c in children(tree)
     )
     return (decoration(tree),) + new_children
+
+
+# =============================================================================
+# Shuffle tree normalization for symmetric operads/cooperads
+# =============================================================================
+
+
+def min_leaf(tree) -> int:
+    """Return the minimum leaf label in a tree or subtree."""
+    if is_leaf(tree):
+        return tree
+    return min(min_leaf(c) for c in children(tree))
+
+
+def is_shuffle_tree(tree) -> bool:
+    """Check if a tree is in shuffle form.
+
+    A shuffle tree has, at each internal vertex, children ordered so that
+    the minimum leaf label in each child subtree increases from left to right.
+
+    Example:
+        ((), 1, 2) is shuffle (min({1})=1 < min({2})=2)
+        ((), 2, 1) is NOT shuffle (min({2})=2 > min({1})=1)
+    """
+    if is_leaf(tree):
+        return True
+
+    kids = children(tree)
+    min_leaves = [min_leaf(c) for c in kids]
+
+    # Children must be sorted by min leaf
+    for i in range(len(min_leaves) - 1):
+        if min_leaves[i] >= min_leaves[i + 1]:
+            return False
+
+    # Recursively check all subtrees
+    return all(is_shuffle_tree(c) for c in kids if is_internal(c))
+
+
+def _koszul_sign_of_permutation(perm: list[int], degrees: list[int]) -> int:
+    """Compute the Koszul sign of a permutation acting on graded elements.
+
+    Given a permutation perm and degrees [d_1, ..., d_k], compute the sign
+    incurred by permuting elements of degrees d_{perm[0]}, d_{perm[1]}, ...
+    back to their original order.
+
+    The sign is (-1)^{sum of d_i * d_j for all inversions (i,j) in perm}.
+    """
+    n = len(perm)
+    exponent = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            # Inversion: perm[i] > perm[j]
+            if perm[i] > perm[j]:
+                exponent += degrees[perm[i]] * degrees[perm[j]]
+    return 1 if exponent % 2 == 0 else -1
+
+
+def to_shuffle_tree_bar(tree, operad_cls, base_ring):
+    """Normalize a tree to shuffle form for the bar construction B(P).
+
+    Returns ``(shuffle_tree, sign)`` where:
+    - ``shuffle_tree`` is the tree with children reordered at each vertex
+    - ``sign`` is the accumulated Koszul sign and operad action sign
+
+    At each vertex, children are sorted by min leaf. The decoration is
+    acted on by the sorting permutation (using the operad's permute method),
+    and Koszul signs are computed based on bar-degrees of subtrees.
+
+    For sP̄ (suspended augmentation ideal), the degree of a subtree is
+    ``sum_v (deg_P(v) + arity(v) - 1)``.
+    """
+    if is_leaf(tree):
+        return tree, 1
+
+    kids = children(tree)
+    dec = decoration(tree)
+    k = len(kids)
+
+    # Recursively normalize children first
+    normalized_kids = []
+    child_sign = 1
+    for c in kids:
+        if is_internal(c):
+            norm_c, s = to_shuffle_tree_bar(c, operad_cls, base_ring)
+            normalized_kids.append(norm_c)
+            child_sign *= s
+        else:
+            normalized_kids.append(c)
+
+    # Compute min leaf and bar-degree for each normalized child
+    min_leaves = [min_leaf(c) for c in normalized_kids]
+    bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
+
+    # Sort children by min leaf
+    # indexed_children = [(min_leaf, original_index, child, bar_degree)]
+    indexed = list(zip(min_leaves, range(k), normalized_kids, bar_degrees))
+    indexed.sort(key=lambda x: x[0])
+
+    # Extract the permutation: perm[new_pos] = old_pos
+    # We need the inverse: old_to_new[old_pos] = new_pos
+    perm = [item[1] for item in indexed]  # old positions in new order
+
+    # Check if already sorted
+    if perm == list(range(k)):
+        # Already in shuffle order
+        new_tree = (dec,) + tuple(normalized_kids)
+        return new_tree, child_sign
+
+    # Compute Koszul sign for reordering
+    # The bar-degrees are associated with the OLD positions
+    koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
+
+    # Compute operad action: the sorting permutation σ acts on decoration
+    # σ is the permutation that sends position i to perm[i] (one-indexed)
+    # In Sage permutation notation: σ = [perm[0]+1, perm[1]+1, ..., perm[k-1]+1]
+    sigma_list = [p + 1 for p in perm]
+
+    # Apply operad action to decoration
+    operad_parent = operad_cls(k, base_ring)
+    dec_elem = operad_parent.term(dec)
+
+    # The permute method applies σ to the element
+    # But we need σ^{-1} because we're reordering children to shuffle form
+    # When we sort children, we're effectively applying σ^{-1} to leaf labels
+    # So decoration should be acted on by σ^{-1}
+
+    # Compute σ^{-1}: if σ(i) = sigma_list[i-1], then σ^{-1}(j) = position where j appears
+    sigma_inv = [0] * k
+    for new_pos, old_pos_plus_one in enumerate(sigma_list):
+        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
+    # Actually, let me reconsider...
+    # perm[new_pos] = old_pos means: child at new position came from old position
+    # So σ takes new_pos -> old_pos, meaning σ^{-1} takes old_pos -> new_pos
+    # The permutation acting on decoration should be the same as acting on children
+    # If we reorder children by σ (sorting), decoration gets acted on by σ
+
+    # Let's use the inverse: σ^{-1}[old_pos] = new_pos
+    # sigma_inv already computed above
+
+    permuted_dec_elem = dec_elem.permute(sigma_inv)
+
+    # Extract the new decoration (should be a single term for most operads)
+    operad_sign = 1
+    new_dec = dec
+    for new_dec_key, coeff in permuted_dec_elem:
+        new_dec = new_dec_key
+        operad_sign = coeff
+        break  # Assume single term result
+
+    # Build sorted tree
+    sorted_kids = tuple(item[2] for item in indexed)
+    new_tree = (new_dec,) + sorted_kids
+
+    total_sign = child_sign * koszul_sign * operad_sign
+    return new_tree, total_sign
+
+
+def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
+    """Normalize a tree to shuffle form for the cobar construction Ω(C).
+
+    Returns ``(shuffle_tree, sign)`` where:
+    - ``shuffle_tree`` is the tree with children reordered at each vertex
+    - ``sign`` is the accumulated Koszul sign and cooperad action sign
+
+    For s^{-1}C̄ (desuspended coaugmentation coideal), the degree of a subtree is
+    ``sum_v (deg_C(v) - (arity(v) - 1))``.
+    """
+    if is_leaf(tree):
+        return tree, 1
+
+    kids = children(tree)
+    dec = decoration(tree)
+    k = len(kids)
+
+    # Recursively normalize children first
+    normalized_kids = []
+    child_sign = 1
+    for c in kids:
+        if is_internal(c):
+            norm_c, s = to_shuffle_tree_cobar(c, cooperad_cls, base_ring)
+            normalized_kids.append(norm_c)
+            child_sign *= s
+        else:
+            normalized_kids.append(c)
+
+    # Compute min leaf and cobar-degree for each normalized child
+    min_leaves = [min_leaf(c) for c in normalized_kids]
+    cobar_degrees = [
+        subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids
+    ]
+
+    # Sort children by min leaf
+    indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
+    indexed.sort(key=lambda x: x[0])
+
+    perm = [item[1] for item in indexed]
+
+    if perm == list(range(k)):
+        new_tree = (dec,) + tuple(normalized_kids)
+        return new_tree, child_sign
+
+    koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
+
+    sigma_list = [p + 1 for p in perm]
+    sigma_inv = [0] * k
+    for new_pos, old_pos_plus_one in enumerate(sigma_list):
+        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
+
+    cooperad_parent = cooperad_cls(k, base_ring)
+    dec_elem = cooperad_parent.term(dec)
+    permuted_dec_elem = dec_elem.permute(sigma_inv)
+
+    operad_sign = 1
+    new_dec = dec
+    for new_dec_key, coeff in permuted_dec_elem:
+        new_dec = new_dec_key
+        operad_sign = coeff
+        break
+
+    sorted_kids = tuple(item[2] for item in indexed)
+    new_tree = (new_dec,) + sorted_kids
+
+    total_sign = child_sign * koszul_sign * operad_sign
+    return new_tree, total_sign
