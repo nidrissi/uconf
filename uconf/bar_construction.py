@@ -260,10 +260,10 @@ class BarConstruction:
             """Structural differential: contract each internal edge.
 
             For each internal edge (parent p, position l, child c), the sign is:
-                (-1)^{global_cum(p) + deg_P(p) + |sc| * deg_bar_before(p, l)}
+                (-1)^{global_accum(p) + deg_P(p) + |sc| * deg_bar_before(p, l)}
 
             where:
-            - global_cum(p) = sum_{v before p in DFS} (deg_P(v) + arity(v) - 1)
+            - global_accum(p) = sum_{v before p in DFS} (deg_P(v) + arity(v) - 1)
                 is the total sP̄-degree of all DFS-preceding vertices
             - deg_P(p) is the P-degree of the parent decoration
             - |sc| = deg_P(c) + arity(c) - 1 is the sP̄-degree of the child
