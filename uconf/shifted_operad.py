@@ -16,6 +16,7 @@ from sage.all import (
     QQ,
     SymmetricGroup,
 )
+from .operad import OperadProtocol
 from .signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
@@ -38,7 +39,7 @@ class ShiftedOperad:
       with ``m = arity(x)``, ``n = arity(y)``, and ``|y|`` in the base operad.
     """
 
-    def __init__(self, operad_cls, shift_degree: int):
+    def __init__(self, operad_cls: type[OperadProtocol], shift_degree: int):
         self.operad_cls = operad_cls
         self.shift_degree = int(shift_degree)
         self.name = f"{operad_cls.name}[{self.shift_degree}]"

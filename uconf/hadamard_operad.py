@@ -14,11 +14,17 @@ from __future__ import annotations
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
 
+from .operad import OperadProtocol
+
 
 class HadamardProduct:
     """Factory for Hadamard-product operad components."""
 
-    def __init__(self, left_operad_cls, right_operad_cls):
+    def __init__(
+        self,
+        left_operad_cls: type[OperadProtocol],
+        right_operad_cls: type[OperadProtocol],
+    ):
         self.left_operad_cls = left_operad_cls
         self.right_operad_cls = right_operad_cls
         self.name = f"{left_operad_cls.name}⊙{right_operad_cls.name}"

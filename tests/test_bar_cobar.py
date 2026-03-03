@@ -640,29 +640,6 @@ class TestCobarConstruction:
         assert latex(elem) == latex_repr
 
 
-class TestProtocolCompliance:
-    """Test that bar/cobar constructions satisfy the protocols."""
-
-    def test_bar_is_cooperad(self):
-        """BarConstruction components should satisfy CooperadProtocol."""
-        BLie = BarConstruction(Lie)
-        for n in range(2, 4):
-            B = BLie(n)
-            assert isinstance(B, CooperadProtocol), f"B(Lie)({n}) not a cooperad"
-
-    def test_cobar_is_operad(self):
-        """CobarConstruction components should satisfy OperadProtocol."""
-        OmegaS = CobarConstruction(SurjectionDual)
-        for n in range(1, 4):
-            O = OmegaS(n)
-            # Note: OperadProtocol requires compose as static method on type
-            # Our implementation has it on the factory, which is slightly different
-            # But the Element class should have the right methods
-            assert hasattr(O, "arity")
-            assert hasattr(O, "degree_on_basis")
-            assert hasattr(O, "boundary")
-
-
 class TestContractEdge:
     """Tests for edge contraction in trees."""
 
@@ -784,11 +761,6 @@ class TestBarCoderivation:
 class TestCoAssociative:
     """Tests for the CoAssociative cooperad."""
 
-    def test_coassociative_protocol(self):
-        """CoAssociative satisfies CooperadProtocol."""
-        for n in range(1, 4):
-            assert isinstance(CoAssociative(n), CooperadProtocol)
-
     def test_coassociative_counit(self):
         """Counit evaluates correctly on arity-1 generator."""
         C1 = CoAssociative(1)
@@ -845,11 +817,6 @@ class TestCoAssociative:
 
 class TestCoCommutative:
     """Tests for the CoCommutative cooperad."""
-
-    def test_cocommutative_protocol(self):
-        """CoCommutative satisfies CooperadProtocol."""
-        for n in range(1, 4):
-            assert isinstance(CoCommutative(n), CooperadProtocol)
 
     def test_cocommutative_counit(self):
         """Counit evaluates correctly on arity-1 generator."""

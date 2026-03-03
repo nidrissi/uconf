@@ -12,6 +12,7 @@ from sage.all import (
     tensor,
 )
 
+from .cooperad import CooperadProtocol
 from .signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
@@ -27,7 +28,7 @@ class ShiftedCooperad:
     transport/sign rules as :class:`uconf.shifted_operad.ShiftedOperad`.
     """
 
-    def __init__(self, cooperad_cls, shift_degree: int):
+    def __init__(self, cooperad_cls: type[CooperadProtocol], shift_degree: int):
         self.cooperad_cls = cooperad_cls
         self.shift_degree = int(shift_degree)
         self.name = f"{cooperad_cls.name}[{self.shift_degree}]"

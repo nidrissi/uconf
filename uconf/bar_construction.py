@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator
+from typing import ClassVar, Iterator, cast
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -32,6 +32,7 @@ from .signs import (
     shifted_operadic_compose_sign,
     sign_from_exponent,
 )
+from .operad import OperadProtocol
 from .trees import (
     children,
     decoration,
@@ -69,13 +70,32 @@ class BarConstruction:
     For connected operads, P̄(1) = 0, so all internal vertices have arity >= 2.
     """
 
-    def __init__(self, operad_cls, max_weight: int = 3):
+    def __init__(
+        self,
+        operad_cls: type[OperadProtocol],
+        max_weight: int = 3,
+    ):
         self.operad_cls = operad_cls
         self.max_weight = int(max_weight)
         self.name = f"B({operad_cls.name})"
 
     def __call__(self, n: int, base_ring=QQ) -> "BarConstruction.Component":
         return BarConstruction.Component(self, n, base_ring)
+
+    @staticmethod
+    def counit(x: "BarConstruction.Element"):
+        """Cooperadic counit at the factory level."""
+        return BarConstruction.Component.counit(x)
+
+    @staticmethod
+    def reduced(x: "BarConstruction.Element") -> "BarConstruction.Element":
+        """Reduced projection at the factory level."""
+        return BarConstruction.Component.reduced(x)
+
+    @staticmethod
+    def infinitesimal_cocompose(x: "BarConstruction.Element", i: int, m: int, n: int):
+        """Infinitesimal cocomposition at the factory level."""
+        return x.infinitesimal_cocompose(i, m, n)
 
     def counit_element(self, base_ring=QQ) -> "BarConstruction.Element":
         """Return the counit element (single leaf tree in arity 1).

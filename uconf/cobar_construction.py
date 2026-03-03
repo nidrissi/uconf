@@ -21,6 +21,8 @@ from typing import ClassVar, Iterator
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
+from .cooperad import CooperadProtocol
+from typing import cast
 from .signs import shifted_boundary_sign, sign_from_exponent
 from .trees import (
     children,
@@ -63,7 +65,7 @@ class CobarConstruction:
         ``is_shuffle_tree`` in ``trees`` can be used explicitly when needed.
     """
 
-    def __init__(self, cooperad_cls, max_weight: int = 3):
+    def __init__(self, cooperad_cls: type[CooperadProtocol], max_weight: int = 3):
         self.cooperad_cls = cooperad_cls
         self.max_weight = int(max_weight)
         self.name = f"Ω({cooperad_cls.name})"
@@ -290,7 +292,7 @@ class CobarConstruction:
                 curr_arity = vertex_arity(curr_vertex)
                 curr_dec = decoration(curr_vertex)
                 curr_parent = self._cooperad_cls(curr_arity, base_ring)
-                curr_elem = curr_parent(curr_dec)
+                curr_elem = curr_parent.term(curr_dec)
 
                 # Cumulative s^{-1}C-degree of DFS vertices before current
                 global_accum = 0
