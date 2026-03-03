@@ -303,6 +303,7 @@ class CobarConstruction:
                                 v_idx + 1,
                                 dec_right,
                             )
+                            # TODO There should be a sign depending on i, m, n; dual to what appears in d2 of the bar construction.
                             result += total_sign * coeff * self.term(new_tree)
             return result
 
