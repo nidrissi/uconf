@@ -797,6 +797,16 @@ class TestCobarSignFix:
     decoration (1,2,3,1) in arity 3 has s^{-1}C degree = (4-3) - 2 = -1.
     """
 
+    def test_cobar_surjection_square_zero_arity4_weight2(self):
+        """d^2 = 0 for a weight-2 tree in Ω(S*) where the sign fix matters."""
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O4 = OmegaS(4)
+        # root arity 3 with one internal arity-2 child
+        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
+        elem = O4(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O4.zero(), f"d^2 != 0 in arity 4 weight 2: {bdry2}"
+
     def test_cobar_sign_arity5_weight2(self):
         """d^2 = 0 for a weight-2 tree where the sign fix matters.
 
@@ -810,7 +820,7 @@ class TestCobarSignFix:
         tree = ((1, 2, 3, 1), ((1, 2, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
         bdry2 = elem.boundary().boundary()
-        assert bdry2 == O5.zero(), f"d^2 != 0 (sign fix required): {bdry2}"
+        assert bdry2 == O5.zero(), f"d^2 != 0 in arity 5 weight 2: {bdry2}"
 
     def test_cobar_sign_arity5_weight2_inner_dec(self):
         """d^2 = 0 for a tree where the inner node has high-degree decoration."""
@@ -819,7 +829,16 @@ class TestCobarSignFix:
         tree = ((1, 2, 3, 1), ((1, 2, 1, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
         bdry2 = elem.boundary().boundary()
-        assert bdry2 == O5.zero(), f"d^2 != 0 (sign fix required): {bdry2}"
+        assert bdry2 == O5.zero(), f"d^2 != 0 in arity 5 weight 2: {bdry2}"
+
+    def test_cobar_sign_arity6_weight3(self):
+        """d^2 = 0 for a weight-3 tree where the sign fix matters."""
+        OmegaS = CobarConstruction(SurjectionLinearDual)
+        O6 = OmegaS(6)
+        tree = ((1, 2, 3, 1, 4), ((1, 2, 1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
+        elem = O6(tree)
+        bdry2 = elem.boundary().boundary()
+        assert bdry2 == O6.zero(), f"d^2 != 0 in arity 6 weight 3: {bdry2}"
 
 
 if __name__ == "__main__":
