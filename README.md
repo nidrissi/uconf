@@ -183,7 +183,6 @@ res = Surjection.act(u, x)
 ### Main operads
 
 - `test_surjection.py`: units, symmetric action, composition, planar bases, section/table-reduction.
-  - Includes known `xfail` tests for subtle `section` compatibilities.
 - `test_barratt_eccles.py`: basis cardinalities, unit, symmetric action, composition.
 - `test_lie.py`: unit, antisymmetry, Jacobi, operadic axioms, stress checks in arities 4–6.
 
