@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 from sage.all import tensor
 
 from .surjection import Surjection
@@ -11,6 +13,41 @@ class SurjectionDual(Surjection):
     """Linear dual companion of :class:`uconf.surjection.Surjection`."""
 
     name = "S*"
+
+    def basis_it(self, d: int):
+        """Iterate over basis elements in dual degree ``d`` (non-positive)."""
+
+        assert d <= 0, f"d must be a non-positive integer, got d={d}."
+        r = self.arity()
+        for values in itertools.product(range(1, r + 1), repeat=r - d):
+            res = self(values)
+            if res != self.zero():
+                yield res
+
+    def degree_on_basis(self, basis_element: tuple) -> int:
+        """Return dual homological degree (negative primal degree)."""
+
+        return self.arity() - len(basis_element)
+
+    def _boundary_on_basis(self, basis_element: tuple) -> "SurjectionDual.Element":
+        """Compute the differential by transposing ``Surjection`` differential."""
+
+        primal_parent = Surjection(self.arity(), base_ring=self.base_ring())
+        primal_degree = len(basis_element) - self.arity()
+        source_degree = primal_degree + 1
+
+        def term_generator():
+            for source_term in primal_parent.basis_it(source_degree):
+                source_basis = next(iter(source_term.support()))
+                source_boundary = primal_parent._boundary_on_basis(source_basis)
+                coeff = self.base_ring().zero()
+                for target_basis, c in source_boundary:
+                    if target_basis == basis_element:
+                        coeff += c
+                if coeff != 0:
+                    yield (source_basis, coeff)
+
+        return self.sum_of_terms(term_generator())
 
     @staticmethod
     def counit(x: "SurjectionDual.Element"):
@@ -56,14 +93,14 @@ class SurjectionDual(Surjection):
         source_parent = x.parent()
 
         def _on_basis(u_basis: tuple[int, ...]):
-            u_degree = source_parent.degree_on_basis(u_basis)
+            u_degree = -source_parent.degree_on_basis(u_basis)
             out = target.zero()
 
             for left_degree in range(u_degree + 1):
                 right_degree = u_degree - left_degree
-                for left_term in left_parent.basis_it(left_degree):
+                for left_term in left_parent.basis_it(-left_degree):
                     left_basis = next(iter(left_term.support()))
-                    for right_term in right_parent.basis_it(right_degree):
+                    for right_term in right_parent.basis_it(-right_degree):
                         right_basis = next(iter(right_term.support()))
                         composed = Surjection.compose(left_term, i, right_term)
                         coeff = source_parent.base_ring().zero()
