@@ -896,7 +896,6 @@ class TestCoCommutative:
         assert bdry2 == O3.zero(), f"d^2 != 0 for CoCom: {bdry2}"
 
 
-# TODO These tests are failing: d_2 has wrong signs in CobarConstruction
 class TestCobarSignFix:
     """Tests verifying the corrected cumulative-sign in cobar d_2."""
 
