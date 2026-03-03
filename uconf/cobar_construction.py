@@ -48,7 +48,7 @@ class CobarConstruction:
     """Factory for cobar construction components of a connected dg-cooperad.
 
     Args:
-        cooperad_cls: Base cooperad class (e.g., ``SurjectionLinearDual``).
+        cooperad_cls: Base cooperad class (e.g., ``SurjectionDual``).
         max_weight: Maximum tree weight for enumeration helpers (default 3).
 
     The cobar construction Ω(C) is a dg-operad whose arity-n component has
@@ -264,21 +264,8 @@ class CobarConstruction:
 
             return result
 
-        # TODO: The d_2 implementation is the most complex part and has sign issues
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Structural differential: expand vertices using cocomposition.
-
-            For each vertex v with decoration c and arity k, and each way to
-            split it via infinitesimal cocomposition Delta^{i; m, n}(c), the sign is:
-                (-1)^{global_accum + deg_C(c) + koszul_exp + (n - 1)}
-
-            where:
-            - global_accum = sum over DFS-preceding vertices of (deg_C - (arity - 1))
-              is the total s^{-1}C-degree of preceding vertices
-            - deg_C(c) is the C-degree of the current vertex decoration
-            - koszul_exp = right_sinv_deg * before_deg (Koszul sign for position)
-            - (n - 1) accounts for the desuspension shift of the new inner vertex
-            """
+            """Structural differential: expand vertices using cocomposition."""
             if is_leaf(tree):
                 return self.zero()
 
@@ -286,11 +273,11 @@ class CobarConstruction:
             base_ring = self.base_ring()
             verts = vertices_dfs(tree)
 
-            for v_idx, curr_vertex in enumerate(verts):
+            for curr_vertex in verts:
                 curr_arity = vertex_arity(curr_vertex)
                 curr_dec = decoration(curr_vertex)
                 curr_parent = self._cooperad_cls(curr_arity, base_ring)
-                curr_deg_C = curr_parent.degree_on_basis(curr_dec)
+                curr_elem = curr_parent(curr_dec)
 
                 # Cumulative s^{-1}C-degree of DFS vertices before current
                 global_accum = 0
@@ -301,20 +288,18 @@ class CobarConstruction:
                     v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(
                         decoration(vertex)
                     )
-                    # s^{-1}C degree = deg_C - (arity - 1)
-                    global_accum += v_deg - (v_arity - 1)
+                    global_accum += v_deg - 1
 
-                curr_elem = curr_parent.term(curr_dec)
                 for m in range(2, curr_arity):
                     n = curr_arity - m + 1
                     for i in range(1, m + 1):
                         cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
                         for (dec_left, dec_right), coeff in cocomp:
-                            # s^{-1}C degree of the new inner vertex decoration
                             right_parent = self._cooperad_cls(n, base_ring)
-                            right_sinv_deg = right_parent.degree_on_basis(dec_right) - (
-                                n - 1
-                            )
+                            right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
+
+                            left_parent = self._cooperad_cls(m, base_ring)
+                            left_degree = left_parent.degree_on_basis(dec_left)
 
                             # Cobar-degree of subtrees at positions 1, ..., i-1
                             before_deg = sum(
@@ -324,9 +309,8 @@ class CobarConstruction:
                             )
 
                             koszul_exp = right_sinv_deg * before_deg
-                            # Sign includes (n-1) for the desuspension shift
                             total_sign = sign_from_exponent(
-                                global_accum + curr_deg_C + koszul_exp + (n - 1)
+                                global_accum + left_degree + koszul_exp
                             )
 
                             new_tree = expand_vertex(
