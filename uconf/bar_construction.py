@@ -7,7 +7,7 @@ cofree conilpotent cooperad on the suspension of the augmentation ideal:
 
 where:
 - P̄ is the augmentation ideal (P̄(1) = 0 for connected operads)
-- sP̄ denotes the suspension (degree shift by +1 per arity-1)
+- sP̄ denotes the suspension used here (degree shift by +1 per internal vertex)
 - T^c denotes the cofree conilpotent cooperad (decorated rooted trees)
 - d_1 is the internal differential from P
 - d_2 is the structural differential from edge contractions
@@ -132,8 +132,9 @@ class BarConstruction:
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
 
-            Returns (shuffle_tree, sign) where shuffle_tree is the normalized
-            tree and sign is the accumulated Koszul and operad action sign.
+            Returns ``(shuffle_tree, sign)`` where ``shuffle_tree`` is the
+            normalized tree and ``sign`` is the accumulated Koszul and operad
+            action sign.
 
             A shuffle tree has children at each vertex sorted by min leaf label.
             This implements the standard basis for the bar construction on a
@@ -188,10 +189,10 @@ class BarConstruction:
             """Compute the degree of a tree in B(P).
 
             The degree is sum over all vertices v of:
-                deg_P(decoration(v)) + (arity(v) - 1)
+                deg_P(decoration(v)) + 1
 
-            This equals sum_v deg_P(decoration(v)) + (n - 1) where n is tree arity,
-            since sum_v (arity(v) - 1) = n - 1 for any tree.
+            This is the grading convention implemented by ``subtree_degree``
+            and used consistently in the bar differential sign exponents.
             """
             return subtree_degree(tree, self._operad_cls, self.base_ring())
 
@@ -206,8 +207,8 @@ class BarConstruction:
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
 
-            d_1: internal differential, applies P.boundary to each vertex decoration
-            d_2: structural differential, contracts each internal edge
+            - ``d_1`` applies ``P.boundary`` to each vertex decoration.
+            - ``d_2`` contracts each internal edge via partial composition.
             """
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
@@ -218,6 +219,9 @@ class BarConstruction:
                 (-1)^{sum_{l < j} (deg_P(p_l) + 1)}
 
             where deg_P(p_l) + 1 is the uniformly suspended degree of vertex l.
+
+            This is the coderivation extending the internal differential on
+            vertex decorations.
             """
             if is_leaf(tree):
                 return self.zero()
@@ -263,10 +267,10 @@ class BarConstruction:
                 (-1)^{global_accum(p) + deg_P(p) + |sc| * deg_bar_before(p, l)}
 
             where:
-            - global_accum(p) = sum_{v before p in DFS} (deg_P(v) + arity(v) - 1)
-                is the total sP̄-degree of all DFS-preceding vertices
+            - global_accum(p) = sum_{v before p in DFS} (deg_P(v) - 1)
+                is the cumulative shifted degree used by the implementation
             - deg_P(p) is the P-degree of the parent decoration
-            - |sc| = deg_P(c) + arity(c) - 1 is the sP̄-degree of the child
+            - |sc| = deg_P(c) - 1 is the shifted degree of the child
             - deg_bar_before(p, l) = sum_{j < l} subtree_degree(child_j of p)
                 is the total bar-degree of the subtrees rooted at siblings of c
                 occupying positions 1, ..., l-1
@@ -303,10 +307,10 @@ class BarConstruction:
                     v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(
                         decoration(v)
                     )
-                    global_accum += v_deg + (v_arity - 1)
+                    global_accum += v_deg - 1
 
                 # Koszul sign: sP̄-degree of child times bar-degree before position l
-                c_sp_deg = c_deg_P + (c_arity - 1)
+                c_sp_deg = c_deg_P - 1
                 before_deg = sum(
                     subtree_degree(ch, self._operad_cls, base_ring)
                     for i, ch in enumerate(children(parent_vertex), start=1)
@@ -386,7 +390,7 @@ class BarConstruction:
             """Partial cocomposition dual to free operad composition.
 
             Splits trees at internal edges where the lower subtree has leaves
-            {i, i+1, ..., i+n-1}.
+            ``{i, i+1, ..., i+n-1}``.
             """
             if m <= 0 or n <= 0:
                 raise ValueError(f"Arities must be positive. Got m={m}, n={n}.")
@@ -509,7 +513,7 @@ class BarConstruction:
             return self.parent()._d2(self)
 
         def permute(self, sigma) -> "BarConstruction.Element":
-            """Permute leaf labels by sigma (no sign, just relabeling)."""
+            """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
             n = parent.arity()
 
@@ -528,12 +532,15 @@ class BarConstruction:
             return result
 
         def counit(self):
+            """Evaluate the cooperadic counit on this element."""
             return BarConstruction.Component.counit(self)
 
         def reduced(self) -> "BarConstruction.Element":
+            """Project this element to the reduced bar cooperad."""
             return BarConstruction.Component.reduced(self)
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
+            """Apply infinitesimal cocomposition ``Δ^{i;m,n}`` to this element."""
             return self.parent().infinitesimal_cocompose(self, i, m, n)
 
 
