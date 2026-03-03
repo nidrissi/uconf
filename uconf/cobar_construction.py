@@ -19,17 +19,9 @@ from __future__ import annotations
 
 from typing import ClassVar, Iterator
 
-from sage.all import (
-    CombinatorialFreeModule,
-    GradedModulesWithBasis,
-    QQ,
-    SymmetricGroup,
-)
+from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
-from .signs import (
-    shifted_boundary_sign,
-    sign_from_exponent,
-)
+from .signs import shifted_boundary_sign, sign_from_exponent
 from .trees import (
     children,
     decoration,
@@ -229,13 +221,7 @@ class CobarConstruction:
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
         def _d1_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Internal differential: apply cooperad boundary to each vertex.
-
-            For each vertex v_j in DFS order, the sign is:
-                (-1)^{-1 + sum_{l < j} |s⁻¹ c_l|}
-
-            where |s⁻¹ c_l| = deg_C(c_l) - (arity(v_l) - 1) is the desuspended degree.
-            """
+            """Internal differential: apply cooperad boundary to each vertex."""
             if is_leaf(tree):
                 return self.zero()
 
@@ -251,15 +237,9 @@ class CobarConstruction:
                 cooperad_parent = self._cooperad_cls(v_arity, base_ring)
 
                 # Degree of this vertex in s⁻¹C̄
-                vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - (
-                    v_arity - 1
-                )
+                vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - 1
 
-                # Sign: (-1)^{-1 + cumulative} = (-1)^{1 + cumulative}
-                # shifted_boundary_sign(-1) = (-1)^{-1} = -1
-                sign = shifted_boundary_sign(-1)
-                if cumulative_degree % 2 == 1:
-                    sign = -sign
+                sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
                 dec_elem = cooperad_parent.term(dec)
