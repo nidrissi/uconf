@@ -207,8 +207,7 @@ class BarConstruction:
                 # Degree of this vertex in sP̄
                 vertex_sp_degree = operad_parent.degree_on_basis(dec) + 1
 
-                # Sign: (-1)^{shift_degree + cumulative}
-                # shift_degree = 1 for the suspension
+                # Sign: (-1)^{cumulative}
                 sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
