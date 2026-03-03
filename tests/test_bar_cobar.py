@@ -785,25 +785,16 @@ class TestCoCommutative:
 
 
 class TestCobarSignFix:
-    """Tests verifying the corrected cumulative-sign in cobar d_2.
+    """Tests verifying the corrected cumulative-sign in cobar d_2."""
 
-    The structural differential d_2 of the cobar construction contributes a
-    factor (-1)^{cumulative_before} where cumulative_before is the sum of
-    s^{-1}C degrees of all DFS-preceding vertices.  Without this factor, d^2
-    can be non-zero.
-
-    The test trees below have a root whose s^{-1}C degree is odd (-1), so the
-    child vertex acquires a non-trivial sign when expanded.  The SurjectionLinearDual
-    decoration (1,2,3,1) in arity 3 has s^{-1}C degree = (4-3) - 2 = -1.
-    """
-
-    def test_cobar_com_square_zero_arity5_weight1(self):
+    @pytest.mark.parametrize("arity", [3, 4, 5])
+    def test_cobar_com_square_zero_arity5_weight1(self, arity: int):
         OmegaCom = CobarConstruction(CoCommutative)
-        OC5 = OmegaCom(5)
-        tree = ((), 1, 2, 3, 4, 5)
-        elem = OC5(tree)
+        OC = OmegaCom(arity)
+        tree = ((),) + tuple(range(1, arity + 1))
+        elem = OC(tree)
         bdry2 = elem.boundary().boundary()
-        assert bdry2 == OC5.zero(), f"d^2 != 0 for CoCom arity 5: {bdry2}"
+        assert bdry2 == OC.zero(), f"d^2 != 0 for CoCom arity {arity}: {bdry2}"
 
     def test_cobar_surjection_square_zero_arity4_weight2(self):
         """d^2 = 0 for a weight-2 tree in Ω(S*) where the sign fix matters."""

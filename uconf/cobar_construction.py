@@ -258,7 +258,19 @@ class CobarConstruction:
             return result
 
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Structural differential: expand vertices using cocomposition."""
+            """Structural differential: expand vertices using cocomposition.
+
+            For each vertex v with decoration c and arity k, and each way to
+            split it via infinitesimal cocomposition Delta^{i; m, n}(c), the sign is:
+                (-1)^{global_accum + deg_C(c) + koszul_exp + (n - 1)}
+
+            where:
+            - global_accum = sum over DFS-preceding vertices of (deg_C - (arity - 1))
+              is the total s^{-1}C-degree of preceding vertices
+            - deg_C(c) is the C-degree of the current vertex decoration
+            - koszul_exp = right_sinv_deg * before_deg (Koszul sign for position)
+            - (n - 1) accounts for the desuspension shift of the new inner vertex
+            """
             if is_leaf(tree):
                 return self.zero()
 
@@ -272,6 +284,7 @@ class CobarConstruction:
                 curr_parent = self._cooperad_cls(curr_arity, base_ring)
                 curr_deg_C = curr_parent.degree_on_basis(curr_dec)
 
+                # Cumulative s^{-1}C-degree of DFS vertices before current
                 global_accum = 0
                 for vertex in verts:
                     if vertex is curr_vertex:
@@ -280,10 +293,8 @@ class CobarConstruction:
                     v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(
                         decoration(vertex)
                     )
-                    global_accum += v_deg + (v_arity - 1)
-
-                c_sc_deg = curr_deg_C + curr_arity + 1
-                total_sign = sign_from_exponent(global_accum + c_sc_deg)
+                    # s^{-1}C degree = deg_C - (arity - 1)
+                    global_accum += v_deg - (v_arity - 1)
 
                 curr_elem = curr_parent.term(curr_dec)
                 for m in range(2, curr_arity):
@@ -291,19 +302,28 @@ class CobarConstruction:
                     for i in range(1, m + 1):
                         cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
                         for (dec_left, dec_right), coeff in cocomp:
+                            # s^{-1}C degree of the new inner vertex decoration
+                            right_parent = self._cooperad_cls(n, base_ring)
+                            right_sinv_deg = right_parent.degree_on_basis(dec_right) - (
+                                n - 1
+                            )
+
+                            # Cobar-degree of subtrees at positions 1, ..., i-1
+                            before_deg = sum(
+                                subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                                for j, ch in enumerate(children(curr_vertex), start=1)
+                                if j < i
+                            )
+
+                            koszul_exp = right_sinv_deg * before_deg
+                            # Sign includes (n-1) for the desuspension shift
+                            total_sign = sign_from_exponent(
+                                global_accum + curr_deg_C + koszul_exp + (n - 1)
+                            )
+
                             new_tree = expand_vertex(
                                 tree, curr_vertex, i, dec_left, dec_right, m, n
                             )
-                            new_tree = self._replace_vertex_decoration_by_index(
-                                new_tree, vertices_dfs(new_tree), v_idx, dec_left
-                            )
-                            new_tree = self._replace_vertex_decoration_by_index(
-                                new_tree,
-                                vertices_dfs(new_tree),
-                                v_idx + 1,
-                                dec_right,
-                            )
-                            # TODO There should be a sign depending on i, m, n; dual to what appears in d2 of the bar construction.
                             result += total_sign * coeff * self.term(new_tree)
             return result
 
