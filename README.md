@@ -39,7 +39,7 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 
 ### Cooperad model
 
-- `surjection_linear_dual.py` — `SurjectionLinearDual`
+- `surjection_linear_dual.py` — `SurjectionDual`
   - Linear dual companion of `Surjection`.
   - Operations: `counit`, `reduced`, `infinitesimal_cocompose`.
 
@@ -142,7 +142,7 @@ xp = x.permute([2, 1])
 ### Bar / cobar constructions
 
 ```python
-from uconf import BarConstruction, CobarConstruction, Lie, SurjectionLinearDual
+from uconf import BarConstruction, CobarConstruction, Lie, SurjectionDual
 
 # Bar construction B(Lie)
 BLie = BarConstruction(Lie)
@@ -151,7 +151,7 @@ t = B3(((1, 2), 1, 2, 3))
 dt = t.boundary()
 
 # Cobar construction Ω(S*)
-OmegaS = CobarConstruction(SurjectionLinearDual)
+OmegaS = CobarConstruction(SurjectionDual)
 O2 = OmegaS(2)
 x = O2(((1, 2), 1, 2))
 u = OmegaS.unit()
@@ -178,7 +178,7 @@ res = Surjection.act(u, x)
 ### API contracts
 
 - `test_common_operad.py`: `OperadProtocol` conformance (`Surjection`, `BarrattEccles`).
-- `test_common_cooperad.py`: `CooperadProtocol` conformance (`SurjectionLinearDual`).
+- `test_common_cooperad.py`: `CooperadProtocol` conformance (`SurjectionDual`).
 
 ### Main operads
 

@@ -4,7 +4,7 @@ This package exposes several operads and related constructions used in the
 project:
 
 - :class:`Surjection`
-- :class:`SurjectionLinearDual`
+- :class:`SurjectionDual`
 - :class:`BarrattEccles`
 - :class:`Lie`
 - :class:`Associative`
@@ -37,7 +37,7 @@ from .signs import *
 from .shifted_operad import *
 from .simplicial import *
 from .surjection import *
-from .surjection_linear_dual import *
+from .surjection_dual import *
 from .trees import *
 
 
