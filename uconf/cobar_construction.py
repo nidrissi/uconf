@@ -7,7 +7,7 @@ free operad on the desuspension of the coaugmentation coideal:
 
 where:
 - C̄ is the coaugmentation coideal (C̄(1) = 0 for connected cooperads)
-- s⁻¹C̄ denotes the desuspension (degree shift by -1 per arity-1)
+- s⁻¹C̄ denotes the desuspension used here (degree shift by -1 per internal vertex)
 - T denotes the free operad (decorated rooted trees)
 - d_1 is the internal differential from C
 - d_2 is the structural differential from vertex expansions
@@ -58,11 +58,9 @@ class CobarConstruction:
     For connected cooperads, C̄(1) = 0, so all internal vertices have arity >= 2.
 
     Note:
-        Unlike BarConstruction, this does not currently implement automatic
-        shuffle tree normalization. The differential sign formulas need to be
-        reworked to be compatible with shuffle normalization. Use the functions
-        ``to_shuffle_tree_cobar`` and ``is_shuffle_tree`` from ``trees`` module
-        for manual normalization if needed.
+        Unlike ``BarConstruction``, this module does not automatically normalize
+        trees to shuffle form. Utilities ``to_shuffle_tree_cobar`` and
+        ``is_shuffle_tree`` in ``trees`` can be used explicitly when needed.
     """
 
     def __init__(self, cooperad_cls, max_weight: int = 3):
@@ -87,8 +85,8 @@ class CobarConstruction:
     ) -> "CobarConstruction.Element":
         """Free operad composition: graft y onto leaf i of x.
 
-        In the free operad T(s⁻¹C̄), composition is pure tree grafting
-        with no signs (signs are encoded in the s⁻¹C̄ structure).
+        In the free operad ``T(s⁻¹C̄)``, composition is tree grafting; no
+        additional composition sign is introduced here.
         """
         x_parent = x.parent()
         y_parent = y.parent()
@@ -199,7 +197,7 @@ class CobarConstruction:
             """Compute the degree of a tree in Ω(C).
 
             The degree is sum over all vertices v of:
-                deg_C(decoration(v)) - (arity(v) - 1)
+                deg_C(decoration(v)) - 1
 
             For the unit (leaf 1 in arity 1), degree is 0.
             """
@@ -222,15 +220,20 @@ class CobarConstruction:
         def _boundary_on_basis(self, tree) -> "CobarConstruction.Element":
             """Compute the cobar differential d = d_1 + d_2 on a tree.
 
-            d_1: internal differential, applies C.boundary to each vertex
-            d_2: structural differential, expands vertices using cocomposition
+            - ``d_1`` applies ``C.boundary`` to each vertex decoration.
+            - ``d_2`` expands vertices via infinitesimal cocomposition.
             """
             if is_leaf(tree):
                 return self.zero()
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
         def _d1_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Internal differential: apply cooperad boundary to each vertex."""
+            """Internal differential: apply cooperad boundary to each vertex.
+
+            For vertices in DFS order, the sign at vertex ``v_j`` is
+
+                ``(-1)^{\\sum_{l < j} (deg_C(v_l) - 1)}``.
+            """
             if is_leaf(tree):
                 return self.zero()
 
@@ -265,7 +268,17 @@ class CobarConstruction:
             return result
 
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
-            """Structural differential: expand vertices using cocomposition."""
+            """Structural differential: expand vertices using cocomposition.
+
+            For each expanded vertex ``c`` and split ``Δ^{i;m,n}(c) = Σ c_L ⊗ c_R``,
+            the exponent used here is:
+
+                global_accum + deg_C(c_L) + (deg_C(c_R) - 1) * before_deg
+
+            where ``global_accum`` sums ``deg_C(v) - 1`` over DFS-preceding vertices,
+            and ``before_deg`` is the total cobar degree of child subtrees in slots
+            ``1, ..., i-1``.
+            """
             if is_leaf(tree):
                 return self.zero()
 
@@ -396,6 +409,7 @@ class CobarConstruction:
             return self.parent().arity()
 
         def boundary(self) -> "CobarConstruction.Element":
+            """Apply the cobar differential ``d = d_1 + d_2``."""
             return self.parent().boundary(self)
 
         def d1(self) -> "CobarConstruction.Element":
@@ -407,7 +421,7 @@ class CobarConstruction:
             return self.parent()._d2(self)
 
         def permute(self, sigma) -> "CobarConstruction.Element":
-            """Permute leaf labels by sigma (no sign, just relabeling)."""
+            """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
             n = parent.arity()
 

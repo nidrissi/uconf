@@ -315,10 +315,8 @@ class TestBarConstructionLie:
     def test_bar_lie_degree(self):
         BLie = BarConstruction(Lie)
         B3 = BLie(3)
-        # Lie is degree 0, tree arity 3, weight 1
-        # degree = 0 + (3 - 1) = 2
         tree = ((1, 2), 1, 2, 3)
-        assert B3.degree_on_basis(tree) == 2
+        assert B3.degree_on_basis(tree) == 1
 
     def test_bar_lie_boundary_squared_zero_arity2(self):
         """d^2 = 0 for B(Lie)(2)."""
@@ -460,8 +458,6 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_degree(self):
         BS = BarConstruction(Surjection)
         B2 = BS(2)
-        # Surjection basis (1, 2) has degree 0, arity 2
-        # sP degree = 0 + (2 - 1) = 1
         tree = ((1, 2), 1, 2)
         assert B2.degree_on_basis(tree) == 1
 

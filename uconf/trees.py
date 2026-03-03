@@ -1,4 +1,4 @@
-"""Rooted tree utilities for bar-cobar constructions.
+"""Rooted tree utilities for bar/cobar constructions.
 
 Trees are encoded as nested tuples:
 - A leaf is an ``int`` in ``{1, ..., n}`` (the arity).
@@ -79,24 +79,25 @@ def vertices_dfs(tree) -> list[tuple]:
 
 
 def subtree_degree(tree, operad_cls, base_ring) -> int:
-    """Compute the total s*P-bar degree of all decorations in a subtree.
+    """Compute the total shifted bar degree of a subtree.
 
-    For the bar construction, each vertex contributes
-    ``deg_P(decoration) + (vertex_arity - 1)``.
+    In the conventions used by ``BarConstruction``, each internal vertex
+    contributes ``deg_P(decoration) + 1``.
     """
     if is_leaf(tree):
         return 0
     parent = operad_cls(vertex_arity(tree), base_ring)
     dec = decoration(tree)
-    vertex_deg = parent.degree_on_basis(dec) + (vertex_arity(tree) - 1)
+    vertex_deg = parent.degree_on_basis(dec) + 1
     child_deg = sum(subtree_degree(c, operad_cls, base_ring) for c in children(tree))
     return vertex_deg + child_deg
 
 
 def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
-    """Compute the total s^{-1}*C-bar degree for the cobar construction.
+    """Compute the total shifted cobar degree of a subtree.
 
-    Each vertex contributes ``deg_C(decoration) - 1``.
+    In the conventions used by ``CobarConstruction``, each internal vertex
+    contributes ``deg_C(decoration) - 1``.
     """
     if is_leaf(tree):
         return 0
@@ -259,7 +260,7 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     - All internal vertices have arity >= 2 (connected assumption)
     - All decorations are valid for the given operad/cooperad
 
-    Returns the validated tree (possibly normalized) or None if invalid.
+    Returns a validated tree with cleaned decorations, or ``None`` if invalid.
     """
     # Check that tree_arity matches
     if is_leaf(tree):
@@ -498,12 +499,7 @@ def expand_vertex(
 ) -> tuple:
     """Expand a vertex into two vertices connected by an edge.
 
-    For the cobar differential d_2: replaces ``target_vertex`` with two vertices.
-    The original children are reassigned: children 1..child_pos-1+left_arity-1
-    go to left_decoration, the rest to right_decoration, with right_decoration
-    becoming child_pos of left_decoration.
-
-    Actually, this is more nuanced. The infinitesimal cocomposition
+    Used in the cobar differential ``d_2``. The infinitesimal cocomposition
     Delta^{l; a, b}(c) splits an arity-k vertex (k = a + b - 1) into:
     - Top vertex with arity a, decoration c_L
     - Bottom vertex with arity b, decoration c_R
@@ -615,14 +611,14 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
 
     Returns ``(shuffle_tree, sign)`` where:
     - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and operad action sign
+    - ``sign`` is the accumulated Koszul sign and operad-action coefficient
 
     At each vertex, children are sorted by min leaf. The decoration is
     acted on by the sorting permutation (using the operad's permute method),
     and Koszul signs are computed based on bar-degrees of subtrees.
 
-    For sP̄ (suspended augmentation ideal), the degree of a subtree is
-    ``sum_v (deg_P(v) + arity(v) - 1)``.
+    For the implemented bar grading, subtree degrees are computed by
+    ``subtree_degree`` (sum of ``deg_P(v) + 1`` over internal vertices).
     """
     if is_leaf(tree):
         return tree, 1
@@ -715,10 +711,10 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
 
     Returns ``(shuffle_tree, sign)`` where:
     - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and cooperad action sign
+    - ``sign`` is the accumulated Koszul sign and cooperad-action coefficient
 
-    For s^{-1}C̄ (desuspended coaugmentation coideal), the degree of a subtree is
-    ``sum_v (deg_C(v) - (arity(v) - 1))``.
+    For the implemented cobar grading, subtree degrees are computed by
+    ``subtree_degree_cobar`` (sum of ``deg_C(v) - 1`` over internal vertices).
     """
     if is_leaf(tree):
         return tree, 1
