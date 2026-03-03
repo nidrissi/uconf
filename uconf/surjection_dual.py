@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import itertools
 
-from sage.all import tensor
+from sage.all import QQ, tensor
 
 from .surjection import Surjection
 
@@ -13,6 +13,14 @@ class SurjectionDual(Surjection):
     """Linear dual companion of :class:`uconf.surjection.Surjection`."""
 
     name = "S*"
+
+    def __init__(self, n: int, base_ring=QQ):
+        """Initialize fixed-arity linear dual component and internal caches."""
+
+        super().__init__(n, base_ring=base_ring)
+        self._primal_parent = Surjection(n, base_ring=self.base_ring())
+        self._dual_boundary_cache: dict[int, dict[tuple[int, ...], dict]] = {}
+        self._inf_cocompose_cache: dict[tuple[int, int, int, int], dict] = {}
 
     def basis_it(self, d: int):
         """Iterate over basis elements in dual degree ``d`` (non-positive)."""
@@ -32,22 +40,63 @@ class SurjectionDual(Surjection):
     def _boundary_on_basis(self, basis_element: tuple) -> "SurjectionDual.Element":
         """Compute the differential by transposing ``Surjection`` differential."""
 
-        primal_parent = Surjection(self.arity(), base_ring=self.base_ring())
         primal_degree = len(basis_element) - self.arity()
-        source_degree = primal_degree + 1
 
-        def term_generator():
-            for source_term in primal_parent.basis_it(source_degree):
+        if primal_degree not in self._dual_boundary_cache:
+            source_degree = primal_degree + 1
+            rows: dict[tuple[int, ...], dict] = {}
+            for source_term in self._primal_parent.basis_it(source_degree):
                 source_basis = next(iter(source_term.support()))
-                source_boundary = primal_parent._boundary_on_basis(source_basis)
-                coeff = self.base_ring().zero()
-                for target_basis, c in source_boundary:
-                    if target_basis == basis_element:
-                        coeff += c
-                if coeff != 0:
-                    yield (source_basis, coeff)
+                source_boundary = self._primal_parent._boundary_on_basis(source_basis)
+                for target_basis, coeff in source_boundary:
+                    if target_basis not in rows:
+                        rows[target_basis] = {}
+                    rows[target_basis][source_basis] = (
+                        rows[target_basis].get(source_basis, self.base_ring().zero())
+                        + coeff
+                    )
+            self._dual_boundary_cache[primal_degree] = rows
 
-        return self.sum_of_terms(term_generator())
+        row = self._dual_boundary_cache[primal_degree].get(basis_element, {})
+        return self.sum_of_terms(row.items())
+
+    def _cocompose_rows(self, i: int, m: int, n: int, u_degree: int) -> dict:
+        """Return cached pairing rows for ``Δ^{i;m,n}`` in fixed primal degree."""
+
+        key = (i, m, n, u_degree)
+        if key in self._inf_cocompose_cache:
+            return self._inf_cocompose_cache[key]
+
+        left_parent = SurjectionDual(m, base_ring=self.base_ring())
+        right_parent = SurjectionDual(n, base_ring=self.base_ring())
+        rows: dict[tuple[int, ...], dict] = {}
+
+        for left_degree in range(u_degree + 1):
+            right_degree = u_degree - left_degree
+
+            left_basis_terms = [
+                (next(iter(left_term.support())), left_term)
+                for left_term in left_parent.basis_it(-left_degree)
+            ]
+            right_basis_terms = [
+                (next(iter(right_term.support())), right_term)
+                for right_term in right_parent.basis_it(-right_degree)
+            ]
+
+            for left_basis, left_term in left_basis_terms:
+                for right_basis, right_term in right_basis_terms:
+                    composed = Surjection.compose(left_term, i, right_term)
+                    pair_basis = (left_basis, right_basis)
+                    for u_basis, coeff in composed:
+                        if u_basis not in rows:
+                            rows[u_basis] = {}
+                        rows[u_basis][pair_basis] = (
+                            rows[u_basis].get(pair_basis, self.base_ring().zero())
+                            + coeff
+                        )
+
+        self._inf_cocompose_cache[key] = rows
+        return rows
 
     @staticmethod
     def counit(x: "SurjectionDual.Element"):
@@ -94,26 +143,8 @@ class SurjectionDual(Surjection):
 
         def _on_basis(u_basis: tuple[int, ...]):
             u_degree = -source_parent.degree_on_basis(u_basis)
-            out = target.zero()
-
-            for left_degree in range(u_degree + 1):
-                right_degree = u_degree - left_degree
-                for left_term in left_parent.basis_it(-left_degree):
-                    left_basis = next(iter(left_term.support()))
-                    for right_term in right_parent.basis_it(-right_degree):
-                        right_basis = next(iter(right_term.support()))
-                        composed = Surjection.compose(left_term, i, right_term)
-                        coeff = source_parent.base_ring().zero()
-                        for basis, c in composed:
-                            if basis == u_basis:
-                                coeff += c
-                        if coeff != 0:
-                            out += coeff * (
-                                left_parent.term(left_basis).tensor(
-                                    right_parent.term(right_basis)
-                                )
-                            )
-            return out
+            rows = source_parent._cocompose_rows(i, m, n, u_degree)
+            return target.sum_of_terms(rows.get(u_basis, {}).items())
 
         result = target.zero()
         for u_basis, u_coeff in x:
