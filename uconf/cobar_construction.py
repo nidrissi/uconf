@@ -140,6 +140,14 @@ class CobarConstruction:
                 on_basis=self._boundary_on_basis,
                 codomain=self,
             )
+            self._d1 = self.module_morphism(
+                on_basis=self._d1_on_basis,
+                codomain=self,
+            )
+            self._d2 = self.module_morphism(
+                on_basis=self._d2_on_basis,
+                codomain=self,
+            )
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key.
@@ -418,6 +426,14 @@ class CobarConstruction:
 
         def boundary(self) -> "CobarConstruction.Element":
             return self.parent().boundary(self)
+
+        def d1(self) -> "CobarConstruction.Element":
+            """Internal differential: applies cooperad boundary to vertex decorations."""
+            return self.parent()._d1(self)
+
+        def d2(self) -> "CobarConstruction.Element":
+            """Structural differential: expands internal edges."""
+            return self.parent()._d2(self)
 
         def permute(self, sigma) -> "CobarConstruction.Element":
             """Permute leaf labels by sigma (no sign, just relabeling)."""
