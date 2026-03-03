@@ -21,10 +21,14 @@ These are implemented as lazy module morphisms cached on the parent objects.
 
 from sage.all import Partitions
 
+from .algebra import *
+from .algebra_bar import *
 from .bar_construction import *
 from .associative import *
 from .barratt_eccles import *
 from .coassociative import *
+from .coalgebra import *
+from .coalgebra_cobar import *
 from .cobar_construction import *
 from .cocommutative import *
 from .commutative import *
