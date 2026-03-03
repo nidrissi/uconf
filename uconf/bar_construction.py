@@ -127,6 +127,8 @@ class BarConstruction:
                 basis_key, self._arity, self._operad_cls, self.base_ring()
             )
 
+        # TODO The symmetry is currently ignored: we should implement the S_n-action by leaf relabeling *and* act upon the generators of the bar construction!
+        # For example, in BarConstruction(Commutative), the tree ((), 1, 2) should be identified with ((), 2, 1) under the S_2-action, but currently they are treated as distinct basis elements.
         def _element_constructor_(self, x):
             """Build elements from tree basis keys or sparse dictionaries."""
             if isinstance(x, BarConstruction.Element):

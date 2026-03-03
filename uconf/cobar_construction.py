@@ -257,6 +257,7 @@ class CobarConstruction:
 
             return result
 
+        # TODO: The d_2 implementation is the most complex part and has sign issues
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
             """Structural differential: expand vertices using cocomposition.
 
