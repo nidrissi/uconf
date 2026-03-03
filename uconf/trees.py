@@ -96,13 +96,13 @@ def subtree_degree(tree, operad_cls, base_ring) -> int:
 def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     """Compute the total s^{-1}*C-bar degree for the cobar construction.
 
-    Each vertex contributes ``deg_C(decoration) - (vertex_arity - 1)``.
+    Each vertex contributes ``deg_C(decoration) - 1``.
     """
     if is_leaf(tree):
         return 0
     parent = cooperad_cls(vertex_arity(tree), base_ring)
     dec = decoration(tree)
-    vertex_deg = parent.degree_on_basis(dec) - (vertex_arity(tree) - 1)
+    vertex_deg = parent.degree_on_basis(dec) - 1
     child_deg = sum(
         subtree_degree_cobar(c, cooperad_cls, base_ring) for c in children(tree)
     )
