@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from uconf.cooperad import CooperadProtocol
+from uconf.core.cooperad import CooperadProtocol
 
 
 class CooperadCoalgebra:

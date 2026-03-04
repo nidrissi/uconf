@@ -16,8 +16,8 @@ from sage.all import (
     QQ,
     SymmetricGroup,
 )
-from .operad import OperadProtocol
-from .signs import (
+from uconf.core.operad import OperadProtocol
+from uconf.core.signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
     shifted_permutation_sign,

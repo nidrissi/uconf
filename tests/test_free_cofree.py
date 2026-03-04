@@ -17,8 +17,11 @@ from uconf import (
     Commutative,
     Lie,
 )
-from uconf.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
-from uconf.cofree_coalgebra import CofreeCoalgebraModule, CofreeConilpotentCoalgebra
+from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
+from uconf.algebraic.cofree_coalgebra import (
+    CofreeCoalgebraModule,
+    CofreeConilpotentCoalgebra,
+)
 
 
 # ===========================================================================
@@ -99,7 +102,9 @@ class TestFreeAlgebraModule:
         M = _zero_diff_module()
         mod = FreeAlgebraModule(Associative, M)
         assert mod._validate_basis_key("bad") is None
-        assert mod._validate_basis_key((1, ((), ()))) is None  # 2 m-keys for arity-1 leaf
+        assert (
+            mod._validate_basis_key((1, ((), ()))) is None
+        )  # 2 m-keys for arity-1 leaf
 
 
 # ===========================================================================
@@ -350,7 +355,7 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_lie_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Lie; Free_Lie(M))."""
-        from uconf.algebra_bar import BarComplexAlgebra
+        from uconf.constructions.algebra_bar import BarComplexAlgebra
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Lie, M)
@@ -365,7 +370,7 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_ass_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M))."""
-        from uconf.algebra_bar import BarComplexAlgebra
+        from uconf.constructions.algebra_bar import BarComplexAlgebra
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M)

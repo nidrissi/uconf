@@ -21,10 +21,10 @@ from typing import ClassVar, Iterator
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
-from .cooperad import CooperadProtocol
+from uconf.core.cooperad import CooperadProtocol
 from typing import cast
-from .signs import shifted_boundary_sign, sign_from_exponent
-from .trees import (
+from uconf.core.signs import shifted_boundary_sign, sign_from_exponent
+from uconf.core.trees import (
     children,
     decoration,
     expand_vertex,

@@ -5,6 +5,11 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 ## Repository structure
 
 - `uconf/`: main implementation (active API).
+  - `uconf/core/`: protocols and shared utilities (`operad`, `cooperad`, `signs`, `trees`).
+  - `uconf/models/`: concrete operad/cooperad/simplicial models.
+  - `uconf/algebraic/`: algebra/coalgebra wrappers, free/cofree constructions.
+  - `uconf/constructions/`: bar/cobar constructions and algebraic bar/cobar complexes.
+  - `uconf/wrappers/`: shifted and Hadamard operad/cooperad wrappers.
 - `tests/test_*.py`: main regression test suite.
 - `pytest.ini`: pytest configuration (`-q`, `test_*.py`).
 - `misc.py`, `misc.ipynb`: drafts/experiments.
@@ -21,66 +26,85 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 
 ## `uconf` package
 
+Canonical imports are now subpackage-based (for example `uconf.models.surjection`).
+Top-level module shims (such as `uconf.surjection`, `uconf.trees`, `uconf.free_algebra`) were removed.
+
+### Breaking changes and migration
+
+Use canonical subpackage imports instead of old top-level module imports:
+
+- `uconf.surjection` → `uconf.models.surjection`
+- `uconf.barratt_eccles` → `uconf.models.barratt_eccles`
+- `uconf.surjection_dual` → `uconf.models.surjection_dual`
+- `uconf.simplicial` → `uconf.models.simplicial`
+- `uconf.associative` / `uconf.commutative` / `uconf.lie` → `uconf.models.*`
+- `uconf.operad` / `uconf.cooperad` / `uconf.signs` / `uconf.trees` → `uconf.core.*`
+- `uconf.algebra` / `uconf.coalgebra` / `uconf.free_algebra` / `uconf.cofree_coalgebra` → `uconf.algebraic.*`
+- `uconf.bar_construction` / `uconf.cobar_construction` / `uconf.algebra_bar` / `uconf.coalgebra_cobar` → `uconf.constructions.*`
+- `uconf.shifted_operad` / `uconf.shifted_cooperad` / `uconf.hadamard_operad` → `uconf.wrappers.*`
+
+The package-level API is still available through `from uconf import ...` for the main exported classes.
+
 ### Operad models
 
-- `surjection.py` — `Surjection`
+- `models/surjection.py` — `Surjection`
   - Basis: non-degenerate surjective words (no consecutive repetitions).
   - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_it`.
   - Extra actions: `act` on `SimplicialChains`, `coact` on `SimplicialCochains`.
 
-- `barratt_eccles.py` — `BarrattEccles`
+- `models/barratt_eccles.py` — `BarrattEccles`
   - Basis: sequences of permutations in `S_n` with no consecutive duplicates.
   - Operations: `unit`, `compose`, `boundary`, `permute`, `diagonal`, `planarize`.
 
-- `lie.py` — `Lie`
+- `models/lie.py` — `Lie`
   - Hall-basis model (nested brackets).
   - Operations: `unit`, `compose`, `permute` (antisymmetry/Jacobi behavior).
   - Includes PBW change-of-basis caches to accelerate `compose`.
 
 ### Cooperad model
 
-- `surjection_linear_dual.py` — `SurjectionDual`
+- `models/surjection_dual.py` — `SurjectionDual`
   - Linear dual companion of `Surjection`.
   - Operations: `counit`, `reduced`, `infinitesimal_cocompose`.
 
 ### Bar-cobar constructions
 
-- `bar_construction.py` — `BarConstruction(P)`
+- `constructions/bar_construction.py` — `BarConstruction(P)`
   - Bar construction of a connected dg-operad: `B(P) = (T^c(s\bar{P}), d_1 + d_2)`.
   - Cooperadic model on decorated rooted trees.
   - Differential combines internal differential on vertex decorations and edge-contraction terms.
 
-- `cobar_construction.py` — `CobarConstruction(C)`
+- `constructions/cobar_construction.py` — `CobarConstruction(C)`
   - Cobar construction of a connected dg-cooperad: `\Omega(C) = (T(s^{-1}\bar{C}), d_1 + d_2)`.
   - Operadic model on decorated rooted trees.
   - Differential combines internal differential and vertex-expansion terms from infinitesimal cocomposition.
 
-- `trees.py`
+- `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.
   - Utilities for DFS traversal, arity/weight/leaves, grafting, edge contraction, and vertex expansion.
 
 ### Simplicial models
 
-- `simplicial.py`
+- `models/simplicial.py`
   - `SimplicialChains`: normalized chains on standard simplices, tensor differential, iterated AW diagonal.
   - `SimplicialCochains`: dual cochains, coboundary, Kronecker pairing (`evaluate`).
 
 ### Protocols and utilities
 
-- `operad.py` — `OperadProtocol` (minimal structural contract for operads).
-- `cooperad.py` — `CooperadProtocol` (dual cooperadic contract).
-- `signs.py` — shared sign conventions (permutation signature, suspension signs).
+- `core/operad.py` — `OperadProtocol` (minimal structural contract for operads).
+- `core/cooperad.py` — `CooperadProtocol` (dual cooperadic contract).
+- `core/signs.py` — shared sign conventions (permutation signature, suspension signs).
 
 ### Wrappers
 
-- `shifted_operad.py` — `ShiftedOperad(P, d)`
+- `wrappers/shifted_operad.py` — `ShiftedOperad(P, d)`
   - Arity-dependent degree shift.
   - Sign twists for `boundary`, symmetric action, and `compose`.
 
-- `shifted_cooperad.py` — `ShiftedCooperad(C, d)`
+- `wrappers/shifted_cooperad.py` — `ShiftedCooperad(C, d)`
   - Cooperadic shift wrapper with compatible sign rules.
 
-- `hadamard_operad.py` — `HadamardProduct(P, Q)`
+- `wrappers/hadamard_operad.py` — `HadamardProduct(P, Q)`
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
@@ -210,13 +234,13 @@ res = Surjection.act(u, x)
 - Run all tests:
   - `pytest`
 - Run wrapper-focused tests:
-  - `pytest -q test_shifted_operad.py test_shifted_cooperad.py test_hadamard_operad.py`
+  - `pytest -q tests/test_shifted_operad.py tests/test_shifted_cooperad.py tests/test_hadamard_operad.py`
 - Run bar/cobar tests:
-  - `pytest -q test_bar_cobar.py`
+  - `pytest -q tests/test_bar_cobar.py`
 - Run core operad tests:
-  - `pytest -q test_common_operad.py test_surjection.py test_barratt_eccles.py test_lie.py`
+  - `pytest -q tests/test_protocols.py tests/test_surjection.py tests/test_barratt_eccles.py tests/test_lie.py`
 - Run simplicial tests:
-  - `pytest -q test_simplicial.py`
+  - `pytest -q tests/test_simplicial.py`
 
 ## Notes
 

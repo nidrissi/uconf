@@ -7,7 +7,7 @@ from itertools import combinations, pairwise, permutations
 from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
-    from .surjection import Surjection
+    from uconf.models.surjection import Surjection
 
 from sage.all import (
     QQ,

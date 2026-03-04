@@ -19,32 +19,66 @@ It also wires two standard maps at import time:
 These are implemented as lazy module morphisms cached on the parent objects.
 """
 
+from itertools import permutations
+
 from sage.all import Partitions
 
-from .algebra import *
-from .algebra_bar import *
-from .bar_construction import *
-from .associative import *
-from .barratt_eccles import *
-from .coassociative import *
-from .coalgebra import *
-from .coalgebra_cobar import *
-from .cobar_construction import *
-from .cofree_coalgebra import *
-from .cocommutative import *
-from .commutative import *
-from .cooperad import *
-from .free_algebra import *
-from .hadamard_operad import *
-from .lie import *
-from .operad import *
-from .shifted_cooperad import *
-from .signs import *
-from .shifted_operad import *
-from .simplicial import *
-from .surjection import *
-from .surjection_dual import *
-from .trees import *
+from uconf.algebraic import (
+    CofreeCoalgebraModule,
+    CofreeConilpotentCoalgebra,
+    CooperadCoalgebra,
+    FreeAlgebraModule,
+    FreeOperadAlgebra,
+    OperadAlgebra,
+)
+from uconf.constructions import (
+    BarComplexAlgebra,
+    BarConstruction,
+    CobarComplexCoalgebra,
+    CobarConstruction,
+)
+from uconf.core import CooperadProtocol, OperadProtocol
+from uconf.models import (
+    Associative,
+    BarrattEccles,
+    CoAssociative,
+    CoCommutative,
+    Commutative,
+    Lie,
+    SimplicialChains,
+    SimplicialCochains,
+    Surjection,
+    SurjectionDual,
+)
+from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
+
+__all__ = [
+    "OperadProtocol",
+    "CooperadProtocol",
+    "Surjection",
+    "SurjectionDual",
+    "BarrattEccles",
+    "Lie",
+    "Associative",
+    "Commutative",
+    "CoAssociative",
+    "CoCommutative",
+    "SimplicialChains",
+    "SimplicialCochains",
+    "ShiftedOperad",
+    "ShiftedCooperad",
+    "HadamardProduct",
+    "OperadAlgebra",
+    "CooperadCoalgebra",
+    "FreeAlgebraModule",
+    "FreeOperadAlgebra",
+    "CofreeCoalgebraModule",
+    "CofreeConilpotentCoalgebra",
+    "BarConstruction",
+    "CobarConstruction",
+    "BarComplexAlgebra",
+    "CobarComplexCoalgebra",
+]
 
 
 def _table_reduction_on_basis(self: BarrattEccles):

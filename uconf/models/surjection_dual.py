@@ -6,7 +6,7 @@ import itertools
 
 from sage.all import QQ, tensor
 
-from .surjection import Surjection
+from uconf.models.surjection import Surjection
 
 
 class SurjectionDual(Surjection):

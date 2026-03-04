@@ -32,10 +32,10 @@ from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
-from .coalgebra import CooperadCoalgebra
-from .free_algebra import _dfs_all_iter
-from .signs import sign_from_exponent
-from .trees import (
+from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.algebraic.free_algebra import _dfs_all_iter
+from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import (
     children,
     decoration,
     is_leaf,
@@ -162,9 +162,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             0
             if is_leaf(tree)
             else sum(
-                self._cooperad_cls(
-                    vertex_arity(v), self.base_ring()
-                ).degree_on_basis(decoration(v))
+                self._cooperad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(
+                    decoration(v)
+                )
                 for v in vertices_dfs(tree)
             )
         )
@@ -199,7 +199,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
                 for new_m_key, coeff in bdry:
-                    new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
+                    new_m = (
+                        m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
+                    )
                     result += sign * coeff * self.term((tree, new_m))
                 cumulative += self._inner_module.degree_on_basis(m_key)
             else:

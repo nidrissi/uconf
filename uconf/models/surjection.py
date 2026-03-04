@@ -8,8 +8,8 @@ from itertools import combinations, combinations_with_replacement, pairwise, pro
 from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
-    from .barratt_eccles import BarrattEccles
-    from .simplicial import SimplicialCochains, SimplicialChains
+    from uconf.models.barratt_eccles import BarrattEccles
+    from uconf.models.simplicial import SimplicialCochains, SimplicialChains
 
 from sage.all import (
     QQ,
@@ -329,7 +329,7 @@ class Surjection(CombinatorialFreeModule):
         SimplicialChains.Element
             The action `\theta_u(x)`, in ``SimplicialChains(r)``.
         """
-        from .simplicial import SimplicialChains
+        from uconf.models.simplicial import SimplicialChains
 
         if surj.parent().base_ring() != chain.parent().base_ring():
             raise TypeError("Surjection and chain must have the same base ring.")
@@ -494,7 +494,7 @@ class Surjection(CombinatorialFreeModule):
         SimplicialCochains.Element
             The resulting cochain on `\Delta^N`.
         """
-        from .simplicial import SimplicialCochains, SimplicialChains
+        from uconf.models.simplicial import SimplicialCochains, SimplicialChains
 
         r = surj.arity()
         assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."

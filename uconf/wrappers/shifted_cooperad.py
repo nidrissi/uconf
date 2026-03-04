@@ -12,8 +12,8 @@ from sage.all import (
     tensor,
 )
 
-from .cooperad import CooperadProtocol
-from .signs import (
+from uconf.core.cooperad import CooperadProtocol
+from uconf.core.signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
     shifted_permutation_sign,

@@ -30,9 +30,9 @@ from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
-from .algebra import OperadAlgebra
-from .signs import sign_from_exponent
-from .trees import (
+from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import (
     children,
     decoration,
     is_leaf,
@@ -210,7 +210,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
                 for new_m_key, coeff in bdry:
-                    new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
+                    new_m = (
+                        m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
+                    )
                     result += sign * coeff * self.term((tree, new_m))
                 cumulative += self._inner_module.degree_on_basis(m_key)
             else:

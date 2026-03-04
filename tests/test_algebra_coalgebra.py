@@ -17,10 +17,10 @@ from uconf import (
     Commutative,
     Lie,
 )
-from uconf.algebra import OperadAlgebra
-from uconf.algebra_bar import BarComplexAlgebra
-from uconf.coalgebra import CooperadCoalgebra
-from uconf.coalgebra_cobar import CobarComplexCoalgebra
+from uconf.algebraic.algebra import OperadAlgebra
+from uconf.constructions.algebra_bar import BarComplexAlgebra
+from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.constructions.coalgebra_cobar import CobarComplexCoalgebra
 
 
 # ===========================================================================
@@ -66,8 +66,10 @@ def _make_trivial_coass_coalgebra(base_ring=QQ):
         right_parent = Commutative(1, base_ring=base_ring)
         # Build V^⊗n as n-fold tensor
         import itertools
+
         right_factors = [right_parent] * n
         from sage.all import tensor as sage_tensor
+
         if n == 1:
             target = sage_tensor([left_parent, right_parent])
         else:
@@ -266,7 +268,7 @@ class TestBarComplexAlgebra:
         # The result should contain a weight-1 ternary tree
         has_ternary = False
         for (t, _a), _coeff in d2_result:
-            if hasattr(t, '__len__') and len(t) == 4:  # (dec, leaf1, leaf2, leaf3)
+            if hasattr(t, "__len__") and len(t) == 4:  # (dec, leaf1, leaf2, leaf3)
                 has_ternary = True
         assert has_ternary
 
