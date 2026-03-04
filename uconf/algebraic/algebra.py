@@ -52,7 +52,7 @@ class OperadAlgebra:
     @abstractmethod
     def act(
         self,
-        p_element: OperadElementType,
+        p_element,
         algebra_elements: list[AlgebraElementType],
     ) -> AlgebraElementType:
         """Apply the P-algebra structure map γ(p; a_1, ..., a_n).
@@ -69,7 +69,7 @@ class OperadAlgebra:
         """
         ...
 
-    def boundary(self, a):
+    def boundary(self, a: AlgebraElementType) -> AlgebraElementType:
         """Apply the differential ∂_A to an algebra element.
 
         Args:
