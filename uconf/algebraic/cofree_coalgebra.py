@@ -282,11 +282,10 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         self, cooperad_cls: type[CooperadProtocol], inner_module, base_ring=QQ
     ):
         cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
-        # Pass a placeholder costructure_map; we override coact() directly.
-        super().__init__(cofree_module, cooperad_cls)
+        super().__init__(cofree_module, cooperad_cls, self._coact_impl)
         self._inner_module = inner_module
 
-    def coact(self, v_element, n: int):
+    def _coact_impl(self, v_element, n: int):
         """C-coalgebra coaction δ_n: split each tree at its root when root arity = n.
 
         For each basis element ``(tree, m_tuple)`` with ``vertex_arity(root) == n``:

@@ -257,3 +257,6 @@ mu = alg.act(u, [f1, f2])
 
 - `uconf/` is the current source of truth.
 - `old-computations/` is historical material, not the primary target of the current test suite.
+- `OperadAlgebra` / `CooperadCoalgebra` use callable dispatch via constructor
+  parameters (`structure_map`, `coaction_map`). Overriding `act` / `coact` is
+  not part of the public extension pattern.
