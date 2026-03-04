@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import itertools
-from itertools import combinations, combinations_with_replacement, pairwise, product
+from itertools import combinations, combinations_with_replacement, pairwise
 from typing import TYPE_CHECKING, ClassVar, Iterator
 
 if TYPE_CHECKING:
@@ -198,7 +198,7 @@ class Surjection(CombinatorialFreeModule):
         result = 0
         for i, j in combinations(range(1, self.arity() + 1), 2):
             seq = [x for x in basis_element if x == i or x == j]
-            complexity = len([k for k, l in pairwise(seq) if k != l])
+            complexity = len([a for a, b in pairwise(seq) if a != b])
             result = max(result, complexity)
         return result
 
@@ -352,10 +352,10 @@ class Surjection(CombinatorialFreeModule):
             """Return whether each supported basis term satisfies planarity."""
             r = self.arity()
 
-            def _planar(l: tuple[int, ...]) -> bool:
-                """Check if the first occurrence of each integer in l are in increasing order."""
+            def _planar(input_list: tuple[int, ...]) -> bool:
+                """Check if the first occurrence of each integer in input_list are in increasing order."""
                 first_occurrences = {}
-                for i, val in enumerate(l):
+                for i, val in enumerate(input_list):
                     if val not in first_occurrences:
                         first_occurrences[val] = i
 

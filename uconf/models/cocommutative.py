@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from sage.all import QQ, tensor
+from sage.all import tensor
 
 from uconf.models.commutative import Commutative
 

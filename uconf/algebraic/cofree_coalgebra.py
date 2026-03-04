@@ -34,6 +34,7 @@ from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import _dfs_all_iter
+from uconf.core.cooperad import CooperadProtocol
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -277,7 +278,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         cofree_coass.coact(elem, 2)   # splits at root
     """
 
-    def __init__(self, cooperad_cls, inner_module, base_ring=QQ):
+    def __init__(
+        self, cooperad_cls: type[CooperadProtocol], inner_module, base_ring=QQ
+    ):
         cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
         # Pass a placeholder costructure_map; we override coact() directly.
         super().__init__(cofree_module, cooperad_cls, costructure_map=None)
@@ -329,7 +332,6 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
             for j, (child, child_leaves) in enumerate(
                 zip(root_children, child_leaf_lists)
             ):
-                n_j = len(child_leaves)
                 relabel = {old: new for new, old in enumerate(child_leaves, start=1)}
                 if is_leaf(child):
                     relabeled_children.append(1)

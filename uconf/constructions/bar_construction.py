@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator, cast
+from typing import ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -28,8 +28,6 @@ from sage.all import (
 )
 
 from uconf.core.signs import (
-    shifted_boundary_sign,
-    shifted_operadic_compose_sign,
     sign_from_exponent,
 )
 from uconf.core.operad import OperadProtocol
@@ -37,21 +35,17 @@ from uconf.core.trees import (
     children,
     decoration,
     internal_edges_dfs,
-    is_internal,
     is_leaf,
-    is_shuffle_tree,
     leaves,
     relabel_leaves,
     split_at_vertex,
     subtree_degree,
     to_shuffle_tree_bar,
-    tree_arity,
     tree_to_latex,
     tree_to_string,
     validate_tree,
     vertex_arity,
     vertices_dfs,
-    weight,
     contract_edge,
 )
 

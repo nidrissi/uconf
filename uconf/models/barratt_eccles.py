@@ -227,7 +227,6 @@ class BarrattEccles(CombinatorialFreeModule):
             # Iterate over the linear combinations
             for x_basis, x_coeff in x:
                 for y_basis, y_coeff in y:
-
                     # Degrees (length of tuple - 1)
                     p = len(x_basis) - 1
                     q = len(y_basis) - 1
