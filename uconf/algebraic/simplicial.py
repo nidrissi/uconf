@@ -219,13 +219,9 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
             )
         from uconf.models.surjection_dual import SurjectionDual
 
-        super().__init__(
-            module=module,
-            cooperad_cls=SurjectionDual,
-            costructure_map=self._costructure_map,
-        )
+        super().__init__(module=module, cooperad_cls=SurjectionDual)
 
-    def _costructure_map(self, v_element: SimplicialChains.Element, n: int):
+    def coact(self, v_element: SimplicialChains.Element, n: int):
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
 
