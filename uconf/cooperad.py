@@ -1,5 +1,7 @@
 """Typing protocols for cooperad-like objects used in this project."""
 
+from __future__ import annotations
+
 from collections.abc import Iterator
 from typing import Any, Iterable, Protocol, Self, runtime_checkable
 
