@@ -30,9 +30,11 @@ from .coassociative import *
 from .coalgebra import *
 from .coalgebra_cobar import *
 from .cobar_construction import *
+from .cofree_coalgebra import *
 from .cocommutative import *
 from .commutative import *
 from .cooperad import *
+from .free_algebra import *
 from .hadamard_operad import *
 from .lie import *
 from .operad import *
