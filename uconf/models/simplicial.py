@@ -72,6 +72,12 @@ class SimplicialChains(CombinatorialFreeModule):
             self._native_tensor_parent = tensor([factor] * self.arity())
         return self._native_tensor_parent
 
+    def as_surjection_coalgebra(self):
+        """Return the canonical `SurjectionDual`-coalgebra wrapper on this module."""
+        from uconf.algebraic.simplicial import SurjectionSimplicialChainCoalgebra
+
+        return SurjectionSimplicialChainCoalgebra(self)
+
     # -- element constructor ------------------------------------------------
 
     def _element_constructor_(self, x):
@@ -330,6 +336,12 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     def simplex_dim(self) -> int:
         return self._N
+
+    def as_surjection_algebra(self):
+        """Return the canonical `Surjection`-algebra wrapper on this module."""
+        from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
+
+        return SurjectionSimplicialCochainAlgebra(self)
 
     # -- element constructor ------------------------------------------------
 

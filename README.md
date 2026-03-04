@@ -26,31 +26,14 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 
 ## `uconf` package
 
-Canonical imports are now subpackage-based (for example `uconf.models.surjection`).
-Top-level module shims (such as `uconf.surjection`, `uconf.trees`, `uconf.free_algebra`) were removed.
-
-### Breaking changes and migration
-
-Use canonical subpackage imports instead of old top-level module imports:
-
-- `uconf.surjection` → `uconf.models.surjection`
-- `uconf.barratt_eccles` → `uconf.models.barratt_eccles`
-- `uconf.surjection_dual` → `uconf.models.surjection_dual`
-- `uconf.simplicial` → `uconf.models.simplicial`
-- `uconf.associative` / `uconf.commutative` / `uconf.lie` → `uconf.models.*`
-- `uconf.operad` / `uconf.cooperad` / `uconf.signs` / `uconf.trees` → `uconf.core.*`
-- `uconf.algebra` / `uconf.coalgebra` / `uconf.free_algebra` / `uconf.cofree_coalgebra` → `uconf.algebraic.*`
-- `uconf.bar_construction` / `uconf.cobar_construction` / `uconf.algebra_bar` / `uconf.coalgebra_cobar` → `uconf.constructions.*`
-- `uconf.shifted_operad` / `uconf.shifted_cooperad` / `uconf.hadamard_operad` → `uconf.wrappers.*`
-
-The package-level API is still available through `from uconf import ...` for the main exported classes.
+Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 
 ### Operad models
 
 - `models/surjection.py` — `Surjection`
   - Basis: non-degenerate surjective words (no consecutive repetitions).
   - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_it`.
-  - Extra actions: `act` on `SimplicialChains`, `coact` on `SimplicialCochains`.
+  - Acts on simplicial models through wrappers in `uconf.algebraic.simplicial`.
 
 - `models/barratt_eccles.py` — `BarrattEccles`
   - Basis: sequences of permutations in `S_n` with no consecutive duplicates.
@@ -88,6 +71,22 @@ The package-level API is still available through `from uconf import ...` for the
 - `models/simplicial.py`
   - `SimplicialChains`: normalized chains on standard simplices, tensor differential, iterated AW diagonal.
   - `SimplicialCochains`: dual cochains, coboundary, Kronecker pairing (`evaluate`).
+  - Factory methods:
+    - `SimplicialChains.as_surjection_coalgebra()`
+    - `SimplicialCochains.as_surjection_algebra()`
+
+### Surjection action/coaction API
+
+- Canonical implementation lives in `uconf.algebraic.simplicial`:
+  - `surjection_chain_action(u, x, coord=1)`
+  - `surjection_cochain_action(u, (f_1, ..., f_r))`
+  - `SurjectionSimplicialChainCoalgebra`
+  - `SurjectionSimplicialCochainAlgebra`
+
+Preferred usage is through simplicial wrappers:
+
+- Chain-side: `SimplicialChains(...).as_surjection_coalgebra().act(...)`
+- Cochain-side: `SimplicialCochains(...).as_surjection_algebra().act(...)`
 
 ### Protocols and utilities
 
@@ -187,14 +186,26 @@ comp = OmegaS.compose(x, 1, u)
 delta = t.infinitesimal_cocompose(i=2, m=2, n=2)
 ```
 
-### Surjection action on simplicial chains
+### Surjection action on simplicial chains/cochains
 
 ```python
 from uconf import SimplicialChains, Surjection
 
 u = Surjection(2)((1, 2, 1))
 x = SimplicialChains.standard_element(3)
-res = Surjection.act(u, x)
+coalg = SimplicialChains(r=1).as_surjection_coalgebra()
+res = coalg.act(u, x)
+```
+
+```python
+from uconf import SimplicialCochains, Surjection
+
+u = Surjection(2)((1, 2, 1))
+C = SimplicialCochains(N=3, r=1)
+f1 = C(((0, 1),))
+f2 = C(((1, 2),))
+alg = C.as_surjection_algebra()
+mu = alg.act(u, [f1, f2])
 ```
 
 ## Tests (coverage)
