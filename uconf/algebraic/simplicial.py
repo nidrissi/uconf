@@ -10,7 +10,9 @@ from sage.all import QQ, tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.core.operad import OperadProtocol
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
+from uconf.models.surjection import Surjection
 
 if TYPE_CHECKING:
     from uconf.models.surjection import Surjection
@@ -190,23 +192,11 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
             raise ValueError(
                 f"Expected arity-1 simplicial cochains module, got arity={module.arity()}."
             )
-        from uconf.models.surjection import Surjection
 
-        super().__init__(
-            module=module,
-            operad_cls=Surjection,
-            structure_map=lambda p_element, a_list: surjection_cochain_action(
-                p_element, tuple(a_list)
-            ),
-        )
+        super().__init__(module=module, operad_cls=Surjection)
 
-    def coact(
-        self,
-        surj: "Surjection.Element",
-        cochains: tuple[SimplicialCochains.Element, ...],
-    ) -> SimplicialCochains.Element:
-        """Compatibility alias for the operad action on cochains."""
-        return self.act(surj, list(cochains))
+    def act(self, p_element: Surjection.Element, algebra_elements: list):
+        return surjection_cochain_action(p_element, tuple(algebra_elements))
 
 
 class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):

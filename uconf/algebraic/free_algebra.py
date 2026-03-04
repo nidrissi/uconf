@@ -296,7 +296,7 @@ class FreeOperadAlgebra(OperadAlgebra):
     def __init__(self, operad_cls: type[OperadProtocol], inner_module, base_ring=QQ):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         # The structure map is grafting; we override act() directly.
-        super().__init__(free_module, operad_cls, structure_map=None)
+        super().__init__(free_module, operad_cls)
         self._inner_module = inner_module
 
     def act(self, p_element, algebra_elements):

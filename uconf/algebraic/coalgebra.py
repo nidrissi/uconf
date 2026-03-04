@@ -17,7 +17,6 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Callable
 
 from uconf.core.cooperad import CooperadProtocol
 

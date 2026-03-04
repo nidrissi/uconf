@@ -16,9 +16,13 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 
 from __future__ import annotations
 
-from typing import Callable
+from abc import abstractmethod
+from typing import TypeVar
 
 from uconf.core.operad import OperadProtocol
+
+AlgebraElementType = TypeVar("AlgebraElementType")
+OperadElementType = TypeVar("OperadElementType", bound=OperadProtocol.Element)
 
 
 class OperadAlgebra:
@@ -41,14 +45,16 @@ class OperadAlgebra:
         structure_map: Callable implementing the P-algebra action γ.
     """
 
-    def __init__(
-        self, module, operad_cls: type[OperadProtocol], structure_map: Callable
-    ):
+    def __init__(self, module, operad_cls: type[OperadProtocol]):
         self.module = module
         self.operad_cls = operad_cls
-        self._structure_map = structure_map
 
-    def act(self, p_element: OperadProtocol.Element, algebra_elements: list):
+    @abstractmethod
+    def act(
+        self,
+        p_element: OperadElementType,
+        algebra_elements: list[AlgebraElementType],
+    ) -> AlgebraElementType:
         """Apply the P-algebra structure map γ(p; a_1, ..., a_n).
 
         Args:
@@ -61,13 +67,7 @@ class OperadAlgebra:
         Raises:
             ValueError: If ``len(algebra_elements) != p_element.arity()``.
         """
-        n = p_element.arity()
-        alg_list = list(algebra_elements)
-        if len(alg_list) != n:
-            raise ValueError(
-                f"Expected {n} algebra elements for P({n}) action, got {len(alg_list)}."
-            )
-        return self._structure_map(p_element, alg_list)
+        ...
 
     def boundary(self, a):
         """Apply the differential ∂_A to an algebra element.
