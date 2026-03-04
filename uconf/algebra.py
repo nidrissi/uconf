@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+from uconf.operad import OperadProtocol
+
 
 class OperadAlgebra:
     """A dg-module equipped with a P-algebra structure.
@@ -39,12 +41,14 @@ class OperadAlgebra:
         structure_map: Callable implementing the P-algebra action γ.
     """
 
-    def __init__(self, module, operad_cls, structure_map: Callable):
+    def __init__(
+        self, module, operad_cls: type[OperadProtocol], structure_map: Callable
+    ):
         self.module = module
         self.operad_cls = operad_cls
         self._structure_map = structure_map
 
-    def act(self, p_element, algebra_elements):
+    def act(self, p_element: OperadProtocol.Element, algebra_elements: list):
         """Apply the P-algebra structure map γ(p; a_1, ..., a_n).
 
         Args:
