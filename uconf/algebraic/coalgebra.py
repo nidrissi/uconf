@@ -16,7 +16,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from collections.abc import Callable
 
 from uconf.core.cooperad import CooperadProtocol
 
@@ -29,23 +29,37 @@ class CooperadCoalgebra:
     :class:`uconf.cooperad.CooperadProtocol`) together with an explicit
     costructure map.
 
-    The costructure map is provided as a callable::
+    The costructure map can be supplied in two ways:
 
-        costructure_map(v_element, n) → (C(n) ⊗ V^{⊗n}).Element
+    1. Pass a callable as the ``costructure_map`` argument::
 
-    where ``v_element`` is an element of the module V and ``n`` is the
-    coaction arity.
+           coalg = CooperadCoalgebra(module, CoAssociative, my_map)
+
+       where ``my_map(v_element, n) → (C(n) ⊗ V^{⊗n}).Element``.
+
+    2. Subclass and override :meth:`coact`::
+
+           class MyCoalgebra(CooperadCoalgebra):
+               def coact(self, v_element, n):
+                   ...
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         cooperad_cls: Cooperad class (CooperadProtocol-compatible).
+        costructure_map: Optional callable implementing the C-coalgebra
+            coaction δ_n.  If omitted, a subclass must override :meth:`coact`.
     """
 
-    def __init__(self, module, cooperad_cls: type[CooperadProtocol]):
+    def __init__(
+        self,
+        module,
+        cooperad_cls: type[CooperadProtocol],
+        costructure_map: Callable | None = None,
+    ):
         self.module = module
         self.cooperad_cls = cooperad_cls
+        self._costructure_map = costructure_map
 
-    @abstractmethod
     def coact(self, v_element, n: int):
         """Apply the C-coaction δ_n(v) ∈ C(n) ⊗_{S_n} V^{⊗n}.
 
@@ -55,8 +69,16 @@ class CooperadCoalgebra:
 
         Returns:
             An element of ``C(n) ⊗ V^{⊗n}``.
+
+        Raises:
+            NotImplementedError: If no ``costructure_map`` was given and the
+                subclass has not overridden :meth:`coact`.
         """
-        ...
+        if self._costructure_map is not None:
+            return self._costructure_map(v_element, n)
+        raise NotImplementedError(
+            "Provide a costructure_map to the constructor or override coact() in a subclass."
+        )
 
     def boundary(self, v):
         """Apply the differential ∂_V to a coalgebra element.

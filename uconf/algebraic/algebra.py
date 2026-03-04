@@ -16,7 +16,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from collections.abc import Callable
 from typing import TypeVar
 
 from uconf.core.operad import OperadProtocol
@@ -32,24 +32,37 @@ class OperadAlgebra:
     operad class ``operad_cls`` (satisfying :class:`uconf.operad.OperadProtocol`)
     together with an explicit structure map.
 
-    The structure map is provided as a callable::
+    The structure map can be supplied in two ways:
 
-        structure_map(p_element, algebra_elements) → A.Element
+    1. Pass a callable as the ``structure_map`` argument::
 
-    where ``p_element`` is an element of ``operad_cls(n)`` for some ``n``, and
-    ``algebra_elements`` is a list of ``n`` elements of the module A.
+           alg = OperadAlgebra(module, Associative, my_map)
+
+       where ``my_map(p_element, algebra_elements) → A.Element``.
+
+    2. Subclass and override :meth:`act`::
+
+           class MyAlgebra(OperadAlgebra):
+               def act(self, p_element, algebra_elements):
+                   ...
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         operad_cls: Operad class (OperadProtocol-compatible).
-        structure_map: Callable implementing the P-algebra action γ.
+        structure_map: Optional callable implementing the P-algebra action γ.
+            If omitted, a subclass must override :meth:`act`.
     """
 
-    def __init__(self, module, operad_cls: type[OperadProtocol]):
+    def __init__(
+        self,
+        module,
+        operad_cls: type[OperadProtocol],
+        structure_map: Callable | None = None,
+    ):
         self.module = module
         self.operad_cls = operad_cls
+        self._structure_map = structure_map
 
-    @abstractmethod
     def act(
         self,
         p_element,
@@ -66,8 +79,20 @@ class OperadAlgebra:
 
         Raises:
             ValueError: If ``len(algebra_elements) != p_element.arity()``.
+            NotImplementedError: If no ``structure_map`` was given and the
+                subclass has not overridden :meth:`act`.
         """
-        ...
+        n = p_element.arity()
+        if len(algebra_elements) != n:
+            raise ValueError(
+                f"Expected {n} algebra elements for P({n}) action, "
+                f"got {len(algebra_elements)}."
+            )
+        if self._structure_map is not None:
+            return self._structure_map(p_element, algebra_elements)
+        raise NotImplementedError(
+            "Provide a structure_map to the constructor or override act() in a subclass."
+        )
 
     def boundary(self, a: AlgebraElementType) -> AlgebraElementType:
         """Apply the differential ∂_A to an algebra element.
