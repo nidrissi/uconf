@@ -7,6 +7,12 @@ from uconf.algebraic.cofree_coalgebra import (
     CofreeConilpotentCoalgebra,
 )
 from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
+from uconf.algebraic.simplicial import (
+    SurjectionSimplicialChainCoalgebra,
+    SurjectionSimplicialCochainAlgebra,
+    surjection_chain_action,
+    surjection_cochain_action,
+)
 
 __all__ = [
     "OperadAlgebra",
@@ -15,4 +21,8 @@ __all__ = [
     "FreeOperadAlgebra",
     "CofreeCoalgebraModule",
     "CofreeConilpotentCoalgebra",
+    "SurjectionSimplicialCochainAlgebra",
+    "SurjectionSimplicialChainCoalgebra",
+    "surjection_chain_action",
+    "surjection_cochain_action",
 ]

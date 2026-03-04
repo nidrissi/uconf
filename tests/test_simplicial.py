@@ -41,6 +41,20 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
     return value
 
 
+def _surjection_chain_action(u, x, coord=1):
+    """Evaluate the induced Surjection action on chains via coalgebra wrapper."""
+    coalg = SimplicialChains(
+        r=1, base_ring=u.parent().base_ring()
+    ).as_surjection_coalgebra()
+    return coalg.act(u, x, coord=coord)
+
+
+def _surjection_cochain_action(u, cochains):
+    """Evaluate the Surjection action on cochains via operad-algebra wrapper."""
+    alg = cochains[0].parent().as_surjection_algebra()
+    return alg.act(u, list(cochains))
+
+
 # ===========================================================================
 # SimplicialChains basics
 # ===========================================================================
@@ -202,7 +216,7 @@ class TestSurjectionAction:
         unit = Surjection.unit()  # (1,) in S(1)
         for n in range(0, 4):
             x = SimplicialChains.standard_element(n)
-            result = Surjection.act(unit, x)
+            result = _surjection_chain_action(unit, x)
             assert _as_dict(result) == _as_dict(x), f"Unit action failed on Δ^{n}"
 
     def test_action_degree(self):
@@ -212,7 +226,7 @@ class TestSurjectionAction:
             for u in S.planar_basis_it(d):
                 for n in range(d, d + 4):
                     x = SimplicialChains.standard_element(n)
-                    result = Surjection.act(u, x)
+                    result = _surjection_chain_action(u, x)
                     if result != SimplicialChains(r=r).zero():
                         assert result.degree() == n + d
 
@@ -221,7 +235,7 @@ class TestSurjectionAction:
         S2 = Surjection(2)
         u = S2((1, 2, 1))
         x = SimplicialChains.standard_element(3)
-        result = Surjection.act(u, x)
+        result = _surjection_chain_action(u, x)
         assert result.arity() == 2
 
     def test_action_on_second_tensor_factor(self):
@@ -230,7 +244,7 @@ class TestSurjectionAction:
         u = S2((1, 2, 1))
         C2 = SimplicialChains(r=2)
         x = C2(((0, 1, 2), (0, 1, 2)))
-        result = Surjection.act(u, x, coord=2)
+        result = _surjection_chain_action(u, x, coord=2)
         assert result.arity() == 3
 
     def test_action_zero_on_low_degree(self):
@@ -238,7 +252,7 @@ class TestSurjectionAction:
         S2 = Surjection(2)
         u = S2((1, 2, 1))  # degree 1
         x = SimplicialChains.standard_element(0)  # degree 0
-        result = Surjection.act(u, x)
+        result = _surjection_chain_action(u, x)
         assert _as_dict(result) == {}
 
     def test_chain_map_property_small(self):
@@ -252,9 +266,9 @@ class TestSurjectionAction:
             d = 1  # degree of u
             for n in range(d, d + 4):
                 x = SimplicialChains.standard_element(n)
-                lhs = Surjection.act(u, x).boundary()
-                rhs_1 = Surjection.act(u.boundary(), x)
-                rhs_2 = Surjection.act(u, x.boundary())
+                lhs = _surjection_chain_action(u, x).boundary()
+                rhs_1 = _surjection_chain_action(u.boundary(), x)
+                rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
                 assert _as_dict(lhs) == _as_dict(
                     rhs
@@ -267,9 +281,9 @@ class TestSurjectionAction:
             d = 2
             for n in range(d, d + 3):
                 x = SimplicialChains.standard_element(n)
-                lhs = Surjection.act(u, x).boundary()
-                rhs_1 = Surjection.act(u.boundary(), x)
-                rhs_2 = Surjection.act(u, x.boundary())
+                lhs = _surjection_chain_action(u, x).boundary()
+                rhs_1 = _surjection_chain_action(u.boundary(), x)
+                rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
                 assert _as_dict(lhs) == _as_dict(
                     rhs
@@ -282,9 +296,9 @@ class TestSurjectionAction:
             d = 1
             for n in range(d, d + 3):
                 x = SimplicialChains.standard_element(n)
-                lhs = Surjection.act(u, x).boundary()
-                rhs_1 = Surjection.act(u.boundary(), x)
-                rhs_2 = Surjection.act(u, x.boundary())
+                lhs = _surjection_chain_action(u, x).boundary()
+                rhs_1 = _surjection_chain_action(u.boundary(), x)
+                rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
                 assert _as_dict(lhs) == _as_dict(
                     rhs
@@ -298,9 +312,9 @@ class TestSurjectionAction:
         C2 = SimplicialChains(r=2)
         x = C2(((0, 1, 2), (0, 1, 2)))
 
-        lhs = Surjection.act(u, x, coord=2).boundary()
-        rhs_1 = Surjection.act(u.boundary(), x, coord=2)
-        rhs_2 = Surjection.act(u, x.boundary(), coord=2)
+        lhs = _surjection_chain_action(u, x, coord=2).boundary()
+        rhs_1 = _surjection_chain_action(u.boundary(), x, coord=2)
+        rhs_2 = _surjection_chain_action(u, x.boundary(), coord=2)
         rhs = rhs_1 + (-1) ** d * rhs_2
         assert _as_dict(lhs) == _as_dict(rhs)
 
@@ -314,10 +328,10 @@ class TestSurjectionAction:
 
         for n in range(2, 5):
             x = SimplicialChains.standard_element(n)
-            lhs = Surjection.act(w, x).boundary()
-            rhs = Surjection.act(w.boundary(), x) + (-1) ** d_w * Surjection.act(
-                w, x.boundary()
-            )
+            lhs = _surjection_chain_action(w, x).boundary()
+            rhs = _surjection_chain_action(w.boundary(), x) + (
+                -1
+            ) ** d_w * _surjection_chain_action(w, x.boundary())
             assert _as_dict(lhs) == _as_dict(rhs)
 
     def test_action_121_on_triangle(self):
@@ -331,7 +345,7 @@ class TestSurjectionAction:
         S2 = Surjection(2)
         u = S2((1, 2, 1))
         x = SimplicialChains.standard_element(2)
-        result = Surjection.act(u, x)
+        result = _surjection_chain_action(u, x)
         # Result should be non-zero and in arity 2
         assert result.arity() == 2
         assert result != SimplicialChains(r=2).zero()
@@ -386,7 +400,7 @@ class TestCosimplicialCochains:
         C = SimplicialCochains(N=N, r=1)
         f1 = C(((0, 1),))  # degree 1
         f2 = C(((1, 2),))  # degree 1
-        result = Surjection.coact(u, (f1, f2))
+        result = _surjection_cochain_action(u, (f1, f2))
         # Should be a degree-3 cochain (1 + 1 + 1 = 3)
         # on Delta^3
         assert result.arity() == 1
@@ -406,13 +420,13 @@ class TestCosimplicialCochains:
         for u in S2.planar_basis_it(1):
             d = 1
             for f1, f2 in product(degree1_cochains, repeat=2):
-                mu = Surjection.coact(u, (f1, f2))
+                mu = _surjection_cochain_action(u, (f1, f2))
                 n = 1 + 1 + d
                 for simplex in combinations(range(N + 1), n + 1):
                     x = SimplicialChains(r=1)((simplex,))
                     lhs = SimplicialCochains.evaluate(mu, x)
                     rhs = _evaluate_tensor_cochains_on_chain(
-                        (f1, f2), Surjection.act(u, x)
+                        (f1, f2), _surjection_chain_action(u, x)
                     )
                     assert lhs == rhs
 
@@ -431,13 +445,13 @@ class TestCosimplicialCochains:
         for u in S3.planar_basis_it(1):
             d = 1
             for f1, f2, f3 in product(sample, repeat=3):
-                mu = Surjection.coact(u, (f1, f2, f3))
+                mu = _surjection_cochain_action(u, (f1, f2, f3))
                 n = 1 + 1 + 1 + d
                 for simplex in combinations(range(N + 1), n + 1):
                     x = SimplicialChains(r=1)((simplex,))
                     lhs = SimplicialCochains.evaluate(mu, x)
                     rhs = _evaluate_tensor_cochains_on_chain(
-                        (f1, f2, f3), Surjection.act(u, x)
+                        (f1, f2, f3), _surjection_chain_action(u, x)
                     )
                     assert lhs == rhs
 
@@ -445,7 +459,7 @@ class TestCosimplicialCochains:
         u = Surjection(2)((1, 2))
         x = SimplicialChains(r=1, base_ring=ZZ)(((0, 1),))
         with pytest.raises(TypeError, match="same base ring"):
-            Surjection.act(u, x)
+            _surjection_chain_action(u, x)
 
     def test_coact_requires_same_base_ring(self):
         u = Surjection(2)((1, 2))
@@ -453,4 +467,4 @@ class TestCosimplicialCochains:
         f1 = C(((0, 1),))
         f2 = C(((1, 2),))
         with pytest.raises(TypeError, match="same base ring"):
-            Surjection.coact(u, (f1, f2))
+            _surjection_cochain_action(u, (f1, f2))

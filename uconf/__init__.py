@@ -30,6 +30,10 @@ from uconf.algebraic import (
     FreeAlgebraModule,
     FreeOperadAlgebra,
     OperadAlgebra,
+    SurjectionSimplicialChainCoalgebra,
+    SurjectionSimplicialCochainAlgebra,
+    surjection_chain_action,
+    surjection_cochain_action,
 )
 from uconf.constructions import (
     BarComplexAlgebra,
@@ -78,6 +82,10 @@ __all__ = [
     "CobarConstruction",
     "BarComplexAlgebra",
     "CobarComplexCoalgebra",
+    "SurjectionSimplicialCochainAlgebra",
+    "SurjectionSimplicialChainCoalgebra",
+    "surjection_chain_action",
+    "surjection_cochain_action",
 ]
 
 
