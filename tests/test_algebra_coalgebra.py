@@ -38,8 +38,9 @@ class TrivialAssAlgebra(OperadAlgebra):
     def act(self, p_element, algebra_elements):
         # p_elem ∈ Ass(n), algebra_elements = [module_elem, ...]
         # All elements are scalar multiples of ()
-        if p_element.arity() != len(algebra_elements):
-            raise ValueError("Arity mismatch")
+        n = p_element.arity()
+        if len(algebra_elements) != n:
+            raise ValueError(f"Expected {n} algebra elements, got {len(algebra_elements)}.")
 
         result = self.module.zero()
         for p_key, p_coeff in p_element:
