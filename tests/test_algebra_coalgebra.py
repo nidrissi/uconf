@@ -24,28 +24,32 @@ from uconf.constructions.coalgebra_cobar import CobarComplexCoalgebra
 # ===========================================================================
 
 
-def _make_trivial_ass_algebra(base_ring=QQ):
-    """Return an Ass-algebra structure on the 1-dimensional module k.
+class TrivialAssAlgebra(OperadAlgebra):
+    """A trivial associative algebra structure on the 1-dimensional module k.
 
-    The module k has a single basis element ``()`` in degree 0, product
-    γ_n(σ; (),...,()) = ().
+    The module k has a single basis element ``()`` in degree 0, and the product
+    γ_n(σ; (),...,()) = () for all σ ∈ S_n.
     """
-    module = Commutative(1, base_ring=base_ring)
 
-    def structure_map(p_elem, a_list):
-        # p_elem ∈ Ass(n), a_list = [module_elem, ...]
+    def __init__(self, base_ring=QQ):
+        self.module = Commutative(1, base_ring=base_ring)
+        super().__init__(self.module, Associative)
+
+    def act(self, p_element, algebra_elements):
+        # p_elem ∈ Ass(n), algebra_elements = [module_elem, ...]
         # All elements are scalar multiples of ()
-        result = module.zero()
-        for p_key, p_coeff in p_elem:
+        if p_element.arity() != len(algebra_elements):
+            raise ValueError("Arity mismatch")
+
+        result = self.module.zero()
+        for p_key, p_coeff in p_element:
             # Coefficient from each a_i
             coeff = p_coeff
-            for a_elem in a_list:
+            for a_elem in algebra_elements:
                 for _a_key, a_coeff in a_elem:
                     coeff = coeff * a_coeff
-            result += coeff * module.term(())
+            result += coeff * self.module.term(())
         return result
-
-    return OperadAlgebra(module, Associative, structure_map)
 
 
 class TrivialCoassCoalgebra(CooperadCoalgebra):
@@ -96,13 +100,13 @@ class TestOperadAlgebra:
     """Tests for OperadAlgebra wrapper."""
 
     def test_construction(self):
-        alg = _make_trivial_ass_algebra()
+        alg = TrivialAssAlgebra()
         assert alg.operad_cls is Associative
         assert alg.module is not None
 
     def test_act_unary(self):
         """Unit axiom: γ_1(id; a) = a."""
-        alg = _make_trivial_ass_algebra()
+        alg = TrivialAssAlgebra()
         module = alg.module
         a = module.term(())
         unit = Associative.unit()
@@ -111,7 +115,7 @@ class TestOperadAlgebra:
 
     def test_act_binary(self):
         """Binary product γ_2(σ; a, a) = a (trivial algebra)."""
-        alg = _make_trivial_ass_algebra()
+        alg = TrivialAssAlgebra()
         module = alg.module
         a = module.term(())
         p = Associative(2).term((1, 2))
@@ -120,7 +124,7 @@ class TestOperadAlgebra:
 
     def test_act_arity_mismatch(self):
         """act() raises ValueError when len(algebra_elements) != arity."""
-        alg = _make_trivial_ass_algebra()
+        alg = TrivialAssAlgebra()
         module = alg.module
         a = module.term(())
         p = Associative(2).term((1, 2))
@@ -129,7 +133,7 @@ class TestOperadAlgebra:
 
     def test_boundary_zero(self):
         """Boundary of algebra element is 0 (Commutative module has zero differential)."""
-        alg = _make_trivial_ass_algebra()
+        alg = TrivialAssAlgebra()
         module = alg.module
         a = module.term(())
         assert alg.boundary(a) == module.zero()
@@ -163,7 +167,7 @@ class TestCooperadCoalgebra:
 
 def _make_bar_complex(base_ring=QQ):
     """Build B_Ass(k) -- bar complex of the trivial 1-dim Ass-algebra."""
-    alg = _make_trivial_ass_algebra(base_ring=base_ring)
+    alg = TrivialAssAlgebra(base_ring=base_ring)
     return BarComplexAlgebra(alg, base_ring=base_ring)
 
 
