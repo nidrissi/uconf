@@ -191,10 +191,10 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         base_ring = self.base_ring()
         cumulative = 0
 
-        for node, is_leaf_flag, leaf_0idx in _dfs_all_iter(tree):
+        for node, leaf_0idx in _dfs_all_iter(tree):
             sign = sign_from_exponent(cumulative)
 
-            if is_leaf_flag:
+            if leaf_0idx is not None:
                 # d_M: apply ∂_M to this leaf
                 m_key = m_tuple[leaf_0idx]
                 m_elem = self._inner_module.term(m_key)

@@ -31,6 +31,7 @@ from typing import ClassVar
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.operad import OperadProtocol
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -48,13 +49,13 @@ def _dfs_all_iter(tree):
 
     Yields ``(node, is_leaf_flag, leaf_0based_index)`` where:
 
-    - For internal vertices: ``(vertex_tuple, False, None)``
-    - For leaves: ``(leaf_int, True, leaf_int - 1)``
+    - For internal vertices: ``(vertex_tuple, None)``
+    - For leaves: ``(leaf_int, leaf_int - 1)``
     """
     if is_leaf(tree):
-        yield (tree, True, tree - 1)
+        yield (tree, tree - 1)
         return
-    yield (tree, False, None)
+    yield (tree, None)
     for child in children(tree):
         yield from _dfs_all_iter(child)
 
@@ -201,10 +202,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         base_ring = self.base_ring()
         cumulative = 0
 
-        for node, is_leaf_flag, leaf_0idx in _dfs_all_iter(tree):
+        for node, leaf_0idx in _dfs_all_iter(tree):
             sign = sign_from_exponent(cumulative)
 
-            if is_leaf_flag:
+            if leaf_0idx is not None:
                 # d_M: apply ∂_M to this leaf
                 m_key = m_tuple[leaf_0idx]
                 m_elem = self._inner_module.term(m_key)
@@ -292,7 +293,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         bracket = free_lie.act(Lie(2).term((1,)), [x, y])
     """
 
-    def __init__(self, operad_cls, inner_module, base_ring=QQ):
+    def __init__(self, operad_cls: type[OperadProtocol], inner_module, base_ring=QQ):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         # The structure map is grafting; we override act() directly.
         super().__init__(free_module, operad_cls, structure_map=None)
