@@ -16,6 +16,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import Callable
 
 from uconf.core.cooperad import CooperadProtocol
@@ -39,16 +40,13 @@ class CooperadCoalgebra:
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         cooperad_cls: Cooperad class (CooperadProtocol-compatible).
-        costructure_map: Callable implementing the C-coaction δ.
     """
 
-    def __init__(
-        self, module, cooperad_cls: type[CooperadProtocol], costructure_map: Callable
-    ):
+    def __init__(self, module, cooperad_cls: type[CooperadProtocol]):
         self.module = module
         self.cooperad_cls = cooperad_cls
-        self._costructure_map = costructure_map
 
+    @abstractmethod
     def coact(self, v_element, n: int):
         """Apply the C-coaction δ_n(v) ∈ C(n) ⊗_{S_n} V^{⊗n}.
 
@@ -59,7 +57,7 @@ class CooperadCoalgebra:
         Returns:
             An element of ``C(n) ⊗ V^{⊗n}``.
         """
-        return self._costructure_map(v_element, n)
+        ...
 
     def boundary(self, v):
         """Apply the differential ∂_V to a coalgebra element.

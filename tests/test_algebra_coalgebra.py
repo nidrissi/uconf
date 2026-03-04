@@ -7,20 +7,17 @@ Covers:
 - :class:`uconf.coalgebra_cobar.CobarComplexCoalgebra` (cobar complex Ω_C(V))
 """
 
+import itertools
+
 import pytest
 from sage.all import QQ
+from sage.all import tensor as sage_tensor
 
-from uconf import (
-    Associative,
-    CoAssociative,
-    Commutative,
-    Lie,
-)
+from uconf import Associative, CoAssociative, Commutative, Lie
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.constructions.algebra_bar import BarComplexAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.constructions.algebra_bar import BarComplexAlgebra
 from uconf.constructions.coalgebra_cobar import CobarComplexCoalgebra
-
 
 # ===========================================================================
 # Helpers: build simple algebra modules
@@ -51,23 +48,22 @@ def _make_trivial_ass_algebra(base_ring=QQ):
     return OperadAlgebra(module, Associative, structure_map)
 
 
-def _make_trivial_coass_coalgebra(base_ring=QQ):
+class TrivialCoassCoalgebra(CooperadCoalgebra):
     """Return a CoAss-coalgebra structure on the 1-dimensional module k.
 
     The coaction δ_n: k → CoAss(n) ⊗ k^⊗n sends () to Σ_σ (σ ⊗ ()⊗...⊗()).
     Since CoAss(n) has a full basis {σ : σ ∈ S_n}, the coaction sums over all.
     """
-    module = Commutative(1, base_ring=base_ring)
-    coop = CoAssociative
 
-    def costructure_map(v_elem, n):
-        left_parent = coop(n, base_ring=base_ring)
-        right_parent = Commutative(1, base_ring=base_ring)
-        # Build V^⊗n as n-fold tensor
-        import itertools
+    def __init__(self, base_ring=QQ):
+        self.base_ring = base_ring
+        self.module = Commutative(1, base_ring=base_ring)
+        super().__init__(self.module, CoAssociative)
 
+    def coact(self, v_element, n):
+        left_parent = CoAssociative(n, base_ring=self.base_ring)
+        right_parent = Commutative(1, base_ring=self.base_ring)
         right_factors = [right_parent] * n
-        from sage.all import tensor as sage_tensor
 
         if n == 1:
             target = sage_tensor([left_parent, right_parent])
@@ -76,7 +72,7 @@ def _make_trivial_coass_coalgebra(base_ring=QQ):
             target = sage_tensor([left_parent, right_tensor])
 
         result = target.zero()
-        for _v_key, v_coeff in v_elem:
+        for _v_key, v_coeff in v_element:
             for sigma in itertools.permutations(range(1, n + 1)):
                 left_elem = left_parent.term(sigma)
                 if n == 1:
@@ -89,8 +85,6 @@ def _make_trivial_coass_coalgebra(base_ring=QQ):
                         right_full = right_full.tensor(right_parent.term(()))
                     result += v_coeff * left_elem.tensor(right_full)
         return result
-
-    return CooperadCoalgebra(module, coop, costructure_map)
 
 
 # ===========================================================================
@@ -150,13 +144,13 @@ class TestCooperadCoalgebra:
     """Tests for CooperadCoalgebra wrapper."""
 
     def test_construction(self):
-        coalg = _make_trivial_coass_coalgebra()
+        coalg = TrivialCoassCoalgebra()
         assert coalg.cooperad_cls is CoAssociative
         assert coalg.module is not None
 
     def test_boundary_zero(self):
         """Boundary of coalgebra element is 0."""
-        coalg = _make_trivial_coass_coalgebra()
+        coalg = TrivialCoassCoalgebra()
         module = coalg.module
         v = module.term(())
         assert coalg.boundary(v) == module.zero()
@@ -300,7 +294,7 @@ class TestBarComplexAlgebra:
 
 def _make_cobar_complex(base_ring=QQ):
     """Build Ω_CoAss(k) -- cobar complex of the trivial 1-dim CoAss-coalgebra."""
-    coalg = _make_trivial_coass_coalgebra(base_ring=base_ring)
+    coalg = TrivialCoassCoalgebra(base_ring=base_ring)
     return CobarComplexCoalgebra(coalg, base_ring=base_ring)
 
 

@@ -283,44 +283,44 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     ):
         cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
         # Pass a placeholder costructure_map; we override coact() directly.
-        super().__init__(cofree_module, cooperad_cls, costructure_map=None)
+        super().__init__(cofree_module, cooperad_cls)
         self._inner_module = inner_module
 
-    def coact(self, v_element, k: int):
-        """C-coalgebra coaction δ_k: split each tree at its root when root arity = k.
+    def coact(self, v_element, n: int):
+        """C-coalgebra coaction δ_n: split each tree at its root when root arity = n.
 
-        For each basis element ``(tree, m_tuple)`` with ``vertex_arity(root) == k``:
+        For each basis element ``(tree, m_tuple)`` with ``vertex_arity(root) == n``:
 
-            δ_k((tree, m_tuple)) = root_dec ⊗ (subtree_1, m_1) ⊗ … ⊗ (subtree_k, m_k)
+            δ_n((tree, m_tuple)) = root_dec ⊗ (subtree_1, m_1) ⊗ … ⊗ (subtree_n, m_n)
 
-        where ``root_dec ∈ C(k)`` is the root decoration, ``subtree_j`` are the k
+        where ``root_dec ∈ C(n)`` is the root decoration, ``subtree_j`` are the n
         root children (relabeled to leaves ``{1, …, n_j}``), and ``m_j`` is the
         sub-tuple of M-labels for the leaves of ``subtree_j``.
 
-        For a single leaf ``(1, (m,))``: δ_k = 0 for all k (no root arity to split).
+        For a single leaf ``(1, (m,))``: δ_n = 0 for all n (no root arity to split).
 
-        Returns an element of ``C(k) ⊗ T^c_C(M)^{⊗k}`` (a Sage tensor module element).
-        The basis keys are ``(c_key, cofree_key_1, ..., cofree_key_k)`` as required by
+        Returns an element of ``C(n) ⊗ T^c_C(M)^{⊗n}`` (a Sage tensor module element).
+        The basis keys are ``(c_key, cofree_key_1, ..., cofree_key_n)`` as required by
         :meth:`uconf.coalgebra_cobar.CobarComplexCoalgebra._dcoact_on_basis`.
         """
         base_ring = self.module.base_ring()
-        coop_parent = self.cooperad_cls(k, base_ring)
+        coop_parent = self.cooperad_cls(n, base_ring)
         cofree_mod = self.module  # CofreeCoalgebraModule
 
-        right_factors = [cofree_mod] * k
+        right_factors = [cofree_mod] * n
         target = tensor([coop_parent] + right_factors)
         result = target.zero()
 
         for (tree, m_tuple), v_coeff in v_element:
             if is_leaf(tree):
-                continue  # no root vertex, δ_k = 0
-            if vertex_arity(tree) != k:
+                continue  # no root vertex, δ_n = 0
+            if vertex_arity(tree) != n:
                 continue  # root arity doesn't match
 
             root_dec = decoration(tree)
             root_children = children(tree)
 
-            # Split m_tuple among the k children according to leaf membership
+            # Split m_tuple among the n children according to leaf membership
             child_leaf_lists = []
             for child in root_children:
                 child_leaves = sorted(leaves(child) if not is_leaf(child) else {child})
@@ -340,12 +340,12 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 # m-labels for this child (by original leaf order)
                 child_m_tuples.append(tuple(m_tuple[l - 1] for l in child_leaves))
 
-            # Build tensor product term: c_key ⊗ (sub_1, m_1) ⊗ ... ⊗ (sub_k, m_k)
+            # Build tensor product term: c_key ⊗ (sub_1, m_1) ⊗ ... ⊗ (sub_n, m_n)
             coop_elem = coop_parent.term(root_dec)
             term = coop_elem
-            for j in range(k):
+            for j in range(n):
                 sub_key = (relabeled_children[j], child_m_tuples[j])
-                term = term.tensor(cofree_mod.term(sub_key))
+                term = tensor([term, cofree_mod.term(sub_key)])
 
             result += v_coeff * term
 
