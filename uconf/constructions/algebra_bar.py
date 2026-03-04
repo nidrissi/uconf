@@ -34,9 +34,9 @@ from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
-from .algebra import OperadAlgebra
-from .signs import sign_from_exponent
-from .trees import (
+from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import (
     children,
     contract_edge,
     decoration,

@@ -27,13 +27,13 @@ from sage.all import (
     tensor,
 )
 
-from .signs import (
+from uconf.core.signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
     sign_from_exponent,
 )
-from .operad import OperadProtocol
-from .trees import (
+from uconf.core.operad import OperadProtocol
+from uconf.core.trees import (
     children,
     decoration,
     internal_edges_dfs,

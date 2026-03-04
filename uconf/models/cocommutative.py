@@ -13,7 +13,7 @@ from typing import ClassVar
 
 from sage.all import QQ, tensor
 
-from .commutative import Commutative
+from uconf.models.commutative import Commutative
 
 
 class CoCommutative(Commutative):
@@ -48,9 +48,7 @@ class CoCommutative(Commutative):
         return x - CoCommutative.counit(x) * x.parent()(())
 
     @staticmethod
-    def infinitesimal_cocompose(
-        x: "CoCommutative.Element", i: int, m: int, n: int
-    ):
+    def infinitesimal_cocompose(x: "CoCommutative.Element", i: int, m: int, n: int):
         """Partial cocomposition dual to ``Commutative.compose(·, i, ·)``.
 
         Since ``Com.compose(e_m, i, e_n) = e_{m+n-1}`` for all ``i``, the

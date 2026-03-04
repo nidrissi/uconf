@@ -35,9 +35,9 @@ from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
-from .coalgebra import CooperadCoalgebra
-from .signs import sign_from_exponent
-from .trees import (
+from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import (
     children,
     decoration,
     expand_vertex,

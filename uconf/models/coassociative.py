@@ -12,7 +12,7 @@ from typing import ClassVar
 
 from sage.all import QQ, tensor
 
-from .associative import Associative
+from uconf.models.associative import Associative
 
 
 class CoAssociative(Associative):
@@ -49,9 +49,7 @@ class CoAssociative(Associative):
         return x - CoAssociative.counit(x) * x.parent()((1,))
 
     @staticmethod
-    def infinitesimal_cocompose(
-        x: "CoAssociative.Element", i: int, m: int, n: int
-    ):
+    def infinitesimal_cocompose(x: "CoAssociative.Element", i: int, m: int, n: int):
         """Partial cocomposition dual to ``Associative.compose(·, i, ·)``.
 
         For each basis element ``sigma ∈ S_{m+n-1}`` in ``x``, returns
@@ -84,11 +82,8 @@ class CoAssociative(Associative):
                     )
                     for composed_basis, composed_coeff in composed:
                         if composed_basis == sigma:
-                            out += (
-                                composed_coeff
-                                * left_parent.term(left_key).tensor(
-                                    right_parent.term(right_key)
-                                )
+                            out += composed_coeff * left_parent.term(left_key).tensor(
+                                right_parent.term(right_key)
                             )
             return out
 

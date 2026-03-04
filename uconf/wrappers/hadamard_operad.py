@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
 
-from .operad import OperadProtocol
+from uconf.core.operad import OperadProtocol
 
 
 class HadamardProduct:

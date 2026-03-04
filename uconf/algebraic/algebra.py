@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from uconf.operad import OperadProtocol
+from uconf.core.operad import OperadProtocol
 
 
 class OperadAlgebra:

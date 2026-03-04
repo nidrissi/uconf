@@ -16,7 +16,7 @@ from uconf import (
     BarrattEccles,
     SurjectionDual,
 )
-from uconf.trees import (
+from uconf.core.trees import (
     children,
     contract_edge,
     is_shuffle_tree,
