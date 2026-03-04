@@ -8,12 +8,11 @@ Covers:
 """
 
 import pytest
-from sage.all import QQ, tensor
+from sage.all import QQ
 
 from uconf import (
     Associative,
     CoAssociative,
-    CoCommutative,
     Commutative,
     Lie,
 )
@@ -181,8 +180,8 @@ class TestBarComplexAlgebra:
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
         B = _make_bar_complex()
         # Basis key: (1, ((),))  -- single leaf with A-decoration ()
-        elem = B.term((1, ((),)))
-        assert B.degree_on_basis((1, ((),))) == 0
+        elem = B((1, ((),)))
+        assert elem.degree() == 0
 
     def test_weight1_binary_degree(self):
         """Weight-1 binary tree has degree = 1 (deg_P(μ)+1 = 0+1 = 1)."""
@@ -191,8 +190,8 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         tree = (mu, 1, 2)
         a_tuple = ((), ())
-        deg = B.degree_on_basis((tree, a_tuple))
-        assert deg == 1
+        elem = B.term((tree, a_tuple))
+        assert elem.degree() == 1
 
     def test_weight1_ternary_degree(self):
         """Weight-1 ternary tree has degree = 1."""
@@ -275,7 +274,6 @@ class TestBarComplexAlgebra:
     def test_commutative_algebra_bar(self):
         """Bar complex also works with the Commutative operad."""
         module = Commutative(1)
-        mu = (1, 2)
 
         def comm_structure_map(p_elem, a_list):
             result = module.zero()
@@ -290,8 +288,7 @@ class TestBarComplexAlgebra:
         alg = OperadAlgebra(module, Commutative, comm_structure_map)
         B = BarComplexAlgebra(alg)
         # Weight-1 arity-2 tree: Commutative(2) has basis {()}
-        com_dec = ()
-        tree = (com_dec, 1, 2)
+        tree = ((), 1, 2)
         elem = B.term((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
 

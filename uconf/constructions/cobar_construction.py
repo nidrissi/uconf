@@ -17,32 +17,25 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator
+from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
 from uconf.core.cooperad import CooperadProtocol
-from typing import cast
-from uconf.core.signs import shifted_boundary_sign, sign_from_exponent
+from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
     decoration,
     expand_vertex,
     graft,
-    internal_edges_dfs,
-    is_internal,
     is_leaf,
-    leaves,
     relabel_leaves,
-    subtree_degree,
     subtree_degree_cobar,
-    tree_arity,
     tree_to_latex,
     tree_to_string,
     validate_tree,
     vertex_arity,
     vertices_dfs,
-    weight,
 )
 
 

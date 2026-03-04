@@ -104,7 +104,8 @@ def _table_reduction_on_basis(self: BarrattEccles):
 
         def term_generator():
             for pi_ord in Partitions(
-                d + n, length=d + 1  # pyright: ignore[reportCallIssue]
+                d + n,
+                length=d + 1,  # pyright: ignore[reportCallIssue]
             ):
                 for pi in set(permutations(pi_ord)):
                     k2, removed = [], []

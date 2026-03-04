@@ -41,10 +41,7 @@ from uconf.core.trees import (
     contract_edge,
     decoration,
     internal_edges_dfs,
-    is_internal,
     is_leaf,
-    leaves,
-    relabel_leaves,
     subtree_degree,
     tree_arity,
     vertices_dfs,
@@ -380,7 +377,6 @@ class BarComplexAlgebra(CombinatorialFreeModule):
         Returns ``(new_tree, new_a_tuple)``.
         """
         leaf_children = sorted(children(target_vertex))  # all are leaf integers
-        k = len(leaf_children)
         n = len(a_tuple)
 
         new_leaf_label = leaf_children[0]  # minimum child label

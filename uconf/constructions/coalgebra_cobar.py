@@ -328,7 +328,6 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         )
 
         result = self.zero()
-        base_ring = self.base_ring()
         cumulative_v = 0
 
         for leaf_l in range(1, n + 1):
@@ -382,8 +381,6 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         The new vertex is decorated by ``new_dec``.  Old leaves ``> leaf_l``
         are shifted by ``k - 1``.
         """
-        # Build a small subtree: (new_dec, 1, 2, ..., k) with leaf labels 1..k
-        new_subtree = (new_dec,) + tuple(range(1, k + 1))
 
         def _expand_rec(node):
             if is_leaf(node):

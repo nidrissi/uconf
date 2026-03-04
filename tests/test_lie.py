@@ -46,9 +46,9 @@ def test_basic_composition() -> None:
     composed = Lie.compose(bracket, 1, bracket)
     target = composed.parent()
     expected = target((1, 2)) - target((2, 1))
-    assert _as_dict(composed) == _as_dict(
-        expected
-    ), "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
+    assert _as_dict(composed) == _as_dict(expected), (
+        "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
+    )
 
 
 def test_compose_requires_same_base_ring() -> None:
@@ -69,9 +69,9 @@ def test_operadic_unit_axioms(input_pos: int) -> None:
 
     x_dict = _as_dict(x)
     assert _as_dict(left) == x_dict, "Left unit axiom failed: 1∘1 x = x."
-    assert (
-        _as_dict(right) == x_dict
-    ), f"Right unit axiom failed at input {input_pos}: x∘{input_pos} 1 = x."
+    assert _as_dict(right) == x_dict, (
+        f"Right unit axiom failed at input {input_pos}: x∘{input_pos} 1 = x."
+    )
 
 
 def test_jacobi_identity() -> None:
@@ -184,6 +184,7 @@ def test_compose_full_basis_arity6() -> None:
 # Parallel associativity axiom:  (x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y  for i < k
 # ===========================================================================
 
+
 @pytest.mark.parametrize("i,k", [(1, 2), (1, 3), (2, 3)])
 def test_lie_parallel_associativity_arity4(i: int, k: int) -> None:
     """Parallel associativity for p ∈ Lie(3), q, r ∈ Lie(2) → Lie(5)."""
@@ -195,9 +196,17 @@ def test_lie_parallel_associativity_arity4(i: int, k: int) -> None:
     assert lhs == rhs, f"Lie parallel axiom failed for i={i}, k={k} at arity 4"
 
 
-@pytest.mark.parametrize("i,k", [
-    (1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4),
-])
+@pytest.mark.parametrize(
+    "i,k",
+    [
+        (1, 2),
+        (1, 3),
+        (1, 4),
+        (2, 3),
+        (2, 4),
+        (3, 4),
+    ],
+)
 def test_lie_parallel_associativity_arity5(i: int, k: int) -> None:
     """Parallel associativity for p ∈ Lie(4), q, r ∈ Lie(2) → Lie(6)."""
     bracket = Lie(2)((1,))
@@ -211,6 +220,7 @@ def test_lie_parallel_associativity_arity5(i: int, k: int) -> None:
 # ===========================================================================
 # Equivariance:  (σ·x)∘_i(τ·y) = (σ∘_iτ) · (x∘_{σ^{-1}(i)} y)
 # ===========================================================================
+
 
 def _block_permutation(sigma: list[int], i: int, tau: list[int]) -> list[int]:
     """Return the block permutation ``σ ∘_i τ`` in one-line notation."""
@@ -234,12 +244,15 @@ def _inverse_one_line(sigma: list[int]) -> list[int]:
     return inv
 
 
-@pytest.mark.parametrize("sigma,tau", [
-    ([2, 1, 3], [2, 1]),   # σ ∈ S_3, τ ∈ S_2
-    ([2, 3, 1], [2, 1]),   # σ = 3-cycle, τ = transposition
-    ([3, 1, 2], [2, 1]),
-    ([2, 1, 3], [1, 2]),   # τ = identity
-])
+@pytest.mark.parametrize(
+    "sigma,tau",
+    [
+        ([2, 1, 3], [2, 1]),  # σ ∈ S_3, τ ∈ S_2
+        ([2, 3, 1], [2, 1]),  # σ = 3-cycle, τ = transposition
+        ([3, 1, 2], [2, 1]),
+        ([2, 1, 3], [1, 2]),  # τ = identity
+    ],
+)
 def test_lie_equivariance_arity3_times_2(sigma: list[int], tau: list[int]) -> None:
     """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(3)×Lie(2)."""
     x = Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,)))  # Lie(3)
@@ -249,17 +262,18 @@ def test_lie_equivariance_arity3_times_2(sigma: list[int], tau: list[int]) -> No
         lhs = Lie.compose(x.permute(sigma), i, y.permute(tau))
         bp = _block_permutation(sigma, i, tau)
         rhs = Lie.compose(x, sigma_inv[i - 1], y).permute(bp)
-        assert lhs == rhs, (
-            f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
-        )
+        assert lhs == rhs, f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
 
 
-@pytest.mark.parametrize("sigma,tau", [
-    ([2, 1, 3, 4], [2, 1]),  # σ ∈ S_4, τ ∈ S_2
-    ([2, 3, 1, 4], [2, 1]),
-    ([4, 1, 2, 3], [2, 1]),
-    ([2, 1, 4, 3], [2, 1]),
-])
+@pytest.mark.parametrize(
+    "sigma,tau",
+    [
+        ([2, 1, 3, 4], [2, 1]),  # σ ∈ S_4, τ ∈ S_2
+        ([2, 3, 1, 4], [2, 1]),
+        ([4, 1, 2, 3], [2, 1]),
+        ([2, 1, 4, 3], [2, 1]),
+    ],
+)
 def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> None:
     """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(4)×Lie(2)."""
     bracket = Lie(2)((1,))
@@ -270,14 +284,13 @@ def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> No
         lhs = Lie.compose(mu4.permute(sigma), i, y.permute(tau))
         bp = _block_permutation(sigma, i, tau)
         rhs = Lie.compose(mu4, sigma_inv[i - 1], y).permute(bp)
-        assert lhs == rhs, (
-            f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
-        )
+        assert lhs == rhs, f"Lie equivariance failed for σ={sigma}, τ={tau}, i={i}"
 
 
 # ===========================================================================
 # Square-zero differential:  d² = 0
 # ===========================================================================
+
 
 @pytest.mark.parametrize("n", range(0, 7))
 def test_lie_differential_squared_zero(n: int) -> None:

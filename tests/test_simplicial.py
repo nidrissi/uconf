@@ -270,9 +270,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(
-                    rhs
-                ), f"Chain map failed: u={list(u.support())}, n={n}"
+                assert _as_dict(lhs) == _as_dict(rhs), (
+                    f"Chain map failed: u={list(u.support())}, n={n}"
+                )
 
     def test_chain_map_property_degree2(self):
         """Chain map property for degree-2 surjections in arity 2."""
@@ -285,9 +285,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(
-                    rhs
-                ), f"Chain map failed: u={list(u.support())}, n={n}"
+                assert _as_dict(lhs) == _as_dict(rhs), (
+                    f"Chain map failed: u={list(u.support())}, n={n}"
+                )
 
     def test_chain_map_arity3(self):
         """Chain map property for arity-3 surjections."""
@@ -300,9 +300,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(
-                    rhs
-                ), f"Chain map failed (arity 3): u={list(u.support())}, n={n}"
+                assert _as_dict(lhs) == _as_dict(rhs), (
+                    f"Chain map failed (arity 3): u={list(u.support())}, n={n}"
+                )
 
     def test_chain_map_property_on_coord2(self):
         """Chain map identity also holds when acting on coord=2."""

@@ -8,12 +8,11 @@ Covers:
 """
 
 import pytest
-from sage.all import QQ, tensor
+from sage.all import QQ
 
 from uconf import (
     Associative,
     CoAssociative,
-    CoCommutative,
     Commutative,
     Lie,
 )
@@ -310,12 +309,6 @@ class TestCofreeConilpotentCoalgebra:
         """Δ^{1;2,2} on arity-3 tree gives a tensor of two arity-2 trees."""
         M = _zero_diff_module()
         T = CofreeConilpotentCoalgebra(CoAssociative, M)
-        # Tree with 3 leaves: root has 3 children, arity 3
-        # For CoAssociative: CoAss(3) ⊗ M^3
-        c_dec3 = (1, 2, 3)  # CoAss(3) basis key
-        tree3 = (c_dec3, 1, 2, 3)
-        elem = T.module.term((tree3, ((), (), ())))
-        # Δ^{1;2,2}: split at vertex covering leaves {1,2}
         # But arity-3 tree has no weight-2 subtree unless it's nested
         # Use a weight-2 tree for a proper split
         c_dec2 = (1, 2)

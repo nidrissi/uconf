@@ -15,7 +15,7 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from typing import Any, Iterator, Literal
+from typing import Iterator, Literal
 
 
 def is_leaf(node) -> bool:
@@ -388,9 +388,8 @@ def _enumerate_with_root(
     if v_arity == 2:
         # Partition into two parts
         leaves_set = set(range(1, arity + 1))
-        for size1 in range(1, arity):
-            size2 = arity - size1
-            for part1 in combinations(range(1, arity + 1), size1):
+        for size in range(1, arity):
+            for part1 in combinations(range(1, arity + 1), size):
                 part1_set = set(part1)
                 part2 = tuple(sorted(leaves_set - part1_set))
                 # Child 1 gets part1, child 2 gets part2

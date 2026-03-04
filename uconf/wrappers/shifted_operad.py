@@ -8,7 +8,6 @@ sign rules from standard operad references.
 
 from __future__ import annotations
 
-from typing import Any
 
 from sage.all import (
     CombinatorialFreeModule,

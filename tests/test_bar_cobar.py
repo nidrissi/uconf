@@ -9,11 +9,8 @@ from uconf import (
     CoCommutative,
     CobarConstruction,
     Commutative,
-    CooperadProtocol,
     Lie,
-    OperadProtocol,
     Surjection,
-    BarrattEccles,
     SurjectionDual,
 )
 from uconf.core.trees import (
@@ -22,7 +19,6 @@ from uconf.core.trees import (
     is_shuffle_tree,
     min_leaf,
     to_shuffle_tree_bar,
-    to_shuffle_tree_cobar,
     decoration,
     expand_vertex,
     graft,
@@ -31,7 +27,6 @@ from uconf.core.trees import (
     is_leaf,
     leaves,
     relabel_leaves,
-    subtree_degree,
     tree_arity,
     validate_tree,
     vertex_arity,
@@ -377,7 +372,7 @@ class TestBarConstructionLie:
         elem = B3(nested)
 
         # d_2 should contract to a weight-1 tree
-        d2 = B3._d2_on_basis(nested)
+        d2 = elem.d2()
         assert d2 != B3.zero()
 
         # Result should be weight-1 trees (since we contract one edge)
@@ -498,7 +493,7 @@ class TestBarConstructionSurjection:
         tree = ((1, 2, 1), 1, 2)
         elem = B2(tree)
 
-        d1 = B2._d1_on_basis(tree)
+        d1 = elem.d1()
         # Should produce trees with different decorations
         assert d1 != B2.zero()
 
@@ -556,7 +551,6 @@ class TestCobarConstruction:
         """Test free operad composition (grafting)."""
         OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2)
-        O3 = OmegaS(3)
 
         tree1 = ((1, 2), 1, 2)
         elem1 = O2(tree1)
@@ -566,6 +560,7 @@ class TestCobarConstruction:
         composed = OmegaS.compose(elem1, 1, unit)
         assert composed.arity() == 2
         # Composing with unit should give back the same element (essentially)
+        assert composed == elem1
 
     def test_cobar_compose_two_trees(self):
         """Test composing two nontrivial trees."""
@@ -651,11 +646,8 @@ class TestContractEdge:
         # New vertex has arity 3, children 1, 2, 3
         # Result depends on new_decoration
 
-        from sage.all import QQ
-
         # Lie.compose(Lie(2).term((1,)), 1, Lie(2).term((1,))) computes the composition
         L2 = Lie(2)
-        L3 = Lie(3)
         bracket = L2.term((1,))
         composed = Lie.compose(bracket, 1, bracket)
         # In Lie, id ∘_1 id = id in arity 3, which has basis keys permutations of (1, 2)
