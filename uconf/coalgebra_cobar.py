@@ -153,7 +153,8 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         """Degree = deg_cobar(tree) + Σ_i deg_V(v_i)."""
         tree, v_tuple = key
         tree_deg = (
-            0 if is_leaf(tree)
+            0
+            if is_leaf(tree)
             else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
         v_deg = sum(self._module.degree_on_basis(v) for v in v_tuple)
@@ -281,7 +282,8 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         """
         tree, v_tuple = key
         deg_cobar = (
-            0 if is_leaf(tree)
+            0
+            if is_leaf(tree)
             else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
 
@@ -320,7 +322,8 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         n = len(v_tuple)
 
         deg_cobar = (
-            0 if is_leaf(tree)
+            0
+            if is_leaf(tree)
             else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
 
@@ -350,11 +353,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
                     new_tree = self._expand_leaf(tree, leaf_l, c_key, k)
 
                     # Build new v_tuple: insert new_v_keys at position leaf_l
-                    new_v_tuple = (
-                        v_tuple[: leaf_l - 1]
-                        + new_v_keys
-                        + v_tuple[leaf_l:]
-                    )
+                    new_v_tuple = v_tuple[: leaf_l - 1] + new_v_keys + v_tuple[leaf_l:]
 
                     result += sign * coeff * self.term((new_tree, new_v_tuple))
 
@@ -434,6 +433,3 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         def dcoact(self) -> "CobarComplexCoalgebra.Element":
             """Apply the C-coalgebra coaction at each leaf."""
             return self.parent()._dcoact(self)
-
-
-CobarComplexCoalgebra.Element = CobarComplexCoalgebra.Element

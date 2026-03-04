@@ -155,7 +155,8 @@ class BarComplexAlgebra(CombinatorialFreeModule):
         """Degree of ``(tree, a_tuple)`` = deg_bar(tree) + Σ_i deg_A(a_i)."""
         tree, a_tuple = key
         tree_deg = (
-            0 if is_leaf(tree)
+            0
+            if is_leaf(tree)
             else subtree_degree(tree, self._operad_cls, self.base_ring())
         )
         a_deg = sum(self._module.degree_on_basis(a) for a in a_tuple)
@@ -446,6 +447,3 @@ class BarComplexAlgebra(CombinatorialFreeModule):
         def dact(self) -> "BarComplexAlgebra.Element":
             """Apply the P-algebra action at all-leaf-children vertices."""
             return self.parent()._dact(self)
-
-
-BarComplexAlgebra.Element = BarComplexAlgebra.Element

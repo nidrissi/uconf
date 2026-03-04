@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+from uconf.cooperad import CooperadProtocol
+
 
 class CooperadCoalgebra:
     """A dg-module equipped with a C-coalgebra structure.
@@ -40,7 +42,9 @@ class CooperadCoalgebra:
         costructure_map: Callable implementing the C-coaction δ.
     """
 
-    def __init__(self, module, cooperad_cls, costructure_map: Callable):
+    def __init__(
+        self, module, cooperad_cls: type[CooperadProtocol], costructure_map: Callable
+    ):
         self.module = module
         self.cooperad_cls = cooperad_cls
         self._costructure_map = costructure_map
