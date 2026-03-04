@@ -295,11 +295,10 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     def __init__(self, operad_cls: type[OperadProtocol], inner_module, base_ring=QQ):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
-        # The structure map is grafting; we override act() directly.
-        super().__init__(free_module, operad_cls)
+        super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module
 
-    def act(self, p_element, algebra_elements):
+    def _act_impl(self, p_element, algebra_elements):
         """P-algebra action γ(p; x_1, ..., x_k) by grafting.
 
         Grafts the k input subtrees ``x_j ∈ Free_P(M)`` under a new root

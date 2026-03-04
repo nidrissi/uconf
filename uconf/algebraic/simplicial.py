@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
@@ -193,9 +194,15 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
                 f"Expected arity-1 simplicial cochains module, got arity={module.arity()}."
             )
 
-        super().__init__(module=module, operad_cls=Surjection)
+        super().__init__(
+            module=module, operad_cls=Surjection, structure_map=self._act_impl
+        )
 
-    def act(self, p_element: Surjection.Element, algebra_elements: list):
+    def _act_impl(
+        self,
+        p_element: Surjection.Element,
+        algebra_elements: Sequence[SimplicialCochains.Element],
+    ):
         return surjection_cochain_action(p_element, tuple(algebra_elements))
 
 
@@ -209,9 +216,13 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
             )
         from uconf.models.surjection_dual import SurjectionDual
 
-        super().__init__(module=module, cooperad_cls=SurjectionDual)
+        super().__init__(
+            module=module,
+            cooperad_cls=SurjectionDual,
+            coaction_map=self._coact_impl,
+        )
 
-    def coact(self, v_element: SimplicialChains.Element, n: int):
+    def _coact_impl(self, v_element: SimplicialChains.Element, n: int):
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
 
