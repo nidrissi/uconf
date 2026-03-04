@@ -252,7 +252,7 @@ class Surjection(CombinatorialFreeModule):
                         sign_exp += sum(w1[idx + 1 :]) % 2
                 return (-1) ** sign_exp
 
-            positions = [idx for idx, i in enumerate(x_tuple) if i == i]
+            positions = [idx for idx, j in enumerate(x_tuple) if j == i]
             for p in combinations_with_replacement(
                 range(len(y_tuple)), len(positions) - 1
             ):
