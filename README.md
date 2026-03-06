@@ -69,24 +69,67 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 ### Simplicial models
 
 - `models/simplicial.py`
-  - `SimplicialChains`: normalized chains on standard simplices, tensor differential, iterated AW diagonal.
-  - `SimplicialCochains`: dual cochains, coboundary, Kronecker pairing (`evaluate`).
+  - `SimplicialChains`: normalized chains on standard simplices, basis = non-degenerate
+    simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
+    - `SimplicialChains.standard_element(n)` — the fundamental cycle `[0,…,n]`.
+    - `SimplicialChains.basis_it(N)` — iterator over all simplices in `Δ^N`.
+    - `SimplicialChains.tensor_boundary(x)` — Koszul tensor-product differential
+      on elements of `tensor([SimplicialChains()]*r)`.
+    - `Element.boundary()` — simplicial boundary on arity-1 elements.
+    - `Element.iterated_diagonal(times)` — AW diagonal; returns a native Sage
+      `tensor([SimplicialChains()]*(times+1))` element.
+  - `SimplicialCochains(N)`: dual cochains on `Δ^N`, same simplex-tuple basis as
+    `SimplicialChains`.
+    - `SimplicialCochains.evaluate(cochain, chain)` — Kronecker pairing.
+    - `SimplicialCochains.dual_basis_it(N)` — iterator over dual basis.
+    - `Element.coboundary()` — coboundary operator.
   - Factory methods:
-    - `SimplicialChains.as_surjection_coalgebra()`
-    - `SimplicialCochains.as_surjection_algebra()`
+    - `SimplicialChains().as_surjection_coalgebra()` — returns a
+      `SurjectionSimplicialChainCoalgebra` wrapper.
+    - `SimplicialCochains(N).as_surjection_algebra()` — returns a
+      `SurjectionSimplicialCochainAlgebra` wrapper.
 
 ### Surjection action/coaction API
 
 - Canonical implementation lives in `uconf.algebraic.simplicial`:
-  - `surjection_chain_action(u, x, coord=1)`
-  - `surjection_cochain_action(u, (f_1, ..., f_r))`
+  - `surjection_chain_action(u, x)` — action of `u ∈ S(r)` on a chain `x ∈ C`; returns
+    a native `tensor([SimplicialChains()]*r)` element (`r ≥ 2`) or `SimplicialChains`
+    element (`r = 1`).
+  - `surjection_cochain_action(u, (f_1, …, f_r))` — dual cochain action.
   - `SurjectionSimplicialChainCoalgebra`
   - `SurjectionSimplicialCochainAlgebra`
 
 Preferred usage is through simplicial wrappers:
 
-- Chain-side: `SimplicialChains(...).as_surjection_coalgebra().act(...)`
-- Cochain-side: `SimplicialCochains(...).as_surjection_algebra().act(...)`
+```python
+from uconf import SimplicialChains, SimplicialCochains, Surjection
+from sage.all import tensor
+
+# Chains
+SC = SimplicialChains()
+x = SC((0, 1, 2))            # the 2-simplex [0,1,2]
+x.boundary()                  # ∂[0,1,2]
+x.iterated_diagonal(times=1) # Δ([0,1,2]) ∈ tensor([SC, SC])
+
+# Tensor-product boundary (for tensor([SC]*r) elements)
+T = tensor([SC, SC])
+y = x.iterated_diagonal(times=1)
+SimplicialChains.tensor_boundary(y)
+
+# Coalgebra (chain-side) wrapper
+coalg = SC.as_surjection_coalgebra()
+u = Surjection(2)((1, 2, 1))  # degree-1 surjection
+coalg.act(u, x)               # θ_u(x) ∈ tensor([SC, SC])
+
+# Cochains
+Cco = SimplicialCochains(N=3)
+f = Cco((0, 1))               # the dual cochain [0,1]*
+SimplicialCochains.evaluate(f, SC((0, 1)))  # 1
+
+# Algebra (cochain-side) wrapper
+alg = Cco.as_surjection_algebra()
+alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
+```
 
 ### Protocols and utilities
 
