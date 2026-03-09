@@ -84,7 +84,7 @@ def test_sphere_surjection_matches_top_cochain_action(k: int, e: int) -> None:
 
     C = SimplicialCochains(N=d, base_ring=QQ)
     top_key = tuple(range(d + 1))
-    top = C.term(top_key)
+    top = C(top_key)
 
     for u in Surjection(k).basis_it(e):
         sphere_val = alg.act(u, [g] * k)
