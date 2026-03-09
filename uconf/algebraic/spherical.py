@@ -15,12 +15,12 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.models.surjection import Surjection
 
 
-def _permutation_sign(one_line: tuple[int, ...]) -> int:
+def _permutation_sign(sigma: tuple[int, ...]) -> int:
     """Return the signature of a permutation in one-line notation."""
     inversions = 0
-    for i in range(len(one_line)):
-        for j in range(i + 1, len(one_line)):
-            if one_line[i] > one_line[j]:
+    for i in range(len(sigma)):
+        for j in range(i + 1, len(sigma)):
+            if sigma[i] > sigma[j]:
                 inversions += 1
     return -1 if inversions % 2 else 1
 
@@ -36,39 +36,20 @@ def _extract_concatenated_permutations(
     if len(u) != expected_len:
         return None
 
-    blocks = d + 1
-    block_len = n - 1
-
     perms: list[tuple[int, ...]] = []
-    pos = 0
-    valid_values = set(range(1, n + 1))
-    for _ in range(blocks):
-        block = tuple(u[pos : pos + block_len])
-        pos += block_len
-        if len(set(block)) != block_len:
+    valid = set(range(1, n + 1))
+    for i in range(0, len(u) - 1, n - 1):
+        block = tuple(u[i : i + n])
+        if set(block) != valid:
             return None
-        if set(block) - valid_values:
-            return None
-        missing = tuple(valid_values - set(block))
-        if len(missing) != 1:
-            return None
-        perms.append(block + (missing[0],))
-
-    if pos != len(u) - 1:
-        return None
-    if u[pos] != perms[-1][-1]:
-        return None
-
-    for j in range(d):
-        if perms[j][-1] != perms[j + 1][0]:
-            return None
+        perms.append(block)
 
     return perms
 
 
 def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
     """Return the sign predicted by the proposition-level closed formula."""
-    perms = _extract_concatenated_permutations(u, n=n, d=d)
+    perms = _extract_concatenated_permutations(u, n, d)
     if perms is None:
         return 0
 
@@ -87,7 +68,7 @@ class ReducedSphereCochains(CombinatorialFreeModule):
 
     def __init__(self, d: int, base_ring=QQ):
         assert d >= 0
-        name = f"C~*(S^{d})"
+        name = f"N*(S^{d})"
         super().__init__(
             base_ring,
             tuple,
