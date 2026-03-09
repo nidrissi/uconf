@@ -151,6 +151,11 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
 
+- `algebraic/hadamard_algebra.py` — `HadamardTensorAlgebra(A, B)`
+  - Input: a `P`-algebra `A` and a `Q`-algebra `B`.
+  - Output: a `(P ⊙ Q)`-algebra on `tensor([A.module, B.module])`.
+  - Action is diagonal on factors and multilinear on tensor arguments.
+
 ## Bar-cobar tree conventions
 
 - Trees are encoded as nested tuples.
@@ -203,6 +208,18 @@ y = H2(((1,), (1, 2, 1)))
 z = Had.compose(x, 1, y)
 dx = x.boundary()
 xp = x.permute([2, 1])
+```
+
+### Hadamard tensor algebra
+
+```python
+from uconf import HadamardTensorAlgebra
+
+AB = HadamardTensorAlgebra(A, B)  # A: P-algebra, B: Q-algebra
+u = AB.operad_cls.unit()          # unit in (P ⊙ Q)(1)
+t = AB.module.term((a_key, b_key))
+
+AB.act(u, [t])
 ```
 
 ### Bar / cobar constructions
