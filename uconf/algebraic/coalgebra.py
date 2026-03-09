@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Generic, Protocol, TypeVar
 
-from uconf.core.cooperad import CooperadProtocol
+from uconf.core.cooperad import CooperadLike, CooperadProtocol
 
 CoalgebraElementType = TypeVar("CoalgebraElementType")
 CooperadElementType = TypeVar("CooperadElementType", bound=CooperadProtocol.Element)
@@ -46,7 +46,7 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a
-    cooperad class ``cooperad_cls`` (satisfying
+    cooperad provider ``cooperad_cls`` (satisfying
     :class:`uconf.cooperad.CooperadProtocol`) together with an explicit
     costructure map.
 
@@ -58,14 +58,14 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        cooperad_cls: Cooperad class (CooperadProtocol-compatible).
+        cooperad_cls: Cooperad provider (class or factory, CooperadProtocol-compatible).
         coaction_map: Callable implementing the C-coalgebra coaction δ_n.
     """
 
     def __init__(
         self,
         module,
-        cooperad_cls: type[CooperadProtocol],
+        cooperad_cls: CooperadLike,
         coaction_map: CoactionMap[CoalgebraElementType, CoactionValueType],
     ):
         if not callable(coaction_map):

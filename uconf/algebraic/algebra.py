@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Generic, Protocol, TypeVar
 
-from uconf.core.operad import OperadProtocol
+from uconf.core.operad import OperadLike, OperadProtocol
 
 AlgebraElementType = TypeVar("AlgebraElementType")
 OperadElementType = TypeVar("OperadElementType", bound=OperadProtocol.Element)
@@ -56,14 +56,14 @@ class OperadAlgebra(Generic[OperadElementType, AlgebraElementType]):
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        operad_cls: Operad class (OperadProtocol-compatible).
+        operad_cls: Operad provider (class or factory, OperadProtocol-compatible).
         structure_map: Callable implementing the P-algebra action γ.
     """
 
     def __init__(
         self,
         module,
-        operad_cls: type[OperadProtocol],
+        operad_cls: OperadLike,
         structure_map: StructureMap[OperadElementType, AlgebraElementType],
     ):
         if not callable(structure_map):

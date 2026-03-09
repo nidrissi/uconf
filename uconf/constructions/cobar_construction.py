@@ -21,7 +21,7 @@ from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 
-from uconf.core.cooperad import CooperadProtocol
+from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -43,7 +43,7 @@ class CobarConstruction:
     """Factory for cobar construction components of a connected dg-cooperad.
 
     Args:
-        cooperad_cls: Base cooperad class (e.g., ``SurjectionDual``).
+        cooperad_cls: Base cooperad provider (class or wrapper instance).
         max_weight: Maximum tree weight for enumeration helpers (default 3).
 
     The cobar construction Ω(C) is a dg-operad whose arity-n component has
@@ -58,7 +58,7 @@ class CobarConstruction:
         ``is_shuffle_tree`` in ``trees`` can be used explicitly when needed.
     """
 
-    def __init__(self, cooperad_cls: type[CooperadProtocol], max_weight: int = 3):
+    def __init__(self, cooperad_cls: CooperadLike, max_weight: int = 3):
         self.cooperad_cls = cooperad_cls
         self.max_weight = int(max_weight)
         self.name = f"Ω({cooperad_cls.name})"

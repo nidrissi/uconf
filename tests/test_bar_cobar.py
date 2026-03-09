@@ -5,11 +5,13 @@ from sage.all import tensor, QQ
 
 from uconf import (
     BarConstruction,
+    HadamardProduct,
     CoAssociative,
     CoCommutative,
     CobarConstruction,
     Commutative,
     Lie,
+    ShiftedOperad,
     Surjection,
     SurjectionDual,
 )
@@ -135,6 +137,20 @@ class TestTrees:
         # Invalid: wrong leaves
         bad_tree = ((1, 2), 1, 2, 4)
         assert validate_tree(bad_tree, 3, Lie, QQ) is None
+
+
+def test_bar_cobar_accept_nested_operad_providers() -> None:
+    shifted_lie = ShiftedOperad(Lie, -1)
+    surj_shifted_lie = HadamardProduct(Surjection, shifted_lie)
+
+    bar = BarConstruction(surj_shifted_lie)
+    b3 = bar(3)
+    tree = (((1, 2, 3), (1, 2)), 1, 2, 3)
+
+    assert b3(tree) != b3.zero()
+
+    cobar = CobarConstruction(bar)
+    assert cobar(2).arity() == 2
 
 
 class TestShuffleTrees:

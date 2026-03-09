@@ -135,6 +135,11 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 
 - `core/operad.py` — `OperadProtocol` (minimal structural contract for operads).
 - `core/cooperad.py` — `CooperadProtocol` (dual cooperadic contract).
+- `core/operad.py` — `OperadLike` accepts either an operad class (for example
+  `Lie`) or an operad factory/wrapper instance (for example
+  `ShiftedOperad(Lie, -1)` and `HadamardProduct(Associative, Associative)`).
+- `core/cooperad.py` — `CooperadLike` similarly accepts cooperad classes or
+  cooperad wrapper instances (for example `BarConstruction(Lie)`).
 - `core/signs.py` — shared sign conventions (permutation signature, suspension signs).
 
 ### Wrappers
@@ -244,6 +249,17 @@ comp = OmegaS.compose(x, 1, u)
 
 # Cooperadic infinitesimal cocomposition on bar elements
 delta = t.infinitesimal_cocompose(i=2, m=2, n=2)
+```
+
+Constructors taking operads/cooperads now use the same provider API, so nested
+wrappers are accepted directly:
+
+```python
+from uconf import BarConstruction, CobarConstruction, HadamardProduct, Lie, ShiftedOperad, Surjection
+
+s_lie = ShiftedOperad(Lie, -1)
+surj_s_lie = HadamardProduct(Surjection, s_lie)
+omega_b = CobarConstruction(BarConstruction(surj_s_lie))
 ```
 
 ### Surjection action on simplicial chains/cochains

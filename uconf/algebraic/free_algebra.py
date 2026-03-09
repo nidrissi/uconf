@@ -31,7 +31,7 @@ from typing import ClassVar
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.core.operad import OperadProtocol
+from uconf.core.operad import OperadLike
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -72,11 +72,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     name: ClassVar[str] = "Free"
 
-    def __init__(self, operad_cls, inner_module, base_ring=QQ):
+    def __init__(self, operad_cls: OperadLike, inner_module, base_ring=QQ):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
-            operad_cls: Operad class P (e.g. ``Associative``, ``Lie``).
+            operad_cls: Operad provider P (class or wrapper instance).
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring (default ``QQ``).
         """
@@ -278,7 +278,7 @@ class FreeOperadAlgebra(OperadAlgebra):
     structure given by grafting (operadic composition on tree decorations).
 
     Args:
-        operad_cls: Operad class P (e.g. ``Associative``, ``Lie``).
+        operad_cls: Operad provider P (class or wrapper instance).
         inner_module: The generating dg-module M.
         base_ring: Coefficient ring (default ``QQ``).
 
@@ -293,7 +293,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         bracket = free_lie.act(Lie(2).term((1,)), [x, y])
     """
 
-    def __init__(self, operad_cls: type[OperadProtocol], inner_module, base_ring=QQ):
+    def __init__(self, operad_cls: OperadLike, inner_module, base_ring=QQ):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module

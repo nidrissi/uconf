@@ -34,7 +34,7 @@ from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import _dfs_all_iter
-from uconf.core.cooperad import CooperadProtocol
+from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -61,11 +61,11 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     name: ClassVar[str] = "T^c"
 
-    def __init__(self, cooperad_cls, inner_module, base_ring=QQ):
+    def __init__(self, cooperad_cls: CooperadLike, inner_module, base_ring=QQ):
         """Initialize the cofree conilpotent C-coalgebra module ``T^c_C(M)``.
 
         Args:
-            cooperad_cls: Cooperad class C (e.g. ``CoAssociative``, ``CoCommutative``).
+            cooperad_cls: Cooperad provider C (class or wrapper instance).
             inner_module: Cogenerating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring (default ``QQ``).
         """
@@ -260,7 +260,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     C-coalgebra infinitesimal cocomposition given by tree-splitting.
 
     Args:
-        cooperad_cls: Cooperad class C (e.g. ``CoAssociative``, ``CoCommutative``).
+        cooperad_cls: Cooperad provider C (class or wrapper instance).
         inner_module: The cogenerating dg-module M.
         base_ring: Coefficient ring (default ``QQ``).
 
@@ -278,9 +278,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         cofree_coass.coact(elem, 2)   # splits at root
     """
 
-    def __init__(
-        self, cooperad_cls: type[CooperadProtocol], inner_module, base_ring=QQ
-    ):
+    def __init__(self, cooperad_cls: CooperadLike, inner_module, base_ring=QQ):
         cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
         super().__init__(cofree_module, cooperad_cls, self._coact_impl)
         self._inner_module = inner_module

@@ -3,7 +3,7 @@
 import pytest
 from sage.all import ZZ
 
-from uconf import HadamardProduct, Lie, Surjection
+from uconf import HadamardProduct, Lie, ShiftedOperad, Surjection
 
 
 def _as_dict(x):
@@ -80,3 +80,15 @@ def test_compose_requires_same_base_ring() -> None:
 
     with pytest.raises(TypeError, match="same base ring"):
         had.compose(x, 1, y)
+
+
+def test_hadamard_accepts_shifted_operad_provider() -> None:
+    shifted_lie = ShiftedOperad(Lie, -1)
+    had = HadamardProduct(Surjection, shifted_lie)
+
+    x = had(2)(((1, 2), (1,)))
+    y = had(2)(((1, 2, 1), (1,)))
+    composed = had.compose(x, 1, y)
+
+    assert x.arity() == 2
+    assert composed.arity() == 3

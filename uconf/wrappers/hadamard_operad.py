@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
 
-from uconf.core.operad import OperadProtocol
+from uconf.core.operad import OperadLike
 
 
 class HadamardProduct:
@@ -22,8 +22,8 @@ class HadamardProduct:
 
     def __init__(
         self,
-        left_operad_cls: type[OperadProtocol],
-        right_operad_cls: type[OperadProtocol],
+        left_operad_cls: OperadLike,
+        right_operad_cls: OperadLike,
     ):
         self.left_operad_cls = left_operad_cls
         self.right_operad_cls = right_operad_cls

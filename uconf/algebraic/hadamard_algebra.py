@@ -17,12 +17,10 @@ extended multilinearly.  The differential on ``A ⊗ B`` is the tensor one:
 from __future__ import annotations
 
 import itertools
-from typing import cast
 
 from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.core.operad import OperadProtocol
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -52,7 +50,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         super().__init__(
             module=tensor([self.left_module, self.right_module]),
-            operad_cls=cast(type[OperadProtocol], hadamard_operad),
+            operad_cls=hadamard_operad,
             structure_map=self._act_impl,
         )
 
