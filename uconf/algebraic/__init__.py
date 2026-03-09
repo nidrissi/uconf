@@ -7,6 +7,10 @@ from uconf.algebraic.cofree_coalgebra import (
     CofreeConilpotentCoalgebra,
 )
 from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
+from uconf.algebraic.hadamard_algebra import (
+    HadamardTensorAlgebra,
+    hadamard_tensor_algebra,
+)
 from uconf.algebraic.simplicial import (
     SurjectionSimplicialChainCoalgebra,
     SurjectionSimplicialCochainAlgebra,
@@ -21,6 +25,8 @@ __all__ = [
     "FreeOperadAlgebra",
     "CofreeCoalgebraModule",
     "CofreeConilpotentCoalgebra",
+    "HadamardTensorAlgebra",
+    "hadamard_tensor_algebra",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSimplicialChainCoalgebra",
     "surjection_chain_action",
