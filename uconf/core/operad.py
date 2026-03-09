@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Protocol, Self, runtime_checkable
+from typing import Any, Protocol, Self, TypeAlias, runtime_checkable
 
 
 @runtime_checkable
@@ -77,3 +77,35 @@ class OperadProtocol(Protocol):
         # This is ugly but I cannot find a better way to express the fact that the element class should inherit from CombinatorialFreeModule.Element.
         def __iter__(self) -> Iterator[tuple[Any, Any]]: ...
         def __rmul__(self, other) -> Self: ...
+
+
+@runtime_checkable
+class OperadFactoryProtocol(Protocol):
+    """Structural contract for operad factories and wrappers.
+
+    Factory instances (for example shifted/Hadamard wrappers) are callable by
+    arity and expose operadic structure maps at the factory level.
+    """
+
+    name: str
+
+    def __call__(self, n: int, base_ring=...) -> Any:
+        """Returns the arity-``n`` component over ``base_ring``."""
+        ...
+
+    def unit(self, base_ring=...) -> Any:
+        """Returns the unit element of the operad."""
+        ...
+
+    def compose(
+        self,
+        x: Any,
+        i: int,
+        y: Any,
+    ) -> Any:
+        """Computes ``x \\circ_i y``."""
+        ...
+
+
+OperadLike: TypeAlias = type[OperadProtocol] | OperadFactoryProtocol
+"""Type alias for accepted operad inputs (class or factory instance)."""

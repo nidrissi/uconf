@@ -30,7 +30,7 @@ from sage.all import (
 from uconf.core.signs import (
     sign_from_exponent,
 )
-from uconf.core.operad import OperadProtocol
+from uconf.core.operad import OperadLike
 from uconf.core.trees import (
     children,
     decoration,
@@ -54,7 +54,7 @@ class BarConstruction:
     """Factory for bar construction components of a connected dg-operad.
 
     Args:
-        operad_cls: Base operad class (e.g., ``Lie``, ``Surjection``).
+        operad_cls: Base operad provider (class or wrapper instance).
         max_weight: Maximum tree weight for enumeration helpers (default 3).
 
     The bar construction B(P) is a dg-cooperad whose arity-n component has
@@ -66,7 +66,7 @@ class BarConstruction:
 
     def __init__(
         self,
-        operad_cls: type[OperadProtocol],
+        operad_cls: OperadLike,
         max_weight: int = 3,
     ):
         self.operad_cls = operad_cls

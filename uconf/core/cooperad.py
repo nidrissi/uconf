@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Iterable, Protocol, Self, runtime_checkable
+from typing import Any, Iterable, Protocol, Self, TypeAlias, runtime_checkable
 
 
 @runtime_checkable
@@ -95,3 +95,36 @@ class CooperadProtocol(Protocol):
         # This is ugly but I cannot find a better way to express the fact that the element class should inherit from CombinatorialFreeModule.Element.
         def __iter__(self) -> Iterator[tuple[Any, Any]]: ...
         def __rmul__(self, other) -> Self: ...
+
+
+@runtime_checkable
+class CooperadFactoryProtocol(Protocol):
+    """Structural contract for cooperad factories and wrappers."""
+
+    name: str
+
+    def __call__(self, n: int, base_ring=...) -> Any:
+        """Returns the arity-``n`` component over ``base_ring``."""
+        ...
+
+    def counit(self, x: Any) -> object:
+        """Returns the counit evaluation on ``x``."""
+        ...
+
+    def reduced(self, x: Any) -> Any:
+        """Projects ``x`` to the reduced part."""
+        ...
+
+    def infinitesimal_cocompose(
+        self,
+        x: Any,
+        i: int,
+        m: int,
+        n: int,
+    ) -> Any:
+        """Returns the partial cocomposition in slot ``i``."""
+        ...
+
+
+CooperadLike: TypeAlias = type[CooperadProtocol] | CooperadFactoryProtocol
+"""Type alias for accepted cooperad inputs (class or factory instance)."""
