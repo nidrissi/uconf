@@ -73,7 +73,6 @@ def test_sphere_surjection_equivariance(k: int, d: int) -> None:
             assert lhs == rhs
 
 
-# TODO The signs don't match!
 @pytest.mark.parametrize("k", [2, 3, 4])
 @pytest.mark.parametrize("e", [0, 1, 2, 3, 4, 5])
 def test_sphere_surjection_matches_top_cochain_action(k: int, e: int) -> None:
