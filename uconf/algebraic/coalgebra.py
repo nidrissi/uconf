@@ -16,12 +16,33 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from collections.abc import Iterable
+from typing import Generic, Protocol, TypeVar
 
 from uconf.core.cooperad import CooperadProtocol
 
+CoalgebraElementType = TypeVar("CoalgebraElementType")
+CooperadElementType = TypeVar("CooperadElementType", bound=CooperadProtocol.Element)
+CoactionValueType = TypeVar(
+    "CoactionValueType",
+    bound=Iterable[tuple[tuple[object, ...], object]],
+    covariant=True,
+)
+CoalgebraElementInputType = TypeVar(
+    "CoalgebraElementInputType",
+    contravariant=True,
+)
 
-class CooperadCoalgebra:
+
+class CoactionMap(Protocol[CoalgebraElementInputType, CoactionValueType]):
+    """Type contract for cooperad coaction callables."""
+
+    def __call__(
+        self, v_element: CoalgebraElementInputType, n: int, /
+    ) -> CoactionValueType: ...
+
+
+class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a
@@ -29,24 +50,31 @@ class CooperadCoalgebra:
     :class:`uconf.cooperad.CooperadProtocol`) together with an explicit
     costructure map.
 
-    The costructure map is provided as a callable::
+    The coaction map is supplied as a callable via ``coaction_map``::
 
-        costructure_map(v_element, n) → (C(n) ⊗ V^{⊗n}).Element
+           coalg = CooperadCoalgebra(module, CoAssociative, my_map)
 
-    where ``v_element`` is an element of the module V and ``n`` is the
-    coaction arity.
+       where ``my_map(v_element, n) → (C(n) ⊗ V^{⊗n}).Element``.
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         cooperad_cls: Cooperad class (CooperadProtocol-compatible).
+        coaction_map: Callable implementing the C-coalgebra coaction δ_n.
     """
 
-    def __init__(self, module, cooperad_cls: type[CooperadProtocol]):
+    def __init__(
+        self,
+        module,
+        cooperad_cls: type[CooperadProtocol],
+        coaction_map: CoactionMap[CoalgebraElementType, CoactionValueType],
+    ):
+        if not callable(coaction_map):
+            raise TypeError("coaction_map must be callable.")
         self.module = module
         self.cooperad_cls = cooperad_cls
+        self._coaction_map = coaction_map
 
-    @abstractmethod
-    def coact(self, v_element, n: int):
+    def coact(self, v_element: CoalgebraElementType, n: int) -> CoactionValueType:
         """Apply the C-coaction δ_n(v) ∈ C(n) ⊗_{S_n} V^{⊗n}.
 
         Args:
@@ -55,8 +83,22 @@ class CooperadCoalgebra:
 
         Returns:
             An element of ``C(n) ⊗ V^{⊗n}``.
+
+        Raises:
+            ValueError: If ``n <= 0``.
+            TypeError: If ``coaction_map`` does not return an iterable object.
         """
-        ...
+        if n <= 0:
+            raise ValueError(f"Coaction arity must be positive, got {n}.")
+
+        value = self._coaction_map(v_element, n)
+        try:
+            iter(value)
+        except TypeError as exc:
+            raise TypeError(
+                "coaction_map must return an iterable coaction value."
+            ) from exc
+        return value
 
     def boundary(self, v):
         """Apply the differential ∂_V to a coalgebra element.

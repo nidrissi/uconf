@@ -33,13 +33,16 @@ class TrivialAssAlgebra(OperadAlgebra):
 
     def __init__(self, base_ring=QQ):
         self.module = Commutative(1, base_ring=base_ring)
-        super().__init__(self.module, Associative)
+        super().__init__(self.module, Associative, self._structure_map)
 
-    def act(self, p_element, algebra_elements):
+    def _structure_map(self, p_element, algebra_elements):
         # p_elem ∈ Ass(n), algebra_elements = [module_elem, ...]
         # All elements are scalar multiples of ()
-        if p_element.arity() != len(algebra_elements):
-            raise ValueError("Arity mismatch")
+        n = p_element.arity()
+        if len(algebra_elements) != n:
+            raise ValueError(
+                f"Expected {n} algebra elements, got {len(algebra_elements)}."
+            )
 
         result = self.module.zero()
         for p_key, p_coeff in p_element:
@@ -62,9 +65,9 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
     def __init__(self, base_ring=QQ):
         self.base_ring = base_ring
         self.module = Commutative(1, base_ring=base_ring)
-        super().__init__(self.module, CoAssociative)
+        super().__init__(self.module, CoAssociative, self._coaction_map)
 
-    def coact(self, v_element, n):
+    def _coaction_map(self, v_element, n):
         left_parent = CoAssociative(n, base_ring=self.base_ring)
         right_parent = Commutative(1, base_ring=self.base_ring)
         right_factors = [right_parent] * n
