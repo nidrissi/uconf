@@ -100,6 +100,8 @@ class HadamardProduct:
                 category=GradedModulesWithBasis(base_ring),
             )
             self.factory = factory
+            # OperadProtocol expects a `name` attribute on each component.
+            self.name = factory.name
             self._arity = int(n)
             self._left_parent = factory.left_operad_cls(n, base_ring)
             self._right_parent = factory.right_operad_cls(n, base_ring)
