@@ -1,4 +1,13 @@
-"""Simplicial chain/cochain structures as operad-(co)algebra objects."""
+"""Simplicial chain/cochain structures as operad-(co)algebra objects.
+
+This module provides:
+
+- :func:`surjection_chain_action` – the :class:`~uconf.models.surjection.Surjection`
+  action on normalized simplicial chains via the Barratt-Eccles (BF) formula.
+- :func:`surjection_cochain_action` – the dual action on simplicial cochains.
+- :class:`SurjectionSimplicialCochainAlgebra` – the resulting *P*-algebra.
+- :class:`SurjectionSimplicialChainCoalgebra` – the resulting *C*-coalgebra.
+"""
 
 from __future__ import annotations
 
@@ -10,27 +19,49 @@ from sage.all import QQ, tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.core.operad import OperadProtocol
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
 from uconf.models.surjection import Surjection
 
 if TYPE_CHECKING:
-    from uconf.models.surjection import Surjection
+    pass
 
 
 def surjection_chain_action(
     surj: "Surjection.Element",
-    chain: SimplicialChains.Element,
-    coord: int = 1,
-) -> SimplicialChains.Element:
-    r"""Action of a surjection element on normalized simplicial chains."""
+    chain: "SimplicialChains.Element",
+) -> "SimplicialChains.Element | tensor element":
+    r"""Action of a surjection element on normalized simplicial chains.
+
+    For `u \in S(r)` of degree `d` and `x \in C_n(\Delta^\infty)`, the
+    Barratt–Eccles action is defined by first applying the
+    Alexander–Whitney diagonal `r + d - 1` times to `x`, then grouping
+    the resulting simplex factors according to `u`.
+
+    Parameters
+    ----------
+    surj : Surjection.Element
+        Homogeneous element of the surjection operad of arity ``r``.
+    chain : SimplicialChains.Element
+        Element of :class:`~uconf.models.simplicial.SimplicialChains`.
+
+    Returns
+    -------
+    Element of ``tensor([SimplicialChains()]*r)`` (native Sage tensor)
+    if ``r >= 2``; element of :class:`SimplicialChains` if ``r == 1``.
+
+    Raises
+    ------
+    TypeError
+        If ``surj`` and ``chain`` have different base rings.
+    """
     if surj.parent().base_ring() != chain.parent().base_ring():
         raise TypeError("Surjection and chain must have the same base ring.")
 
     r = surj.arity()
-    t = chain.arity()
-    assert 1 <= coord <= t, f"coord={coord} out of range [1, {t}]"
-    target = SimplicialChains(r=t + r - 1, base_ring=surj.parent().base_ring())
+    SC = chain.parent()
+
+    # Target: tensor([SC]*r) for r >= 2, or SC itself for r == 1.
+    target = SC if r == 1 else tensor([SC] * r)
 
     if not surj or not chain:
         return target.zero()
@@ -41,7 +72,7 @@ def surjection_chain_action(
     d = degrees.pop()
 
     times = r + d - 1
-    pre_diag = chain.iterated_diagonal(times=times, coord=coord)
+    pre_diag = chain.iterated_diagonal(times=times) if times > 0 else chain
 
     def _compute_bf_sign(surj_tuple, simplex_factors):
         weights = [len(s) - 1 for s in simplex_factors]
@@ -81,17 +112,17 @@ def surjection_chain_action(
     def term_generator():
         for surj_tuple, surj_coeff in surj:
             for diag_key, diag_coeff in pre_diag:
-                left_idx = coord - 1
-                right_idx = left_idx + len(surj_tuple)
-                left = diag_key[:left_idx]
-                middle = diag_key[left_idx:right_idx]
-                right = diag_key[right_idx:]
+                # diag_key is a tuple of simplex tuples (len = r+d for times>0,
+                # or just a single simplex for times==0 when r==1, d==0).
+                if times == 0:
+                    # Single-factor case: the diagonal was a no-op.
+                    diag_key = (diag_key,)  # wrap into 1-tuple for uniform handling
 
                 new_factors = []
                 zero_term = False
                 for i in range(1, r + 1):
                     to_join = [
-                        middle[idx]
+                        diag_key[idx]
                         for idx in range(len(surj_tuple))
                         if surj_tuple[idx] == i
                     ]
@@ -102,26 +133,50 @@ def surjection_chain_action(
                     new_factors.append(joined)
                 if zero_term:
                     continue
-                new_key = left + tuple(new_factors) + right
-                validated = SimplicialChains._validate_basis_key(new_key)
-                if validated is None:
+
+                sign = _compute_bf_sign(surj_tuple, diag_key)
+                coeff = sign * surj_coeff * diag_coeff
+
+                # Validate each output factor individually.
+                if any(SC._validate_basis_key(f) is None for f in new_factors):
                     continue
 
-                sign = _compute_bf_sign(surj_tuple, middle)
-                deg_left = sum(len(spx) - 1 for spx in left)
-                sign *= (-1) ** (deg_left * d)
-                yield (validated, sign * surj_coeff * diag_coeff)
+                if r == 1:
+                    yield (new_factors[0], coeff)
+                else:
+                    yield (tuple(new_factors), coeff)
 
-    out = target.sum_of_terms(term_generator())
-    _ = out.to_native_tensor()
-    return out
+    return target.sum_of_terms(term_generator())
 
 
 def surjection_cochain_action(
     surj: "Surjection.Element",
-    cochains: tuple[SimplicialCochains.Element, ...],
-) -> SimplicialCochains.Element:
-    r"""Dual surjection action on simplicial cochains."""
+    cochains: tuple["SimplicialCochains.Element", ...],
+) -> "SimplicialCochains.Element":
+    r"""Dual surjection action on simplicial cochains.
+
+    For `u \in S(r)` and cochains `f_1, \dots, f_r \in C^*(\Delta^N)`,
+    the result `\mu_u(f_1 \otimes \dots \otimes f_r) \in C^*(\Delta^N)` is
+    defined by duality:
+
+    .. math::
+        \langle \mu_u(f_1 \otimes \dots \otimes f_r),\, x \rangle
+        = \langle f_1 \otimes \dots \otimes f_r,\, \theta_u(x) \rangle
+
+    for all chains `x`.
+
+    Parameters
+    ----------
+    surj : Surjection.Element
+        Homogeneous element of the surjection operad of arity ``r``.
+    cochains : tuple of SimplicialCochains.Element
+        Exactly ``r`` cochains, all on the same ``Δ^N``.
+
+    Raises
+    ------
+    TypeError
+        If ``surj`` and the cochains have different base rings.
+    """
     r = surj.arity()
     assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."
     if r == 0:
@@ -138,45 +193,43 @@ def surjection_cochain_action(
         if c.parent().simplex_dim() != N:
             raise ValueError("All cochains must be on the same simplex dimension.")
 
-    if surj.parent().base_ring() == QQ:
-        target = SimplicialCochains(N=N, r=1)
-    else:
-        target = SimplicialCochains(N=N, r=1, base_ring=surj.parent().base_ring())
-
-    result_dict: dict[tuple, int] = {}
-    cochain_degrees = [c.degree() for c in cochains]
-    total_deg = sum(cochain_degrees)
+    target = SimplicialCochains(N=N, base_ring=cochain_base_ring)
 
     surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
     assert len(surj_deg) == 1
     d = surj_deg[0]
-    chain_deg = total_deg + d
+    cochain_degrees = [c.degree() for c in cochains]
+    chain_deg = sum(cochain_degrees) + d
 
-    for simplex_tuple in combinations(range(N + 1), chain_deg + 1):
-        if surj.parent().base_ring() == QQ:
-            chain_parent = SimplicialChains(r=1)
-        else:
-            chain_parent = SimplicialChains(r=1, base_ring=surj.parent().base_ring())
-        x = chain_parent((simplex_tuple,))
+    SC = SimplicialChains(base_ring=cochain_base_ring)
+
+    result_dict: dict[tuple, int] = {}
+    for simplex in combinations(range(N + 1), chain_deg + 1):
+        x = SC.term(simplex)
         theta = surjection_chain_action(surj, x)
         value = 0
         for basis_key, coeff in theta:
+            # For r >= 2: basis_key = (simplex_1, ..., simplex_r).
+            # For r == 1: basis_key is a single simplex tuple.
+            if r == 1:
+                factor_keys = (basis_key,)
+            else:
+                factor_keys = basis_key
             contrib = coeff
             for slot in range(r):
                 f = cochains[slot]
-                simplex_key = (basis_key[slot],)
-                matched = False
+                fk = factor_keys[slot]
+                factor_coeff = 0
                 for f_key, f_coeff in f:
-                    if f_key == simplex_key:
-                        contrib *= f_coeff
-                        matched = True
+                    if f_key == fk:
+                        factor_coeff = f_coeff
                         break
-                if not matched:
-                    contrib = 0
+                contrib *= factor_coeff
+                if contrib == 0:
                     break
             value += contrib
         if value != 0:
-            result_dict[(simplex_tuple,)] = result_dict.get((simplex_tuple,), 0) + value
+            result_dict[simplex] = result_dict.get(simplex, 0) + value
 
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
     if not result_dict:
@@ -185,33 +238,51 @@ def surjection_cochain_action(
 
 
 class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
-    """`Surjection`-algebra structure on arity-1 simplicial cochains."""
+    """:class:`~uconf.models.surjection.Surjection`-algebra on simplicial cochains.
+
+    The :func:`surjection_cochain_action` equips
+    :class:`~uconf.models.simplicial.SimplicialCochains` with the structure of
+    a ``Surjection``-algebra.
+    """
 
     def __init__(self, module: SimplicialCochains):
-        if module.arity() != 1:
-            raise ValueError(
-                f"Expected arity-1 simplicial cochains module, got arity={module.arity()}."
-            )
+        super().__init__(
+            module=module,
+            operad_cls=Surjection,
+            structure_map=self._act_impl,
+        )
 
-        super().__init__(module=module, operad_cls=Surjection)
-
-    def act(self, p_element: Surjection.Element, algebra_elements: list):
+    def _act_impl(
+        self,
+        p_element: Surjection.Element,
+        algebra_elements,
+    ):
         return surjection_cochain_action(p_element, tuple(algebra_elements))
 
 
 class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
-    """`SurjectionDual`-coalgebra structure on arity-1 simplicial chains."""
+    """:class:`~uconf.models.surjection_dual.SurjectionDual`-coalgebra on simplicial chains.
+
+    The dual of the surjection chain action equips
+    :class:`~uconf.models.simplicial.SimplicialChains` with a
+    ``SurjectionDual``-coalgebra structure.
+    """
 
     def __init__(self, module: SimplicialChains):
-        if module.arity() != 1:
-            raise ValueError(
-                f"Expected arity-1 simplicial chains module, got arity={module.arity()}."
-            )
         from uconf.models.surjection_dual import SurjectionDual
 
-        super().__init__(module=module, cooperad_cls=SurjectionDual)
+        super().__init__(
+            module=module,
+            cooperad_cls=SurjectionDual,
+            coaction_map=self._coact_impl,
+        )
 
-    def coact(self, v_element: SimplicialChains.Element, n: int):
+    def _coact_impl(self, v_element: "SimplicialChains.Element", n: int):
+        """C-coalgebra coaction δ_n via the surjection chain action.
+
+        Returns an element of ``tensor([SurjectionDual(n)] + [SC]*n)``
+        (a flat ``(n+1)``-fold tensor product).
+        """
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
 
@@ -222,13 +293,10 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         if v_element.parent().base_ring() != base_ring:
             raise TypeError("Chain element base ring does not match module base ring.")
 
+        SC = self.module  # SimplicialChains instance
         left_parent = SurjectionDual(n, base_ring=base_ring)
-        factor = SimplicialChains(r=1, base_ring=base_ring)
-        if n == 1:
-            right_parent = factor
-        else:
-            right_parent = tensor([factor] * n)
-        target = tensor([left_parent, right_parent])
+        # Flat (n+1)-way tensor: SurjectionDual(n) ⊗ SC ⊗ ... ⊗ SC
+        target = tensor([left_parent, SC] if n == 1 else [left_parent] + [SC] * n)
 
         if not v_element:
             return target.zero()
@@ -241,21 +309,31 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         result = target.zero()
         for degree in range(max_degree + 1):
             for u in surj_parent.basis_it(degree):
-                theta = surjection_chain_action(u, v_element)
-                if not theta:
+                # surjection_chain_action returns:
+                #   SC element  (if n == 1)
+                #   tensor([SC]*n) element  (if n >= 2)
+                right_elem = surjection_chain_action(u, v_element)
+                if not right_elem:
                     continue
-                right_elem = theta.to_native_tensor()
-                right_elem = right_parent(right_elem)
                 for u_basis, u_coeff in u:
                     left_elem = left_parent.term(u_basis)
-                    result += u_coeff * left_elem.tensor(right_elem)
+                    for right_key, right_coeff in right_elem:
+                        # right_key is either:
+                        #   a single simplex tuple  (n == 1)
+                        #   an n-tuple of simplex tuples  (n >= 2)
+                        if n == 1:
+                            flat_key = (u_basis, right_key)
+                        else:
+                            flat_key = (u_basis,) + right_key
+                        result += (
+                            u_coeff * right_coeff * target.term(flat_key)
+                        )
         return result
 
     def act(
         self,
         surj: "Surjection.Element",
-        chain: SimplicialChains.Element,
-        coord: int = 1,
-    ) -> SimplicialChains.Element:
-        """Convenience wrapper for the induced chain action."""
-        return surjection_chain_action(surj, chain, coord=coord)
+        chain: "SimplicialChains.Element",
+    ) -> "SimplicialChains.Element | tensor element":
+        """Convenience wrapper for the induced surjection chain action."""
+        return surjection_chain_action(surj, chain)
