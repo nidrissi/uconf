@@ -126,14 +126,6 @@ class TestSimplicialChains:
         x = C((0, 1, 2))
         assert x.degree() == 2
 
-    def test_degree_tensor(self):
-        SC = SimplicialChains()
-        T = tensor([SC, SC])
-        x = T.term(((0, 1, 2), (3, 4)))
-        # Degree = sum of factor degrees: dim(0,1,2) + dim(3,4) = 2 + 1
-        deg = SC.degree_on_basis((0, 1, 2)) + SC.degree_on_basis((3, 4))
-        assert deg == 3
-
     def test_standard_element(self):
         x = SimplicialChains.standard_element(3)
         assert x.degree() == 3
@@ -259,7 +251,6 @@ class TestSurjectionAction:
 
     def test_action_degree(self):
         """For nonzero terms, |θ_u(x)| = |x| + |u|."""
-        SC = SimplicialChains()
         for r, d in [(2, 1), (2, 2), (3, 1)]:
             S = Surjection(r)
             for u in S.planar_basis_it(d):

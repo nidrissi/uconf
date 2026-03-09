@@ -303,13 +303,14 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         if not v_element:
             return target.zero()
 
-        max_degree = max(
+        min_v_degree = min(
             v_element.parent().degree_on_basis(key) for key in v_element.support()
         )
+        max_v_dim = max(len(key) - 1 for key in v_element.support())
         surj_parent = Surjection(n, base_ring=base_ring)
 
         result = target.zero()
-        for degree in range(max_degree + 1):
+        for degree in range(n * max_v_dim + min_v_degree + 1):
             for u in surj_parent.basis_it(degree):
                 # surjection_chain_action returns:
                 #   SC element  (if n == 1)
@@ -318,7 +319,6 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
                 if not right_elem:
                     continue
                 for u_basis, u_coeff in u:
-                    left_elem = left_parent.term(u_basis)
                     for right_key, right_coeff in right_elem:
                         # right_key is either:
                         #   a single simplex tuple  (n == 1)
