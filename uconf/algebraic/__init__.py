@@ -17,6 +17,10 @@ from uconf.algebraic.simplicial import (
     surjection_chain_action,
     surjection_cochain_action,
 )
+from uconf.algebraic.spherical import (
+    ReducedSphereCochains,
+    SurjectionSphereCochainAlgebra,
+)
 
 __all__ = [
     "OperadAlgebra",
@@ -31,4 +35,6 @@ __all__ = [
     "SurjectionSimplicialChainCoalgebra",
     "surjection_chain_action",
     "surjection_cochain_action",
+    "ReducedSphereCochains",
+    "SurjectionSphereCochainAlgebra",
 ]

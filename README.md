@@ -160,6 +160,12 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Input: a `P`-algebra `A` and a `Q`-algebra `B`.
   - Output: a `(P ⊙ Q)`-algebra on `tensor([A.module, B.module])`.
   - Action is diagonal on factors and multilinear on tensor arguments.
+- `algebraic/spherical.py`
+  - `ReducedSphereCochains(d)` — rank-1 module for reduced cochains of `S^d`,
+    concentrated in degree `d`.
+  - `SurjectionSphereCochainAlgebra(d)` — explicit `Surjection`-algebra structure
+    on `ReducedSphereCochains(d)`, following the sign/concatenation criterion
+    from Proposition~\ref{prop:surj-alg-sphere} in `article.tex`.
 
 ## Bar-cobar tree conventions
 

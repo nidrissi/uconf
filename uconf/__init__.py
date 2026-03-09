@@ -33,6 +33,8 @@ from uconf.algebraic import (
     OperadAlgebra,
     SurjectionSimplicialChainCoalgebra,
     SurjectionSimplicialCochainAlgebra,
+    ReducedSphereCochains,
+    SurjectionSphereCochainAlgebra,
     surjection_chain_action,
     surjection_cochain_action,
     hadamard_tensor_algebra,
@@ -88,6 +90,8 @@ __all__ = [
     "CobarComplexCoalgebra",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSimplicialChainCoalgebra",
+    "ReducedSphereCochains",
+    "SurjectionSphereCochainAlgebra",
     "surjection_chain_action",
     "surjection_cochain_action",
 ]
