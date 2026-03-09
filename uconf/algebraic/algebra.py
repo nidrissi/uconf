@@ -93,7 +93,7 @@ class OperadAlgebra(Generic[OperadElementType, AlgebraElementType]):
         element_cls = getattr(self.operad_cls, "Element", None)
         if isinstance(element_cls, type) and not isinstance(p_element, element_cls):
             raise TypeError(
-                f"Expected p_element of type {self.operad_cls.__name__}.Element, "
+                f"Expected p_element of type {self.operad_cls.name}.Element, "
                 f"got {type(p_element).__name__}."
             )
 
