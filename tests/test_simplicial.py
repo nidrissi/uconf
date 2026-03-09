@@ -49,9 +49,7 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
 
 def _surjection_chain_action(u, x):
     """Evaluate the surjection action on chains via the coalgebra wrapper."""
-    coalg = SimplicialChains(
-        base_ring=u.parent().base_ring()
-    ).as_surjection_coalgebra()
+    coalg = SimplicialChains(base_ring=u.parent().base_ring()).as_surjection_coalgebra()
     return coalg.act(u, x)
 
 
@@ -75,7 +73,11 @@ def _chain_arity(result):
 
 def _chain_zero(r, base_ring=None):
     """Return the zero element of the appropriate chain space of arity r."""
-    SC = SimplicialChains() if base_ring is None else SimplicialChains(base_ring=base_ring)
+    SC = (
+        SimplicialChains()
+        if base_ring is None
+        else SimplicialChains(base_ring=base_ring)
+    )
     if r == 1:
         return SC.zero()
     return tensor([SC] * r).zero()
@@ -299,9 +301,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(rhs), (
-                    f"Chain map failed: u={list(u.support())}, n={n}"
-                )
+                assert _as_dict(lhs) == _as_dict(
+                    rhs
+                ), f"Chain map failed: u={list(u.support())}, n={n}"
 
     def test_chain_map_property_degree2(self):
         """Chain map property for degree-2 surjections in arity 2."""
@@ -315,9 +317,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(rhs), (
-                    f"Chain map failed: u={list(u.support())}, n={n}"
-                )
+                assert _as_dict(lhs) == _as_dict(
+                    rhs
+                ), f"Chain map failed: u={list(u.support())}, n={n}"
 
     def test_chain_map_arity3(self):
         """Chain map property for arity-3 surjections."""
@@ -331,9 +333,9 @@ class TestSurjectionAction:
                 rhs_1 = _surjection_chain_action(u.boundary(), x)
                 rhs_2 = _surjection_chain_action(u, x.boundary())
                 rhs = rhs_1 + (-1) ** d * rhs_2
-                assert _as_dict(lhs) == _as_dict(rhs), (
-                    f"Chain map failed (arity 3): u={list(u.support())}, n={n}"
-                )
+                assert _as_dict(lhs) == _as_dict(
+                    rhs
+                ), f"Chain map failed (arity 3): u={list(u.support())}, n={n}"
 
     def test_composed_surjection_chain_map(self):
         """Chain-map identity also holds for explicit composed surjections."""
@@ -373,6 +375,12 @@ class TestCosimplicialCochains:
         f = C((0, 1))
         assert f != C.zero()
 
+    def test_degree_is_negative_simplex_dimension(self):
+        C = SimplicialCochains(N=3)
+        assert C((0,)).degree() == 0
+        assert C((0, 1)).degree() == -1
+        assert C((0, 1, 2)).degree() == -2
+
     def test_coboundary_squared_zero(self):
         C = SimplicialCochains(N=3)
         for simplex_tuple in combinations(range(4), 2):
@@ -408,8 +416,8 @@ class TestCosimplicialCochains:
         u = S2((1, 2, 1))  # arity 2, degree 1
         N = 3
         C = SimplicialCochains(N=N)
-        f1 = C((0, 1))  # degree 1
-        f2 = C((1, 2))  # degree 1
+        f1 = C((0, 1))  # degree -1
+        f2 = C((1, 2))  # degree -1
         result = _surjection_cochain_action(u, (f1, f2))
         # Result lives in SimplicialCochains(N=N) – always arity-1 by design.
         assert isinstance(result.parent(), SimplicialCochains)
@@ -420,15 +428,13 @@ class TestCosimplicialCochains:
         S2 = Surjection(2)
         Cco = SimplicialCochains(N=N)
 
-        degree1_cochains = [
-            Cco(simplex) for simplex in combinations(range(N + 1), 2)
-        ]
+        degree1_cochains = [Cco(simplex) for simplex in combinations(range(N + 1), 2)]
 
         for u in S2.planar_basis_it(1):
             d = 1
             for f1, f2 in product(degree1_cochains, repeat=2):
                 mu = _surjection_cochain_action(u, (f1, f2))
-                n = 1 + 1 + d
+                n = -f1.degree() - f2.degree() - d
                 for simplex in combinations(range(N + 1), n + 1):
                     SC = SimplicialChains()
                     x = SC(simplex)
@@ -443,16 +449,14 @@ class TestCosimplicialCochains:
         N = 4
         S3 = Surjection(3)
         Cco = SimplicialCochains(N=N)
-        degree1_cochains = [
-            Cco(simplex) for simplex in combinations(range(N + 1), 2)
-        ]
+        degree1_cochains = [Cco(simplex) for simplex in combinations(range(N + 1), 2)]
 
         sample = degree1_cochains[:3]
         for u in S3.planar_basis_it(1):
             d = 1
             for f1, f2, f3 in product(sample, repeat=3):
                 mu = _surjection_cochain_action(u, (f1, f2, f3))
-                n = 1 + 1 + 1 + d
+                n = -f1.degree() - f2.degree() - f3.degree() - d
                 for simplex in combinations(range(N + 1), n + 1):
                     SC = SimplicialChains()
                     x = SC(simplex)

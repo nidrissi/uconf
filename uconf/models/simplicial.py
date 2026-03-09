@@ -94,9 +94,7 @@ class SimplicialChains(CombinatorialFreeModule):
                 return self.zero()
             return self.term(k)
 
-        raise TypeError(
-            f"Input must be a dict or a simplex tuple, got {type(x)}."
-        )
+        raise TypeError(f"Input must be a dict or a simplex tuple, got {type(x)}.")
 
     @staticmethod
     def _validate_basis_key(key) -> "tuple | None":
@@ -246,13 +244,9 @@ class SimplicialChains(CombinatorialFreeModule):
                 for simplex, coeff in self:
                     dim = len(simplex) - 1
                     # All ways to split simplex into (times+1) overlapping parts.
-                    for split in combinations_with_replacement(
-                        range(dim + 1), times
-                    ):
+                    for split in combinations_with_replacement(range(dim + 1), times):
                         p = (0,) + split + (dim,)
-                        pieces = tuple(
-                            simplex[a : b + 1] for a, b in pairwise(p)
-                        )
+                        pieces = tuple(simplex[a : b + 1] for a, b in pairwise(p))
                         if any(len(pc) < 1 for pc in pieces):
                             continue
                         yield (pieces, coeff)
@@ -326,8 +320,8 @@ class SimplicialCochains(CombinatorialFreeModule):
     # -- grading ------------------------------------------------------------
 
     def degree_on_basis(self, simplex: tuple) -> int:
-        """Cohomological degree = ``len(simplex) - 1``."""
-        return len(simplex) - 1
+        """Homological degree convention: ``-(len(simplex) - 1)``."""
+        return -(len(simplex) - 1)
 
     # -- coboundary ---------------------------------------------------------
 
@@ -335,7 +329,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         r"""Coboundary: the transpose of the simplicial boundary.
 
         `(\delta f)(\sigma) = f(\partial \sigma)`.  Inserts one vertex
-        at each valid position to raise the degree by 1.
+        at each valid position (which lowers homological degree by 1).
         """
 
         def terms():
