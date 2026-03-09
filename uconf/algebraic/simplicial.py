@@ -15,7 +15,7 @@ from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
 
-from sage.all import QQ, tensor
+from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 def surjection_chain_action(
     surj: "Surjection.Element",
     chain: "SimplicialChains.Element",
-) -> "SimplicialChains.Element | tensor element":
+):
     r"""Action of a surjection element on normalized simplicial chains.
 
     For `u \in S(r)` of degree `d` and `x \in C_n(\Delta^\infty)`, the
@@ -198,8 +198,10 @@ def surjection_cochain_action(
     surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
     assert len(surj_deg) == 1
     d = surj_deg[0]
+    # Cochains are graded homologically (negative simplex dimension), so the
+    # chain degree paired with μ_u(f_1,...,f_r) is -|μ_u| = -(|f_1|+...+|f_r|+|u|).
     cochain_degrees = [c.degree() for c in cochains]
-    chain_deg = sum(cochain_degrees) + d
+    chain_deg = -sum(cochain_degrees) - d
 
     SC = SimplicialChains(base_ring=cochain_base_ring)
 
@@ -234,7 +236,7 @@ def surjection_cochain_action(
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
     if not result_dict:
         return target.zero()
-    return target(result_dict)
+    return target.sum_of_terms(result_dict.items())
 
 
 class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
@@ -325,15 +327,13 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
                             flat_key = (u_basis, right_key)
                         else:
                             flat_key = (u_basis,) + right_key
-                        result += (
-                            u_coeff * right_coeff * target.term(flat_key)
-                        )
+                        result += u_coeff * right_coeff * target.term(flat_key)
         return result
 
     def act(
         self,
         surj: "Surjection.Element",
         chain: "SimplicialChains.Element",
-    ) -> "SimplicialChains.Element | tensor element":
+    ):
         """Convenience wrapper for the induced surjection chain action."""
         return surjection_chain_action(surj, chain)
