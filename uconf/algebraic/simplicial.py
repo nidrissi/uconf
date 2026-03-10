@@ -114,7 +114,45 @@ def surjection_chain_action(
         surj_tuple: tuple[int, ...],
         simplex_factors: tuple[tuple[int, ...], ...],
     ):
-        r"""Berger–Fresse sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`."""
+        r"""
+        Compute the Berger–Fresse sign for a given surjection and simplex factors.
+
+        This function calculates the sign ε(u; x_0, …, x_{r+d-1}) according to the
+        Berger–Fresse construction, which is used in operadic homology computations.
+
+        Parameters
+        ----------
+        surj_tuple : tuple[int, ...]
+            A tuple representing a surjection u, where each element indicates an index
+            in the target set. Elements may repeat, with repetitions indicating which
+            intervals are "inner" versus "final".
+
+        simplex_factors : tuple[tuple[int, ...], ...]
+            A tuple of tuples representing the simplex factors (vertices) corresponding
+            to each position in surj_tuple. Each inner tuple contains vertex indices.
+
+        Returns
+        -------
+        int
+            Returns 1 or -1, the computed Berger–Fresse sign.
+
+        Notes
+        -----
+        The sign is computed as (-1)^(ordering_sign_exp + position_exp), where:
+
+        - **Final intervals**: Positions i where surj_tuple[i] appears for the last time
+        - **Inner intervals**: All other positions
+        - **position_exp**: Sum of the last vertices in all inner interval simplex factors
+        - **ordering_sign_exp**: Koszul sign computed from inversions when sorting by
+          u-values, weighted by lengths of simplex factors
+        - **lengths**: For final intervals, the length is len(simplex_factor) - 1;
+          for inner intervals, the length is len(simplex_factor)
+
+        Raises
+        ------
+        AssertionError
+            If the lengths of surj_tuple and simplex_factors do not match.
+        """
         assert len(surj_tuple) == len(
             simplex_factors
         ), "Length mismatch in BF sign computation."
@@ -127,7 +165,7 @@ def surjection_chain_action(
             if u not in final_intervals:
                 final_intervals[u] = i
 
-        # The position exponent is the value of the last index in each *inner* interval.
+        # The position exponent is the sum of the last values in each *inner* interval.
         position_exp = 0
         for i in range(len(surj_tuple)):
             u = surj_tuple[i]
