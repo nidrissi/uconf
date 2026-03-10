@@ -3,10 +3,14 @@
 This module provides:
 
 - :func:`surjection_chain_action` – the :class:`~uconf.models.surjection.Surjection`
-  action on normalized simplicial chains via the Barratt-Eccles (BF) formula.
+  action on normalized simplicial chains via the Berger–Fresse formula.
 - :func:`surjection_cochain_action` – the dual action on simplicial cochains.
 - :class:`SurjectionSimplicialCochainAlgebra` – the resulting *P*-algebra.
 - :class:`SurjectionSimplicialChainCoalgebra` – the resulting *C*-coalgebra.
+
+**Reference**: C. Berger, B. Fresse, "Combinatorial operad actions on cochains",
+Math. Proc. Cambridge Philos. Soc. **137** (2004), 135–174.  All sign
+conventions in this module follow that paper (hereafter *[BF04]*).
 """
 
 from __future__ import annotations
@@ -32,10 +36,41 @@ def surjection_chain_action(
 ):
     r"""Action of a surjection element on normalized simplicial chains.
 
-    For `u \in S(r)` of degree `d` and `x \in C_n(\Delta^\infty)`, the
-    Barratt–Eccles action is defined by first applying the
-    Alexander–Whitney diagonal `r + d - 1` times to `x`, then grouping
-    the resulting simplex factors according to `u`.
+    Implements the Berger–Fresse formula [BF04, §1.2] for the
+    ``Surjection``-module structure on normalized simplicial chains.
+
+    **Algorithm** (one basis term at a time):
+
+    Let `u = (u_0, \ldots, u_{r+d-1}) \in S(r)` be a surjection of arity
+    `r` and degree `d`, and let `x \in C_n(\Delta^\infty)` be a chain.
+
+    1. **Iterated Alexander–Whitney diagonal.**
+       Apply the AW diagonal `r + d - 1` times to `x`, producing an
+       element of `C^{\otimes(r+d)}`.  Each basis term is an
+       `(r+d)`-tuple of simplices `(x_0, \ldots, x_{r+d-1})` with
+       `\sum \dim(x_i) = n`.
+
+    2. **Group factors by the surjection.**
+       For each output slot `k \in \{1, \ldots, r\}` collect all simplex
+       factors `x_i` whose index satisfies `u_i = k`:
+       `y_k = x_{i_1} * \cdots * x_{i_m}` (concatenation in the simplex
+       sense, i.e.  taking the appropriate face).  Discard the term if any
+       `y_k` is degenerate (has a repeated vertex).
+
+    3. **Berger–Fresse sign.**
+       Multiply by the sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`
+       computed by :func:`_compute_bf_sign`.  This sign has two
+       contributions:
+
+       - *Ordering sign*: Koszul sign of the permutation that rearranges
+         `(x_0, \ldots, x_{r+d-1})` into value-sorted order, computed
+         using the graded-commutativity rule (transposing two factors of
+         degrees `a` and `b` costs `(-1)^{ab}`).
+       - *Action sign*: additional sign arising from adjacent positions of
+         equal ``u``-value in sorted order; see :func:`_compute_bf_sign`.
+
+    4. **Accumulate.**
+       Sum all contributions `\varepsilon \cdot (y_1 \otimes \cdots \otimes y_r)`.
 
     Parameters
     ----------
@@ -71,28 +106,88 @@ def surjection_chain_action(
     assert len(degrees) == 1, "Surjection must be homogeneous in degree."
     d = degrees.pop()
 
+    # AW diagonal applied r+d-1 times gives r+d tensor factors.
     times = r + d - 1
     pre_diag = chain.iterated_diagonal(times=times) if times > 0 else chain
 
     def _compute_bf_sign(surj_tuple, simplex_factors):
+        r"""Berger–Fresse sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`.
+
+        Given the surjection tuple ``surj_tuple = (u_0,...,u_{r+d-1})``
+        and the ordered tuple of simplex factors
+        ``simplex_factors = (x_0,...,x_{r+d-1})`` produced by the iterated
+        AW diagonal, this function computes the sign
+
+        .. math::
+            \varepsilon = (-1)^{\text{ord} + \text{act}}
+
+        following [BF04, §1.2.1].
+
+        **Ordering sign** (`ord`):
+        Let `\pi` be the permutation of `\{0,\ldots,r+d-1\}` that sorts
+        the indices stably by their ``u``-value (i.e.
+        `u_{\pi^{-1}(0)} \le \cdots \le u_{\pi^{-1}(r+d-1)}`).
+        This reorders the tensor factors from
+        `x_0 \otimes \cdots \otimes x_{r+d-1}` to
+        `x_{\pi^{-1}(0)} \otimes \cdots \otimes x_{\pi^{-1}(r+d-1)}`.
+        The Koszul sign of this reordering is
+
+        .. math::
+            (-1)^{\text{ord}} = (-1)^{
+                \sum_{\substack{i < j \\ \pi(i) > \pi(j)}} \deg(x_i)\,\deg(x_j)
+            }
+
+        where `\deg(x_i) = \dim(x_i) = \lvert x_i \rvert - 1`.
+
+        **Action sign** (`act`):
+        After sorting, consecutive positions of equal ``u``-value
+        correspond to factors that will be concatenated.  For each such
+        adjacent equal-value pair at sorted positions ``idx`` and
+        ``idx+1``, we add the total degree of all factors before position
+        ``idx+1`` in the sorted order, i.e.
+
+        .. math::
+            \text{act} = \sum_{\substack{0 \le \text{idx} < r+d-1 \\
+                u_{\pi^{-1}(\text{idx})} = u_{\pi^{-1}(\text{idx}+1)}}}
+                \sum_{j=0}^{\text{idx}} \deg(x_{\pi^{-1}(j)}).
+
+        Parameters
+        ----------
+        surj_tuple : tuple of int
+            Basis key of a single homogeneous surjection element.
+        simplex_factors : tuple of tuple
+            Tuple of simplex tuples from the iterated AW diagonal.
+
+        Returns
+        -------
+        int
+            ``+1`` or ``-1``.
+        """
         weights = [len(s) - 1 for s in simplex_factors]
 
+        # Sort indices stably by their u-value to get the ordering permutation π.
+        # inv_ordering[new_pos] = original index (i.e. π^{-1}).
         indexed = list(enumerate(surj_tuple))
         sorted_indexed = sorted(indexed, key=lambda pair: pair[1])
         inv_ordering = [pair[0] for pair in sorted_indexed]
 
+        # ordering_perm[i] = new position of original index i (i.e. π(i)).
         ordering_sign_exp = 0
         ordering_perm = [0] * len(inv_ordering)
         for new_pos, old_pos in enumerate(inv_ordering):
             ordering_perm[old_pos] = new_pos
+        # Koszul sign: sum deg(x_i)*deg(x_j) over inversions (i < j, π(i) > π(j)).
         for i in range(len(ordering_perm)):
             for j in range(i + 1, len(ordering_perm)):
                 if ordering_perm[i] > ordering_perm[j]:
                     ordering_sign_exp += weights[i] * weights[j]
 
+        # Build the sorted weight/surjection sequences.
         sorted_weights = [weights[i] for i in inv_ordering]
         sorted_surj = [surj_tuple[i] for i in inv_ordering]
 
+        # Action sign: for each adjacent pair in sorted order with equal u-value,
+        # add the cumulative degree of all preceding factors in sorted order.
         action_sign_exp = 0
         for idx in range(len(sorted_surj) - 1):
             if sorted_surj[idx] == sorted_surj[idx + 1]:
@@ -102,6 +197,23 @@ def surjection_chain_action(
         return (-1) ** total_sign_exp
 
     def _join_simplices(simplex_list):
+        """Concatenate a list of overlapping simplex faces into one simplex.
+
+        The AW diagonal splits `[v_0, \ldots, v_n]` into consecutive
+        sub-faces that share boundary vertices.  This function reassembles
+        the full (concatenated) simplex from such a list.  Returns ``None``
+        if the result would be degenerate (i.e. has a repeated vertex or
+        is not strictly increasing).
+
+        Parameters
+        ----------
+        simplex_list : list of tuple
+            Non-empty list of simplex tuples to concatenate.
+
+        Returns
+        -------
+        tuple or None
+        """
         if not simplex_list:
             return None
         result = reduce(lambda x, y: x + y, simplex_list)
@@ -118,6 +230,8 @@ def surjection_chain_action(
                     # Single-factor case: the diagonal was a no-op.
                     diag_key = (diag_key,)  # wrap into 1-tuple for uniform handling
 
+                # --- Step 2: group factors by u-value and concatenate ---
+                # For output slot k, collect factors x_i where u_i = k and join them.
                 new_factors = []
                 zero_term = False
                 for i in range(1, r + 1):
@@ -128,12 +242,14 @@ def surjection_chain_action(
                     ]
                     joined = _join_simplices(to_join)
                     if joined is None:
+                        # Degenerate factor → this AW term contributes 0.
                         zero_term = True
                         break
                     new_factors.append(joined)
                 if zero_term:
                     continue
 
+                # --- Step 3: Berger–Fresse sign ---
                 sign = _compute_bf_sign(surj_tuple, diag_key)
                 coeff = sign * surj_coeff * diag_coeff
 
@@ -155,15 +271,36 @@ def surjection_cochain_action(
 ) -> "SimplicialCochains.Element":
     r"""Dual surjection action on simplicial cochains.
 
-    For `u \in S(r)` and cochains `f_1, \dots, f_r \in C^*(\Delta^N)`,
-    the result `\mu_u(f_1 \otimes \dots \otimes f_r) \in C^*(\Delta^N)` is
-    defined by duality:
+    For `u \in S(r)` of degree `d` and cochains
+    `f_1, \dots, f_r \in C^*(\Delta^N)`, the result
+    `\mu_u(f_1 \otimes \dots \otimes f_r) \in C^*(\Delta^N)` is
+    defined by the duality
 
     .. math::
         \langle \mu_u(f_1 \otimes \dots \otimes f_r),\, x \rangle
         = \langle f_1 \otimes \dots \otimes f_r,\, \theta_u(x) \rangle
 
-    for all chains `x`.
+    for all chains `x`, where `\theta_u` is the chain action of
+    :func:`surjection_chain_action`.
+
+    **Degree bookkeeping.**
+    Cochains are graded homologically (``degree_on_basis`` returns
+    `-\dim(\sigma)` for a simplex `\sigma`).  If `f_i` has homological
+    degree `-n_i` (i.e.  is an `n_i`-cochain) and `u` has degree `d`,
+    then `\mu_u(f_1 \otimes \dots \otimes f_r)` is an `n`-cochain where
+    `n = n_1 + \dots + n_r + d`.  Equivalently, the chain `x` that can
+    pair non-trivially with `\mu_u(f_1 \otimes \dots \otimes f_r)` has
+    dimension
+
+    .. math::
+        \dim(x) = n_1 + \dots + n_r + d
+        = \bigl(-\deg(f_1)\bigr) + \dots + \bigl(-\deg(f_r)\bigr) + d.
+
+    **Implementation.**
+    Iterate over all non-degenerate simplices `\sigma` of the correct
+    dimension in `\Delta^N`, evaluate the chain action
+    `\theta_u(\sigma)`, then contract with `f_1 \otimes \dots \otimes f_r`
+    via the Kronecker pairing to read off the coefficient.
 
     Parameters
     ----------
@@ -198,19 +335,25 @@ def surjection_cochain_action(
     surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
     assert len(surj_deg) == 1
     d = surj_deg[0]
-    # Cochains are graded homologically (negative simplex dimension), so the
-    # chain degree paired with μ_u(f_1,...,f_r) is -|μ_u| = -(|f_1|+...+|f_r|+|u|).
+    # Degree bookkeeping: cochains use the homological convention
+    # degree_on_basis(σ) = -dim(σ), so deg(f_i) = -n_i.
+    # The output cochain μ_u(f_1,...,f_r) has homological degree
+    # deg(f_1)+...+deg(f_r)-d = -(n_1+...+n_r+d).
+    # Equivalently, the dual chain dimension is n_1+...+n_r+d.
     cochain_degrees = [c.degree() for c in cochains]
     chain_deg = -sum(cochain_degrees) - d
 
     if chain_deg < 0:
+        # No simplex of negative dimension exists; the action is zero.
         return target.zero()
 
     SC = SimplicialChains(base_ring=cochain_base_ring)
 
     result_dict: dict[tuple, int] = {}
+    # Iterate over all dim-chain_deg simplices of Δ^N and apply the pairing.
     for simplex in combinations(range(N + 1), chain_deg + 1):
         x = SC.term(simplex)
+        # θ_u(x): element of tensor([SC]*r) (or SC for r=1).
         theta = surjection_chain_action(surj, x)
         value = 0
         for basis_key, coeff in theta:
@@ -220,6 +363,7 @@ def surjection_cochain_action(
                 factor_keys = (basis_key,)
             else:
                 factor_keys = basis_key
+            # Kronecker pairing: ⟨f_1⊗...⊗f_r, y_1⊗...⊗y_r⟩ = ∏ ⟨f_i, y_i⟩.
             contrib = coeff
             for slot in range(r):
                 f = cochains[slot]
@@ -243,11 +387,19 @@ def surjection_cochain_action(
 
 
 class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
-    """:class:`~uconf.models.surjection.Surjection`-algebra on simplicial cochains.
+    r""":class:`~uconf.models.surjection.Surjection`-algebra on simplicial cochains.
 
-    The :func:`surjection_cochain_action` equips
-    :class:`~uconf.models.simplicial.SimplicialCochains` with the structure of
-    a ``Surjection``-algebra.
+    Equips :class:`~uconf.models.simplicial.SimplicialCochains` with the
+    ``Surjection``-algebra structure given by :func:`surjection_cochain_action`.
+
+    This is a direct implementation of the Berger–Fresse cochain algebra
+    [BF04]: for `u \in S(r)` and cochains `f_1, \ldots, f_r \in C^*(\Delta^N)`,
+
+    .. math::
+        \mu_u(f_1 \otimes \cdots \otimes f_r)(\sigma)
+        = (f_1 \otimes \cdots \otimes f_r)(\theta_u(\sigma))
+
+    where `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
     def __init__(self, module: SimplicialCochains):
@@ -266,11 +418,16 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
 
 
 class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
-    """:class:`~uconf.models.surjection_dual.SurjectionDual`-coalgebra on simplicial chains.
+    r""":class:`~uconf.models.surjection_dual.SurjectionDual`-coalgebra on simplicial chains.
 
     The dual of the surjection chain action equips
     :class:`~uconf.models.simplicial.SimplicialChains` with a
     ``SurjectionDual``-coalgebra structure.
+
+    The coaction `\delta_n : C \to \mathrm{SD}(n) \otimes C^{\otimes n}` is
+    defined by `\delta_n(x) = \sum_u u^* \otimes \theta_u(x)`, where the
+    sum runs over all surjections `u \in S(n)` of appropriate degree and
+    `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
     def __init__(self, module: SimplicialChains):
