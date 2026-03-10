@@ -203,6 +203,9 @@ def surjection_cochain_action(
     cochain_degrees = [c.degree() for c in cochains]
     chain_deg = -sum(cochain_degrees) - d
 
+    if chain_deg < 0:
+        return target.zero()
+
     SC = SimplicialChains(base_ring=cochain_base_ring)
 
     result_dict: dict[tuple, int] = {}
