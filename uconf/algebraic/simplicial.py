@@ -110,60 +110,39 @@ def surjection_chain_action(
     times = r + d - 1
     pre_diag = chain.iterated_diagonal(times=times) if times > 0 else chain
 
-    def _compute_bf_sign(surj_tuple, simplex_factors):
-        r"""Berger–Fresse sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`.
+    def _compute_bf_sign(
+        surj_tuple: tuple[int, ...],
+        simplex_factors: tuple[tuple[int, ...], ...],
+    ):
+        r"""Berger–Fresse sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`."""
+        assert len(surj_tuple) == len(
+            simplex_factors
+        ), "Length mismatch in BF sign computation."
 
-        Given the surjection tuple ``surj_tuple = (u_0,...,u_{r+d-1})``
-        and the ordered tuple of simplex factors
-        ``simplex_factors = (x_0,...,x_{r+d-1})`` produced by the iterated
-        AW diagonal, this function computes the sign
+        # Find the indices of "final" intervals, i.e., the values i such that u_i is the last occurrence of that value in surj_tuple.
+        # The other intervals are called "inner" intervals.
+        final_intervals = dict()
+        for i in reversed(range(len(surj_tuple))):
+            u = surj_tuple[i]
+            if u not in final_intervals:
+                final_intervals[u] = i
 
-        .. math::
-            \varepsilon = (-1)^{\text{ord} + \text{act}}
+        # The position exponent is the value of the last index in each *inner* interval.
+        position_exp = 0
+        for i in range(len(surj_tuple)):
+            u = surj_tuple[i]
+            if i != final_intervals[u]:
+                position_exp += simplex_factors[i][
+                    -1
+                ]  # last vertex of the simplex factor
 
-        following [BF04, §1.2.1].
-
-        **Ordering sign** (`ord`):
-        Let `\pi` be the permutation of `\{0,\ldots,r+d-1\}` that sorts
-        the indices stably by their ``u``-value (i.e.
-        `u_{\pi^{-1}(0)} \le \cdots \le u_{\pi^{-1}(r+d-1)}`).
-        This reorders the tensor factors from
-        `x_0 \otimes \cdots \otimes x_{r+d-1}` to
-        `x_{\pi^{-1}(0)} \otimes \cdots \otimes x_{\pi^{-1}(r+d-1)}`.
-        The Koszul sign of this reordering is
-
-        .. math::
-            (-1)^{\text{ord}} = (-1)^{
-                \sum_{\substack{i < j \\ \pi(i) > \pi(j)}} \deg(x_i)\,\deg(x_j)
-            }
-
-        where `\deg(x_i) = \dim(x_i) = \lvert x_i \rvert - 1`.
-
-        **Action sign** (`act`):
-        After sorting, consecutive positions of equal ``u``-value
-        correspond to factors that will be concatenated.  For each such
-        adjacent equal-value pair at sorted positions ``idx`` and
-        ``idx+1``, we add the total degree of all factors before position
-        ``idx+1`` in the sorted order, i.e.
-
-        .. math::
-            \text{act} = \sum_{\substack{0 \le \text{idx} < r+d-1 \\
-                u_{\pi^{-1}(\text{idx})} = u_{\pi^{-1}(\text{idx}+1)}}}
-                \sum_{j=0}^{\text{idx}} \deg(x_{\pi^{-1}(j)}).
-
-        Parameters
-        ----------
-        surj_tuple : tuple of int
-            Basis key of a single homogeneous surjection element.
-        simplex_factors : tuple of tuple
-            Tuple of simplex tuples from the iterated AW diagonal.
-
-        Returns
-        -------
-        int
-            ``+1`` or ``-1``.
-        """
-        weights = [len(s) - 1 for s in simplex_factors]
+        # The length of a final interval is its number of elements minus one, the length of inner intervals is their number of elements.
+        lengths = []
+        for i, u in enumerate(surj_tuple):
+            if i == final_intervals[u]:
+                lengths.append(len(simplex_factors[i]) - 1)
+            else:
+                lengths.append(len(simplex_factors[i]))
 
         # Sort indices stably by their u-value to get the ordering permutation π.
         # inv_ordering[new_pos] = original index (i.e. π^{-1}).
@@ -180,26 +159,15 @@ def surjection_chain_action(
         for i in range(len(ordering_perm)):
             for j in range(i + 1, len(ordering_perm)):
                 if ordering_perm[i] > ordering_perm[j]:
-                    ordering_sign_exp += weights[i] * weights[j]
+                    ordering_sign_exp += lengths[i] * lengths[j]
 
-        # Build the sorted weight/surjection sequences.
-        sorted_weights = [weights[i] for i in inv_ordering]
-        sorted_surj = [surj_tuple[i] for i in inv_ordering]
-
-        # Action sign: for each adjacent pair in sorted order with equal u-value,
-        # add the cumulative degree of all preceding factors in sorted order.
-        action_sign_exp = 0
-        for idx in range(len(sorted_surj) - 1):
-            if sorted_surj[idx] == sorted_surj[idx + 1]:
-                action_sign_exp += sum(sorted_weights[: idx + 1])
-
-        total_sign_exp = (ordering_sign_exp + action_sign_exp) % 2
+        total_sign_exp = (ordering_sign_exp + position_exp) % 2
         return (-1) ** total_sign_exp
 
     def _join_simplices(simplex_list):
         """Concatenate a list of overlapping simplex faces into one simplex.
 
-        The AW diagonal splits `[v_0, \ldots, v_n]` into consecutive
+        The AW diagonal splits `[v_0, \\ldots, v_n]` into consecutive
         sub-faces that share boundary vertices.  This function reassembles
         the full (concatenated) simplex from such a list.  Returns ``None``
         if the result would be degenerate (i.e. has a repeated vertex or
