@@ -73,11 +73,11 @@ def test_sphere_surjection_equivariance(k: int, d: int) -> None:
             assert lhs == rhs
 
 
+@pytest.mark.parametrize("d", [1, 2, 3])
 @pytest.mark.parametrize("k", [2, 3, 4])
 @pytest.mark.parametrize("e", [0, 1, 2, 3, 4, 5])
-def test_sphere_surjection_matches_top_cochain_action(k: int, e: int) -> None:
+def test_sphere_surjection_matches_top_cochain_action(d: int, k: int, e: int) -> None:
     """Compare with μ_u on the top cochain of Δ^d."""
-    d = 2
     alg = SurjectionSphereCochainAlgebra(d=d, base_ring=QQ)
     g = alg.module.generator()
 
