@@ -384,6 +384,7 @@ def surjection_cochain_action(
                     break
             value += contrib
         if value != 0:
+            value *= (-1) ** (d - r)
             result_dict[simplex] = result_dict.get(simplex, 0) + value
 
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
