@@ -79,15 +79,15 @@ def _comch_be_from_basis(basis: tuple[tuple[int, ...], ...]) -> BarrattEcclesEle
     return BarrattEcclesElement({basis: 1})
 
 
-def test_surjection_boundary_matches_comch() -> None:
-    for r in range(1, 5):
-        for d in range(0, 3):
-            for basis_element in Surjection(r).basis_it(d):
-                uconf_boundary = basis_element.boundary()
-                comch_boundary = _uconf_surjection_to_comch(basis_element).boundary()
-                assert _uconf_surjection_dict(uconf_boundary) == _comch_surjection_dict(
-                    comch_boundary
-                )
+@pytest.mark.parametrize("r", range(1, 5))
+@pytest.mark.parametrize("d", range(0, 3))
+def test_surjection_boundary_matches_comch(r: int, d: int) -> None:
+    for basis_element in Surjection(r).basis_it(d):
+        uconf_boundary = basis_element.boundary()
+        comch_boundary = _uconf_surjection_to_comch(basis_element).boundary()
+        assert _uconf_surjection_dict(uconf_boundary) == _comch_surjection_dict(
+            comch_boundary
+        )
 
 
 @pytest.mark.parametrize(
