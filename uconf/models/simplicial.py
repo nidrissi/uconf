@@ -142,13 +142,13 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- standard element ---------------------------------------------------
 
     @staticmethod
-    def standard_element(n: int) -> "SimplicialChains.Element":
+    def fundamental_chain(n: int) -> "SimplicialChains.Element":
         r"""The chain `[0, 1, \dots, n]` in `C_n(\Delta^n)`.
 
         Parameters
         ----------
         n : int  (non-negative)
-            Dimension of the standard simplex.
+            Dimension of the fundamental chain.
         """
         assert n >= 0
         return SimplicialChains().term(tuple(range(n + 1)))
@@ -347,6 +347,12 @@ class SimplicialCochains(CombinatorialFreeModule):
                     yield (augmented, sign)
 
         return self.sum_of_terms(terms())
+
+    # -- volume form ---------------------------------------------------------
+    @staticmethod
+    def volume_form(N: int) -> "SimplicialCochains.Element":
+        """The cochain evaluating to 1 on the fundamental chain of `Δ^N`."""
+        return SimplicialCochains(N).term(tuple(range(N + 1)))
 
     # -- evaluation pairing -------------------------------------------------
 
