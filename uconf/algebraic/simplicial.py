@@ -342,16 +342,15 @@ def surjection_cochain_action(
         if c == c.parent().zero():
             return target.zero()
 
-    surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
-    assert len(surj_deg) == 1
-    d = surj_deg[0]
+    d = surj.degree()
     # Degree bookkeeping: cochains use the homological convention
     # degree_on_basis(σ) = -dim(σ), so deg(f_i) = -n_i.
     # The output cochain μ_u(f_1,...,f_r) has homological degree
     # deg(f_1)+...+deg(f_r)-d = -(n_1+...+n_r+d).
     # Equivalently, the dual chain dimension is n_1+...+n_r+d.
     cochain_degrees = [c.degree() for c in cochains]
-    chain_deg = -sum(cochain_degrees) - d
+    cochain_total_degree = sum(cochain_degrees)
+    chain_deg = -cochain_total_degree - d
 
     if chain_deg < 0:
         # No simplex of negative dimension exists; the action is zero.
@@ -388,7 +387,9 @@ def surjection_cochain_action(
                     break
             value += contrib
         if value != 0:
-            duality_sign_exp = r * (r - 1) // 2 * N
+            duality_sign_exp = d * cochain_total_degree
+            for i in range(0, r):
+                duality_sign_exp += cochain_degrees[i] * sum(cochain_degrees[i + 1 :])
             duality_sign = -1 if duality_sign_exp % 2 == 1 else 1
             value *= duality_sign
             result_dict[simplex] = result_dict.get(simplex, 0) + value
