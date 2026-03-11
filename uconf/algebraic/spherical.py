@@ -157,7 +157,7 @@ def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
         return 1
 
     sign_exp = d * n * (n - 1) // 2
-    sign_exp += (d * (d - 1) // 2) * ((n + 2) * (n - 1) // 2)
+    sign_exp += (d * (d - 1) // 2) * ((n - 2) * (n - 1) // 2)
     sign = -1 if sign_exp % 2 else 1
     for j in range(d):
         sign *= _permutation_sign(perms[j])
