@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 import math
+from random import Random
 
 import pytest
 from sage.all import ZZ
@@ -53,9 +54,9 @@ def test_surjection_permutation_action(sigma: list[int]) -> None:
     x = s2((1, 2))
     swapped = x.permute(sigma)
     assert _as_dict(swapped) == {(2, 1): 1}, "Expected transposed surjection tuple."
-    assert _as_dict(swapped.permute(sigma)) == _as_dict(x), (
-        "Applying the same transposition twice should return the original element."
-    )
+    assert _as_dict(swapped.permute(sigma)) == _as_dict(
+        x
+    ), "Applying the same transposition twice should return the original element."
 
 
 def test_surjection_basic_composition() -> None:
@@ -98,14 +99,14 @@ def test_surjection_basis(r: int, d: int) -> None:
     basis = list(Surjection(r).basis_it(d))
     assert len(basis) == len(set(basis)), "Duplicate elements found in basis_it"
     for el in basis:
-        assert isinstance(el, Surjection.Element), (
-            "Non-Surjection element found in basis_it"
-        )
+        assert isinstance(
+            el, Surjection.Element
+        ), "Non-Surjection element found in basis_it"
         assert el != el.parent().zero(), "Zero element found in basis_it"
         assert el.arity() == r, "Element with incorrect arity in basis_it"
-        assert _degree_matches(el, d), (
-            "Element with incorrect degree in Surjection basis_it"
-        )
+        assert _degree_matches(
+            el, d
+        ), "Element with incorrect degree in Surjection basis_it"
 
 
 @pytest.mark.parametrize("r", range(2, 5))
@@ -113,12 +114,12 @@ def test_surjection_basis(r: int, d: int) -> None:
 def test_planar_surjection_basis(r: int, d: int) -> None:
     planar_basis = list(Surjection(r).planar_basis_it(d))
     basis = list(Surjection(r).basis_it(d))
-    assert set(planar_basis).issubset(basis), (
-        "Planar basis should be a subset of the full basis."
-    )
-    assert len(planar_basis) * math.factorial(r) == len(basis), (
-        "Planar basis size should be full basis size divided by r!."
-    )
+    assert set(planar_basis).issubset(
+        basis
+    ), "Planar basis should be a subset of the full basis."
+    assert len(planar_basis) * math.factorial(r) == len(
+        basis
+    ), "Planar basis size should be full basis size divided by r!."
 
     for el in planar_basis:
         assert el.is_planar(), "Non-planar element found in planar_basis_it"
@@ -131,9 +132,9 @@ def test_planar_preserved_under_composition_last_input(
 ) -> None:
     pos = s1.arity()
     composed = Surjection.compose(s1, pos, s2)
-    assert composed.is_planar(), (
-        f"Composition of {s1} and {s2} at position {pos} is not planar."
-    )
+    assert (
+        composed.is_planar()
+    ), f"Composition of {s1} and {s2} at position {pos} is not planar."
 
 
 @pytest.mark.parametrize("s", PLANAR_LARGE)
@@ -149,9 +150,9 @@ def test_section_planar(s: Surjection.Element) -> None:
     sect = s.section()
     for key in sect.support():
         first_perm = key[0]
-        assert tuple(first_perm.tuple()) == tuple(range(1, r + 1)), (
-            f"Section of planar surjection {s} is not planar at {key}."
-        )
+        assert tuple(first_perm.tuple()) == tuple(
+            range(1, r + 1)
+        ), f"Section of planar surjection {s} is not planar at {key}."
 
 
 @pytest.mark.skip(reason="The result is false")
@@ -165,9 +166,9 @@ def test_section_composition(s1: Surjection.Element, s2: Surjection.Element):
     sect1 = s1.section()
     sect2 = s2.section()
     composed_sect = Surjection.compose(sect1, 1, sect2)
-    assert sect_composed == composed_sect, (
-        f"Section composition failed for {s1} and {s2} at position 1."
-    )
+    assert (
+        sect_composed == composed_sect
+    ), f"Section composition failed for {s1} and {s2} at position 1."
 
 
 @pytest.mark.parametrize("i,j", [(1, 2), (1, 3), (2, 3)])
@@ -340,30 +341,15 @@ def test_surjection_equivariance(
 # ===========================================================================
 
 
-@pytest.mark.parametrize(
-    "n,d",
-    [
-        (2, 0),
-        (2, 1),
-        (2, 2),
-        (2, 3),
-        (3, 0),
-        (3, 1),
-        (3, 2),
-        (4, 0),
-        (4, 1),
-        (4, 2),
-        (5, 0),
-        (5, 1),
-    ],
-)
+@pytest.mark.parametrize("n", range(2, 6))
+@pytest.mark.parametrize("d", range(0, 4))
 def test_surjection_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S(n)."""
     zero = Surjection(n).zero()
     for elem in Surjection(n).basis_it(d):
-        assert elem.boundary().boundary() == zero, (
-            f"d²({elem}) ≠ 0 in S({n}) degree {d}"
-        )
+        assert (
+            elem.boundary().boundary() == zero
+        ), f"d²({elem}) ≠ 0 in S({n}) degree {d}"
 
 
 # ===========================================================================
