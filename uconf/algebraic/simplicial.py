@@ -153,9 +153,9 @@ def surjection_chain_action(
         AssertionError
             If the lengths of surj_tuple and simplex_factors do not match.
         """
-        assert len(surj_tuple) == len(
-            simplex_factors
-        ), "Length mismatch in BF sign computation."
+        assert len(surj_tuple) == len(simplex_factors), (
+            "Length mismatch in BF sign computation."
+        )
 
         # Find the indices of "final" intervals, i.e., the values i such that u_i is the last occurrence of that value in surj_tuple.
         # The other intervals are called "inner" intervals.
@@ -335,8 +335,12 @@ def surjection_cochain_action(
             raise TypeError("All cochains must have the same base ring.")
         if c.parent().simplex_dim() != N:
             raise ValueError("All cochains must be on the same simplex dimension.")
-
     target = SimplicialCochains(N=N, base_ring=cochain_base_ring)
+
+    # If any input cochain is zero, the result is zero.
+    for c in cochains:
+        if c == c.parent().zero():
+            return target.zero()
 
     surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
     assert len(surj_deg) == 1
@@ -384,7 +388,6 @@ def surjection_cochain_action(
                     break
             value += contrib
         if value != 0:
-            value *= (-1) ** (d - r)
             result_dict[simplex] = result_dict.get(simplex, 0) + value
 
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
