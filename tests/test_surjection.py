@@ -371,40 +371,23 @@ def test_surjection_differential_squared_zero(n: int, d: int) -> None:
 # ===========================================================================
 
 
-@pytest.mark.parametrize(
-    "x_tuple,y_tuple,m,n",
-    [
-        # degree-1 × degree-0
-        ((1, 2, 1), (1, 2), 2, 2),
-        ((1, 2, 3, 1), (1, 2), 3, 2),
-        ((1, 2, 3, 4, 1), (1, 2), 4, 2),
-        # degree-0 × degree-1
-        ((1, 2, 3), (1, 2, 1), 3, 2),
-        ((1, 2, 3, 4), (1, 2, 1), 4, 2),
-        ((1, 2, 3), (1, 2, 3, 1), 3, 3),
-        # degree-1 × degree-1
-        ((1, 2, 3, 1), (1, 2, 1), 3, 2),
-        ((1, 2, 3, 4, 1), (1, 2, 1), 4, 2),
-        # degree-2 × degree-0
-        ((1, 2, 1, 2), (1, 2), 2, 2),
-        ((1, 2, 3, 1, 2), (1, 2), 3, 2),
-        # degree-0 × degree-2
-        ((1, 2, 3), (1, 2, 1, 2), 3, 2),
-        # degree-2 × degree-1
-        ((1, 2, 1, 2), (1, 2, 1), 2, 2),
-    ],
-)
-def test_surjection_derivation_property(
-    x_tuple: tuple, y_tuple: tuple, m: int, n: int
-) -> None:
+@pytest.mark.parametrize("n1", range(2, 5))
+@pytest.mark.parametrize("d1", range(0, 3))
+@pytest.mark.parametrize("n2", range(2, 5))
+@pytest.mark.parametrize("d2", range(0, 3))
+def test_surjection_derivation_property(n1: int, d1: int, n2: int, d2: int) -> None:
     """d(x∘_i y) = d(x)∘_i y + (-1)^|x| x∘_i d(y) for all valid i."""
-    x = Surjection(m)(x_tuple)
-    y = Surjection(n)(y_tuple)
-    sign = (-1) ** x.degree()
-    for i in range(1, m + 1):
-        xy = Surjection.compose(x, i, y)
-        lhs = xy.boundary()
-        rhs = Surjection.compose(x.boundary(), i, y) + sign * Surjection.compose(
-            x, i, y.boundary()
-        )
-        assert lhs == rhs, f"Derivation failed for x={x_tuple}, y={y_tuple}, i={i}"
+    rng = Random(20260311)
+    basis1 = list(Surjection(n1).basis_it(d1))
+    basis2 = list(Surjection(n2).basis_it(d2))
+    for _ in range(10):
+        x = rng.choice(basis1)
+        y = rng.choice(basis2)
+        sign = (-1) ** d1
+        for i in range(1, n1 + 1):
+            xy = Surjection.compose(x, i, y)
+            lhs = xy.boundary()
+            rhs = Surjection.compose(x.boundary(), i, y) + sign * Surjection.compose(
+                x, i, y.boundary()
+            )
+            assert lhs == rhs, f"Derivation failed for x={x}, y={y}, i={i}"
