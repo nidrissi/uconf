@@ -328,8 +328,8 @@ class SimplicialCochains(CombinatorialFreeModule):
     def _coboundary_on_basis(self, simplex: tuple):
         r"""Coboundary: the transpose of the simplicial boundary.
 
-        `(\delta f)(\sigma) = f(\partial \sigma)`.  Inserts one vertex
-        at each valid position (which lowers homological degree by 1).
+        `(\delta f)(\sigma) = - (-1)^{|f|} f(\partial \sigma)`.
+        Inserts one vertex at each valid position (which lowers homological degree by 1).
         """
 
         def terms():
@@ -343,7 +343,8 @@ class SimplicialCochains(CombinatorialFreeModule):
                     candidates = range(simplex[j - 1] + 1, simplex[j])
                 for w in candidates:
                     augmented = simplex[:j] + (w,) + simplex[j:]
-                    sign = (-1) ** (j % 2)
+                    sign_exp = j + 1 + dim
+                    sign = -1 if sign_exp % 2 == 1 else 1
                     yield (augmented, sign)
 
         return self.sum_of_terms(terms())
