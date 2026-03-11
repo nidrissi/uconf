@@ -255,7 +255,7 @@ class TestSurjectionAction:
         S2 = Surjection(2)
         for u in S2.planar_basis_it(d):
             for n in range(1, 3):
-                possible_simplices = self.powerset_nonempty(range(n + 1))
+                possible_simplices = list(self.powerset_nonempty(range(n + 1)))
                 for x in possible_simplices:
                     for y in possible_simplices:
                         x = SimplicialCochains(n)(x)
@@ -277,7 +277,7 @@ class TestSurjectionAction:
         S3 = Surjection(3)
         for u in S3.planar_basis_it(d):
             for n in range(1, 3):
-                possible_simplices = self.powerset_nonempty(range(n + 1))
+                possible_simplices = list(self.powerset_nonempty(range(n + 1)))
                 for x in possible_simplices:
                     for y in possible_simplices:
                         for z in possible_simplices:
