@@ -148,7 +148,7 @@ class SimplicialChains(CombinatorialFreeModule):
         Parameters
         ----------
         n : int  (non-negative)
-            Dimension of the fundamental chain.
+            Dimension of the standard simplex ``Δ^n`` (so the chain lies in degree ``n``).
         """
         assert n >= 0
         return SimplicialChains().term(tuple(range(n + 1)))

@@ -110,7 +110,39 @@ def _permutation_sign(perm: tuple[int, ...]) -> int:
 
 
 def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
-    r"""Return the Berger-Fresse sign for the ``Surjection``-algebra on ``N*(S^d)``."""
+    r"""
+    Return the Berger-Fresse sign for the ``Surjection``-algebra on ``N*(S^d)``.
+
+    Computes the sign associated with a basis element of the surjection algebra
+    acting on the normalized chains of a sphere, following the formula from
+    Proposition prop:surj-alg-sphere in article.tex.
+
+    Parameters
+    ----------
+    u : tuple[int, ...]
+        The arity tuple representing the surjection basis element.
+    n : int
+        The arity (number of inputs).
+    d : int
+        The dimension of the sphere.
+
+    Returns
+    -------
+    int
+        The Berger-Fresse sign: +1, -1, or 0 if the configuration is invalid.
+
+        - Returns 1 if n == 1 and u == (1,) (identity element).
+        - Returns 0 if n == 1 and u != (1,), or if permutations cannot be extracted.
+        - Returns 1 if d == 0 (degree-0 surjection on S^0).
+        - Otherwise, returns the product of sign contributions from the surjection
+          structure and the extracted permutations.
+
+    Notes
+    -----
+    The sign is computed as:
+        - Initial sign based on degrees: (-1)^(d*n*(n-1)/2 + (d*(d-1)/2)*((n+2)*(n-1)/2))
+        - Multiplied by the signs of d extracted permutations.
+    """
     if n == 1:
         # Arity-1 element (1,) acts as the identity; sign = 1.
         return 1 if u == (1,) else 0

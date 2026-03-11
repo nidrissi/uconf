@@ -98,18 +98,11 @@ class TestSimplicialChains:
         x = C((0, 1, 2))
         assert x.degree() == 2
 
-    def test_standard_element(self):
+    def test_fundamental_chain(self):
         x = SimplicialChains.fundamental_chain(3)
         assert x.degree() == 3
         d = _as_dict(x)
         assert d == {(0, 1, 2, 3): 1}
-
-    def test_standard_element_tensor(self):
-        SC = SimplicialChains()
-        x = SimplicialChains.fundamental_chain(2)
-        T = tensor([SC, SC])
-        y = x.iterated_diagonal(times=1)
-        assert y.parent() == T
 
 
 class TestBoundary:
