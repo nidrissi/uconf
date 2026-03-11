@@ -71,7 +71,7 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 - `models/simplicial.py`
   - `SimplicialChains`: normalized chains on standard simplices, basis = non-degenerate
     simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
-    - `SimplicialChains.standard_element(n)` — the fundamental cycle `[0,…,n]`.
+    - `SimplicialChains.fundamental_chain(n)` — the fundamental cycle `[0,…,n]`.
     - `SimplicialChains.basis_it(N)` — iterator over all simplices in `Δ^N`.
     - `SimplicialChains.tensor_boundary(x)` — Koszul tensor-product differential
       on elements of `tensor([SimplicialChains()]*r)`.
@@ -80,6 +80,7 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
       `tensor([SimplicialChains()]*(times+1))` element.
   - `SimplicialCochains(N)`: dual cochains on `Δ^N`, same simplex-tuple basis as
     `SimplicialChains`.
+    - `SimplicialCochains.volume_form(N)` — the volume form on `Δ^N`.
     - `SimplicialCochains.evaluate(cochain, chain)` — Kronecker pairing.
     - `SimplicialCochains.dual_basis_it(N)` — iterator over dual basis.
     - `Element.coboundary()` — coboundary operator.
@@ -274,7 +275,7 @@ omega_b = CobarConstruction(BarConstruction(surj_s_lie))
 from uconf import SimplicialChains, Surjection
 
 u = Surjection(2)((1, 2, 1))
-x = SimplicialChains.standard_element(3)
+x = SimplicialChains.fundamental_chain(3)
 coalg = SimplicialChains(r=1).as_surjection_coalgebra()
 res = coalg.act(u, x)
 ```
