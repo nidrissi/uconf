@@ -247,7 +247,7 @@ class TestSurjectionAction:
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 2."""
         S2 = Surjection(2)
         for u in S2.planar_basis_it(d):
-            for n in range(1, 3):
+            for n in range(d, d + 2):
                 possible_simplices = list(self.powerset_nonempty(range(n + 1)))
                 for x in possible_simplices:
                     for y in possible_simplices:
@@ -258,10 +258,13 @@ class TestSurjectionAction:
                         rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y])
                         rhs_3 = _surjection_cochain_action(u, [x, y.coboundary()])
                         rhs = (
-                            rhs_1 + (-1) ** d * rhs_2 + (-1) ** (d + x.degree()) * rhs_3
+                            rhs_1
+                            + (-1) ** (u.degree()) * rhs_2
+                            + (-1) ** (u.degree() + x.degree()) * rhs_3
                         )
+
                         assert _as_dict(lhs) == _as_dict(rhs), (
-                            f"Chain map failed: u={list(u.support())}, n={n}"
+                            f"Chain map failed: u={list(u.support())}, x={x}, y={y}"
                         )
 
     @pytest.mark.parametrize("d", range(1, 4))
@@ -269,7 +272,7 @@ class TestSurjectionAction:
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 3."""
         S3 = Surjection(3)
         for u in S3.planar_basis_it(d):
-            for n in range(1, 3):
+            for n in range(d, d + 2):
                 possible_simplices = list(self.powerset_nonempty(range(n + 1)))
                 for x in possible_simplices:
                     for y in possible_simplices:
@@ -290,9 +293,9 @@ class TestSurjectionAction:
                             )
                             rhs = (
                                 rhs_1
-                                + (-1) ** d * rhs_2
-                                + (-1) ** (d + x.degree()) * rhs_3
-                                + (-1) ** (d + x.degree() + y.degree()) * rhs_4
+                                + (-1) ** (u.degree()) * rhs_2
+                                + (-1) ** (u.degree() + x.degree()) * rhs_3
+                                + (-1) ** (u.degree() + x.degree() + y.degree()) * rhs_4
                             )
                             assert _as_dict(lhs) == _as_dict(rhs), (
                                 f"Chain map failed: u={list(u.support())}, n={n}"
