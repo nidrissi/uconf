@@ -388,6 +388,9 @@ def surjection_cochain_action(
                     break
             value += contrib
         if value != 0:
+            duality_sign_exp = r * (r - 1) // 2 * N
+            duality_sign = -1 if duality_sign_exp % 2 == 1 else 1
+            value *= duality_sign
             result_dict[simplex] = result_dict.get(simplex, 0) + value
 
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
