@@ -223,7 +223,11 @@ class TestSurjectionAction:
 
     @pytest.mark.parametrize("r,d", [(2, 1), (2, 2), (3, 1)])
     def test_action_degree(self, r: int, d: int):
-        """For nonzero terms, |θ_u(x)| = |x| + |u|."""
+        """Cochain action: for nonzero θ_u(x, …, x), |θ_u(x, …, x)| = d - n*r.
+
+        Here u ∈ S(r) has degree d, x is the volume form in degree n, and we
+        test θ_u(x, …, x) with r copies of x.
+        """
         for u in Surjection(r).planar_basis_it(d):
             for n in range(d, d + 4):
                 x = SimplicialCochains.volume_form(n)
