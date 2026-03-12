@@ -99,65 +99,49 @@ def _extract_concatenated_permutations(
     return perms
 
 
+def _permutation_sign(perm: tuple[int, ...]) -> int:
+    """Return the sign of a permutation."""
+    inversions = 0
+    for i in range(len(perm)):
+        for j in range(i + 1, len(perm)):
+            if perm[i] > perm[j]:
+                inversions += 1
+    return -1 if inversions % 2 else 1
+
+
 def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
-    r"""Return the Berger-Fresse sign for the ``Surjection``-algebra on ``N*(S^d)``.
+    r"""
+    Return the Berger-Fresse sign for the ``Surjection``-algebra on ``N*(S^d)``.
 
-    For a sphere-admissible surjection ``u`` of arity ``n`` and
-    degree ``d*(n-1)``, the unique valid Alexander-Whitney cut of the
-    top chain ``(0,...,d)`` has *edge factors* (1-dimensional simplex
-    factors) at the ``d`` connecting positions ``j*(n-1)`` for
-    ``j = 1,...,d``, and *vertex factors* (0-dimensional) elsewhere.
+    Computes the sign associated with a basis element of the surjection algebra
+    acting on the normalized chains of a sphere, following the formula from
+    Proposition prop:surj-alg-sphere in article.tex.
 
-    The sign is ``(-1)^S`` where
-    ``S = ord_inv + term1 + term2``, with:
+    Parameters
+    ----------
+    u : tuple[int, ...]
+        The arity tuple representing the surjection basis element.
+    n : int
+        The arity (number of inputs).
+    d : int
+        The dimension of the sphere.
 
-    - ``c_j = u[j*(n-1)]`` the *connecting value* at position ``j*(n-1)``
-      (equal to ``σ_j(n) = σ_{j+1}(1)`` in the permutation-block notation);
-    - ``ord_inv``: the number of inversions in the sequence
-      ``(c_1,...,c_d)`` (i.e. pairs ``j1 < j2`` with ``c_{j1} > c_{j2}``),
-      coming from the **ordering sign** of :func:`~uconf.algebraic.simplicial._compute_bf_sign`
-      (only the edge factors have non-zero degree, so only inversions
-      involving two edge positions contribute to the Koszul sign);
-    - ``P_k = {i : u[i] = k}`` the set of positions with value ``k``;
-    - ``E_{<k} = #{j : c_j < k}`` the number of connecting values
-      strictly less than ``k``;
-    - ``term1 = Σ_k (|P_k| - 1) · E_{<k}``, coming from the **action sign**
-      contribution of sorting equal-valued positions relative to the
-      edge factors;
-    - ``term2 = Σ_j #{p ∈ P_{c_j} : p > j*(n-1)}``, the number of
-      positions in the same group as the ``j``-th edge that come
-      *after* that edge in ``u``, also part of the **action sign**.
+    Returns
+    -------
+    int
+        The Berger-Fresse sign: +1, -1, or 0 if the configuration is invalid.
 
-    This formula is obtained by applying the Berger-Fresse action to
-    the top chain of ``Δ^d`` and reading off the sign of the unique
-    non-zero contribution.  The first summand ``ord_inv`` arises from
-    the Koszul reordering sign, and ``term1 + term2`` arises from the
-    position sign in the BF formula (see
-    :func:`~uconf.algebraic.simplicial._compute_bf_sign`).
+        - Returns 1 if n == 1 and u == (1,) (identity element).
+        - Returns 0 if n == 1 and u != (1,), or if permutations cannot be extracted.
+        - Returns 1 if d == 0 (degree-0 surjection on S^0).
+        - Otherwise, returns the product of sign contributions from the surjection
+          structure and the extracted permutations.
 
-    Returns 0 for non-sphere-admissible ``u``.
-
-    **Worked example** (``n=2``, ``d=1``):
-
-    Consider ``u = (2, 1, 2)`` with ``n=2`` and ``d=1`` (degree
-    ``1*(2-1) = 1``).
-
-    - Step = ``n-1 = 1``.  Connecting position: ``j=1``, position ``1``.
-      ``c_1 = u[1] = 1``.
-    - ``ord_inv``: only one connecting value, no pairs → ``ord_inv = 0``.
-    - ``P[1] = [1]``, ``P[2] = [0, 2]``.
-    - ``E_lt[1] = 0``, ``E_lt[2] = #{c_j < 2} = #{1} = 1``.
-    - ``term1 = (|P[1]|-1)*0 + (|P[2]|-1)*1 = 0 + 1 = 1``.
-    - ``term2``: ``j=1``, ``c_1=1``, ``P[1]=[1]``, ``#{p in [1]: p > 1} = 0``.
-      ``term2 = 0``.
-    - ``S = 0 + 1 + 0 = 1`` → sign ``= -1``.
-
-    Verification: ``θ_{(2,1,2)}((0,1)) = -1 · (0,1) ⊗ (0,1)`` (by a
-    direct BF computation), so ``μ_{(2,1,2)}(g, g) = -g`` on ``N*(S^1)``.
-
-    Compare ``u = (1, 2, 1)`` (same ``n=2``, ``d=1``): ``c_1 = u[1] = 2``,
-    ``term1 = (2-1)*0 = 0``, ``term2 = #{p in P[2]=[1]: p > 1} = 0``,
-    ``S = 0`` → sign ``= +1``.
+    Notes
+    -----
+    The sign is computed as:
+        - Initial sign based on degrees: (-1)^(d*n*(n-1)/2 + (d*(d-1)/2)*((n-2)*(n-1)/2))
+        - Multiplied by the signs of d extracted permutations.
     """
     if n == 1:
         # Arity-1 element (1,) acts as the identity; sign = 1.
@@ -166,72 +150,19 @@ def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
     perms = _extract_concatenated_permutations(u, n, d)
     if perms is None:
         return 0
+    assert len(perms) == d + 1
 
     if d == 0:
         # Degree-0 surjection acting on S^0: BF sign is always +1.
         return 1
 
-    step = n - 1  # distance between consecutive connecting positions
+    sign_exp = d * n * (n - 1) // 2
+    sign_exp += (d * (d - 1) // 2) * ((n - 2) * (n - 1) // 2)
+    sign = -1 if sign_exp % 2 else 1
+    for j in range(d):
+        sign *= _permutation_sign(perms[j])
 
-    # The unique valid AW cut of the top chain (0,...,d) into n+d*(n-1) factors
-    # has exactly d factors of dimension 1 (the "edge factors") located at the
-    # connecting positions j*(n-1), and all other factors of dimension 0
-    # (the "vertex factors").  Only edge factors have non-zero degree, so the
-    # ordering sign (Koszul sign of sorting by u-value) simplifies to counting
-    # inversions only among the d connecting values.
-
-    # Connecting values c_j = u[j*(n-1)] for j = 1,...,d.
-    # These are the u-values of the edge factors; vertex factors have degree 0
-    # and do not contribute to the Koszul sign.
-    connecting = [u[j * step] for j in range(1, d + 1)]
-
-    # ord_inv: number of inversions in (c_1,...,c_d).
-    # This is the ordering sign contribution from _compute_bf_sign, restricted
-    # to pairs of edge-factor positions (all vertex-factor cross-terms vanish
-    # because vertex factors have degree 0).
-    ord_inv = sum(
-        1
-        for a in range(d)
-        for b in range(a + 1, d)
-        if connecting[a] > connecting[b]
-    )
-
-    # Build P[k]: positions in u whose value is k (1-indexed, use list index k)
-    P: list[list[int]] = [[] for _ in range(n + 1)]
-    for pos, val in enumerate(u):
-        P[val].append(pos)
-
-    # E_lt[k] = #{j : c_j < k}  (number of connecting values strictly below k)
-    E_lt: list[int] = [0] * (n + 2)
-    cumulative = 0
-    for k in range(1, n + 1):
-        E_lt[k] = cumulative
-        cumulative += sum(1 for c in connecting if c == k)
-
-    # term1 and term2 together make up the action sign from _compute_bf_sign.
-    # After sorting positions by u-value, consecutive positions of the same value
-    # will be concatenated.  The action sign accumulates the cumulative degree of
-    # all preceding sorted factors at each same-value adjacency.  Since only edge
-    # positions contribute non-zero degree (1), this decomposes into two parts:
-
-    # term1: for each group k with |P_k| occurrences, the E_{<k} edge positions
-    # (which have been sorted before the entire k-group) each contribute 1 to
-    # the action sign.  Concretely: within the sorted list, the E_{<k} edge
-    # factors of values < k precede the k-group, and each consecutive pair
-    # inside the k-group adds one unit of cumulative weight per edge before it.
-    term1 = sum((len(P[k]) - 1) * E_lt[k] for k in range(1, n + 1))
-
-    # term2: for each connecting position j*(n-1) with value c_j, count the
-    # positions in group c_j that are sorted *after* the j-th edge position in
-    # the sorted order.  These pairs (edge j, later same-value position) each
-    # contribute one unit of degree-1 to the cumulative action sign.
-    term2 = sum(
-        sum(1 for p in P[c] if p > j * step)
-        for j, c in enumerate(connecting, start=1)
-    )
-
-    total = (ord_inv + term1 + term2) % 2
-    return -1 if total else 1
+    return sign
 
 
 class ReducedSphereCochains(CombinatorialFreeModule):

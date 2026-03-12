@@ -19,12 +19,13 @@ from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
 
-from sage.all import tensor
+from sage.all import QQ, tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
 from uconf.models.surjection import Surjection
+from uconf.models.surjection_dual import SurjectionDual
 
 if TYPE_CHECKING:
     pass
@@ -110,60 +111,80 @@ def surjection_chain_action(
     times = r + d - 1
     pre_diag = chain.iterated_diagonal(times=times) if times > 0 else chain
 
-    def _compute_bf_sign(surj_tuple, simplex_factors):
-        r"""Berger–Fresse sign `\varepsilon(u; x_0, \ldots, x_{r+d-1})`.
+    def _compute_bf_sign(
+        surj_tuple: tuple[int, ...],
+        simplex_factors: tuple[tuple[int, ...], ...],
+        positions: dict[int, int],
+    ):
+        r"""
+        Compute the Berger–Fresse sign for a given surjection and simplex factors.
 
-        Given the surjection tuple ``surj_tuple = (u_0,...,u_{r+d-1})``
-        and the ordered tuple of simplex factors
-        ``simplex_factors = (x_0,...,x_{r+d-1})`` produced by the iterated
-        AW diagonal, this function computes the sign
-
-        .. math::
-            \varepsilon = (-1)^{\text{ord} + \text{act}}
-
-        following [BF04, §1.2.1].
-
-        **Ordering sign** (`ord`):
-        Let `\pi` be the permutation of `\{0,\ldots,r+d-1\}` that sorts
-        the indices stably by their ``u``-value (i.e.
-        `u_{\pi^{-1}(0)} \le \cdots \le u_{\pi^{-1}(r+d-1)}`).
-        This reorders the tensor factors from
-        `x_0 \otimes \cdots \otimes x_{r+d-1}` to
-        `x_{\pi^{-1}(0)} \otimes \cdots \otimes x_{\pi^{-1}(r+d-1)}`.
-        The Koszul sign of this reordering is
-
-        .. math::
-            (-1)^{\text{ord}} = (-1)^{
-                \sum_{\substack{i < j \\ \pi(i) > \pi(j)}} \deg(x_i)\,\deg(x_j)
-            }
-
-        where `\deg(x_i) = \dim(x_i) = \lvert x_i \rvert - 1`.
-
-        **Action sign** (`act`):
-        After sorting, consecutive positions of equal ``u``-value
-        correspond to factors that will be concatenated.  For each such
-        adjacent equal-value pair at sorted positions ``idx`` and
-        ``idx+1``, we add the total degree of all factors before position
-        ``idx+1`` in the sorted order, i.e.
-
-        .. math::
-            \text{act} = \sum_{\substack{0 \le \text{idx} < r+d-1 \\
-                u_{\pi^{-1}(\text{idx})} = u_{\pi^{-1}(\text{idx}+1)}}}
-                \sum_{j=0}^{\text{idx}} \deg(x_{\pi^{-1}(j)}).
+        This function calculates the sign ε(u; x_0, …, x_{r+d-1}) according to the
+        Berger–Fresse construction, which is used in operadic homology computations.
 
         Parameters
         ----------
-        surj_tuple : tuple of int
-            Basis key of a single homogeneous surjection element.
-        simplex_factors : tuple of tuple
-            Tuple of simplex tuples from the iterated AW diagonal.
+        surj_tuple : tuple[int, ...]
+            A tuple representing a surjection u, where each element indicates an index
+            in the target set. Elements may repeat, with repetitions indicating which
+            intervals are "inner" versus "final".
 
+        simplex_factors : tuple[tuple[int, ...], ...]
+            A tuple of tuples representing the simplex factors (vertices) corresponding
+            to each position in surj_tuple. Each inner tuple contains vertex indices.
+
+        positions : dict[int, int]
+            A mapping from each vertex label (an integer appearing in the simplex factors)
+            to its position in the ambient simplex.
         Returns
         -------
         int
-            ``+1`` or ``-1``.
+            Returns 1 or -1, the computed Berger–Fresse sign.
+
+        Notes
+        -----
+        The sign is computed as (-1)^(ordering_sign_exp + position_exp), where:
+
+        - **Final intervals**: Positions i where surj_tuple[i] appears for the last time
+        - **Inner intervals**: All other positions
+        - **position_exp**: Sum of the positions of the last vertices in all inner interval simplex factors
+        - **ordering_sign_exp**: Koszul sign computed from inversions when sorting by
+          u-values, weighted by lengths of simplex factors
+        - **lengths**: For final intervals, the length is len(simplex_factor) - 1;
+          for inner intervals, the length is len(simplex_factor)
+
+        Raises
+        ------
+        AssertionError
+            If the lengths of surj_tuple and simplex_factors do not match.
         """
-        weights = [len(s) - 1 for s in simplex_factors]
+        assert len(surj_tuple) == len(simplex_factors), (
+            "Length mismatch in BF sign computation."
+        )
+
+        # Find the indices of "final" intervals, i.e., the values i such that u_i is the last occurrence of that value in surj_tuple.
+        # The other intervals are called "inner" intervals.
+        final_intervals: dict[int, int] = dict()
+        for i in reversed(range(len(surj_tuple))):
+            u = surj_tuple[i]
+            if u not in final_intervals:
+                final_intervals[u] = i
+
+        # The position exponent is the sum of the positions of the last vertices in each *inner* interval.
+        position_exp = 0
+        for i in range(len(surj_tuple)):
+            u = surj_tuple[i]
+            if i != final_intervals[u]:
+                # last vertex of the simplex factor
+                position_exp += positions[simplex_factors[i][-1]]
+
+        # The length of a final interval is its number of elements minus one, the length of inner intervals is their number of elements.
+        lengths = []
+        for i, u in enumerate(surj_tuple):
+            if i == final_intervals[u]:
+                lengths.append(len(simplex_factors[i]) - 1)
+            else:
+                lengths.append(len(simplex_factors[i]))
 
         # Sort indices stably by their u-value to get the ordering permutation π.
         # inv_ordering[new_pos] = original index (i.e. π^{-1}).
@@ -180,30 +201,18 @@ def surjection_chain_action(
         for i in range(len(ordering_perm)):
             for j in range(i + 1, len(ordering_perm)):
                 if ordering_perm[i] > ordering_perm[j]:
-                    ordering_sign_exp += weights[i] * weights[j]
+                    ordering_sign_exp += lengths[i] * lengths[j]
 
-        # Build the sorted weight/surjection sequences.
-        sorted_weights = [weights[i] for i in inv_ordering]
-        sorted_surj = [surj_tuple[i] for i in inv_ordering]
-
-        # Action sign: for each adjacent pair in sorted order with equal u-value,
-        # add the cumulative degree of all preceding factors in sorted order.
-        action_sign_exp = 0
-        for idx in range(len(sorted_surj) - 1):
-            if sorted_surj[idx] == sorted_surj[idx + 1]:
-                action_sign_exp += sum(sorted_weights[: idx + 1])
-
-        total_sign_exp = (ordering_sign_exp + action_sign_exp) % 2
+        total_sign_exp = (ordering_sign_exp + position_exp) % 2
         return (-1) ** total_sign_exp
 
     def _join_simplices(simplex_list):
         """Concatenate a list of overlapping simplex faces into one simplex.
 
-        The AW diagonal splits `[v_0, \ldots, v_n]` into consecutive
-        sub-faces that share boundary vertices.  This function reassembles
-        the full (concatenated) simplex from such a list.  Returns ``None``
-        if the result would be degenerate (i.e. has a repeated vertex or
-        is not strictly increasing).
+        The AW diagonal splits `[v_0, \\ldots, v_n]` into consecutive sub-faces.
+        This function reassembles the full (concatenated) simplex from such a list.
+        Returns ``None`` if the result would be degenerate (i.e. has a repeated
+        vertex or is not strictly increasing).
 
         Parameters
         ----------
@@ -250,7 +259,11 @@ def surjection_chain_action(
                     continue
 
                 # --- Step 3: Berger–Fresse sign ---
-                sign = _compute_bf_sign(surj_tuple, diag_key)
+                curr_vertices: list[int] = sorted(
+                    set(v for simplex in diag_key for v in simplex)
+                )
+                vertex_to_index = {v: idx for idx, v in enumerate(curr_vertices)}
+                sign = _compute_bf_sign(surj_tuple, diag_key, vertex_to_index)
                 coeff = sign * surj_coeff * diag_coeff
 
                 # Validate each output factor individually.
@@ -329,19 +342,22 @@ def surjection_cochain_action(
             raise TypeError("All cochains must have the same base ring.")
         if c.parent().simplex_dim() != N:
             raise ValueError("All cochains must be on the same simplex dimension.")
-
     target = SimplicialCochains(N=N, base_ring=cochain_base_ring)
 
-    surj_deg = list({surj.parent().degree_on_basis(k) for k in surj.support()})
-    assert len(surj_deg) == 1
-    d = surj_deg[0]
+    # If any input cochain is zero, the result is zero.
+    for c in cochains:
+        if c == c.parent().zero():
+            return target.zero()
+
+    d = surj.degree()
     # Degree bookkeeping: cochains use the homological convention
     # degree_on_basis(σ) = -dim(σ), so deg(f_i) = -n_i.
     # The output cochain μ_u(f_1,...,f_r) has homological degree
     # deg(f_1)+...+deg(f_r)-d = -(n_1+...+n_r+d).
     # Equivalently, the dual chain dimension is n_1+...+n_r+d.
     cochain_degrees = [c.degree() for c in cochains]
-    chain_deg = -sum(cochain_degrees) - d
+    cochain_total_degree = sum(cochain_degrees)
+    chain_deg = -cochain_total_degree - d
 
     if chain_deg < 0:
         # No simplex of negative dimension exists; the action is zero.
@@ -378,6 +394,11 @@ def surjection_cochain_action(
                     break
             value += contrib
         if value != 0:
+            duality_sign_exp = d * cochain_total_degree
+            for i in range(0, r):
+                duality_sign_exp += cochain_degrees[i] * sum(cochain_degrees[i + 1 :])
+            duality_sign = -1 if duality_sign_exp % 2 == 1 else 1
+            value *= duality_sign
             result_dict[simplex] = result_dict.get(simplex, 0) + value
 
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
@@ -402,9 +423,9 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
     where `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, module: SimplicialCochains):
+    def __init__(self, N: int, base_ring=QQ):
         super().__init__(
-            module=module,
+            module=SimplicialCochains(N=N, base_ring=base_ring),
             operad_cls=Surjection,
             structure_map=self._act_impl,
         )
@@ -430,11 +451,10 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
     `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, module: SimplicialChains):
-        from uconf.models.surjection_dual import SurjectionDual
+    def __init__(self, base_ring=QQ):
 
         super().__init__(
-            module=module,
+            module=SimplicialChains(base_ring=base_ring),
             cooperad_cls=SurjectionDual,
             coaction_map=self._coact_impl,
         )
@@ -447,9 +467,6 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         """
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
-
-        from uconf.models.surjection import Surjection
-        from uconf.models.surjection_dual import SurjectionDual
 
         base_ring = self.module.base_ring()
         if v_element.parent().base_ring() != base_ring:
@@ -489,11 +506,3 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
                             flat_key = (u_basis,) + right_key
                         result += u_coeff * right_coeff * target.term(flat_key)
         return result
-
-    def act(
-        self,
-        surj: "Surjection.Element",
-        chain: "SimplicialChains.Element",
-    ):
-        """Convenience wrapper for the induced surjection chain action."""
-        return surjection_chain_action(surj, chain)
