@@ -62,14 +62,6 @@ class SimplicialChains(CombinatorialFreeModule):
             on_basis=self._boundary_on_basis, codomain=self
         )
 
-    # -- helpers ------------------------------------------------------------
-
-    def as_surjection_coalgebra(self):
-        """Return the canonical ``SurjectionDual``-coalgebra wrapper."""
-        from uconf.algebraic.simplicial import SurjectionSimplicialChainCoalgebra
-
-        return SurjectionSimplicialChainCoalgebra(self)
-
     # -- element constructor ------------------------------------------------
 
     def _element_constructor_(self, x):
@@ -293,12 +285,6 @@ class SimplicialCochains(CombinatorialFreeModule):
     def simplex_dim(self) -> int:
         """Ambient simplex dimension N."""
         return self._N
-
-    def as_surjection_algebra(self):
-        """Return the canonical ``Surjection``-algebra wrapper."""
-        from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
-
-        return SurjectionSimplicialCochainAlgebra(self)
 
     # -- element constructor ------------------------------------------------
 

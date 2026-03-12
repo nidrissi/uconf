@@ -7,6 +7,7 @@ from itertools import chain, combinations
 from sage.all import tensor
 
 from uconf import SimplicialChains, SimplicialCochains, Surjection
+from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
 
 
 # ===========================================================================
@@ -51,7 +52,8 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
 
 def _surjection_cochain_action(u, cochains):
     """Evaluate the surjection action on cochains via the algebra wrapper."""
-    alg = cochains[0].parent().as_surjection_algebra()
+    parent: SimplicialCochains = cochains[0].parent()
+    alg = SurjectionSimplicialCochainAlgebra(parent._N, base_ring=parent.base_ring())
     return alg.act(u, list(cochains))
 
 
