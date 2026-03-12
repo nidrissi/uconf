@@ -12,6 +12,8 @@ operad ``P ⊙ Q``:
 
 from __future__ import annotations
 
+from typing import Any, Iterator
+
 from sage.all import (
     CombinatorialFreeModule,
     GradedModulesWithBasis,
@@ -127,7 +129,7 @@ class HadamardProduct:
                     codomain=tensor([self, self._symmetric_group_algebra]),
                 )
 
-        def _planarize_on_basis(self, basis_element):
+        def _planarize_on_basis(self, basis_element: tuple) -> Any:
             """Planarize via the right factor's quasi-planar structure.
 
             For a basis element ``(p, q)`` where ``q`` is in an operad with
@@ -140,7 +142,7 @@ class HadamardProduct:
 
             # Planarize the right factor: q -> q_pl ⊗ σ
             right_elem = right_parent.term(right_basis)
-            right_planarized = right_parent.planarize(right_elem)
+            right_planarized = right_parent.planarize(right_elem)  # type: ignore[attr-defined]
 
             target = tensor([self, self._symmetric_group_algebra])
             result = target.zero()
@@ -237,7 +239,7 @@ class HadamardProduct:
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
-        def planar_basis_it(self, d: int):
+        def planar_basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
             A pair ``(left_key, right_key)`` is *planar* when ``right_key``
@@ -254,7 +256,7 @@ class HadamardProduct:
 
             for d_right in range(d + 1):
                 d_left = d - d_right
-                right_elems = list(right_parent.planar_basis_it(d_right))
+                right_elems = list(right_parent.planar_basis_it(d_right))  # type: ignore[attr-defined]
                 if not right_elems:
                     continue
 
@@ -262,16 +264,16 @@ class HadamardProduct:
                 left_elems = []
                 if hasattr(left_parent, "basis_it"):
                     try:
-                        left_elems = list(left_parent.basis_it(d_left))
+                        left_elems = list(left_parent.basis_it(d_left))  # type: ignore[attr-defined]
                     except TypeError:
                         # Degree-free basis_it (e.g. Lie)
-                        for elem in left_parent.basis_it():
+                        for elem in left_parent.basis_it():  # type: ignore[attr-defined]
                             for key in elem.support():
                                 if left_parent.degree_on_basis(key) == d_left:
                                     left_elems.append(left_parent.term(key))
                 else:
                     try:
-                        for key in left_parent.basis():
+                        for key in left_parent.basis():  # type: ignore[attr-defined]
                             if left_parent.degree_on_basis(key) == d_left:
                                 left_elems.append(left_parent.term(key))
                     except (AttributeError, NotImplementedError):

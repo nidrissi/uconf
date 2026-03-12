@@ -40,17 +40,19 @@ Hadamard product :math:`P \\otimes \\mathcal{E}` or :math:`P \\otimes \\Surj`.
 
 from __future__ import annotations
 
-from sage.all import QQ, SymmetricGroup, tensor
+from typing import Any, Optional
+
+from sage.all import SymmetricGroup, tensor
 
 from uconf.models.barratt_eccles import BarrattEccles
 
 
 def e_comodule_on_generator(
-    dec_elem,
-    cooperad_component,
-    cobar_component,
-    be_component=None,
-):
+    dec_elem: Any,
+    cooperad_component: Any,
+    cobar_component: Any,
+    be_component: Optional[Any] = None,
+) -> Any:
     """Compute the :math:`\\mathcal{E}_\\nu`-comodule map on a planar generator.
 
     Given a planar element *dec_elem* :math:`\\in \\mathcal{C}_\\mathrm{pl}(n)`,
@@ -109,9 +111,7 @@ def e_comodule_on_generator(
         return target.zero()
 
     # Maximum recursion depth = degree of the input element
-    max_deg = max(
-        cooperad_component.degree_on_basis(key) for key in dec_elem.support()
-    )
+    max_deg = max(cooperad_component.degree_on_basis(key) for key in dec_elem.support())
 
     result = target.zero()
 

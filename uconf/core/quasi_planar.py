@@ -19,8 +19,7 @@ This module provides:
 
 from __future__ import annotations
 
-from itertools import product as cartesian_product
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -32,11 +31,11 @@ class QuasiPlanarProtocol(Protocol):
     """
 
     def arity(self) -> int: ...
-    def planarize(self, x): ...
-    def boundary(self, x): ...
-    def term(self, key): ...
-    def zero(self): ...
-    def base_ring(self): ...
+    def planarize(self, x: Any) -> Any: ...
+    def boundary(self, x: Any) -> Any: ...
+    def term(self, key: Any) -> Any: ...
+    def zero(self) -> Any: ...
+    def base_ring(self) -> Any: ...
 
 
 class QuasiPlanarMixin:
@@ -54,7 +53,14 @@ class QuasiPlanarMixin:
     decomposition ``P(n) = P_pl(n) ⊗ k[S_n]``.
     """
 
-    def d_sigma(self, x, sigma):
+    if TYPE_CHECKING:  # declare cooperating methods for static analysis
+
+        def arity(self) -> int: ...
+        def boundary(self, x: Any) -> Any: ...
+        def planarize(self, x: Any) -> Any: ...
+        def zero(self) -> Any: ...
+
+    def d_sigma(self, x: Any, sigma: Any) -> Any:
         """Return the ``sigma``-component of ``boundary(x)``.
 
         Given a planar element ``x ∈ P_pl(n)`` (or any element), compute
@@ -73,7 +79,7 @@ class QuasiPlanarMixin:
         The planar element ``d_σ(x) ∈ P_pl(n)`` such that the σ-component
         of ``d(x)`` is ``d_σ(x) ⊗ σ``.
         """
-        from sage.all import SymmetricGroup, SymmetricGroupAlgebra
+        from sage.all import SymmetricGroup
 
         n = self.arity()
         S_n = SymmetricGroup(n)
@@ -94,11 +100,11 @@ class QuasiPlanarMixin:
             # group_key is a basis key of SymmetricGroupAlgebra,
             # which is a permutation
             if S_n(group_key) == sigma:
-                result += coeff * self.term(planar_key)
+                result += coeff * self.term(planar_key)  # type: ignore[attr-defined]
 
         return result
 
-    def d_sigma_iterate(self, x, sigmas):
+    def d_sigma_iterate(self, x: Any, sigmas: Iterable[Any]) -> Any:
         """Apply ``d_sigma`` iteratively for a sequence of permutations.
 
         Computes ``d_{σ₁} ∘ d_{σ₂} ∘ ··· ∘ d_{σₖ}(x)`` where

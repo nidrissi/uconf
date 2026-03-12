@@ -15,7 +15,7 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from typing import Iterator, Literal
+from typing import Any, Iterator, Literal
 
 
 def is_leaf(node) -> bool:
@@ -433,8 +433,8 @@ def _subtrees_for_leaves(
 def enumerate_planar_trees_in_degree(
     arity: int,
     weight_bound: int,
-    operad_cls,
-    base_ring,
+    operad_cls: Any,
+    base_ring: Any,
     target_degree: int,
 ) -> Iterator[tuple]:
     """Enumerate planar-decorated trees in ``B(P)(arity)`` of bar degree ``target_degree``.
@@ -516,10 +516,10 @@ def enumerate_planar_trees_in_degree(
 def _planar_subtrees_for_leaves(
     leaf_set: tuple,
     max_weight: int,
-    operad_cls,
-    base_ring,
+    operad_cls: Any,
+    base_ring: Any,
     target_degree: int,
-) -> Iterator:
+) -> Iterator[tuple | int]:
     """Enumerate planar subtrees for a given leaf set and exact bar degree.
 
     A single leaf always has bar degree 0.
