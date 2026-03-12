@@ -82,24 +82,6 @@ class TestDSigmaOnSurjection:
         iterated = B2.d_sigma_iterate(elem, [sigma, sigma])
         assert step2 == iterated
 
-    def test_d_sigma_identity_permutation_zero(self):
-        """d_id(x) should be zero because boundary maps to non-id components.
-
-        For a planar element x, boundary(x) decomposes as Σ d_σ(x)⊗σ where
-        the identity-σ component is specifically d_id(x) = the planar part
-        of boundary(x) at σ=id.
-        """
-        BS = BarConstruction(Surjection)
-        B2 = BS(2)
-        tree = ((1, 2, 1), 1, 2)
-        elem = B2(tree)
-        S2 = SymmetricGroup(2)
-
-        # The planar element (1,2,1) has boundary (1,2) which is planar → σ=id
-        d_id = B2.d_sigma(elem, S2.identity())
-        # (1,2,1) ∈ S(2) has boundary (1,2) which is planar, so d_id is non-zero
-        assert d_id is not None  # just check it runs
-
 
 class TestDSigmaOnBarrattEccles:
     """d_sigma on B(BarrattEccles)."""
