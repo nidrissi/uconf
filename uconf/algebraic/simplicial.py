@@ -114,6 +114,7 @@ def surjection_chain_action(
     def _compute_bf_sign(
         surj_tuple: tuple[int, ...],
         simplex_factors: tuple[tuple[int, ...], ...],
+        positions: dict[int, int],
     ):
         r"""
         Compute the Berger–Fresse sign for a given surjection and simplex factors.
@@ -132,6 +133,9 @@ def surjection_chain_action(
             A tuple of tuples representing the simplex factors (vertices) corresponding
             to each position in surj_tuple. Each inner tuple contains vertex indices.
 
+        positions: dict[int, int]
+            A mapping from each unique value in surj_tuple to its position in the overall chain.
+
         Returns
         -------
         int
@@ -143,7 +147,7 @@ def surjection_chain_action(
 
         - **Final intervals**: Positions i where surj_tuple[i] appears for the last time
         - **Inner intervals**: All other positions
-        - **position_exp**: Sum of the last vertices in all inner interval simplex factors
+        - **position_exp**: Sum of the positions of the last vertices in all inner interval simplex factors
         - **ordering_sign_exp**: Koszul sign computed from inversions when sorting by
           u-values, weighted by lengths of simplex factors
         - **lengths**: For final intervals, the length is len(simplex_factor) - 1;
@@ -166,14 +170,13 @@ def surjection_chain_action(
             if u not in final_intervals:
                 final_intervals[u] = i
 
-        # The position exponent is the sum of the last values in each *inner* interval.
+        # The position exponent is the sum of the positions of the last vertices in each *inner* interval.
         position_exp = 0
         for i in range(len(surj_tuple)):
             u = surj_tuple[i]
             if i != final_intervals[u]:
-                position_exp += simplex_factors[i][
-                    -1
-                ]  # last vertex of the simplex factor
+                # last vertex of the simplex factor
+                position_exp += positions[simplex_factors[i][-1]]
 
         # The length of a final interval is its number of elements minus one, the length of inner intervals is their number of elements.
         lengths = []
@@ -257,7 +260,11 @@ def surjection_chain_action(
                     continue
 
                 # --- Step 3: Berger–Fresse sign ---
-                sign = _compute_bf_sign(surj_tuple, diag_key)
+                curr_vertices: list[int] = sorted(
+                    set(v for simplex in diag_key for v in simplex)
+                )
+                vertex_to_index = {v: idx for idx, v in enumerate(curr_vertices)}
+                sign = _compute_bf_sign(surj_tuple, diag_key, vertex_to_index)
                 coeff = sign * surj_coeff * diag_coeff
 
                 # Validate each output factor individually.
