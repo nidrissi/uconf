@@ -140,7 +140,7 @@ def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
     Notes
     -----
     The sign is computed as:
-        - Initial sign based on degrees: (-1)^(d*n*(n-1)/2 + (d*(d-1)/2)*((n+2)*(n-1)/2))
+        - Initial sign based on degrees: (-1)^(d*n*(n-1)/2 + (d*(d-1)/2)*((n-2)*(n-1)/2))
         - Multiplied by the signs of d extracted permutations.
     """
     if n == 1:

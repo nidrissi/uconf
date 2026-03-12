@@ -133,9 +133,9 @@ def surjection_chain_action(
             A tuple of tuples representing the simplex factors (vertices) corresponding
             to each position in surj_tuple. Each inner tuple contains vertex indices.
 
-        positions: dict[int, int]
-            A mapping from each unique value in surj_tuple to its position in the overall chain.
-
+        positions : dict[int, int]
+            A mapping from each vertex label (an integer appearing in the simplex factors)
+            to its position in the ambient simplex.
         Returns
         -------
         int
@@ -209,11 +209,10 @@ def surjection_chain_action(
     def _join_simplices(simplex_list):
         """Concatenate a list of overlapping simplex faces into one simplex.
 
-        The AW diagonal splits `[v_0, \\ldots, v_n]` into consecutive
-        sub-faces that share boundary vertices.  This function reassembles
-        the full (concatenated) simplex from such a list.  Returns ``None``
-        if the result would be degenerate (i.e. has a repeated vertex or
-        is not strictly increasing).
+        The AW diagonal splits `[v_0, \\ldots, v_n]` into consecutive sub-faces.
+        This function reassembles the full (concatenated) simplex from such a list.
+        Returns ``None`` if the result would be degenerate (i.e. has a repeated
+        vertex or is not strictly increasing).
 
         Parameters
         ----------

@@ -1,5 +1,8 @@
 """Tests for simplicial chains, cochains, and the surjection action."""
 
+# TODO Add tests for the surjection action on chains
+# TODO Add tests for cochain boundaries
+
 from random import Random
 from typing import Iterable
 
