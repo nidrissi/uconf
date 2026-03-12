@@ -25,6 +25,7 @@ from sage.all import (
     QQ,
     SymmetricGroup,
     SymmetricGroupAlgebra,
+    UniqueRepresentation,
     tensor,
 )
 
@@ -37,7 +38,6 @@ from uconf.core.trees import (
     children,
     decoration,
     enumerate_planar_trees_in_degree,
-    enumerate_trees_by_weight,
     internal_edges_dfs,
     is_leaf,
     leaves,
@@ -54,7 +54,7 @@ from uconf.core.trees import (
 )
 
 
-class BarConstruction:
+class BarConstruction(UniqueRepresentation):
     """Factory for bar construction components of a connected dg-operad.
 
     Args:
@@ -126,10 +126,8 @@ class BarConstruction:
                 category=GradedModulesWithBasis(base_ring),
             )
             self.rename(name)
-            self._symmetric_group = SymmetricGroup(n) if n > 0 else None
-            self._symmetric_group_algebra = (
-                SymmetricGroupAlgebra(base_ring, n) if n > 0 else None
-            )
+            self._symmetric_group = SymmetricGroup(n)
+            self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
 
             self.boundary = self.module_morphism(
                 on_basis=self._boundary_on_basis,

@@ -20,6 +20,7 @@ from sage.all import (
     QQ,
     SymmetricGroup,
     SymmetricGroupAlgebra,
+    UniqueRepresentation,
     tensor,
 )
 
@@ -27,7 +28,7 @@ from uconf.core.operad import OperadLike
 from uconf.core.quasi_planar import QuasiPlanarMixin
 
 
-class HadamardProduct:
+class HadamardProduct(UniqueRepresentation):
     """Factory for Hadamard-product operad components."""
 
     def __init__(

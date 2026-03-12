@@ -8,6 +8,7 @@ from sage.all import (
     GradedModulesWithBasis,
     QQ,
     SymmetricGroup,
+    UniqueRepresentation,
     tensor,
 )
 
@@ -19,7 +20,7 @@ from uconf.core.signs import (
 )
 
 
-class ShiftedCooperad:
+class ShiftedCooperad(UniqueRepresentation):
     """Factory for shifted cooperad components.
 
     For a cooperad ``C`` and integer shift ``d``, the arity-``n`` component is
