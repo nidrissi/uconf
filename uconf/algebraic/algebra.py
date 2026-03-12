@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from uconf.core.operad import OperadLike, OperadProtocol
 
@@ -115,3 +115,6 @@ class OperadAlgebra(Generic[OperadElementType, AlgebraElementType]):
             The boundary ∂_A(a) in the module.
         """
         return self.module.boundary(a)
+
+    def __call__(self, *args: Any, **kwds: Any) -> AlgebraElementType:
+        return self.module(*args, **kwds)
