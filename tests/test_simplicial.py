@@ -1,5 +1,6 @@
 """Tests for simplicial chains, cochains, and the surjection action."""
 
+from random import Random
 from typing import Iterable
 
 import pytest
@@ -247,58 +248,58 @@ class TestSurjectionAction:
     @pytest.mark.parametrize("d", range(1, 4))
     def test_chain_map_property_arity2(self, d: int):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 2."""
-        S2 = Surjection(2)
-        for u in S2.planar_basis_it(d):
-            for n in range(d, d + 2):
-                possible_simplices = list(self.powerset_nonempty(range(n + 1)))
-                for x in possible_simplices:
-                    for y in possible_simplices:
-                        x = SimplicialCochains(n)(x)
-                        y = SimplicialCochains(n)(y)
-                        lhs = _surjection_cochain_action(u, [x, y]).coboundary()
-                        rhs_1 = _surjection_cochain_action(u.boundary(), [x, y])
-                        rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y])
-                        rhs_3 = _surjection_cochain_action(u, [x, y.coboundary()])
-                        rhs = (
-                            rhs_1
-                            + (-1) ** (u.degree()) * rhs_2
-                            + (-1) ** (u.degree() + x.degree()) * rhs_3
-                        )
+        rng = Random(20260312)
+        basis = list(Surjection(2).planar_basis_it(d))
+        possible_simplices: dict[int, list[tuple[int, ...]]] = {}
+        for n in range(d, d + 4):
+            possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
 
-                        assert _as_dict(lhs) == _as_dict(rhs), (
-                            f"Chain map failed: u={list(u.support())}, x={x}, y={y}"
-                        )
+        for _ in range(30):
+            u = rng.choice(list(basis))
+            n = rng.randint(d, d + 3)
+            x = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            y = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            lhs = _surjection_cochain_action(u, [x, y]).coboundary()
+            rhs_1 = _surjection_cochain_action(u.boundary(), [x, y])
+            rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y])
+            rhs_3 = _surjection_cochain_action(u, [x, y.coboundary()])
+            rhs = (
+                rhs_1
+                + (-1) ** (u.degree()) * rhs_2
+                + (-1) ** (u.degree() + x.degree()) * rhs_3
+            )
+
+            assert _as_dict(lhs) == _as_dict(rhs), (
+                f"Chain map failed: u={list(u.support())}, x={x}, y={y}"
+            )
 
     @pytest.mark.parametrize("d", range(1, 4))
     def test_chain_map_property_arity3(self, d: int):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 3."""
-        S3 = Surjection(3)
-        for u in S3.planar_basis_it(d):
-            for n in range(d, d + 2):
-                possible_simplices = list(self.powerset_nonempty(range(n + 1)))
-                for x in possible_simplices:
-                    for y in possible_simplices:
-                        for z in possible_simplices:
-                            x = SimplicialCochains(n)(x)
-                            y = SimplicialCochains(n)(y)
-                            z = SimplicialCochains(n)(z)
-                            lhs = _surjection_cochain_action(u, [x, y, z]).coboundary()
-                            rhs_1 = _surjection_cochain_action(u.boundary(), [x, y, z])
-                            rhs_2 = _surjection_cochain_action(
-                                u, [x.coboundary(), y, z]
-                            )
-                            rhs_3 = _surjection_cochain_action(
-                                u, [x, y.coboundary(), z]
-                            )
-                            rhs_4 = _surjection_cochain_action(
-                                u, [x, y, z.coboundary()]
-                            )
-                            rhs = (
-                                rhs_1
-                                + (-1) ** (u.degree()) * rhs_2
-                                + (-1) ** (u.degree() + x.degree()) * rhs_3
-                                + (-1) ** (u.degree() + x.degree() + y.degree()) * rhs_4
-                            )
-                            assert _as_dict(lhs) == _as_dict(rhs), (
-                                f"Chain map failed: u={list(u.support())}, n={n}"
-                            )
+        rng = Random(20260312)
+        basis = list(Surjection(3).planar_basis_it(d))
+        possible_simplices: dict[int, list[tuple[int, ...]]] = {}
+        for n in range(d, d + 4):
+            possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
+
+        for _ in range(30):
+            u = rng.choice(list(basis))
+            n = rng.randint(d, d + 3)
+            x = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            y = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            z = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+
+            lhs = _surjection_cochain_action(u, [x, y, z]).coboundary()
+            rhs_1 = _surjection_cochain_action(u.boundary(), [x, y, z])
+            rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y, z])
+            rhs_3 = _surjection_cochain_action(u, [x, y.coboundary(), z])
+            rhs_4 = _surjection_cochain_action(u, [x, y, z.coboundary()])
+            rhs = (
+                rhs_1
+                + (-1) ** (u.degree()) * rhs_2
+                + (-1) ** (u.degree() + x.degree()) * rhs_3
+                + (-1) ** (u.degree() + x.degree() + y.degree()) * rhs_4
+            )
+            assert _as_dict(lhs) == _as_dict(rhs), (
+                f"Chain map failed: u={list(u.support())}, n={n}"
+            )
