@@ -237,6 +237,50 @@ class HadamardProduct:
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
+        def planar_basis_it(self, d: int):
+            """Iterate over planar basis elements of degree ``d``.
+
+            A pair ``(left_key, right_key)`` is *planar* when ``right_key``
+            is a planar element of the right factor.  Requires the right
+            factor to implement ``planar_basis_it``.  The left factor is
+            iterated with ``basis_it(d_left)`` (degree-indexed) when
+            available, or with ``basis_it()`` filtered by degree otherwise.
+            """
+            if not hasattr(self._right_parent, "planar_basis_it"):
+                return
+
+            left_parent = self._left_parent
+            right_parent = self._right_parent
+
+            for d_right in range(d + 1):
+                d_left = d - d_right
+                right_elems = list(right_parent.planar_basis_it(d_right))
+                if not right_elems:
+                    continue
+
+                # Gather left elements at degree d_left.
+                left_elems = []
+                if hasattr(left_parent, "basis_it"):
+                    try:
+                        left_elems = list(left_parent.basis_it(d_left))
+                    except TypeError:
+                        # Degree-free basis_it (e.g. Lie)
+                        for elem in left_parent.basis_it():
+                            for key in elem.support():
+                                if left_parent.degree_on_basis(key) == d_left:
+                                    left_elems.append(left_parent.term(key))
+                else:
+                    try:
+                        for key in left_parent.basis():
+                            if left_parent.degree_on_basis(key) == d_left:
+                                left_elems.append(left_parent.term(key))
+                    except (AttributeError, NotImplementedError):
+                        pass
+
+                for left_elem in left_elems:
+                    for right_elem in right_elems:
+                        yield self.from_factors(left_elem, right_elem)
+
         def from_factors(
             self, left_element, right_element
         ) -> "HadamardProduct.Element":
