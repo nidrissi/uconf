@@ -19,7 +19,7 @@ from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
 
-from sage.all import tensor
+from sage.all import QQ, tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
@@ -417,9 +417,9 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
     where `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, module: SimplicialCochains):
+    def __init__(self, N: int, base_ring=QQ):
         super().__init__(
-            module=module,
+            module=SimplicialCochains(N=N, base_ring=base_ring),
             operad_cls=Surjection,
             structure_map=self._act_impl,
         )
@@ -445,10 +445,10 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
     `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, module: SimplicialChains):
+    def __init__(self, base_ring=QQ):
 
         super().__init__(
-            module=module,
+            module=SimplicialChains(base_ring=base_ring),
             cooperad_cls=SurjectionDual,
             coaction_map=self._coact_impl,
         )
