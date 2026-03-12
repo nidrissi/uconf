@@ -332,6 +332,328 @@ class TestEComoduleMap:
 
 
 # ---------------------------------------------------------------------------
+# Comodule axiom tests
+# ---------------------------------------------------------------------------
+
+
+def _delta_equiv(cobar_key, B_n, O_n, BE_n):
+    """Compute Δ equivariantly via planarisation and diagonal S_n action.
+
+    For a weight-1 cobar generator ``(bar_tree, l_1, …, l_n)`` whose bar-tree
+    decoration may be non-planar, planarise ``bar_tree`` in ``B_n``, then
+    apply the comodule formula to the planar representative and act diagonally
+    (on both the BE and the outer-cobar-leaf components) by the resulting
+    permutation.  Handles non-standard outer leaf labels in the same stroke.
+    """
+    T_loc = tensor([BE_n, O_n])
+    n = B_n.arity()
+    inner_bar_tree = cobar_key[0]
+    outer_leaves = list(cobar_key[1:])
+
+    bar_elem = B_n.term(inner_bar_tree)
+    planarized = B_n.planarize(bar_elem)
+
+    result = T_loc.zero()
+    Sn = B_n._symmetric_group
+    for (pl_key, sigma_key), pl_coeff in planarized:
+        sigma = Sn(sigma_key)
+        sigma_vals = list(sigma.tuple())
+        # sigma permutes the outer leaves: new_outer[j] = sigma(outer_leaves[j])
+        new_outer = [sigma_vals[outer_leaves[j] - 1] for j in range(n)]
+
+        pl_elem = B_n.term(pl_key)
+        delta_std = e_comodule_on_generator(pl_elem, B_n, O_n, BE_n)
+
+        # Diagonal action of new_outer on E ⊗ Ω(C):
+        #   BE part : precompose each permutation by the leaf permutation
+        #   Ω(C) part: permute the outer cobar leaf labels
+        for (be_key, ck), c in delta_std:
+            new_be = BE_n.term(be_key).permute(new_outer)
+            new_ck = O_n.term(ck).permute(new_outer)
+            result += c * pl_coeff * new_be.tensor(new_ck)
+
+    return result
+
+
+def _normalize_oc(oc_elem, B_n, O_n):
+    """Rewrite Ω(C)(n) elements using only planar bar-tree decorations.
+
+    Converts every non-planar cobar generator ``(bar_tree, l_1, …, l_n)``
+    to an equivalent linear combination of generators whose decoration
+    ``bar_tree`` is planar, by applying ``B_n.planarize`` and composing
+    the resulting permutation into the outer leaf labels.
+    """
+    n = B_n.arity()
+    result = O_n.zero()
+    Sn = B_n._symmetric_group
+    for cobar_key, coeff in oc_elem:
+        from uconf.core.trees import is_leaf
+
+        if is_leaf(cobar_key):
+            result += coeff * O_n.term(cobar_key)
+            continue
+        inner_bar_tree = cobar_key[0]
+        outer_leaves = list(cobar_key[1:])
+        bar_elem = B_n.term(inner_bar_tree)
+        planarized = B_n.planarize(bar_elem)
+        for (pl_key, sigma_key), pl_coeff in planarized:
+            sigma = Sn(sigma_key)
+            sigma_vals = list(sigma.tuple())
+            new_outer = [sigma_vals[outer_leaves[j] - 1] for j in range(n)]
+            new_cobar_key = tuple([pl_key] + new_outer)
+            result += coeff * pl_coeff * O_n.term(new_cobar_key)
+    return result
+
+
+def _normalize_tensor_E_OC(tensor_elem, B_n, O_n, BE_n):
+    """Normalise an element of BE_n ⊗ Ω(C)_n by canonicalising the Ω(C) part."""
+    T_loc = tensor([BE_n, O_n])
+    result = T_loc.zero()
+    for (be_key, cobar_key), coeff in tensor_elem:
+        be_elem = BE_n.term(be_key)
+        norm_oc = _normalize_oc(O_n.term(cobar_key), B_n, O_n)
+        result += coeff * be_elem.tensor(norm_oc)
+    return result
+
+
+class TestComoduleAxioms:
+    """Check that ``e_comodule_on_generator`` defines a genuine dg E-comodule.
+
+    Two axioms are verified for every planar generator in the bar cooperad
+    B(Lie⊙E)(2):
+
+    1. **Compatibility with the differential** (chain-map property):
+       ``d_tensor(Δ(x)) = Δ(d_Ω(x))`` where both sides are canonicalised
+       to planar bar-tree representatives before comparison (the cobar
+       construction's basis over-represents the module, so non-planar
+       generators must first be identified with signed permutations of
+       planar ones via ``_normalize_tensor_E_OC`` / ``_delta_equiv``).
+
+    2. **Coassociativity**:
+       ``(Δ_E ⊗ id_Ω)(Δ(x)) = (id_E ⊗ Δ)(Δ(x))``
+       where ``Δ_E`` is the Alexander--Whitney diagonal on the
+       Barratt-Eccles complex and the second ``Δ`` is applied equivariantly
+       via ``_delta_equiv``.
+    """
+
+    def test_chain_map_degree0_generator(self):
+        """Chain-map axiom holds trivially for a degree-0 planar generator.
+
+        For a degree-0 cobar generator both ``d_Ω(x)`` and ``d(Δ(x))``
+        vanish, so the equality ``d(Δ(x)) = Δ(d_Ω(x))`` reduces to 0 = 0.
+        """
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        S2 = BE2._symmetric_group
+        id2 = S2.identity()
+
+        had_d0 = ((1,), (id2,))
+        bar_d0 = (had_d0, 1, 2)
+        dec_elem = BH2.term(bar_d0)
+        cobar_gen = OBH2.term((bar_d0, 1, 2))
+
+        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        T = tensor([BE2, OBH2])
+
+        d_delta = T.zero()
+        for (be_key, ck), coeff in delta_x:
+            be_elem = BE2.term(be_key)
+            cobar_el = OBH2.term(ck)
+            deg_e = BE2.degree_on_basis(be_key)
+            for nbk, c in be_elem.boundary():
+                d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+            sign = (-1) ** deg_e
+            for nck, c in cobar_el.boundary():
+                d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+
+        d_omega_x = cobar_gen.boundary()
+        delta_d_omega = T.zero()
+        for ck, coeff in d_omega_x:
+            delta_d_omega += coeff * _delta_equiv(ck, BH2, OBH2, BE2)
+
+        assert d_delta == T.zero()
+        assert delta_d_omega == T.zero()
+
+    def test_chain_map_degree1_planar_generator(self):
+        """Chain-map axiom holds for the canonical degree-1 planar generator.
+
+        After canonicalising both sides to planar bar-tree representatives,
+        ``normalize(d(Δ(x))) == Δ_equiv(d_Ω(x))``.
+        """
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        S2 = BE2._symmetric_group
+        id2 = S2.identity()
+        s21 = S2([2, 1])
+
+        had_d1 = ((1,), (id2, s21))
+        bar_d1 = (had_d1, 1, 2)
+        dec_elem = BH2.term(bar_d1)
+        cobar_gen = OBH2.term((bar_d1, 1, 2))
+
+        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        T = tensor([BE2, OBH2])
+
+        # d_tensor(Δ(x))
+        d_delta = T.zero()
+        for (be_key, ck), coeff in delta_x:
+            be_elem = BE2.term(be_key)
+            cobar_el = OBH2.term(ck)
+            deg_e = BE2.degree_on_basis(be_key)
+            for nbk, c in be_elem.boundary():
+                d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+            sign = (-1) ** deg_e
+            for nck, c in cobar_el.boundary():
+                d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+
+        norm_d_delta = _normalize_tensor_E_OC(d_delta, BH2, OBH2, BE2)
+
+        # Δ_equiv(d_Ω(x))
+        d_omega_x = cobar_gen.boundary()
+        delta_d_omega = T.zero()
+        for ck, coeff in d_omega_x:
+            delta_d_omega += coeff * _delta_equiv(ck, BH2, OBH2, BE2)
+
+        assert norm_d_delta == delta_d_omega, (
+            f"Chain-map failed:\n  normalize(d(Δ(x))) = {norm_d_delta}\n"
+            f"  Δ(d_Ω(x))          = {delta_d_omega}"
+        )
+
+    def test_chain_map_all_degree1_planar_generators(self):
+        """Chain-map axiom holds for every degree-1 planar B(Lie⊙E)(2) generator."""
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        T = tensor([BE2, OBH2])
+
+        for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
+            dec_key = list(pl_elem.support())[0]
+            dec_elem = BH2.term(dec_key)
+            cobar_gen = OBH2.term((dec_key, 1, 2))
+
+            delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+
+            d_delta = T.zero()
+            for (be_key, ck), coeff in delta_x:
+                be_elem = BE2.term(be_key)
+                cobar_el = OBH2.term(ck)
+                deg_e = BE2.degree_on_basis(be_key)
+                for nbk, c in be_elem.boundary():
+                    d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+                sign = (-1) ** deg_e
+                for nck, c in cobar_el.boundary():
+                    d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+
+            norm_d_delta = _normalize_tensor_E_OC(d_delta, BH2, OBH2, BE2)
+
+            d_omega_x = cobar_gen.boundary()
+            delta_d_omega = T.zero()
+            for ck, coeff in d_omega_x:
+                delta_d_omega += coeff * _delta_equiv(ck, BH2, OBH2, BE2)
+
+            assert norm_d_delta == delta_d_omega, (
+                f"Chain-map failed for generator {dec_key}"
+            )
+
+    def test_coassociativity_degree0_generator(self):
+        """Coassociativity holds for the degree-0 planar generator.
+
+        ``(Δ_E ⊗ id)(Δ(x)) == (id ⊗ Δ_equiv)(Δ(x))`` in BE ⊗ BE ⊗ Ω(C).
+        """
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        S2 = BE2._symmetric_group
+        id2 = S2.identity()
+
+        had_d0 = ((1,), (id2,))
+        bar_d0 = (had_d0, 1, 2)
+        dec_elem = BH2.term(bar_d0)
+
+        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        T_EE_OC = tensor([BE2, BE2, OBH2])
+
+        lhs = T_EE_OC.zero()
+        rhs = T_EE_OC.zero()
+
+        for (be_key, ck), coeff in delta_x:
+            be_elem = BE2.term(be_key)
+            cobar_elem = OBH2.term(ck)
+
+            for (lk, rk), dc in be_elem.diagonal():
+                lhs += coeff * dc * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
+
+            for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
+                rhs += coeff * d_coeff * be_elem.tensor(BE2.term(be2_key)).tensor(
+                    OBH2.term(ck2)
+                )
+
+        assert lhs == rhs, (
+            f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
+        )
+
+    def test_coassociativity_degree1_generator(self):
+        """Coassociativity holds for the canonical degree-1 planar generator."""
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        S2 = BE2._symmetric_group
+        id2 = S2.identity()
+        s21 = S2([2, 1])
+
+        had_d1 = ((1,), (id2, s21))
+        bar_d1 = (had_d1, 1, 2)
+        dec_elem = BH2.term(bar_d1)
+
+        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        T_EE_OC = tensor([BE2, BE2, OBH2])
+
+        lhs = T_EE_OC.zero()
+        rhs = T_EE_OC.zero()
+
+        for (be_key, ck), coeff in delta_x:
+            be_elem = BE2.term(be_key)
+            cobar_elem = OBH2.term(ck)
+
+            for (lk, rk), dc in be_elem.diagonal():
+                lhs += coeff * dc * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
+
+            for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
+                rhs += coeff * d_coeff * be_elem.tensor(BE2.term(be2_key)).tensor(
+                    OBH2.term(ck2)
+                )
+
+        assert lhs == rhs, (
+            f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
+        )
+
+    def test_coassociativity_all_degree1_planar_generators(self):
+        """Coassociativity holds for every degree-1 planar generator of B(Lie⊙E)(2)."""
+        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        T_EE_OC = tensor([BE2, BE2, OBH2])
+
+        for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
+            dec_key = list(pl_elem.support())[0]
+            dec_elem = BH2.term(dec_key)
+            delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+
+            lhs = T_EE_OC.zero()
+            rhs = T_EE_OC.zero()
+
+            for (be_key, ck), coeff in delta_x:
+                be_elem = BE2.term(be_key)
+                cobar_elem = OBH2.term(ck)
+
+                for (lk, rk), dc in be_elem.diagonal():
+                    lhs += (
+                        coeff
+                        * dc
+                        * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
+                    )
+
+                for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
+                    rhs += coeff * d_coeff * be_elem.tensor(
+                        BE2.term(be2_key)
+                    ).tensor(OBH2.term(ck2))
+
+            assert lhs == rhs, (
+                f"Coassociativity failed for generator {dec_key}"
+            )
+
+
+# ---------------------------------------------------------------------------
 # QuasiPlanarMixin inheritance checks
 # ---------------------------------------------------------------------------
 

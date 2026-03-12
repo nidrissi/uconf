@@ -362,7 +362,7 @@ class BarrattEccles(CombinatorialFreeModule):
 
             # 2. Iterate linearly
             for basis_tuple, coeff in self:
-                k = len(basis_tuple)  # Degree
+                k = len(basis_tuple) - 1  # Degree (length - 1)
 
                 # 3. Apply formula: Sum (front_face) (x) (back_face)
                 for i in range(k + 1):
