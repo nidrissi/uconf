@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from uconf.core.cooperad import CooperadLike, CooperadProtocol
 
@@ -110,3 +110,6 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
             The boundary ∂_V(v) in the module.
         """
         return self.module.boundary(v)
+
+    def __call__(self, *args: Any, **kwds: Any) -> CoalgebraElementType:
+        return self.module(*args, **kwds)
