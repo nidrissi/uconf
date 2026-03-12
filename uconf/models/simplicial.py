@@ -50,7 +50,7 @@ class SimplicialChains(CombinatorialFreeModule):
     """
 
     def __init__(self, base_ring=QQ):
-        name = "C"
+        name = "NΔ"
         super().__init__(
             base_ring,
             tuple,
@@ -61,14 +61,6 @@ class SimplicialChains(CombinatorialFreeModule):
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis, codomain=self
         )
-
-    # -- helpers ------------------------------------------------------------
-
-    def as_surjection_coalgebra(self):
-        """Return the canonical ``SurjectionDual``-coalgebra wrapper."""
-        from uconf.algebraic.simplicial import SurjectionSimplicialChainCoalgebra
-
-        return SurjectionSimplicialChainCoalgebra(self)
 
     # -- element constructor ------------------------------------------------
 
@@ -142,13 +134,13 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- standard element ---------------------------------------------------
 
     @staticmethod
-    def standard_element(n: int) -> "SimplicialChains.Element":
+    def fundamental_chain(n: int) -> "SimplicialChains.Element":
         r"""The chain `[0, 1, \dots, n]` in `C_n(\Delta^n)`.
 
         Parameters
         ----------
         n : int  (non-negative)
-            Dimension of the standard simplex.
+            Dimension of the standard simplex ``Δ^n`` (so the chain lies in degree ``n``).
         """
         assert n >= 0
         return SimplicialChains().term(tuple(range(n + 1)))
@@ -277,7 +269,7 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     def __init__(self, N: int, base_ring=QQ):
         assert N >= 0
-        name = f"C*({N})"
+        name = f"N*Δ{N}"
         super().__init__(
             base_ring,
             tuple,
@@ -293,12 +285,6 @@ class SimplicialCochains(CombinatorialFreeModule):
     def simplex_dim(self) -> int:
         """Ambient simplex dimension N."""
         return self._N
-
-    def as_surjection_algebra(self):
-        """Return the canonical ``Surjection``-algebra wrapper."""
-        from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
-
-        return SurjectionSimplicialCochainAlgebra(self)
 
     # -- element constructor ------------------------------------------------
 
@@ -328,8 +314,8 @@ class SimplicialCochains(CombinatorialFreeModule):
     def _coboundary_on_basis(self, simplex: tuple):
         r"""Coboundary: the transpose of the simplicial boundary.
 
-        `(\delta f)(\sigma) = f(\partial \sigma)`.  Inserts one vertex
-        at each valid position (which lowers homological degree by 1).
+        `(\delta f)(\sigma) = - (-1)^{|f|} f(\partial \sigma)`.
+        Inserts one vertex at each valid position (which lowers homological degree by 1).
         """
 
         def terms():
@@ -343,10 +329,17 @@ class SimplicialCochains(CombinatorialFreeModule):
                     candidates = range(simplex[j - 1] + 1, simplex[j])
                 for w in candidates:
                     augmented = simplex[:j] + (w,) + simplex[j:]
-                    sign = (-1) ** (j % 2)
+                    sign_exp = j + 1 + dim
+                    sign = -1 if sign_exp % 2 == 1 else 1
                     yield (augmented, sign)
 
         return self.sum_of_terms(terms())
+
+    # -- volume form ---------------------------------------------------------
+    @staticmethod
+    def volume_form(N: int) -> "SimplicialCochains.Element":
+        """The cochain evaluating to 1 on the fundamental chain of `Δ^N`."""
+        return SimplicialCochains(N).term(tuple(range(N + 1)))
 
     # -- evaluation pairing -------------------------------------------------
 

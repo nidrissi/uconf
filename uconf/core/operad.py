@@ -17,6 +17,10 @@ class OperadProtocol(Protocol):
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
+    def __call__(self, input) -> Element:
+        """Returns the basis element corresponding to basis key ``input``."""
+        ...
+
     def arity(self) -> int:
         """Returns the arity of this operad component."""
         ...
