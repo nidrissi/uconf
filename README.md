@@ -120,7 +120,7 @@ SimplicialChains.tensor_boundary(y)
 # Coalgebra (chain-side) wrapper
 coalg = SurjectionSimplicialChainCoalgebra(base_ring=SC.base_ring())
 u = Surjection(2)((1, 2, 1))  # degree-1 surjection
-coalg.act(u, x)               # θ_u(x) ∈ tensor([SC, SC])
+coalg.coact(u, x)             # θ_u(x) ∈ tensor([SC, SC])
 
 # Cochains
 Cco = SimplicialCochains(N=3)
