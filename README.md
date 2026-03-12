@@ -56,11 +56,30 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
   - Bar construction of a connected dg-operad: `B(P) = (T^c(s\bar{P}), d_1 + d_2)`.
   - Cooperadic model on decorated rooted trees.
   - Differential combines internal differential on vertex decorations and edge-contraction terms.
+  - **Quasi-planar structure** (when the base operad is quasi-planar, e.g. `Surjection`, `BarrattEccles`, or a `HadamardProduct` whose right factor is quasi-planar):
+    - `Component.planarize(x)` — decomposes `x` into `x_pl ⊗ σ ∈ B(P)_pl(n) ⊗ k[S_n]`.
+    - `Component.planar_basis_it(d)` — iterates over strongly-planar basis trees of bar degree `d`.
+    - `Component.d_sigma(x, σ)` — the `σ`-component of `boundary(x)`, i.e. `π_σ(d(x))`.
+    - `Component.d_sigma_iterate(x, [σ₁,…,σₖ])` — iterated `d_σ` with zero-branch pruning.
+    - `Element.planarize()` — convenience wrapper.
 
 - `constructions/cobar_construction.py` — `CobarConstruction(C)`
   - Cobar construction of a connected dg-cooperad: `\Omega(C) = (T(s^{-1}\bar{C}), d_1 + d_2)`.
   - Operadic model on decorated rooted trees.
   - Differential combines internal differential and vertex-expansion terms from infinitesimal cocomposition.
+
+- `constructions/comodule.py` — `e_comodule_on_generator`
+  - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
+    the cobar construction of a quasi-planar cooperad `C`.
+  - Formula on a planar generator `s⁻¹x ∈ s⁻¹C_pl(n)`:
+
+    ```
+    Δ(s⁻¹x) = Σ_{k≥0} Σ_{σ̄∈(Sₙ\{id})^k} ρ(σ̄) ⊗ cobar(d_{σ̄}(x))·σ₁…σₖ
+    ```
+
+    where `ρ(σ̄) = (id, σₖ, σₖ₋₁σₖ, …, σ₁…σₖ) ∈ E(n)` and `d_{σ̄} = d_{σ₁}∘…∘d_{σₖ}`.
+  - The sum terminates at `k = deg(x)` (degree truncation).
+  - Zero branches pruned early for efficiency.
 
 - `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.
@@ -156,6 +175,8 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
+  - `Component.planar_basis_it(d)` — if the right factor `Q` has `planar_basis_it`,
+    iterates over pairs `(left_key, right_pl_key)` with right key planar and total degree `d`.
 
 - `algebraic/hadamard_algebra.py` — `HadamardTensorAlgebra(A, B)`
   - Input: a `P`-algebra `A` and a `Q`-algebra `B`.

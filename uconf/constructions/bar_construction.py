@@ -186,16 +186,18 @@ class BarConstruction:
                 return self.term(tree).tensor(sym_alg.term(identity))
 
             def _planarize_subtree(node):
-                """Return ``(planar_node, leaf_order)``.
+                """Return ``(coeff, planar_node, leaf_order)``.
 
                 ``planar_node`` has the same structure as ``node`` but with
                 planar vertex decorations and reordered children; its leaf
                 labels are still the *original* labels (not yet renumbered).
                 ``leaf_order[i]`` is the original leaf label that will sit at
                 canonical position ``i+1`` after renumbering.
+                ``coeff`` is the accumulated scalar from all decoration
+                planarizations (e.g. −1 from Lie antisymmetry).
                 """
                 if is_leaf(node):
-                    return node, [node]
+                    return 1, node, [node]
 
                 k = vertex_arity(node)
                 dec = decoration(node)
@@ -207,12 +209,15 @@ class BarConstruction:
 
                 # For Surjection / BarrattEccles this is a single term;
                 # for other operads it may be a linear combination.
+                # We take the first term and propagate its coefficient.
                 planar_dec = dec
                 sigma_v_tuple = tuple(range(1, k + 1))  # identity fallback
-                for (planar_dec_key, sigma_key), _coeff in planarized:
+                dec_coeff = 1
+                for (planar_dec_key, sigma_key), c in planarized:
                     planar_dec = planar_dec_key
                     sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
-                    break  # single term expected
+                    dec_coeff = c
+                    break  # single term expected for supported operads
 
                 old_ch = children(node)
                 # New child at 0-based index j = old child at sigma_v_tuple[j]-1
@@ -221,14 +226,17 @@ class BarConstruction:
                 # Recursively planarize each (reordered) child.
                 new_ch_planarized = []
                 leaf_order = []
+                total_child_coeff = 1
                 for ch in new_ch:
-                    p_ch, lo_ch = _planarize_subtree(ch)
+                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
+                    total_child_coeff *= ch_coeff
                     new_ch_planarized.append(p_ch)
                     leaf_order.extend(lo_ch)
 
-                return (planar_dec,) + tuple(new_ch_planarized), leaf_order
+                total_coeff = dec_coeff * total_child_coeff
+                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
 
-            planar_with_orig, leaf_order = _planarize_subtree(tree)
+            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
 
             # leaf_order[i] = original label at canonical position i+1.
             # Relabeling: old leaf l → canonical position sigma_global_inv[l].
@@ -238,7 +246,7 @@ class BarConstruction:
             # sigma_global(j) = leaf_order[j-1]  (one-line notation list).
             sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
 
-            return self.term(canonical_tree).tensor(sigma_global)
+            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
 
         def _is_planar_tree(self, tree) -> bool:
             """Return ``True`` if every vertex decoration is planar.
