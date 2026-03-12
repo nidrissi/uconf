@@ -36,6 +36,8 @@ from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
     children,
     decoration,
+    enumerate_planar_trees_in_degree,
+    enumerate_trees_by_weight,
     internal_edges_dfs,
     is_leaf,
     leaves,
@@ -158,98 +160,134 @@ class BarConstruction:
                 return False
 
         def _planarize_on_basis(self, tree):
-            """Decompose a bar tree into planar part ⊗ permutation.
+            """Decompose a bar tree into planar part ⊗ global permutation.
 
-            Planarizes each vertex decoration through the base operad's
-            ``planarize``, then composes the resulting leaf relabelings
-            into a global permutation on {1,...,n}.
+            For each internal vertex ``v`` the base operad's ``planarize``
+            gives a planar decoration ``dec_pl`` and a vertex permutation
+            ``σ_v ∈ S_{k_v}``.  The planarized tree is assembled by:
+
+            1. Replacing each vertex decoration with its planar form.
+            2. Reordering the children of ``v``: new child at position ``j``
+               is old child at position ``σ_v(j)`` (1-indexed).
+            3. Relabeling the leaves of the resulting tree so they run
+               ``1, …, n`` in the new left-to-right order.  The result is
+               automatically a shuffle tree.
+
+            The global permutation ``σ ∈ S_n`` satisfies ``σ(j)`` = the
+            original leaf label at canonical position ``j``.
+
+            Returns an element of ``self ⊗ k[S_n]``.
+            """
+            sym_alg = self._symmetric_group_algebra
+            base_ring = self.base_ring()
+
+            if is_leaf(tree):
+                identity = self._symmetric_group.identity()
+                return self.term(tree).tensor(sym_alg.term(identity))
+
+            def _planarize_subtree(node):
+                """Return ``(planar_node, leaf_order)``.
+
+                ``planar_node`` has the same structure as ``node`` but with
+                planar vertex decorations and reordered children; its leaf
+                labels are still the *original* labels (not yet renumbered).
+                ``leaf_order[i]`` is the original leaf label that will sit at
+                canonical position ``i+1`` after renumbering.
+                """
+                if is_leaf(node):
+                    return node, [node]
+
+                k = vertex_arity(node)
+                dec = decoration(node)
+                op_parent = self._operad_cls(k, base_ring)
+
+                # Use the base operad's planarize morphism on the decoration.
+                dec_elem = op_parent.term(dec)
+                planarized = op_parent.planarize(dec_elem)
+
+                # For Surjection / BarrattEccles this is a single term;
+                # for other operads it may be a linear combination.
+                planar_dec = dec
+                sigma_v_tuple = tuple(range(1, k + 1))  # identity fallback
+                for (planar_dec_key, sigma_key), _coeff in planarized:
+                    planar_dec = planar_dec_key
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    break  # single term expected
+
+                old_ch = children(node)
+                # New child at 0-based index j = old child at sigma_v_tuple[j]-1
+                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+
+                # Recursively planarize each (reordered) child.
+                new_ch_planarized = []
+                leaf_order = []
+                for ch in new_ch:
+                    p_ch, lo_ch = _planarize_subtree(ch)
+                    new_ch_planarized.append(p_ch)
+                    leaf_order.extend(lo_ch)
+
+                return (planar_dec,) + tuple(new_ch_planarized), leaf_order
+
+            planar_with_orig, leaf_order = _planarize_subtree(tree)
+
+            # leaf_order[i] = original label at canonical position i+1.
+            # Relabeling: old leaf l → canonical position sigma_global_inv[l].
+            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+
+            # sigma_global(j) = leaf_order[j-1]  (one-line notation list).
+            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+
+            return self.term(canonical_tree).tensor(sigma_global)
+
+        def _is_planar_tree(self, tree) -> bool:
+            """Return ``True`` if every vertex decoration is planar.
+
+            A decoration is planar when the base operad's ``planarize``
+            returns ``dec ⊗ id`` (i.e. the vertex permutation is the
+            identity).
             """
             if is_leaf(tree):
-                return self.term(tree).tensor(
-                    self._symmetric_group_algebra.term(self._symmetric_group.identity())
-                )
+                return True
+            base_ring = self.base_ring()
+            for v in vertices_dfs(tree):
+                k = vertex_arity(v)
+                dec = decoration(v)
+                op_parent = self._operad_cls(k, base_ring)
+                if not hasattr(op_parent, "planarize"):
+                    return False
+                planarized = op_parent.planarize(op_parent.term(dec))
+                Sk = SymmetricGroup(k)
+                identity_k = Sk.identity()
+                for (_pl_dec, sigma_key), _coeff in planarized:
+                    if Sk(sigma_key) != identity_k:
+                        return False
+            return True
 
-            n = self._arity
-            target = tensor([self, self._symmetric_group_algebra])
+        def planar_basis_it(self, d: int):
+            """Iterate over planar basis elements of degree ``d``.
 
-            # For each vertex (DFS order), planarize the decoration.
-            # The permutation at each vertex relabels its children,
-            # which translates to a permutation of the global leaf set.
-            verts = vertices_dfs(tree)
+            A tree is *planar* when every vertex decoration is a planar
+            element of the base operad.  Trees are enumerated up to weight
+            ``self._max_weight`` using the operad's ``planar_basis_it`` at
+            the exact required decoration degree.
 
-            # Start: accumulate planarizations vertex by vertex.
-            # We process the tree and build the planar tree + global perm.
-            result = self._planarize_tree_recursive(tree)
-            return result
-
-        def _planarize_tree_recursive(self, tree):
-            """Recursively planarize a tree by planarizing each vertex."""
-            if is_leaf(tree):
-                target = tensor([self, self._symmetric_group_algebra])
-                return self.term(tree).tensor(
-                    self._symmetric_group_algebra.term(self._symmetric_group.identity())
-                )
-
+            Requires the base operad to implement ``planarize`` and
+            ``planar_basis_it``.
+            """
             n = self._arity
             base_ring = self.base_ring()
-            target = tensor([self, self._symmetric_group_algebra])
 
-            dec = decoration(tree)
-            v_arity = vertex_arity(tree)
-            operad_parent = self._operad_cls(v_arity, base_ring)
+            if n < 2:
+                # Arity 1: single leaf, degree 0.
+                if n == 1 and d == 0:
+                    yield self.term(1)
+                return
 
-            # Planarize this vertex's decoration
-            dec_elem = operad_parent.term(dec)
-            planarized_dec = operad_parent.planarize(dec_elem)
-
-            # Recursively planarize children
-            kids = children(tree)
-
-            result = target.zero()
-            for dec_tensor_basis, dec_coeff in planarized_dec:
-                planar_dec_key, sigma_key = dec_tensor_basis
-                # sigma_key is a permutation in S_{v_arity}
-                sigma_v = SymmetricGroup(v_arity)(sigma_key)
-
-                # sigma_v permutes the v_arity children.
-                # Translate this into a global leaf permutation.
-                # Child j (1-indexed) has leaf set leaves(kids[j-1]).
-                child_leaf_sets = [sorted(leaves(kids[j])) for j in range(v_arity)]
-
-                # sigma_v says: the current child ordering maps child j
-                # to input sigma_v(j). To get the planar version, we need
-                # to reorder children so child j goes to position j.
-                # The permutation sigma_v^{-1} on children gives the
-                # planar ordering.
-                sigma_v_inv = sigma_v.inverse()
-
-                # Build global leaf relabeling from child permutation
-                global_perm = list(range(n + 1))  # 0-indexed placeholder
-                # After permutation: child at position j should be child sigma_v_inv(j)
-                # This means leaf l in child_leaf_sets[k] maps to the
-                # corresponding leaf in the reordered position.
-                reordered_kids = [kids[sigma_v_inv(j + 1) - 1] for j in range(v_arity)]
-                reordered_leaf_sets = [
-                    sorted(leaves(reordered_kids[j])) for j in range(v_arity)
-                ]
-
-                for j in range(v_arity):
-                    for idx, orig_leaf in enumerate(reordered_leaf_sets[j]):
-                        target_leaf = child_leaf_sets[j][idx]
-                        global_perm[orig_leaf] = target_leaf
-
-                global_sigma = self._symmetric_group(global_perm[1:])
-
-                # Build new tree: planar decoration, reordered children
-                new_tree = (planar_dec_key,) + tuple(reordered_kids)
-                # Normalize to shuffle form
-                new_tree_norm, shuffle_sign = self._normalize_to_shuffle(new_tree)
-
-                result += (dec_coeff * shuffle_sign) * self.term(new_tree_norm).tensor(
-                    self._symmetric_group_algebra.term(global_sigma)
-                )
-
-            return result
+            for tree in enumerate_planar_trees_in_degree(
+                n, self._max_weight, self._operad_cls, base_ring, d
+            ):
+                yield self.term(tree)
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
@@ -640,6 +678,14 @@ class BarConstruction:
             """Structural differential: contracts internal edges."""
             return self.parent()._d2(self)
 
+        def planarize(self):
+            """Decompose into planar representative ⊗ global permutation.
+
+            Returns an element of ``B(P)(n) ⊗ k[S_n]``.
+            Requires the base operad to implement ``planarize``.
+            """
+            return self.parent().planarize(self)
+
         def permute(self, sigma) -> "BarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
@@ -656,6 +702,9 @@ class BarConstruction:
             result = parent.zero()
             for tree, coeff in self:
                 new_tree = relabel_leaves(tree, relabel_map)
+                # Use parent(new_tree) rather than parent.term(new_tree) so that
+                # the shuffle normalization (and its Koszul sign) is applied: the
+                # relabeled tree may no longer be in shuffle order.
                 result += coeff * parent(new_tree)
             return result
 

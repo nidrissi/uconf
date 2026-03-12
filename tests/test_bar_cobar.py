@@ -5,6 +5,7 @@ from sage.all import tensor, QQ
 
 from uconf import (
     BarConstruction,
+    BarrattEccles,
     HadamardProduct,
     CoAssociative,
     CoCommutative,
@@ -921,6 +922,213 @@ class TestCobarSignFix:
         elem = O6(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O6.zero(), f"d^2 != 0 in arity 6 weight 3: {bdry2}"
+
+
+class TestBarPlanarize:
+    """Tests for the quasi-planar structure on B(P)."""
+
+    def _round_trip_ok(self, component, tree):
+        """Check that T_pl.permute(σ) normalizes to T for every term."""
+        from sage.all import SymmetricGroup
+
+        elem = component(tree)
+        if elem == component.zero():
+            return True
+        result = elem.planarize()
+        n = component.arity()
+        Sn = SymmetricGroup(n)
+        total = component.zero()
+        for (pl_tree, sigma_key), coeff in result:
+            T_pl = component.term(pl_tree)
+            sigma = Sn(sigma_key)
+            total += coeff * T_pl.permute(sigma)
+        return total == elem
+
+    # ------------------------------------------------------------------
+    # Surjection
+    # ------------------------------------------------------------------
+
+    def test_planarize_surjection_planar_tree(self):
+        """A planar tree planarizes to itself ⊗ identity."""
+        from sage.all import SymmetricGroup
+
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        tree = ((1, 2, 1, 3), 1, 2, 3)
+        elem = B3(tree)
+        result = elem.planarize()
+        S3 = SymmetricGroup(3)
+        items = list(result)
+        assert len(items) == 1
+        (pl_tree, sigma_key), coeff = items[0]
+        assert coeff == 1
+        assert pl_tree == ((1, 2, 1, 3), 1, 2, 3)
+        assert S3(sigma_key) == S3.identity()
+
+    def test_planarize_surjection_nonplanar_corolla(self):
+        """(2,1,2,3) planarizes to (1,2,1,3) ⊗ (1,2) (the transposition)."""
+        from sage.all import SymmetricGroup
+
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        tree = ((2, 1, 2, 3), 1, 2, 3)
+        elem = B3(tree)
+        result = elem.planarize()
+        items = list(result)
+        assert len(items) == 1
+        (pl_tree, sigma_key), coeff = items[0]
+        assert coeff == 1
+        assert pl_tree == ((1, 2, 1, 3), 1, 2, 3)
+        S3 = SymmetricGroup(3)
+        assert S3(sigma_key) == S3([2, 1, 3])
+
+    def test_planarize_surjection_weight2_roundtrip(self):
+        """Round-trip T_pl.permute(σ) == T for a weight-2 Surjection tree."""
+        BS = BarConstruction(Surjection)
+        B4 = BS(4)
+        tree = ((2, 1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        assert self._round_trip_ok(B4, tree)
+
+    def test_planarize_surjection_roundtrip_weight1(self):
+        """Round-trip holds for various weight-1 Surjection trees."""
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        for tree in [
+            ((1, 2, 3), 1, 2, 3),
+            ((2, 1, 2, 3), 1, 2, 3),
+            ((1, 3, 2, 1), 1, 2, 3),
+        ]:
+            assert self._round_trip_ok(B3, tree), f"Round-trip failed for {tree}"
+
+    # ------------------------------------------------------------------
+    # Barratt–Eccles
+    # ------------------------------------------------------------------
+
+    def test_planarize_barratt_eccles_nonplanar(self):
+        """A non-planar BE decoration planarizes with the correct permutation."""
+        from sage.all import SymmetricGroup
+
+        BBE = BarConstruction(BarrattEccles)
+        B2 = BBE(2)
+        BE2 = BarrattEccles(2)
+        S2 = BE2._symmetric_group
+        perm21 = S2([2, 1])
+        id2 = S2.identity()
+        tree = ((perm21, id2), 1, 2)
+        elem = B2(tree)
+        result = elem.planarize()
+        items = list(result)
+        assert len(items) == 1
+        (pl_tree, sigma_key), coeff = items[0]
+        assert coeff == 1
+        # The planar decoration must start with identity
+        assert pl_tree[0][0] == id2
+        # The global permutation must be (1,2) (the transposition)
+        S2_global = SymmetricGroup(2)
+        assert S2_global(sigma_key) == S2_global([2, 1])
+
+    def test_planarize_barratt_eccles_roundtrip(self):
+        """Round-trip holds for B(BE)(2) elements."""
+        BBE = BarConstruction(BarrattEccles)
+        B2 = BBE(2)
+        BE2 = BarrattEccles(2)
+        S2 = BE2._symmetric_group
+        perm21 = S2([2, 1])
+        id2 = S2.identity()
+        for tree in [
+            ((perm21, id2), 1, 2),
+            ((id2, perm21), 1, 2),
+        ]:
+            assert self._round_trip_ok(B2, tree), f"Round-trip failed for {tree}"
+
+    # ------------------------------------------------------------------
+    # planar_basis_it
+    # ------------------------------------------------------------------
+
+    def test_planar_basis_it_surjection_degree1_arity2(self):
+        """B(Surj)(2) degree-1 planar basis is exactly {(1,2)}."""
+        BS = BarConstruction(Surjection)
+        B2 = BS(2)
+        basis = list(B2.planar_basis_it(1))
+        assert len(basis) == 1
+        tree_key = list(basis[0].support())[0]
+        assert tree_key == ((1, 2), 1, 2)
+
+    def test_planar_basis_it_surjection_degree1_arity3(self):
+        """B(Surj)(3) degree-1 planar basis is exactly {(1,2,3)}."""
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        basis = list(B3.planar_basis_it(1))
+        assert len(basis) == 1
+        tree_key = list(basis[0].support())[0]
+        assert tree_key == ((1, 2, 3), 1, 2, 3)
+
+    def test_planar_basis_it_surjection_degree2_arity2(self):
+        """B(Surj)(2) degree-2 planar basis is exactly {(1,2,1)}."""
+        BS = BarConstruction(Surjection)
+        B2 = BS(2)
+        basis = list(B2.planar_basis_it(2))
+        assert len(basis) == 1
+        tree_key = list(basis[0].support())[0]
+        assert tree_key == ((1, 2, 1), 1, 2)
+
+    def test_planar_basis_it_all_planar(self):
+        """Every element yielded by planar_basis_it is planar (σ = id)."""
+        from sage.all import SymmetricGroup
+
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        S3 = SymmetricGroup(3)
+        for d in range(3):
+            for elem in B3.planar_basis_it(d):
+                result = elem.planarize()
+                for (_, sigma_key), _ in result:
+                    assert S3(sigma_key) == S3.identity(), (
+                        f"Non-identity sigma for planar element in degree {d}"
+                    )
+
+    def test_planar_basis_it_barratt_eccles(self):
+        """B(BE)(2) degree-1 planar basis contains the identity-starting tuple."""
+        BBE = BarConstruction(BarrattEccles)
+        B2 = BBE(2)
+        basis = list(B2.planar_basis_it(1))
+        assert len(basis) == 1
+        tree_key = list(basis[0].support())[0]
+        dec = tree_key[0]
+        # Planar means first permutation is the identity
+        BE2 = BarrattEccles(2)
+        assert dec[0] == BE2._symmetric_group.identity()
+
+    # ------------------------------------------------------------------
+    # Element.planarize() convenience method
+    # ------------------------------------------------------------------
+
+    def test_element_planarize_method(self):
+        """Element.planarize() delegates to Component.planarize()."""
+        BS = BarConstruction(Surjection)
+        B3 = BS(3)
+        tree = ((2, 1, 2, 3), 1, 2, 3)
+        elem = B3(tree)
+        # Both call paths should give the same result
+        result_component = B3.planarize(elem)
+        result_element = elem.planarize()
+        assert result_component == result_element
+
+    # ------------------------------------------------------------------
+    # HadamardProduct
+    # ------------------------------------------------------------------
+
+    def test_planarize_hadamard_roundtrip(self):
+        """Round-trip holds for B(S⊙BE)(2)."""
+        HBE = HadamardProduct(Surjection, BarrattEccles)
+        BH = BarConstruction(HBE)
+        B2 = BH(2)
+        BE2 = BarrattEccles(2)
+        S2 = BE2._symmetric_group
+        perm21 = S2([2, 1])
+        id2 = S2.identity()
+        had_tree = (((1, 2), (perm21, id2)), 1, 2)
+        assert self._round_trip_ok(B2, had_tree)
 
 
 if __name__ == "__main__":
