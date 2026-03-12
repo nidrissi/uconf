@@ -12,9 +12,17 @@ operad ``P ⊙ Q``:
 
 from __future__ import annotations
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
+from sage.all import (
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    QQ,
+    SymmetricGroup,
+    SymmetricGroupAlgebra,
+    tensor,
+)
 
 from uconf.core.operad import OperadLike
+from uconf.core.quasi_planar import QuasiPlanarMixin
 
 
 class HadamardProduct:
@@ -87,7 +95,7 @@ class HadamardProduct:
 
         return accumulated
 
-    class Component(CombinatorialFreeModule):
+    class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of ``P ⊙ Q``."""
 
         def __init__(self, factory: "HadamardProduct", n: int, base_ring=QQ):
@@ -106,11 +114,54 @@ class HadamardProduct:
             self._left_parent = factory.left_operad_cls(n, base_ring)
             self._right_parent = factory.right_operad_cls(n, base_ring)
             self._symmetric_group = SymmetricGroup(self._arity)
+            self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
             self.rename(name)
             self.boundary = self.module_morphism(
                 on_basis=self._boundary_on_basis,
                 codomain=self,
             )
+            # Set up planarize if the right factor supports it
+            if hasattr(self._right_parent, "planarize"):
+                self.planarize = self.module_morphism(
+                    on_basis=self._planarize_on_basis,
+                    codomain=tensor([self, self._symmetric_group_algebra]),
+                )
+
+        def _planarize_on_basis(self, basis_element):
+            """Planarize via the right factor's quasi-planar structure.
+
+            For a basis element ``(p, q)`` where ``q`` is in an operad with
+            ``planarize``, we decompose ``q = q_pl · σ`` and return
+            ``(p · σ⁻¹, q_pl) ⊗ σ``.
+            """
+            left_basis, right_basis = basis_element
+            right_parent = self._right_parent
+            left_parent = self._left_parent
+
+            # Planarize the right factor: q -> q_pl ⊗ σ
+            right_elem = right_parent.term(right_basis)
+            right_planarized = right_parent.planarize(right_elem)
+
+            target = tensor([self, self._symmetric_group_algebra])
+            result = target.zero()
+
+            for tensor_basis, coeff in right_planarized:
+                right_pl_key, sigma_key = tensor_basis
+                # sigma_key is a permutation in S_n
+                sigma = self._symmetric_group(sigma_key)
+                sigma_inv = sigma.inverse()
+
+                # Permute the left factor by σ⁻¹
+                left_elem = left_parent.term(left_basis)
+                left_permuted = left_elem.permute(sigma_inv)
+
+                for new_left_key, left_coeff in left_permuted:
+                    had_key = (new_left_key, right_pl_key)
+                    result += (coeff * left_coeff) * self.term(had_key).tensor(
+                        self._symmetric_group_algebra.term(sigma_key)
+                    )
+
+            return result
 
         def _validate_basis_key(self, basis_key):
             if not isinstance(basis_key, (tuple, list)) or len(basis_key) != 2:
