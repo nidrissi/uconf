@@ -50,7 +50,7 @@ class SimplicialChains(CombinatorialFreeModule):
     """
 
     def __init__(self, base_ring=QQ):
-        name = "C"
+        name = "NΔ"
         super().__init__(
             base_ring,
             tuple,
@@ -277,7 +277,7 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     def __init__(self, N: int, base_ring=QQ):
         assert N >= 0
-        name = f"C*({N})"
+        name = f"N*Δ{N}"
         super().__init__(
             base_ring,
             tuple,
