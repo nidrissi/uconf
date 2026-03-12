@@ -25,6 +25,7 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
 from uconf.models.surjection import Surjection
+from uconf.models.surjection_dual import SurjectionDual
 
 if TYPE_CHECKING:
     pass
@@ -159,7 +160,7 @@ def surjection_chain_action(
 
         # Find the indices of "final" intervals, i.e., the values i such that u_i is the last occurrence of that value in surj_tuple.
         # The other intervals are called "inner" intervals.
-        final_intervals = dict()
+        final_intervals: dict[int, int] = dict()
         for i in reversed(range(len(surj_tuple))):
             u = surj_tuple[i]
             if u not in final_intervals:
@@ -445,7 +446,6 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
     """
 
     def __init__(self, module: SimplicialChains):
-        from uconf.models.surjection_dual import SurjectionDual
 
         super().__init__(
             module=module,
@@ -461,9 +461,6 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         """
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
-
-        from uconf.models.surjection import Surjection
-        from uconf.models.surjection_dual import SurjectionDual
 
         base_ring = self.module.base_ring()
         if v_element.parent().base_ring() != base_ring:
@@ -503,11 +500,3 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
                             flat_key = (u_basis,) + right_key
                         result += u_coeff * right_coeff * target.term(flat_key)
         return result
-
-    def act(
-        self,
-        surj: "Surjection.Element",
-        chain: "SimplicialChains.Element",
-    ):
-        """Convenience wrapper for the induced surjection chain action."""
-        return surjection_chain_action(surj, chain)
