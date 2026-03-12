@@ -1,7 +1,7 @@
 """Tests for quasi-planar structures and the E-comodule map."""
 
 import pytest
-from sage.all import QQ, SymmetricGroup, tensor
+from sage.all import SymmetricGroup, tensor
 
 from uconf import (
     BarConstruction,
@@ -31,10 +31,6 @@ def _BH_setup(n: int = 2):
     return BH, BHn, OBH, OBHn, BEn
 
 
-def _identity_perm(n: int):
-    return SymmetricGroup(n).identity()
-
-
 # ---------------------------------------------------------------------------
 # QuasiPlanarMixin tests
 # ---------------------------------------------------------------------------
@@ -56,7 +52,6 @@ class TestDSigmaOnSurjection:
         elem = B2(tree)
 
         S2 = SymmetricGroup(2)
-        SGA2 = B2._symmetric_group_algebra
 
         # Reconstruct boundary from d_sigma
         reconstructed = B2.zero()
@@ -141,11 +136,12 @@ class TestDSigmaOnHadamard:
         """Σ_σ d_σ(x)·σ == boundary(x) for a degree-2 B(Lie⊙E) element."""
         _, BH2, _, _, _ = _BH_setup(2)
         S2 = SymmetricGroup(2)
-        id2 = S2.identity()
-        s21 = S2([2, 1])
 
         # BE planar degree-1 key: (id, s21)
-        be_key = (BarrattEccles(2)._symmetric_group.identity(), BarrattEccles(2)._symmetric_group([2, 1]))
+        be_key = (
+            BarrattEccles(2)._symmetric_group.identity(),
+            BarrattEccles(2)._symmetric_group([2, 1]),
+        )
         had_key = ((1,), be_key)
         tree = (had_key, 1, 2)
         elem = BH2(tree)
@@ -184,7 +180,9 @@ class TestGradedBasisMethods:
         for d in range(3):
             for elem in S2.graded_planar_basis(d):
                 for key in elem.support():
-                    assert S2.term(key).is_planar(), f"Non-planar element in graded_planar_basis({d})"
+                    assert S2.term(key).is_planar(), (
+                        f"Non-planar element in graded_planar_basis({d})"
+                    )
 
     def test_barratt_eccles_graded_basis(self):
         """BarrattEccles(2).graded_basis(d) has the right size."""
@@ -333,8 +331,7 @@ class TestEComoduleMap:
         cobar_key = (tree_key, 1, 2)
 
         found = any(
-            be_key == id_be_key and ck == cobar_key
-            for (be_key, ck), _coeff in result
+            be_key == id_be_key and ck == cobar_key for (be_key, ck), _coeff in result
         )
         assert found, "k=0 term missing for B(Surj)(2) degree-1 planar element"
 

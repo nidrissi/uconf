@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -159,7 +159,7 @@ class BarConstruction:
             except Exception:
                 return False
 
-        def _planarize_on_basis(self, tree):
+        def _planarize_on_basis(self, tree) -> Any:
             """Decompose a bar tree into planar part ⊗ global permutation.
 
             For each internal vertex ``v`` the base operad's ``planarize``
@@ -272,7 +272,7 @@ class BarConstruction:
                         return False
             return True
 
-        def planar_basis_it(self, d: int):
+        def planar_basis_it(self, d: int) -> Iterator["BarConstruction.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar
