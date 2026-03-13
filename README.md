@@ -32,11 +32,13 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 
 - `models/surjection.py` — `Surjection`
   - Basis: non-degenerate surjective words (no consecutive repetitions).
+  - Constructor semantics: tuples with consecutive repetitions or missing labels map to zero; malformed labels/types raise.
   - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_it`.
   - Acts on simplicial models through wrappers in `uconf.algebraic.simplicial`.
 
 - `models/barratt_eccles.py` — `BarrattEccles`
   - Basis: sequences of permutations in `S_n` with no consecutive duplicates.
+  - Constructor semantics: tuples with consecutive duplicate permutations map to zero; malformed permutation data raises.
   - Operations: `unit`, `compose`, `boundary`, `permute`, `diagonal`, `planarize`.
 
 - `models/lie.py` — `Lie`
@@ -90,6 +92,7 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 - `models/simplicial.py`
   - `SimplicialChains`: normalized chains on standard simplices, basis = non-degenerate
     simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
+    - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data raises.
     - `SimplicialChains.fundamental_chain(n)` — the fundamental cycle `[0,…,n]`.
     - `SimplicialChains.basis_it(N)` — iterator over all simplices in `Δ^N`.
     - `SimplicialChains.tensor_boundary(x)` — Koszul tensor-product differential
@@ -99,6 +102,7 @@ Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
       `tensor([SimplicialChains()]*(times+1))` element.
   - `SimplicialCochains(N)`: dual cochains on `Δ^N`, same simplex-tuple basis as
     `SimplicialChains`.
+    - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data and vertices outside `\{0, ..., N\}` raise.
     - `SimplicialCochains.volume_form(N)` — the volume form on `Δ^N`.
     - `SimplicialCochains.evaluate(cochain, chain)` — Kronecker pairing.
     - `SimplicialCochains.dual_basis_it(N)` — iterator over dual basis.
@@ -210,7 +214,7 @@ These maps are built via `module_morphism` on first use.
 
 - Component classes have a **fixed arity** (`self._arity`).
 - Constructors generally accept `dict` (linear combinations) and tuple/list (basis key).
-- Degenerate/invalid keys are normalized to `0` through internal validation.
+- Degenerate keys are normalized to `0` through internal validation; malformed keys raise `TypeError` or `ValueError`.
 - For permutations in tests, use **one-line list notation** (for example `[2, 1]`).
 
 ## Quick examples

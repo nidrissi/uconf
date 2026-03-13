@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from uconf.models.barratt_eccles import BarrattEccles
 
 from sage.all import (
+    Integer,
     QQ,
     CombinatorialFreeModule,
     Family,
@@ -25,7 +26,8 @@ class Surjection(CombinatorialFreeModule):
     """Surjection operad component in fixed arity.
 
     Basis elements are tuples ``u`` with values in ``{1, ..., n}`` that are
-    surjective and have no consecutive equal entries.
+    surjective and have no consecutive equal entries. Degenerate inputs map to
+    zero, while malformed inputs raise.
     """
 
     name: ClassVar[str] = "S"
@@ -54,63 +56,62 @@ class Surjection(CombinatorialFreeModule):
         )
 
     def _element_constructor_(self, x: "Surjection.Element | dict | tuple | list"):
-        """Build elements from basis tuples or sparse dictionaries."""
-        # Case 1: x is a Dictionary (Linear Combination)
+        """Build elements from basis tuples or sparse dictionaries.
+
+        Degenerate basis keys, namely non-surjective tuples or tuples with
+        consecutive equal entries, map to zero. Invalid keys raise.
+        """
         if isinstance(x, dict):
-            # Validate keys before passing to super
             clean_dict = {}
             for key, coeff in x.items():
                 clean_key = self._validate_basis_key(key)
                 if clean_key is None:
-                    # Skip zero terms
                     continue
                 clean_dict[clean_key] = coeff
-            return super()._element_constructor_(clean_dict)
+            return self.sum_of_terms(clean_dict.items())
 
-        # Case 2: x is a Basis Key (Tuple)
-        # We try to treat it as a single basis element
         if isinstance(x, (tuple, list)):
-            # Check if it looks like a tuple of integers vs a list of terms
-            # Simple heuristic: is the first element an integer?
-            try:
-                clean_key = self._validate_basis_key(x)
-                # Check for consecutive identical integers
-                if clean_key is None:
-                    return self.zero()
-                else:
-                    # Return the monomial 1 * basis_element
-                    return self.term(clean_key)
-            except (ValueError, TypeError) as e:
-                raise TypeError(
-                    f"Item is not a valid element of {self}. Got {x} ({type(x)})"
-                ) from e
+            clean_key = self._validate_basis_key(x)
+            if clean_key is None:
+                return self.zero()
+            return self.term(clean_key)
 
         raise TypeError(
             f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
         )
 
     def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
-        """Validate that an input tuple defines a nondegenerate surjection."""
-        if not isinstance(basis_tuple, (tuple, list)):
-            raise TypeError(f"Basis key must be a tuple, got {type(basis_tuple)}")
+        """Validate a basis tuple.
 
-        for p in basis_tuple:
-            if not isinstance(p, int):
+        Returns ``None`` for degenerate surjections and raises on malformed
+        inputs.
+        """
+        if not isinstance(basis_tuple, (tuple, list)):
+            raise TypeError(
+                f"Basis key must be a tuple or list, got {type(basis_tuple)}"
+            )
+
+        clean_tuple = tuple(basis_tuple)
+
+        for p in clean_tuple:
+            if not isinstance(p, (int, Integer)):
                 raise TypeError(
                     f"Basis key must be a tuple of integers. Got {p} ({type(p)})."
                 )
+            if p < 1 or p > self.arity():
+                raise ValueError(
+                    f"Surjection entries must lie in {{1, ..., {self.arity()}}}. Got {p}."
+                )
 
-        # Non-surjective maps yield zero
-        if set(basis_tuple) != set(range(1, self.arity() + 1)):
+        if len(clean_tuple) > 0:
+            for i in range(len(clean_tuple) - 1):
+                if clean_tuple[i] == clean_tuple[i + 1]:
+                    return None
+
+        if set(clean_tuple) != set(range(1, self.arity() + 1)):
             return None
 
-        # Check for consecutive identical integers
-        if len(basis_tuple) > 0:
-            for i in range(len(basis_tuple) - 1):
-                # Consecutive identical integers yield zero
-                if basis_tuple[i] == basis_tuple[i + 1]:
-                    return None
-        return tuple(basis_tuple)
+        return clean_tuple
 
     def arity(self):
         """Return the fixed arity of this operad component."""
