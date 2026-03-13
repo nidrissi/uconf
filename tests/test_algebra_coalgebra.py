@@ -3,8 +3,8 @@
 Covers:
 - :class:`uconf.algebra.OperadAlgebra`
 - :class:`uconf.coalgebra.CooperadCoalgebra`
-- :class:`uconf.algebra_bar.BarComplexAlgebra` (bar complex B_P(A))
-- :class:`uconf.coalgebra_cobar.CobarComplexCoalgebra` (cobar complex Ω_C(V))
+- :class:`uconf.bar_algebra.BarComplexAlgebra` (bar complex B_P(A))
+- :class:`uconf.cobar_coalgebra.CobarComplexCoalgebra` (cobar complex Ω_C(V))
 """
 
 import itertools
@@ -16,8 +16,8 @@ from sage.all import tensor as sage_tensor
 from uconf import Associative, CoAssociative, Commutative, Lie
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.constructions.algebra_bar import BarComplexAlgebra
-from uconf.constructions.coalgebra_cobar import CobarComplexCoalgebra
+from uconf.constructions.bar_algebra import BarComplexAlgebra
+from uconf.constructions.cobar_coalgebra import CobarComplexCoalgebra
 
 # ===========================================================================
 # Helpers: build simple algebra modules
@@ -272,7 +272,7 @@ class TestBarComplexAlgebra:
                 has_ternary = True
         assert has_ternary
 
-    def test_commutative_algebra_bar(self):
+    def test_commutative_bar_algebra(self):
         """Bar complex also works with the Commutative operad."""
         module = Commutative(1)
 
