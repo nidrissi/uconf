@@ -8,7 +8,7 @@ from typing import Iterable
 
 import pytest
 from itertools import chain, combinations
-from sage.all import tensor
+from sage.all import QQ, tensor
 
 from uconf import SimplicialChains, SimplicialCochains, Surjection
 from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
@@ -125,7 +125,7 @@ class TestSimplicialChains:
         assert x.degree() == 2
 
     def test_fundamental_chain(self):
-        x = SimplicialChains.fundamental_chain(3)
+        x = SimplicialChains.fundamental_chain(QQ, 3)
         assert x.degree() == 3
         d = _as_dict(x)
         assert d == {(0, 1, 2, 3): 1}
@@ -158,7 +158,7 @@ class TestBoundary:
         """∂² = 0 for several simplices."""
         C = SimplicialChains(QQ)
         for n in range(1, 5):
-            x = SimplicialChains.fundamental_chain(n)
+            x = SimplicialChains.fundamental_chain(QQ, n)
             assert x.boundary().boundary() == C.zero(), f"∂² ≠ 0 for Δ^{n}"
 
     def test_boundary_squared_tensor(self):
@@ -187,14 +187,14 @@ class TestBoundary:
 class TestAWDiagonal:
     def test_diagonal_edge(self):
         """Δ([0,1]) = [0]⊗[0,1] + [0,1]⊗[1]."""
-        x = SimplicialChains.fundamental_chain(1)
+        x = SimplicialChains.fundamental_chain(QQ, 1)
         diag = x.iterated_diagonal(times=1)
         d = _as_dict(diag)
         assert d == {((0,), (0, 1)): 1, ((0, 1), (1,)): 1}
 
     def test_diagonal_triangle(self):
         """Δ([0,1,2]) = [0]⊗[0,1,2] + [0,1]⊗[1,2] + [0,1,2]⊗[2]."""
-        x = SimplicialChains.fundamental_chain(2)
+        x = SimplicialChains.fundamental_chain(QQ, 2)
         diag = x.iterated_diagonal(times=1)
         d = _as_dict(diag)
         assert d == {
@@ -206,7 +206,7 @@ class TestAWDiagonal:
     def test_iterated_diagonal_triangle(self):
         """Δ²([0,1,2]) should give 3-fold tensor terms."""
         SC = SimplicialChains(QQ)
-        x = SimplicialChains.fundamental_chain(2)
+        x = SimplicialChains.fundamental_chain(QQ, 2)
         diag = x.iterated_diagonal(times=2)
         T3 = tensor([SC, SC, SC])
         assert diag.parent() == T3
@@ -219,7 +219,7 @@ class TestAWDiagonal:
         """∂∘Δ = Δ∘∂ (AW diagonal is a chain map)."""
         b = SimplicialChains.tensor_boundary
         for n in range(1, 4):
-            x = SimplicialChains.fundamental_chain(n)
+            x = SimplicialChains.fundamental_chain(QQ, n)
             lhs = b(x.iterated_diagonal(times=1))
             rhs = x.boundary().iterated_diagonal(times=1)
             assert _as_dict(lhs) == _as_dict(rhs), f"Diagonal not a chain map on Δ^{n}"
@@ -234,8 +234,8 @@ class TestSurjectionAction:
     @pytest.mark.parametrize("n", range(0, 4))
     def test_unit_action(self, n: int):
         """The operadic unit (1,) acts as the identity on cochains."""
-        unit = Surjection.unit()  # (1,) in S(1)
-        x = SimplicialCochains.volume_form(n)
+        unit = Surjection.unit(QQ)  # (1,) in S(1)
+        x = SimplicialCochains.volume_form(n, QQ)
         result = _surjection_cochain_action(unit, [x])
         assert _as_dict(result) == _as_dict(x), f"Unit action failed on Δ^{n}"
 
@@ -248,7 +248,7 @@ class TestSurjectionAction:
         """
         for u in Surjection(r, QQ).planar_basis_it(d):
             for n in range(d, d + 4):
-                x = SimplicialCochains.volume_form(n)
+                x = SimplicialCochains.volume_form(n, QQ)
                 l = [x] * r
                 result = _surjection_cochain_action(u, l)
                 if result != result.parent().zero():
@@ -258,7 +258,7 @@ class TestSurjectionAction:
         """θ_u(x) = 0 if |x| < |u|."""
         S2 = Surjection(2, QQ)
         u = S2((1, 2, 1))  # degree 1
-        x = SimplicialCochains.volume_form(0)  # degree 0
+        x = SimplicialCochains.volume_form(0, QQ)  # degree 0
         result = _surjection_cochain_action(u, [x] * 2)
         assert _as_dict(result) == {}
 

@@ -52,7 +52,7 @@ def test_be_basis(r: int, d: int) -> None:
 
 
 def test_barratt_eccles_unit() -> None:
-    u = BarrattEccles.unit()
+    u = BarrattEccles.unit(QQ)
     assert _as_dict(u) == {((1,),): 1}, (
         "Barratt-Eccles unit should be identity in arity 1."
     )
@@ -130,7 +130,7 @@ def test_barratt_eccles_dict_constructor_raises_on_invalid_key() -> None:
 def test_barratt_eccles_operadic_unit_axioms(input_pos: int) -> None:
     e3 = BarrattEccles(3, QQ)
     x = e3(((1, 2, 3),))
-    one = BarrattEccles.unit()
+    one = BarrattEccles.unit(QQ)
 
     left = BarrattEccles.compose(one, 1, x)
     right = BarrattEccles.compose(x, input_pos, one)

@@ -39,7 +39,7 @@ def _inverse_one_line(sigma: tuple[int, ...]) -> tuple[int, ...]:
 
 
 def test_commutative_unit() -> None:
-    unit = Commutative.unit()
+    unit = Commutative.unit(QQ)
     assert _as_dict(unit) == {(): 1}
 
 
@@ -148,7 +148,7 @@ def test_commutative_equivariance_on_linear_combinations() -> None:
 def test_commutative_unit_axioms(input_pos: int) -> None:
     """1∘_1 x = x and x∘_i 1 = x for all valid i."""
     x = Commutative(3, QQ)(())
-    one = Commutative.unit()
+    one = Commutative.unit(QQ)
     assert _as_dict(Commutative.compose(one, 1, x)) == _as_dict(x), (
         "Left unit axiom failed for Commutative."
     )
