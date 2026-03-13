@@ -19,7 +19,13 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
+from sage.all import (
+    QQ,
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    UniqueRepresentation,
+)
 
 from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
@@ -39,7 +45,7 @@ from uconf.core.trees import (
 )
 
 
-class CobarConstruction:
+class CobarConstruction(UniqueRepresentation):
     """Factory for cobar construction components of a connected dg-cooperad.
 
     Args:

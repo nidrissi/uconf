@@ -44,6 +44,7 @@ from uconf.constructions import (
     BarConstruction,
     CobarComplexCoalgebra,
     CobarConstruction,
+    e_comodule_on_generator,
 )
 from uconf.core import CooperadProtocol, OperadProtocol
 from uconf.models import (
@@ -94,6 +95,7 @@ __all__ = [
     "SurjectionSphereCochainAlgebra",
     "surjection_chain_action",
     "surjection_cochain_action",
+    "e_comodule_on_generator",
 ]
 
 

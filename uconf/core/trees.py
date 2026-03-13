@@ -15,7 +15,7 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from typing import Iterator, Literal
+from typing import Any, Iterator, Literal
 
 
 def is_leaf(node) -> bool:
@@ -427,6 +427,118 @@ def _subtrees_for_leaves(
 
     # Enumerate trees with arity n and relabel
     for tree in enumerate_trees_by_weight(n, max_weight, operad_cls, base_ring):
+        yield relabel_leaves(tree, mapping)
+
+
+def enumerate_planar_trees_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator[tuple]:
+    """Enumerate planar-decorated trees in ``B(P)(arity)`` of bar degree ``target_degree``.
+
+    A tree is *planar* (in the quasi-planar cooperad sense) when:
+
+    1. All vertex decorations are planar elements of the base operad.
+    2. Children at each vertex have consecutive leaf-label ranges, so that
+       ``planarize(T) = T ⊗ id`` (the global permutation is the identity).
+
+    Condition 2 means that the tree is a *standard planar tree*: leaf labels
+    run ``1, …, n`` strictly left-to-right, and each child subtree occupies a
+    contiguous block.  All such trees are automatically in shuffle form.
+
+    Uses the operad's ``planar_basis_it`` at the exact required degree for
+    each vertex, so this is efficient even for operads with many basis elements
+    per degree (e.g. Barratt–Eccles).
+
+    Requires the operad to implement ``planar_basis_it``.
+
+    The enumeration mirrors the binary-root topologies produced by
+    ``enumerate_trees_by_weight``, extended to planar decorations and
+    restricted to consecutive child-leaf ranges.
+    """
+    if arity < 2 or target_degree < 1:
+        return
+
+    # ------------------------------------------------------------------
+    # Weight 1: single internal vertex with arity leaves.
+    # Decoration degree = target_degree - 1.
+    # ------------------------------------------------------------------
+    if weight_bound >= 1:
+        dec_degree = target_degree - 1
+        if dec_degree >= 0:
+            parent = operad_cls(arity, base_ring)
+            if hasattr(parent, "planar_basis_it"):
+                for elem in parent.planar_basis_it(dec_degree):
+                    for dec in elem.support():
+                        yield (dec,) + tuple(range(1, arity + 1))
+
+    # ------------------------------------------------------------------
+    # Weight >= 2: binary root, one of whose children is an internal
+    # subtree.  We restrict to *consecutive* child-leaf ranges so that
+    # both children's subtrees remain planar.  The two ranges are
+    # {1,...,a} and {a+1,...,n} for a in 1..n-1.
+    # ------------------------------------------------------------------
+    if weight_bound >= 2 and target_degree >= 2 and arity >= 3:
+        root_parent = operad_cls(2, base_ring)
+        if not hasattr(root_parent, "planar_basis_it"):
+            return
+
+        for root_dec_degree in range(target_degree - 1):
+            remaining = target_degree - root_dec_degree - 1
+            for root_dec_elem in root_parent.planar_basis_it(root_dec_degree):
+                for root_dec in root_dec_elem.support():
+                    # Consecutive splits: child 1 gets {1,...,a}, child 2 gets {a+1,...,n}
+                    for a in range(1, arity):
+                        part1 = tuple(range(1, a + 1))
+                        part2 = tuple(range(a + 1, arity + 1))
+                        for deg1 in range(remaining + 1):
+                            deg2 = remaining - deg1
+                            for c1 in _planar_subtrees_for_leaves(
+                                part1,
+                                weight_bound - 1,
+                                operad_cls,
+                                base_ring,
+                                deg1,
+                            ):
+                                for c2 in _planar_subtrees_for_leaves(
+                                    part2,
+                                    weight_bound - 1 - weight(c1),
+                                    operad_cls,
+                                    base_ring,
+                                    deg2,
+                                ):
+                                    yield (root_dec, c1, c2)
+
+
+def _planar_subtrees_for_leaves(
+    leaf_set: tuple,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator[tuple | int]:
+    """Enumerate planar subtrees for a given leaf set and exact bar degree.
+
+    A single leaf always has bar degree 0.
+    """
+    n = len(leaf_set)
+    if n == 0:
+        return
+    if n == 1:
+        if target_degree == 0:
+            yield leaf_set[0]
+        return
+
+    if max_weight < 1 or target_degree < 1:
+        return
+
+    mapping = {i + 1: leaf_set[i] for i in range(n)}
+    for tree in enumerate_planar_trees_in_degree(
+        n, max_weight, operad_cls, base_ring, target_degree
+    ):
         yield relabel_leaves(tree, mapping)
 
 
