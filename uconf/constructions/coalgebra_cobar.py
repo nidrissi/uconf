@@ -36,6 +36,7 @@ from typing import ClassVar
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -408,25 +409,32 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["CobarComplexCoalgebra"], CombinatorialFreeModule.Element
+    ):
         """An element of the cobar complex Ω_C(V)."""
 
         def boundary(self) -> "CobarComplexCoalgebra.Element":
             """Apply the full cobar differential d = d_1 + d_2 + d_V + d_coact."""
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def d1(self) -> "CobarComplexCoalgebra.Element":
             """Apply ∂_C to each vertex decoration."""
-            return self.parent()._d1(self)
+            parent = self._parent()
+            return parent._d1(self)
 
         def d2(self) -> "CobarComplexCoalgebra.Element":
             """Apply the structural cobar differential (expand internal vertices)."""
-            return self.parent()._d2(self)
+            parent = self._parent()
+            return parent._d2(self)
 
         def dV(self) -> "CobarComplexCoalgebra.Element":
             """Apply ∂_V to each leaf decoration."""
-            return self.parent()._dV(self)
+            parent = self._parent()
+            return parent._dV(self)
 
         def dcoact(self) -> "CobarComplexCoalgebra.Element":
             """Apply the C-coalgebra coaction at each leaf."""
-            return self.parent()._dcoact(self)
+            parent = self._parent()
+            return parent._dcoact(self)

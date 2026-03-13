@@ -28,6 +28,7 @@ from sage.all import (
 )
 
 from uconf.core.cooperad import CooperadLike
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -363,7 +364,10 @@ class CobarConstruction(UniqueRepresentation):
             """Delegate to factory compose."""
             return self.factory.compose(x, i, y)
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["CobarConstruction.Component"],
+        CombinatorialFreeModule.Element,
+    ):
         """Element of a cobar construction operad component."""
 
         def pretty(self) -> str:
@@ -372,8 +376,9 @@ class CobarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
+            parent = self._parent()
             for basis, coeff in self:
-                term = self.parent()._repr_term(basis)
+                term = parent._repr_term(basis)
                 if coeff == 1:
                     pieces.append(term)
                 elif coeff == -1:
@@ -388,8 +393,9 @@ class CobarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
+            parent = self._parent()
             for basis, coeff in self:
-                term = self.parent()._latex_term(basis)
+                term = parent._latex_term(basis)
                 if coeff == 1:
                     pieces.append(term)
                 elif coeff == -1:
@@ -407,23 +413,26 @@ class CobarConstruction(UniqueRepresentation):
             return self.pretty_latex()
 
         def arity(self) -> int:
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "CobarConstruction.Element":
             """Apply the cobar differential ``d = d_1 + d_2``."""
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def d1(self) -> "CobarConstruction.Element":
             """Internal differential: applies cooperad boundary to vertex decorations."""
-            return self.parent()._d1(self)
+            parent = self._parent()
+            return parent._d1(self)
 
         def d2(self) -> "CobarConstruction.Element":
             """Structural differential: expands internal edges."""
-            return self.parent()._d2(self)
+            parent = self._parent()
+            return parent._d2(self)
 
         def permute(self, sigma) -> "CobarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
-            parent = self.parent()
+            parent = self._parent()
             n = parent.arity()
 
             if isinstance(sigma, (list, tuple)):

@@ -10,6 +10,7 @@ import itertools
 from typing import ClassVar
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
+from uconf.core.parented_element import ParentedElementMixin
 
 
 class Associative(CombinatorialFreeModule):
@@ -121,9 +122,9 @@ class Associative(CombinatorialFreeModule):
 
     @staticmethod
     def compose(
-        x,
+        x: Element,
         input: int,
-        y,
+        y: Element,
     ):
         """Operadic composition ``x \\circ_i y``."""
 
@@ -146,30 +147,32 @@ class Associative(CombinatorialFreeModule):
 
         return target.sum_of_terms(term_generator())
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(ParentedElementMixin["Associative"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity associative component."""
 
         def arity(self) -> int:
             """Return the arity of this element."""
 
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self):
             """Apply the differential."""
 
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def permute(self, sigma):
             """Permute labels in each supported basis permutation."""
 
+            parent = self._parent()
+
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             def term_generator():
@@ -177,4 +180,4 @@ class Associative(CombinatorialFreeModule):
                     permuted = tuple(sigma(v) for v in basis_key)
                     yield permuted, coeff
 
-            return self.parent().sum_of_terms(term_generator())
+            return parent.sum_of_terms(term_generator())

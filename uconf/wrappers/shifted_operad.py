@@ -16,6 +16,7 @@ from sage.all import (
     SymmetricGroup,
     UniqueRepresentation,
 )
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.operad import OperadLike
 from uconf.core.signs import (
     shifted_boundary_sign,
@@ -193,42 +194,43 @@ class ShiftedOperad(UniqueRepresentation):
         def unit(self) -> "ShiftedOperad.Element":
             return self.factory.unit(self.base_ring())
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element
+    ):
         """Element wrapper carrying shifted operad structure maps."""
 
         def arity(self) -> int:
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "ShiftedOperad.Element":
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def permute(self, sigma) -> "ShiftedOperad.Element":
+            parent = self._parent()
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             base_permuted = (
-                self.parent()
-                .base_parent()
+                parent.base_parent()
                 .sum_of_terms((basis, coeff) for basis, coeff in self)
                 .permute(sigma)
             )
-            sign = shifted_permutation_sign(self.parent().factory.shift_degree, sigma)
-            return self.parent().from_base(sign * base_permuted)
+            sign = shifted_permutation_sign(parent.factory.shift_degree, sigma)
+            return parent.from_base(sign * base_permuted)
 
         def base_element(self):
             """Return the underlying element in the base operad component."""
 
-            return (
-                self.parent()
-                .base_parent()
-                .sum_of_terms((basis, coeff) for basis, coeff in self)
+            parent = self._parent()
+            return parent.base_parent().sum_of_terms(
+                (basis, coeff) for basis, coeff in self
             )
 
         def underlying_element(self):

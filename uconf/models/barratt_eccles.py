@@ -21,6 +21,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.parented_element import ParentedElementMixin
 
 
 class BarrattEccles(CombinatorialFreeModule):
@@ -318,29 +319,35 @@ class BarrattEccles(CombinatorialFreeModule):
             result = max(result, complexity)
         return result
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["BarrattEccles"], CombinatorialFreeModule.Element
+    ):
         """Elements of the Barratt--Eccles operad component."""
 
         def arity(self) -> int:
             """Return the arity of this element."""
 
-            return self.parent().arity()
+            return self._parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with a group element."""
 
-            return self.parent().planarize(self)
+            parent = self._parent()
+            return parent.planarize(self)
 
         def boundary(self) -> BarrattEccles.Element:
             """Apply the simplicial differential."""
 
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
 
+            parent = self._parent()
+
             return max(
-                (self.parent()._complexity_on_basis(basis) for basis in self.support()),
+                (parent._complexity_on_basis(basis) for basis in self.support()),
                 default=0,
             )
 
@@ -348,14 +355,14 @@ class BarrattEccles(CombinatorialFreeModule):
             """
             Permutes the basis elements of self by precomposing with sigma.
             """
+            parent = self._parent()
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             def permuted_term_generator():
@@ -364,14 +371,15 @@ class BarrattEccles(CombinatorialFreeModule):
                     permuted_basis = tuple(sigma * p for p in basis)
                     yield (permuted_basis, coeff)
 
-            return self.parent().sum_of_terms(permuted_term_generator())
+            return parent.sum_of_terms(permuted_term_generator())
 
         def diagonal(self):
             """Compute the Alexander--Whitney diagonal ``E -> E \\otimes E``."""
             # 1. Construct the Tensor Product Parent
             # Sage handles this automatically: self.tensor(self) creates the module E (x) E
 
-            tensor_module = self.parent().tensor(self.parent())
+            parent = self._parent()
+            tensor_module = parent.tensor(parent)
 
             result = tensor_module.zero()
 

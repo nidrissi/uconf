@@ -33,6 +33,7 @@ from uconf.core.signs import (
     sign_from_exponent,
 )
 from uconf.core.operad import OperadLike
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
     children,
@@ -203,7 +204,7 @@ class BarConstruction(UniqueRepresentation):
 
                 # Use the base operad's planarize morphism on the decoration.
                 dec_elem = op_parent.term(dec)
-                planarized = op_parent.planarize(dec_elem)
+                planarized = op_parent.planarize(dec_elem)  # type: ignore[attr-defined]
 
                 # For Surjection / BarrattEccles this is a single term;
                 # for other operads it may be a linear combination.
@@ -262,7 +263,7 @@ class BarConstruction(UniqueRepresentation):
                 op_parent = self._operad_cls(k, base_ring)
                 if not hasattr(op_parent, "planarize"):
                     return False
-                planarized = op_parent.planarize(op_parent.term(dec))
+                planarized = op_parent.planarize(op_parent.term(dec))  # type: ignore[attr-defined]
                 Sk = SymmetricGroup(k)
                 identity_k = Sk.identity()
                 for (_pl_dec, sigma_key), _coeff in planarized:
@@ -626,7 +627,10 @@ class BarConstruction(UniqueRepresentation):
                 total += coeff * _on_basis(tree)
             return total
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["BarConstruction.Component"],
+        CombinatorialFreeModule.Element,
+    ):
         """Element of a bar construction cooperad component."""
 
         def pretty(self) -> str:
@@ -635,8 +639,9 @@ class BarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
+            parent = self._parent()
             for basis, coeff in self:
-                term = self.parent()._repr_term(basis)
+                term = parent._repr_term(basis)
                 if coeff == 1:
                     pieces.append(term)
                 elif coeff == -1:
@@ -651,8 +656,9 @@ class BarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
+            parent = self._parent()
             for basis, coeff in self:
-                term = self.parent()._latex_term(basis)
+                term = parent._latex_term(basis)
                 if coeff == 1:
                     pieces.append(term)
                 elif coeff == -1:
@@ -670,19 +676,22 @@ class BarConstruction(UniqueRepresentation):
             return self.pretty_latex()
 
         def arity(self) -> int:
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "BarConstruction.Element":
             """Apply the bar differential (d_1 + d_2) to this element."""
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def d1(self) -> "BarConstruction.Element":
             """Internal differential: applies operad boundary to vertex decorations."""
-            return self.parent()._d1(self)
+            parent = self._parent()
+            return parent._d1(self)
 
         def d2(self) -> "BarConstruction.Element":
             """Structural differential: contracts internal edges."""
-            return self.parent()._d2(self)
+            parent = self._parent()
+            return parent._d2(self)
 
         def planarize(self):
             """Decompose into planar representative ⊗ global permutation.
@@ -690,11 +699,12 @@ class BarConstruction(UniqueRepresentation):
             Returns an element of ``B(P)(n) ⊗ k[S_n]``.
             Requires the base operad to implement ``planarize``.
             """
-            return self.parent().planarize(self)
+            parent = self._parent()
+            return parent.planarize(self)
 
         def permute(self, sigma) -> "BarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
-            parent = self.parent()
+            parent = self._parent()
             n = parent.arity()
 
             if isinstance(sigma, (list, tuple)):
@@ -724,7 +734,8 @@ class BarConstruction(UniqueRepresentation):
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Apply infinitesimal cocomposition ``Δ^{i;m,n}`` to this element."""
-            return self.parent().infinitesimal_cocompose(self, i, m, n)
+            parent = self._parent()
+            return parent.infinitesimal_cocompose(self, i, m, n)
 
 
 BarConstruction.Component.Element = BarConstruction.Element

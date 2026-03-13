@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Protocol, Self, TypeAlias, runtime_checkable
+from typing import Any, Protocol, Self, TypeAlias, TypeVar, runtime_checkable
+
+
+OperadParentT = TypeVar("OperadParentT", bound="OperadProtocol", covariant=True)
+
+
+class SupportsOperadParent(Protocol[OperadParentT]):
+    """Protocol for Sage elements exposing a typed ``parent()`` method."""
+
+    def parent(self) -> OperadParentT: ...
 
 
 @runtime_checkable
@@ -59,7 +68,7 @@ class OperadProtocol(Protocol):
         """Validates and normalizes a basis key (implementation detail)."""
         ...
 
-    class Element(Protocol):
+    class Element(SupportsOperadParent["OperadProtocol"], Protocol):
         """Structural contract for elements of an operad component.
 
         Elements represent sparse linear combinations and are iterable over

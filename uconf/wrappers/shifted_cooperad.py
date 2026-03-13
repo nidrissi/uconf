@@ -13,6 +13,7 @@ from sage.all import (
 )
 
 from uconf.core.cooperad import CooperadLike
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
@@ -163,49 +164,54 @@ class ShiftedCooperad(UniqueRepresentation):
 
             return target.sum_of_terms(term_generator())
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["ShiftedCooperad.Component"],
+        CombinatorialFreeModule.Element,
+    ):
         """Element wrapper carrying shifted cooperad structure maps."""
 
         def arity(self) -> int:
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "ShiftedCooperad.Element":
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def permute(self, sigma) -> "ShiftedCooperad.Element":
+            parent = self._parent()
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             base_permuted = (
-                self.parent()
-                .base_parent()
+                parent.base_parent()
                 .sum_of_terms((basis, coeff) for basis, coeff in self)
                 .permute(sigma)
             )
-            sign = shifted_permutation_sign(self.parent().factory.shift_degree, sigma)
-            return self.parent().from_base(sign * base_permuted)
+            sign = shifted_permutation_sign(parent.factory.shift_degree, sigma)
+            return parent.from_base(sign * base_permuted)
 
         def counit(self):
-            return self.parent().counit(self)
+            parent = self._parent()
+            return parent.counit(self)
 
         def reduced(self) -> "ShiftedCooperad.Element":
-            return self.parent().reduced(self)
+            parent = self._parent()
+            return parent.reduced(self)
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
-            return self.parent().infinitesimal_cocompose(self, i, m, n)
+            parent = self._parent()
+            return parent.infinitesimal_cocompose(self, i, m, n)
 
         def base_element(self):
-            return (
-                self.parent()
-                .base_parent()
-                .sum_of_terms((basis, coeff) for basis, coeff in self)
+            parent = self._parent()
+            return parent.base_parent().sum_of_terms(
+                (basis, coeff) for basis, coeff in self
             )
 
 
