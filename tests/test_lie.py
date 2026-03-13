@@ -9,7 +9,7 @@ import math
 import time
 
 import pytest
-from sage.all import ZZ
+from sage.all import ZZ, QQ
 
 from uconf import Lie
 
@@ -20,7 +20,7 @@ def _as_dict(x):
 
 @pytest.mark.parametrize("n", range(0, 6))
 def test_basis_it_size(n: int) -> None:
-    basis = list(Lie(n).basis_it(0))
+    basis = list(Lie(n, QQ).basis_it(0))
     if n == 0:
         expected_size = 0
     else:
@@ -29,19 +29,19 @@ def test_basis_it_size(n: int) -> None:
 
 
 def test_unit() -> None:
-    u = Lie.unit()
+    u = Lie.unit(QQ)
     assert _as_dict(u) == {(): 1}, "Unit should be the arity-1 generator x1."
 
 
 @pytest.mark.parametrize("sigma", ([2, 1],))
 def test_antisymmetry_via_permutation(sigma: list[int]) -> None:
-    l2 = Lie(2)
+    l2 = Lie(2, QQ)
     bracket = l2((1,))
     assert bracket.permute(sigma) == -bracket, "Swapping x1 and x2 must negate [x1,x2]."
 
 
 def test_basic_composition() -> None:
-    l2 = Lie(2)
+    l2 = Lie(2, QQ)
     bracket = l2((1,))
     composed = Lie.compose(bracket, 1, bracket)
     target = composed.parent()
@@ -52,7 +52,7 @@ def test_basic_composition() -> None:
 
 
 def test_compose_requires_same_base_ring() -> None:
-    x = Lie(2)((1,))
+    x = Lie(2, QQ)((1,))
     y = Lie(2, base_ring=ZZ)((1,))
     with pytest.raises(TypeError, match="same base ring"):
         Lie.compose(x, 1, y)
@@ -60,9 +60,9 @@ def test_compose_requires_same_base_ring() -> None:
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_operadic_unit_axioms(input_pos: int) -> None:
-    l3 = Lie(3)
+    l3 = Lie(3, QQ)
     x = l3((1, 2))
-    unit = Lie.unit()
+    unit = Lie.unit(QQ)
 
     left = Lie.compose(unit, 1, x)
     right = Lie.compose(x, input_pos, unit)
@@ -75,7 +75,7 @@ def test_operadic_unit_axioms(input_pos: int) -> None:
 
 
 def test_jacobi_identity() -> None:
-    l2 = Lie(2)
+    l2 = Lie(2, QQ)
     bracket = l2((1,))
 
     jacobi_generator = Lie.compose(bracket, 1, bracket)
@@ -100,13 +100,13 @@ def test_jacobi_identity() -> None:
 def test_sequential_associativity_arity4() -> None:
     """Verify the operad sequential-associativity axiom at arity 4.
 
-    For any μ ∈ Lie(2) the identity
+    For any μ ∈ Lie(2, QQ) the identity
     ``(μ ∘_1 μ) ∘_1 μ  =  μ ∘_1 (μ ∘_1 μ)``
-    must hold in Lie(4).  Both sides require compositions through
-    Lie(3) → Lie(4), exercising the full compose/project pipeline.
+    must hold in Lie(4, QQ).  Both sides require compositions through
+    Lie(3, QQ) → Lie(4, QQ), exercising the full compose/project pipeline.
     """
 
-    bracket = Lie(2)((1,))
+    bracket = Lie(2, QQ)((1,))
 
     t0 = time.perf_counter()
     lhs = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)
@@ -120,16 +120,16 @@ def test_sequential_associativity_arity4() -> None:
 def test_sequential_associativity_arity5() -> None:
     """Verify the operad sequential-associativity axiom at arity 5.
 
-    Uses ``(μ ∘_1 (μ ∘_1 μ)) ∘_1 μ = μ ∘_1 ((μ ∘_1 μ) ∘_1 μ)`` in Lie(5),
-    a non-trivial identity requiring four composition calls in Lie(3)–Lie(5).
+    Uses ``(μ ∘_1 (μ ∘_1 μ)) ∘_1 μ = μ ∘_1 ((μ ∘_1 μ) ∘_1 μ)`` in Lie(5, QQ),
+    a non-trivial identity requiring four composition calls in Lie(3, QQ)–Lie(5, QQ).
     """
 
-    bracket = Lie(2)((1,))
-    mu3 = Lie.compose(bracket, 1, bracket)  # Lie(3)
+    bracket = Lie(2, QQ)((1,))
+    mu3 = Lie.compose(bracket, 1, bracket)  # Lie(3, QQ)
 
     t0 = time.perf_counter()
-    lhs = Lie.compose(Lie.compose(bracket, 1, mu3), 1, bracket)  # Lie(4)→Lie(5)
-    rhs = Lie.compose(bracket, 1, Lie.compose(mu3, 1, bracket))  # Lie(4)→Lie(5)
+    lhs = Lie.compose(Lie.compose(bracket, 1, mu3), 1, bracket)  # Lie(4, QQ)→Lie(5, QQ)
+    rhs = Lie.compose(bracket, 1, Lie.compose(mu3, 1, bracket))  # Lie(4, QQ)→Lie(5, QQ)
     elapsed = time.perf_counter() - t0
 
     assert lhs == rhs, "Sequential associativity failed at arity 5."
@@ -137,16 +137,16 @@ def test_sequential_associativity_arity5() -> None:
 
 
 def test_compose_full_basis_arity5() -> None:
-    """Composition of full-basis-sum elements from Lie(3) lands in Lie(5).
+    """Composition of full-basis-sum elements from Lie(3, QQ) lands in Lie(5, QQ).
 
-    Builds the sum of all basis elements in Lie(3) and composes it with
-    itself to produce an element of Lie(5).  The result must be non-zero
+    Builds the sum of all basis elements in Lie(3, QQ) and composes it with
+    itself to produce an element of Lie(5, QQ).  The result must be non-zero
     and the call must complete quickly after caches are warm.
     """
 
-    l3 = Lie(3)
+    l3 = Lie(3, QQ)
     x = sum((l3(k) for k in l3._basis_keys()), l3.zero())  # sum all 2! basis elts
-    assert x != l3.zero(), "Sum of Lie(3) basis should be non-zero."
+    assert x != l3.zero(), "Sum of Lie(3, QQ) basis should be non-zero."
 
     Lie.compose(x, 1, x)  # warm-up: build arity-5 caches
 
@@ -154,19 +154,21 @@ def test_compose_full_basis_arity5() -> None:
     result = Lie.compose(x, 1, x)
     elapsed = time.perf_counter() - t0
 
-    assert result.parent().arity() == 5, "Compose of Lie(3)⊗Lie(3) must land in Lie(5)."
+    assert result.parent().arity() == 5, (
+        "Compose of Lie(3, QQ)⊗Lie(3, QQ) must land in Lie(5, QQ)."
+    )
     assert elapsed < 10, f"compose took {elapsed:.2f} s at arity 5 warm (limit: 10 s)."
 
 
 def test_compose_full_basis_arity6() -> None:
-    """Composition of full-basis-sum elements from Lie(3) and Lie(4) lands in Lie(6).
+    """Composition of full-basis-sum elements from Lie(3, QQ) and Lie(4, QQ) lands in Lie(6, QQ).
 
     This exercises the arity-6 cache path (PBW matrix 720×120, left-inverse
     120×720).  The warm call should complete in well under 30 seconds.
     """
 
-    l3 = Lie(3)
-    l4 = Lie(4)
+    l3 = Lie(3, QQ)
+    l4 = Lie(4, QQ)
     x = sum((l3(k) for k in l3._basis_keys()), l3.zero())
     y = sum((l4(k) for k in l4._basis_keys()), l4.zero())
 
@@ -176,7 +178,9 @@ def test_compose_full_basis_arity6() -> None:
     result = Lie.compose(x, 1, y)
     elapsed = time.perf_counter() - t0
 
-    assert result.parent().arity() == 6, "Compose of Lie(3)⊗Lie(4) must land in Lie(6)."
+    assert result.parent().arity() == 6, (
+        "Compose of Lie(3, QQ)⊗Lie(4, QQ) must land in Lie(6, QQ)."
+    )
     assert elapsed < 30, f"compose took {elapsed:.2f} s at arity 6 warm (limit: 30 s)."
 
 
@@ -187,9 +191,9 @@ def test_compose_full_basis_arity6() -> None:
 
 @pytest.mark.parametrize("i,k", [(1, 2), (1, 3), (2, 3)])
 def test_lie_parallel_associativity_arity4(i: int, k: int) -> None:
-    """Parallel associativity for p ∈ Lie(3), q, r ∈ Lie(2) → Lie(5)."""
-    mu3 = Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,)))  # Lie(3)
-    mu2 = Lie(2)((1,))
+    """Parallel associativity for p ∈ Lie(3, QQ), q, r ∈ Lie(2, QQ) → Lie(5, QQ)."""
+    mu3 = Lie.compose(Lie(2, QQ)((1,)), 1, Lie(2, QQ)((1,)))  # Lie(3, QQ)
+    mu2 = Lie(2, QQ)((1,))
     n = 2
     lhs = Lie.compose(Lie.compose(mu3, i, mu2), k + n - 1, mu2)
     rhs = Lie.compose(Lie.compose(mu3, k, mu2), i, mu2)
@@ -208,9 +212,9 @@ def test_lie_parallel_associativity_arity4(i: int, k: int) -> None:
     ],
 )
 def test_lie_parallel_associativity_arity5(i: int, k: int) -> None:
-    """Parallel associativity for p ∈ Lie(4), q, r ∈ Lie(2) → Lie(6)."""
-    bracket = Lie(2)((1,))
-    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4)
+    """Parallel associativity for p ∈ Lie(4, QQ), q, r ∈ Lie(2, QQ) → Lie(6, QQ)."""
+    bracket = Lie(2, QQ)((1,))
+    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4, QQ)
     n = 2
     lhs = Lie.compose(Lie.compose(mu4, i, bracket), k + n - 1, bracket)
     rhs = Lie.compose(Lie.compose(mu4, k, bracket), i, bracket)
@@ -254,9 +258,9 @@ def _inverse_one_line(sigma: list[int]) -> list[int]:
     ],
 )
 def test_lie_equivariance_arity3_times_2(sigma: list[int], tau: list[int]) -> None:
-    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(3)×Lie(2)."""
-    x = Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,)))  # Lie(3)
-    y = Lie(2)((1,))
+    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(3, QQ)×Lie(2, QQ)."""
+    x = Lie.compose(Lie(2, QQ)((1,)), 1, Lie(2, QQ)((1,)))  # Lie(3, QQ)
+    y = Lie(2, QQ)((1,))
     sigma_inv = _inverse_one_line(sigma)
     for i in range(1, 4):
         lhs = Lie.compose(x.permute(sigma), i, y.permute(tau))
@@ -275,10 +279,10 @@ def test_lie_equivariance_arity3_times_2(sigma: list[int], tau: list[int]) -> No
     ],
 )
 def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> None:
-    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(4)×Lie(2)."""
-    bracket = Lie(2)((1,))
-    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4)
-    y = Lie(2)((1,))
+    """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for Lie(4, QQ)×Lie(2, QQ)."""
+    bracket = Lie(2, QQ)((1,))
+    mu4 = Lie.compose(Lie.compose(bracket, 1, bracket), 1, bracket)  # Lie(4, QQ)
+    y = Lie(2, QQ)((1,))
     sigma_inv = _inverse_one_line(sigma)
     for i in range(1, 5):
         lhs = Lie.compose(mu4.permute(sigma), i, y.permute(tau))
@@ -294,8 +298,8 @@ def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> No
 
 @pytest.mark.parametrize("n", range(0, 7))
 def test_lie_differential_squared_zero(n: int) -> None:
-    """d²(x) = 0 for every basis element of Lie(n) (boundary is identically 0)."""
-    l = Lie(n)
+    """d²(x) = 0 for every basis element of Lie(n, QQ) (boundary is identically 0)."""
+    l = Lie(n, QQ)
     zero = l.zero()
     for elem in l.basis_it(0):
-        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n})"
+        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n}, QQ)"

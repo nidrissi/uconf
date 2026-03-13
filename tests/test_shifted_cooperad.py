@@ -22,7 +22,7 @@ def test_counit_preserved_by_shift_wrapper() -> None:
 
 
 def test_shifted_infinitesimal_cocompose_sign() -> None:
-    base = SurjectionDual(3)((1, 2, 3, 2))
+    base = SurjectionDual(3, QQ)((1, 2, 3, 2))
     shifted = ShiftedCooperad(SurjectionDual, 1)
     shifted_x = shifted(3)((1, 2, 3, 2))
 
@@ -33,7 +33,7 @@ def test_shifted_infinitesimal_cocompose_sign() -> None:
     s = _as_dict(shifted_delta)
 
     assert b.keys() == s.keys()
-    right_parent = SurjectionDual(2)
+    right_parent = SurjectionDual(2, QQ)
     for (left_basis, right_basis), coeff in b.items():
         right_degree = right_parent.degree_on_basis(right_basis)
         expected_sign = -1 if right_degree % 2 else 1

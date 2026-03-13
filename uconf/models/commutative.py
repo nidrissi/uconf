@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Iterator
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -19,7 +19,7 @@ class Commutative(CombinatorialFreeModule):
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
-    def __init__(self, n: int, base_ring=QQ):
+    def __init__(self, n: int, base_ring):
         """Initialize ``Com(n)`` over ``base_ring``."""
 
         assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -78,10 +78,10 @@ class Commutative(CombinatorialFreeModule):
         return self._arity
 
     @staticmethod
-    def unit():
+    def unit(base_ring):
         """Return the operadic unit in arity ``1``."""
 
-        return Commutative(1)(())
+        return Commutative(1, base_ring)(())
 
     def basis_it(self, d: int) -> Iterator[Commutative.Element]:
         """Iterate over basis elements in this arity and the given degree."""

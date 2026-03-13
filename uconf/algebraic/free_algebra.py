@@ -28,7 +28,7 @@ from __future__ import annotations
 import itertools
 from typing import ClassVar
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.operad import OperadLike
@@ -72,13 +72,13 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     name: ClassVar[str] = "Free"
 
-    def __init__(self, operad_cls: OperadLike, inner_module, base_ring=QQ):
+    def __init__(self, operad_cls: OperadLike, inner_module, base_ring):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
             operad_cls: Operad provider P (class or wrapper instance).
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
-            base_ring: Coefficient ring (default ``QQ``).
+            base_ring: Coefficient ring.
         """
         self._operad_cls = operad_cls
         self._inner_module = inner_module
@@ -280,7 +280,7 @@ class FreeOperadAlgebra(OperadAlgebra):
     Args:
         operad_cls: Operad provider P (class or wrapper instance).
         inner_module: The generating dg-module M.
-        base_ring: Coefficient ring (default ``QQ``).
+        base_ring: Coefficient ring.
 
     The inclusion ``η: M → Free_P(M)`` is::
 
@@ -288,12 +288,12 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     Examples::
 
-        free_lie = FreeOperadAlgebra(Lie, module_M)
+        free_lie = FreeOperadAlgebra(Lie, module_M, R)
         # Apply the Lie bracket to two generators:
-        bracket = free_lie.act(Lie(2).term((1,)), [x, y])
+        bracket = free_lie.act(Lie(2, R).term((1,)), [x, y])
     """
 
-    def __init__(self, operad_cls: OperadLike, inner_module, base_ring=QQ):
+    def __init__(self, operad_cls: OperadLike, inner_module, base_ring):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module

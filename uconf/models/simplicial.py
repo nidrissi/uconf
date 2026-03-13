@@ -20,7 +20,6 @@ from itertools import combinations, combinations_with_replacement, pairwise
 
 from sage.all import (
     Integer,
-    QQ,
     CombinatorialFreeModule,
     GradedModulesWithBasis,
     Rational,
@@ -44,15 +43,15 @@ class SimplicialChains(CombinatorialFreeModule):
         (0, 1, 2)   # the 2-simplex [0,1,2]
         (3,)        # the vertex 3
 
-    For tensor products of chain modules use ``tensor([SimplicialChains()]*r)``.
+    For tensor products of chain modules use ``tensor([SimplicialChains(R)]*r)``.
 
     Parameters
     ----------
-    base_ring : ring, default ``QQ``
+    base_ring :
         Coefficient ring.
     """
 
-    def __init__(self, base_ring=QQ):
+    def __init__(self, base_ring):
         name = "NΔ"
         super().__init__(
             base_ring,
@@ -150,7 +149,7 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- standard element ---------------------------------------------------
 
     @staticmethod
-    def fundamental_chain(n: int) -> "SimplicialChains.Element":
+    def fundamental_chain(base_ring, n: int) -> "SimplicialChains.Element":
         r"""The chain `[0, 1, \dots, n]` in `C_n(\Delta^n)`.
 
         Parameters
@@ -159,18 +158,18 @@ class SimplicialChains(CombinatorialFreeModule):
             Dimension of the standard simplex ``Δ^n`` (so the chain lies in degree ``n``).
         """
         assert n >= 0
-        return SimplicialChains().term(tuple(range(n + 1)))
+        return SimplicialChains(base_ring).term(tuple(range(n + 1)))
 
     # -- basis enumeration on Delta^N ----------------------------------------
 
     @staticmethod
-    def basis_it(N: int):
+    def basis_it(base_ring, N: int):
         """Iterate over all non-degenerate basis elements in ``C(Δ^N)``.
 
         Yields :class:`SimplicialChains` elements with vertices in
         ``{0, ..., N}``.
         """
-        parent = SimplicialChains()
+        parent = SimplicialChains(base_ring)
         for k in range(1, N + 2):
             for simplex in combinations(range(N + 1), k):
                 yield parent.term(simplex)
@@ -283,10 +282,10 @@ class SimplicialCochains(CombinatorialFreeModule):
     N : int
         Dimension of the ambient standard simplex.
     base_ring
-        Coefficient ring (default ``QQ``).
+        Coefficient ring.
     """
 
-    def __init__(self, N: int, base_ring=QQ):
+    def __init__(self, N: int, base_ring):
         assert N >= 0
         name = f"N*Δ{N}"
         super().__init__(
@@ -373,9 +372,9 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- volume form ---------------------------------------------------------
     @staticmethod
-    def volume_form(N: int) -> "SimplicialCochains.Element":
+    def volume_form(N: int, base_ring) -> "SimplicialCochains.Element":
         """The cochain evaluating to 1 on the fundamental chain of `Δ^N`."""
-        return SimplicialCochains(N).term(tuple(range(N + 1)))
+        return SimplicialCochains(N, base_ring).term(tuple(range(N + 1)))
 
     # -- evaluation pairing -------------------------------------------------
 

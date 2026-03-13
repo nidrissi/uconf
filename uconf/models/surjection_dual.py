@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 from typing import ClassVar
 
-from sage.all import QQ, tensor
+from sage.all import tensor
 
 from uconf.models.surjection import Surjection
 
@@ -20,7 +20,7 @@ class SurjectionDual(Surjection):
     from the primal surjection operad) since the cobar construction uses the arity bound
     n - 1 for the weight, independent of the sign of the degree."""
 
-    def __init__(self, n: int, base_ring=QQ):
+    def __init__(self, n: int, base_ring):
         """Initialize fixed-arity linear dual component and internal caches."""
 
         super().__init__(n, base_ring=base_ring)

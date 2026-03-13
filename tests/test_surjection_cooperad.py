@@ -3,7 +3,7 @@
 The cooperad axioms tested here are:
 
 * **Square-zero differential** – ``d² = 0`` on every basis element of
-  ``SurjectionDual(n)``.
+  ``SurjectionDual(n, QQ)``.
 
 * **Sequential coassociativity** – for ``x ∈ S*(m+n+p-2)``, ``1 ≤ i ≤ m``,
   ``1 ≤ j ≤ n``::
@@ -163,7 +163,7 @@ def _right_block_perm(tau_oneline: list[int], i: int, m: int, n: int) -> list[in
 
 
 def test_surjection_counit_unit_and_reduced() -> None:
-    s1 = SurjectionDual(1)
+    s1 = SurjectionDual(1, QQ)
     unit = s1((1,))
     x = 3 * unit
 
@@ -174,14 +174,14 @@ def test_surjection_counit_unit_and_reduced() -> None:
 
 
 def test_surjection_counit_vanishes_outside_arity_one() -> None:
-    x = SurjectionDual(2)((1, 2))
+    x = SurjectionDual(2, QQ)((1, 2))
     assert SurjectionDual.counit(x) == 0
     assert x.reduced() == x
 
 
 def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
-    left = Surjection(2)((1, 2, 1))
-    right = Surjection(2)((1, 2))
+    left = Surjection(2, QQ)((1, 2, 1))
+    right = Surjection(2, QQ)((1, 2))
     i = 1
 
     composed = Surjection.compose(left, i, right)
@@ -189,7 +189,7 @@ def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
     right_basis = next(iter(right.support()))
 
     for u_basis, coeff in composed:
-        u = SurjectionDual(3)(u_basis)
+        u = SurjectionDual(3, QQ)(u_basis)
         delta = u.infinitesimal_cocompose(i=i, m=2, n=2)
         assert _tensor_coeff(delta, left_basis, right_basis) == int(coeff)
 
@@ -261,7 +261,7 @@ def test_sequential_coassociativity(
     x_tuple: tuple, i: int, j: int, m: int, n: int, p: int
 ) -> None:
     """(id⊗Δ^{j;n,p})∘Δ^{i;m,n+p-1} = (Δ^{i;m,n}⊗id)∘Δ^{i+j-1;m+n-1,p}."""
-    x = SurjectionDual(m + n + p - 2)(x_tuple)
+    x = SurjectionDual(m + n + p - 2, QQ)(x_tuple)
     lhs = _seq_lhs(x, i, j, m, n, p)
     rhs = _seq_rhs(x, i, j, m, n, p)
     assert lhs == rhs, (
@@ -303,7 +303,7 @@ def test_parallel_coassociativity(
     x_tuple: tuple, i: int, j: int, m: int, n: int, p: int
 ) -> None:
     """(Δ^{i;m,n}⊗id)∘Δ^{j+n-1;m+n-1,p} = (-1)^{|b||c|} τ∘(Δ^{j;m,p}⊗id)∘Δ^{i;m+p-1,n}."""
-    x = SurjectionDual(m + n + p - 2)(x_tuple)
+    x = SurjectionDual(m + n + p - 2, QQ)(x_tuple)
     lhs = _par_lhs(x, i, j, m, n, p)
     rhs = _par_rhs(x, i, j, m, n, p)
     assert lhs == rhs, (
@@ -412,7 +412,7 @@ def test_equivariance_right_block(
 )
 def test_coderivation_property(x_tuple: tuple, i: int, m: int, n: int) -> None:
     """Δ(d(x)) = (d⊗id + (-1)^{|a|} id⊗d) Δ(x)."""
-    x = SurjectionDual(m + n - 1)(x_tuple)
+    x = SurjectionDual(m + n - 1, QQ)(x_tuple)
     lhs = _coderivation_lhs(x, i, m, n)
     rhs = _coderivation_rhs(x, i, m, n)
     assert lhs == rhs, (

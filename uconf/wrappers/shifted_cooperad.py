@@ -6,7 +6,6 @@ from __future__ import annotations
 from sage.all import (
     CombinatorialFreeModule,
     GradedModulesWithBasis,
-    QQ,
     SymmetricGroup,
     UniqueRepresentation,
     tensor,
@@ -45,13 +44,13 @@ class ShiftedCooperad(UniqueRepresentation):
         base_k = getattr(self.cooperad_cls, "connectivity", 0)
         return base_k + self.shift_degree
 
-    def __call__(self, n: int, base_ring=QQ) -> "ShiftedCooperad.Component":
+    def __call__(self, n: int, base_ring) -> "ShiftedCooperad.Component":
         return ShiftedCooperad.Component(self, n, base_ring)
 
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of a shifted cooperad."""
 
-        def __init__(self, factory: "ShiftedCooperad", n: int, base_ring=QQ):
+        def __init__(self, factory: "ShiftedCooperad", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(

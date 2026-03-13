@@ -12,7 +12,6 @@ from __future__ import annotations
 from sage.all import (
     CombinatorialFreeModule,
     GradedModulesWithBasis,
-    QQ,
     SymmetricGroup,
     UniqueRepresentation,
 )
@@ -56,12 +55,12 @@ class ShiftedOperad(UniqueRepresentation):
         base_k = getattr(self.operad_cls, "connectivity", 0)
         return base_k + self.shift_degree
 
-    def __call__(self, n: int, base_ring=QQ) -> "ShiftedOperad.Component":
+    def __call__(self, n: int, base_ring) -> "ShiftedOperad.Component":
         return ShiftedOperad.Component(self, n, base_ring)
 
-    def unit(self, base_ring=QQ) -> "ShiftedOperad.Element":
+    def unit(self, base_ring) -> "ShiftedOperad.Element":
         component = self(1, base_ring)
-        return component.from_base(self.operad_cls.unit())
+        return component.from_base(self.operad_cls.unit(base_ring))
 
     def compose(
         self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
@@ -105,7 +104,7 @@ class ShiftedOperad(UniqueRepresentation):
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of a shifted operad."""
 
-        def __init__(self, factory: "ShiftedOperad", n: int, base_ring=QQ):
+        def __init__(self, factory: "ShiftedOperad", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(

@@ -3,7 +3,7 @@
 import math
 
 import pytest
-from sage.all import ZZ
+from sage.all import ZZ, QQ
 
 from uconf import BarrattEccles
 
@@ -33,7 +33,7 @@ def _as_dict(x):
 @pytest.mark.parametrize("r", range(1, 5))
 @pytest.mark.parametrize("d", range(0, 3))
 def test_be_basis(r: int, d: int) -> None:
-    basis = list(BarrattEccles(r).basis_it(d))
+    basis = list(BarrattEccles(r, QQ).basis_it(d))
     if r == 1:
         expected_size = 1 if d == 0 else 0
     else:
@@ -60,7 +60,7 @@ def test_barratt_eccles_unit() -> None:
 
 @pytest.mark.parametrize("sigma", ([2, 1],))
 def test_barratt_eccles_permutation_action(sigma: list[int]) -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     x = e2(((1, 2),))
     swapped = x.permute(sigma)
     assert _as_dict(swapped) == {((1, 2),): 1}, (
@@ -72,7 +72,7 @@ def test_barratt_eccles_permutation_action(sigma: list[int]) -> None:
 
 
 def test_barratt_eccles_basic_composition() -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     x = e2(((1, 2),))
     composed = BarrattEccles.compose(x, 1, x)
     assert _as_dict(composed) == {((3, 2, 1),): 1}, (
@@ -81,14 +81,14 @@ def test_barratt_eccles_basic_composition() -> None:
 
 
 def test_barratt_eccles_compose_requires_same_base_ring() -> None:
-    x = BarrattEccles(2)(((1, 2),))
+    x = BarrattEccles(2, QQ)(((1, 2),))
     y = BarrattEccles(2, base_ring=ZZ)(((1, 2),))
     with pytest.raises(TypeError, match="same base ring"):
         BarrattEccles.compose(x, 1, y)
 
 
 def test_barratt_eccles_constructor_keeps_degenerate_inputs_zero() -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     assert e2(((1, 2), (1, 2))) == e2.zero()
 
 
@@ -103,32 +103,32 @@ def test_barratt_eccles_constructor_keeps_degenerate_inputs_zero() -> None:
 def test_barratt_eccles_constructor_raises_on_invalid_basis_key(
     key: tuple[tuple[object, ...], ...], error_type: type[Exception]
 ) -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     with pytest.raises(error_type):
         e2(key)
 
 
 def test_barratt_eccles_constructor_raises_on_invalid_container() -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     with pytest.raises(TypeError):
         e2("12")
 
 
 def test_barratt_eccles_dict_constructor_skips_only_degenerate_terms() -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     element = e2({((1, 2),): 3, ((1, 2), (1, 2)): 5})
     assert _as_dict(element) == {((2, 1),): 3}
 
 
 def test_barratt_eccles_dict_constructor_raises_on_invalid_key() -> None:
-    e2 = BarrattEccles(2)
+    e2 = BarrattEccles(2, QQ)
     with pytest.raises(ValueError):
         e2({((1, 2),): 1, ((1, 3),): 2})
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_barratt_eccles_operadic_unit_axioms(input_pos: int) -> None:
-    e3 = BarrattEccles(3)
+    e3 = BarrattEccles(3, QQ)
     x = e3(((1, 2, 3),))
     one = BarrattEccles.unit()
 

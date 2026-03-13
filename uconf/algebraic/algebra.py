@@ -72,8 +72,8 @@ class OperadAlgebra(
         if not callable(structure_map):
             raise TypeError("structure_map must be callable.")
         self.module = module
-        self.operad_cls = operad_cls
         self._structure_map = structure_map
+        self.operad_cls = operad_cls
 
     def act(
         self,

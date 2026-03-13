@@ -48,7 +48,7 @@ def test_composition_sign_shift_lie() -> None:
     assert composed.arity() == 3
     assert composed.degree() == 2
 
-    base_composed = Lie.compose(Lie(2)((1,)), 2, Lie(2)((1,)))
+    base_composed = Lie.compose(Lie(2, QQ)((1,)), 2, Lie(2, QQ)((1,)))
 
     assert _as_dict(composed.base_element()) == _as_dict(-base_composed)
 
@@ -60,7 +60,7 @@ def test_composition_sign_shift_surjection_nonzero_degree() -> None:
 
     composed = shifted.compose(x, 1, y)
     base_composed = Surjection.compose(
-        Surjection(2)((1, 2)), 1, Surjection(2)((1, 2, 1))
+        Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2, 1))
     )
 
     assert _as_dict(composed.base_element()) == _as_dict(-base_composed)
@@ -82,5 +82,5 @@ def test_readme_example_smoke() -> None:
     assert x.permute([2, 1]) == x
 
     z = shift_lie.compose(x, 2, x)
-    expected = -Lie.compose(Lie(2)((1,)), 2, Lie(2)((1,)))
+    expected = -Lie.compose(Lie(2, QQ)((1,)), 2, Lie(2, QQ)((1,)))
     assert _as_dict(z.base_element()) == _as_dict(expected)

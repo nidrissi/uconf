@@ -26,7 +26,7 @@ class OperadComponent(Protocol):
     all n >= 0.  Basic operads have k = 0 (non-negative degrees).
     ``ShiftedOperad(P, d)`` has k = P.connectivity + d."""
 
-    def __init__(self, n: int, base_ring=...):
+    def __init__(self, n: int, base_ring):
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
@@ -56,7 +56,7 @@ class OperadComponent(Protocol):
         ...
 
     @staticmethod
-    def unit() -> Element:
+    def unit(base_ring: Any) -> Element:
         """Returns the unit element of the operad."""
         ...
 
@@ -107,11 +107,11 @@ class OperadFactory(Protocol):
 
     name: str
 
-    def __call__(self, n: int, base_ring=...) -> Component:
+    def __call__(self, n: int, base_ring) -> Component:
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
-    def unit(self, base_ring=...) -> Any:
+    def unit(self, base_ring) -> Any:
         """Returns the unit element of the operad."""
         ...
 

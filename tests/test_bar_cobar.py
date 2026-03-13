@@ -145,13 +145,13 @@ def test_bar_cobar_accept_nested_operad_providers() -> None:
     surj_shifted_lie = HadamardProduct(Surjection, shifted_lie)
 
     bar = BarConstruction(surj_shifted_lie)
-    b3 = bar(3)
+    b3 = bar(3, QQ)
     tree = (((1, 2, 3), (1, 2)), 1, 2, 3)
 
     assert b3(tree) != b3.zero()
 
     cobar = CobarConstruction(bar)
-    assert cobar(2).arity() == 2
+    assert cobar(2, QQ).arity() == 2
 
 
 class TestShuffleTrees:
@@ -223,7 +223,7 @@ class TestShuffleTrees:
     def test_bar_commutative_shuffle_normalization(self):
         """Test that BarConstruction normalizes trees to shuffle form."""
         BCom = BarConstruction(Commutative)
-        B2 = BCom(2)
+        B2 = BCom(2, QQ)
 
         # These two trees should be equal after normalization
         tree1 = ((), 1, 2)
@@ -239,7 +239,7 @@ class TestShuffleTrees:
     def test_bar_commutative_single_generator_arity2(self):
         """Test that B(Com)(2) has a single generator in the shuffle basis."""
         BCom = BarConstruction(Commutative)
-        B2 = BCom(2)
+        B2 = BCom(2, QQ)
 
         # The only shuffle tree in arity 2 with weight 1 is ((), 1, 2)
         shuffle_tree = ((), 1, 2)
@@ -256,9 +256,9 @@ class TestShuffleTrees:
     def test_bar_lie_shuffle_normalization(self):
         """Test shuffle normalization for BarConstruction(Lie)."""
         BLie = BarConstruction(Lie)
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
 
-        # Lie(2) has basis key (1,) which is skew-symmetric
+        # Lie(2, QQ) has basis key (1,) which is skew-symmetric
         # Permuting by (12) gives a sign of -1
         tree1 = ((1,), 1, 2)
         tree2 = ((1,), 2, 1)
@@ -275,13 +275,13 @@ class TestBarConstructionLie:
 
     def test_bar_lie_creation(self):
         BLie = BarConstruction(Lie)
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
         assert B2.arity() == 2
 
     def test_bar_lie_counit_element(self):
         """Test the counit_element method returns the single-leaf tree."""
         BLie = BarConstruction(Lie)
-        eta = BLie.counit_element()
+        eta = BLie.counit_element(QQ)
         assert eta.arity() == 1
         # The single leaf has basis key = 1 (integer)
         assert len(list(eta)) == 1
@@ -292,7 +292,7 @@ class TestBarConstructionLie:
     def test_bar_lie_counit_extracts_coefficient(self):
         """Test that counit extracts the coefficient of the single-leaf tree."""
         BLie = BarConstruction(Lie)
-        B1 = BLie(1)
+        B1 = BLie(1, QQ)
 
         # Create element: 3 * (single leaf)
         elem = 3 * B1(1)
@@ -304,7 +304,7 @@ class TestBarConstructionLie:
     def test_bar_lie_counit_zero_for_higher_arity(self):
         """Test that counit is zero for arity != 1."""
         BLie = BarConstruction(Lie)
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
         tree = ((1,), 1, 2)
         elem = B2(tree)
         assert B2.counit(elem) == 0
@@ -312,31 +312,31 @@ class TestBarConstructionLie:
     def test_bar_lie_reduced(self):
         """Test that reduced removes the counit component."""
         BLie = BarConstruction(Lie)
-        B1 = BLie(1)
+        B1 = BLie(1, QQ)
 
         # Element with only the single-leaf tree
         elem = 5 * B1(1)
         assert B1.reduced(elem) == B1.zero()
 
         # For arity 2, reduced is identity
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
         tree = ((1,), 1, 2)
         elem2 = B2(tree)
         assert B2.reduced(elem2) == elem2
 
     def test_bar_lie_degree(self):
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
         tree = ((1, 2), 1, 2, 3)
         assert B3.degree_on_basis(tree) == 1
 
     def test_bar_lie_boundary_squared_zero_arity2(self):
         """d^2 = 0 for B(Lie)(2)."""
         BLie = BarConstruction(Lie)
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
 
         # Arity 2 tree: single vertex with decoration (1,) and children 1, 2
-        # Lie(2) has basis key (1,) - a permutation of (1,) representing [x_1, x_2]
+        # Lie(2, QQ) has basis key (1,) - a permutation of (1,) representing [x_1, x_2]
         tree = ((1,), 1, 2)
         elem = B2(tree)
 
@@ -349,7 +349,7 @@ class TestBarConstructionLie:
     def test_bar_lie_boundary_squared_zero_arity3(self):
         """d^2 = 0 for B(Lie)(3)."""
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
 
         # Weight-1 tree in arity 3
         tree = ((1, 2), 1, 2, 3)
@@ -368,7 +368,7 @@ class TestBarConstructionLie:
     def test_bar_lie_boundary_squared_zero_weight2(self):
         """d^2 = 0 for weight-2 trees in B(Lie)."""
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
 
         # Weight-2 tree: root with arity 2, one child is internal with arity 2
         # Root: (1,), children: internal node with (1,), and leaf 3
@@ -382,7 +382,7 @@ class TestBarConstructionLie:
     def test_bar_lie_d2_edge_contraction(self):
         """Test that d_2 correctly contracts internal edges."""
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
 
         # Weight-2 tree
         nested = ((1,), ((1,), 1, 2), 3)
@@ -399,7 +399,7 @@ class TestBarConstructionLie:
     def test_bar_lie_boundary_squared_zero_arity4_weight2(self):
         """d^2 = 0 for a weight-2 tree in B(Lie)(4)."""
         BLie = BarConstruction(Lie)
-        B4 = BLie(4)
+        B4 = BLie(4, QQ)
 
         # Root arity 3 with one internal arity-2 child
         tree = ((1, 2), ((1,), 1, 2), 3, 4)
@@ -410,7 +410,7 @@ class TestBarConstructionLie:
     def test_bar_lie_boundary_squared_zero_arity6_weight3(self):
         """d^2 = 0 for a weight-3 tree in B(Lie)(6)."""
         BLie = BarConstruction(Lie)
-        B6 = BLie(6)
+        B6 = BLie(6, QQ)
 
         tree = ((1, 2, 3), ((1,), 1, 2), ((1,), 3, 4), 5, 6)
         elem = B6(tree)
@@ -420,7 +420,7 @@ class TestBarConstructionLie:
     def test_bar_lie_permute(self):
         """Test leaf permutation."""
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
 
         tree = ((1, 2), 1, 2, 3)
         elem = B3(tree)
@@ -433,7 +433,7 @@ class TestBarConstructionLie:
     def test_bar_pretty_print(self):
         """Bar terms should display in tree form with operad labels."""
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
         tree = ((1, 2), 1, 2, 3)
         rep = B3._repr_term(tree)
         latex = B3._latex_term(tree)
@@ -446,7 +446,7 @@ class TestBarConstructionLie:
         from sage.all import latex
 
         BLie = BarConstruction(Lie)
-        B3 = BLie(3)
+        B3 = BLie(3, QQ)
         elem = B3(((1, 2), 1, 2, 3)) + 2 * B3(((2, 1), 1, 2, 3))
 
         pretty = elem.pretty()
@@ -464,12 +464,12 @@ class TestBarConstructionSurjection:
 
     def test_bar_surjection_creation(self):
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         assert B2.arity() == 2
 
     def test_bar_surjection_degree(self):
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         tree = ((1, 2), 1, 2)
         assert B2.degree_on_basis(tree) == 1
 
@@ -480,7 +480,7 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_d_squared_zero_weight1(self):
         """d^2 = 0 for weight-1 trees in B(Surjection)."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
 
         # Weight-1 tree with (1, 2) decoration
         tree = ((1, 2), 1, 2)
@@ -492,7 +492,7 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_d_squared_zero_degree1(self):
         """d^2 = 0 for degree-1 basis elements."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
 
         # Surjection basis (1, 2, 1) has degree 1
         tree = ((1, 2, 1), 1, 2)
@@ -504,7 +504,7 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_internal_differential(self):
         """Test that d_1 applies Surjection.boundary correctly."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
 
         # (1, 2, 1) has nontrivial boundary in Surjection
         tree = ((1, 2, 1), 1, 2)
@@ -517,7 +517,7 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_boundary_squared_zero_arity4_weight2(self):
         """d^2 = 0 for a higher-arity, weight-2 tree in B(Surjection)."""
         BS = BarConstruction(Surjection)
-        B4 = BS(4)
+        B4 = BS(4, QQ)
 
         tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
         elem = B4(tree)
@@ -527,7 +527,7 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_boundary_squared_zero_arity5_weight3(self):
         """d^2 = 0 for a higher-arity, weight-2 tree in B(Surjection)."""
         BS = BarConstruction(Surjection)
-        B5 = BS(5)
+        B5 = BS(5, QQ)
 
         tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), ((1, 2, 1), 3, 4), 5)
         elem = B5(tree)
@@ -540,18 +540,18 @@ class TestCobarConstruction:
 
     def test_cobar_creation(self):
         OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2)
+        O2 = OmegaS(2, QQ)
         assert O2.arity() == 2
 
     def test_cobar_unit(self):
         OmegaS = CobarConstruction(SurjectionDual)
-        unit = OmegaS.unit()
+        unit = OmegaS.unit(QQ)
         assert unit.arity() == 1
-        assert unit == OmegaS(1)(1)
+        assert unit == OmegaS(1, QQ)(1)
 
     def test_cobar_degree(self):
         OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2)
+        O2 = OmegaS(2, QQ)
         # SurjectionDual basis (1, 2) has degree 0
         # s^{-1}C degree = 0 - (2 - 1) = -1
         tree = ((1, 2), 1, 2)
@@ -560,20 +560,20 @@ class TestCobarConstruction:
     def test_cobar_d_squared_zero_unit(self):
         """d^2 = 0 for the unit."""
         OmegaS = CobarConstruction(SurjectionDual)
-        unit = OmegaS.unit()
+        unit = OmegaS.unit(QQ)
         bdry = unit.boundary()
-        assert bdry == OmegaS(1).zero()
+        assert bdry == OmegaS(1, QQ).zero()
 
     def test_cobar_compose(self):
         """Test free operad composition (grafting)."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2)
+        O2 = OmegaS(2, QQ)
 
         tree1 = ((1, 2), 1, 2)
         elem1 = O2(tree1)
 
         # Compose with unit
-        unit = OmegaS.unit()
+        unit = OmegaS.unit(QQ)
         composed = OmegaS.compose(elem1, 1, unit)
         assert composed.arity() == 2
         # Composing with unit should give back the same element (essentially)
@@ -582,7 +582,7 @@ class TestCobarConstruction:
     def test_cobar_compose_two_trees(self):
         """Test composing two nontrivial trees."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2)
+        O2 = OmegaS(2, QQ)
 
         tree1 = ((1, 2), 1, 2)
         tree2 = ((1, 2), 1, 2)
@@ -599,7 +599,7 @@ class TestCobarConstruction:
     def test_cobar_compose_to_arity5(self):
         """Compose larger trees and check resulting arity/leaf normalization."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O3 = OmegaS(3)
+        O3 = OmegaS(3, QQ)
 
         x = O3(((1, 2, 3), 1, 2, 3))
         y = O3(((1, 3, 2), 1, 2, 3))
@@ -614,7 +614,7 @@ class TestCobarConstruction:
     def test_cobar_boundary_squared_zero_arity4_weight2(self):
         """d^2 = 0 for a higher-arity, weight-2 tree in Ω(S*)."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O4 = OmegaS(4)
+        O4 = OmegaS(4, QQ)
 
         tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
         elem = O4(tree)
@@ -624,8 +624,8 @@ class TestCobarConstruction:
     def test_cobar_pretty_print(self):
         """Cobar terms should display trees and unit as id."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O1 = OmegaS(1)
-        O2 = OmegaS(2)
+        O1 = OmegaS(1, QQ)
+        O2 = OmegaS(2, QQ)
 
         assert O1._repr_term(1) == "id"
         assert O1._latex_term(1) == "\\mathrm{id}"
@@ -639,7 +639,7 @@ class TestCobarConstruction:
         from sage.all import latex
 
         OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2)
+        O2 = OmegaS(2, QQ)
         elem = O2(((1, 2), 1, 2)) + 3 * O2(((1, 2, 1), 1, 2))
 
         pretty = elem.pretty()
@@ -663,12 +663,12 @@ class TestContractEdge:
         # New vertex has arity 3, children 1, 2, 3
         # Result depends on new_decoration
 
-        # Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,))) computes the composition
-        L2 = Lie(2)
+        # Lie.compose(Lie(2, QQ)((1,)), 1, Lie(2, QQ)((1,))) computes the composition
+        L2 = Lie(2, QQ)
         bracket = L2((1,))
         composed = Lie.compose(bracket, 1, bracket)
         # In Lie, id ∘_1 id = id in arity 3, which has basis keys permutations of (1, 2)
-        # Lie(3) basis keys are permutations of (1, 2)
+        # Lie(3, QQ) basis keys are permutations of (1, 2)
         for new_dec, coeff in composed:
             new_tree = contract_edge(root, root, 1, new_dec)
             assert weight(new_tree) == 1
@@ -704,9 +704,9 @@ class TestBarCoderivation:
 
     def _check_coderivation(self, factory, tree, i, m, n):
         """Check Δ(d(x)) == (d⊗id + (-1)^|a| id⊗d)(Δ(x)) for a single tree."""
-        B = factory(m + n - 1)
-        Bm = factory(m)
-        Bn = factory(n)
+        B = factory(m + n - 1, QQ)
+        Bm = factory(m, QQ)
+        Bn = factory(n, QQ)
         tgt = tensor([Bm, Bn])
 
         x = B(tree)
@@ -762,7 +762,7 @@ class TestBarCoderivation:
     def test_bar_surjection_coderivation_nontrivial_d1(self):
         """Coderivation holds when d_1 is nontrivial (Surjection has d1 ≠ 0)."""
         BS = BarConstruction(Surjection)
-        # (1,2,1) has nontrivial boundary in Surjection(2)
+        # (1,2,1) has nontrivial boundary in Surjection(2, QQ)
         tree = ((1, 2, 1), 1, 2)
         self._check_coderivation(BS, tree, 1, 1, 2)
 
@@ -772,17 +772,17 @@ class TestCoAssociative:
 
     def test_coassociative_counit(self):
         """Counit evaluates correctly on arity-1 generator."""
-        C1 = CoAssociative(1)
+        C1 = CoAssociative(1, QQ)
         assert CoAssociative.counit(C1((1,))) == 1
-        C2 = CoAssociative(2)
+        C2 = CoAssociative(2, QQ)
         assert CoAssociative.counit(C2((1, 2))) == 0
 
     def test_coassociative_reduced(self):
         """Reduced kills the arity-1 counit component."""
-        C1 = CoAssociative(1)
+        C1 = CoAssociative(1, QQ)
         elem = 3 * C1((1,))
         assert CoAssociative.reduced(elem) == C1.zero()
-        C2 = CoAssociative(2)
+        C2 = CoAssociative(2, QQ)
         elem2 = C2((1, 2))
         assert CoAssociative.reduced(elem2) == elem2
 
@@ -790,24 +790,24 @@ class TestCoAssociative:
         """Cocomposition at arity 3: dual of Ass.compose."""
         from uconf import Associative
 
-        C3 = CoAssociative(3)
+        C3 = CoAssociative(3, QQ)
         sigma = C3((1, 2, 3))  # identity permutation in S_3
 
         # Δ^{1;2,2}((1,2,3)): find (tau, rho) with Ass.compose(tau,1,rho)=(1,2,3)
         delta = CoAssociative.infinitesimal_cocompose(sigma, 1, 2, 2)
-        assert delta != tensor([CoAssociative(2), CoAssociative(2)]).zero()
+        assert delta != tensor([CoAssociative(2, QQ), CoAssociative(2, QQ)]).zero()
 
         # Verify: composing back should give original basis element
         for (left_key, right_key), coeff in delta:
-            tau = CoAssociative(2)(left_key)
-            rho = CoAssociative(2)(right_key)
+            tau = CoAssociative(2, QQ)(left_key)
+            rho = CoAssociative(2, QQ)(right_key)
             composed = Associative.compose(tau, 1, rho)
             assert dict(composed) == {(1, 2, 3): 1}
 
     def test_cobar_coassociative_d_squared_zero_arity3(self):
         """d^2 = 0 for Ω(CoAss)(3)."""
         OmegaCA = CobarConstruction(CoAssociative)
-        O3 = OmegaCA(3)
+        O3 = OmegaCA(4, QQ)
         # Weight-1 tree with (1,2,3) decoration
         tree = ((1, 2, 3), 1, 2, 3)
         elem = O3(tree)
@@ -817,7 +817,7 @@ class TestCoAssociative:
     def test_cobar_coassociative_d_squared_zero_arity4(self):
         """d^2 = 0 for Ω(CoAss)(4)."""
         OmegaCA = CobarConstruction(CoAssociative)
-        O4 = OmegaCA(4)
+        O4 = OmegaCA(4, QQ)
         tree = ((1, 2, 3, 4), 1, 2, 3, 4)
         elem = O4(tree)
         bdry2 = elem.boundary().boundary()
@@ -829,23 +829,23 @@ class TestCoCommutative:
 
     def test_cocommutative_counit(self):
         """Counit evaluates correctly on arity-1 generator."""
-        C1 = CoCommutative(1)
+        C1 = CoCommutative(1, QQ)
         assert CoCommutative.counit(C1(())) == 1
-        C2 = CoCommutative(2)
+        C2 = CoCommutative(2, QQ)
         assert CoCommutative.counit(C2(())) == 0
 
     def test_cocommutative_reduced(self):
         """Reduced kills the arity-1 counit component."""
-        C1 = CoCommutative(1)
+        C1 = CoCommutative(1, QQ)
         elem = 5 * C1(())
         assert CoCommutative.reduced(elem) == C1.zero()
-        C2 = CoCommutative(2)
+        C2 = CoCommutative(2, QQ)
         elem2 = C2(())
         assert CoCommutative.reduced(elem2) == elem2
 
     def test_cocommutative_cocompose(self):
         """Cocomposition maps e_{m+n-1} to e_m ⊗ e_n."""
-        C3 = CoCommutative(3)
+        C3 = CoCommutative(3, QQ)
         elem = C3(())
 
         # For any (i, m, n) with m+n-1=3 and i valid: Δ^{i;2,2}(e_3) = e_2 ⊗ e_2
@@ -860,7 +860,7 @@ class TestCoCommutative:
     def test_cobar_cocommutative_d_squared_zero_arity3(self):
         """d^2 = 0 for Ω(CoCom)(3)."""
         OmegaCC = CobarConstruction(CoCommutative)
-        O3 = OmegaCC(3)
+        O3 = OmegaCC(3, QQ)
         # weight-1 tree with decoration () in arity 3
         tree = ((), 1, 2, 3)
         elem = O3(tree)
@@ -874,7 +874,7 @@ class TestCobarSignFix:
     @pytest.mark.parametrize("arity", [3, 4, 5])
     def test_cobar_com_square_zero_arity5_weight1(self, arity: int):
         OmegaCom = CobarConstruction(CoCommutative)
-        OC = OmegaCom(arity)
+        OC = OmegaCom(arity, QQ)
         tree = ((),) + tuple(range(1, arity + 1))
         elem = OC(tree)
         bdry2 = elem.boundary().boundary()
@@ -883,7 +883,7 @@ class TestCobarSignFix:
     def test_cobar_surjection_square_zero_arity4_weight2(self):
         """d^2 = 0 for a weight-2 tree in Ω(S*) where the sign fix matters."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O4 = OmegaS(4)
+        O4 = OmegaS(4, QQ)
         # root arity 3 with one internal arity-2 child
         tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
         elem = O4(tree)
@@ -898,7 +898,7 @@ class TestCobarSignFix:
         Without the cumulative_before sign, d^2 would be non-zero for this tree.
         """
         OmegaS = CobarConstruction(SurjectionDual)
-        O5 = OmegaS(5)
+        O5 = OmegaS(5, QQ)
         # root arity 3, inner arity 3 as first child, leaves 4 and 5 as other children
         tree = ((1, 2, 3, 1), ((1, 2, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
@@ -908,7 +908,7 @@ class TestCobarSignFix:
     def test_cobar_sign_arity5_weight2_inner_dec(self):
         """d^2 = 0 for a tree where the inner node has high-degree decoration."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O5 = OmegaS(5)
+        O5 = OmegaS(5, QQ)
         tree = ((1, 2, 3, 1), ((1, 2, 1, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
         bdry2 = elem.boundary().boundary()
@@ -917,7 +917,7 @@ class TestCobarSignFix:
     def test_cobar_sign_arity6_weight3(self):
         """d^2 = 0 for a weight-3 tree where the sign fix matters."""
         OmegaS = CobarConstruction(SurjectionDual)
-        O6 = OmegaS(6)
+        O6 = OmegaS(6, QQ)
         tree = ((1, 2, 3, 1, 4), ((1, 2, 1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
         elem = O6(tree)
         bdry2 = elem.boundary().boundary()
@@ -953,7 +953,7 @@ class TestBarPlanarize:
         from sage.all import SymmetricGroup
 
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         tree = ((1, 2, 1, 3), 1, 2, 3)
         elem = B3(tree)
         result = elem.planarize()
@@ -1010,7 +1010,7 @@ class TestBarPlanarize:
 
         BBE = BarConstruction(BarrattEccles)
         B2 = BBE(2)
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
         id2 = S2.identity()
@@ -1031,7 +1031,7 @@ class TestBarPlanarize:
         """Round-trip holds for B(BE)(2) elements."""
         BBE = BarConstruction(BarrattEccles)
         B2 = BBE(2)
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
         id2 = S2.identity()
@@ -1048,7 +1048,7 @@ class TestBarPlanarize:
     def test_planar_basis_it_surjection_degree1_arity2(self):
         """B(Surj)(2) degree-1 planar basis is exactly {(1,2)}."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         basis = list(B2.planar_basis_it(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
@@ -1066,7 +1066,7 @@ class TestBarPlanarize:
     def test_planar_basis_it_surjection_degree2_arity2(self):
         """B(Surj)(2) degree-2 planar basis is exactly {(1,2,1)}."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         basis = list(B2.planar_basis_it(2))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
@@ -1096,7 +1096,7 @@ class TestBarPlanarize:
         tree_key = list(basis[0].support())[0]
         dec = tree_key[0]
         # Planar means first permutation is the identity
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
         assert dec[0] == BE2._symmetric_group.identity()
 
     # ------------------------------------------------------------------
@@ -1123,7 +1123,7 @@ class TestBarPlanarize:
         HBE = HadamardProduct(Surjection, BarrattEccles)
         BH = BarConstruction(HBE)
         B2 = BH(2)
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
         id2 = S2.identity()
@@ -1137,14 +1137,14 @@ class TestBasisIt:
     def test_planar_basis_it_raises_for_commutative(self):
         """planar_basis_it should raise NotImplementedError for Com (no planarize)."""
         BCom = BarConstruction(Commutative)
-        B2 = BCom(2)
+        B2 = BCom(2, QQ)
         with pytest.raises(NotImplementedError):
             list(B2.planar_basis_it(1))
 
     def test_planar_basis_it_raises_for_lie(self):
         """planar_basis_it should raise NotImplementedError for Lie (no planarize)."""
         BLie = BarConstruction(Lie)
-        B2 = BLie(2)
+        B2 = BLie(2, QQ)
         with pytest.raises(NotImplementedError):
             list(B2.planar_basis_it(1))
 
@@ -1204,7 +1204,7 @@ class TestBasisIt:
     def test_basis_it_lie_consistent_with_planar_for_surjection(self):
         """For Surjection, basis_it and planar_basis_it correspond element-by-element."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         for d in range(1, 4):
             planar = {next(iter(e))[0] for e in B2.planar_basis_it(d)}
             full = {next(iter(e))[0] for e in B2.basis_it(d)}

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.parented_element import ParentedElementMixin
@@ -55,7 +55,7 @@ class BarComplexAlgebra(CombinatorialFreeModule):
 
     Args:
         algebra: An :class:`uconf.algebra.OperadAlgebra` instance (the P-algebra A).
-        base_ring: Coefficient ring (default ``QQ``).
+        base_ring: Coefficient ring
 
     Basis keys are pairs ``(tree, a_tuple)`` where:
 
@@ -68,7 +68,7 @@ class BarComplexAlgebra(CombinatorialFreeModule):
 
     name: ClassVar[str] = "B"
 
-    def __init__(self, algebra: OperadAlgebra, base_ring=QQ):
+    def __init__(self, algebra: OperadAlgebra, base_ring):
         self._algebra = algebra
         self._operad_cls = algebra.operad_cls
         self._module = algebra.module

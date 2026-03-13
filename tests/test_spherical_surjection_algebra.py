@@ -45,8 +45,8 @@ def test_sphere_surjection_associativity_on_generator(
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
 
-    basis1 = list(Surjection(k1).basis_it(d1))
-    basis2 = list(Surjection(k2).basis_it(d2))
+    basis1 = list(Surjection(k1, QQ).basis_it(d1))
+    basis2 = list(Surjection(k2, QQ).basis_it(d2))
 
     for p in basis1:
         for q in basis2:
@@ -66,7 +66,7 @@ def test_sphere_surjection_equivariance(k: int, d: int) -> None:
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
 
-    for u in Surjection(k).basis_it(d):
+    for u in Surjection(k, QQ).basis_it(d):
         for sigma in permutations(range(1, k + 1)):
             lhs = alg.act(u.permute(list(sigma)), [g] * k)
             rhs = alg.act(u, [g] * k)
@@ -85,7 +85,7 @@ def test_sphere_surjection_matches_top_cochain_action(d: int, k: int, e: int) ->
     top_key = tuple(range(d + 1))
     top = C(top_key)
 
-    for u in Surjection(k).basis_it(e):
+    for u in Surjection(k, QQ).basis_it(e):
         sphere_val = alg.act(u, [g] * k)
         simplex_val = surjection_cochain_action(u, (top,) * k)
         assert _sphere_coeff(sphere_val) == _top_coeff(simplex_val, top_key)
@@ -95,6 +95,6 @@ def test_sphere_surjection_degree_mismatch_gives_zero() -> None:
     """A degree-mismatched operation acts by zero on the generator."""
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
-    u = Surjection(2)((1, 2, 1))  # degree 1, should be zero for d=2 and arity 2
+    u = Surjection(2, QQ)((1, 2, 1))  # degree 1, should be zero for d=2 and arity 2
 
     assert alg.act(u, [g, g]) == alg.module.zero()

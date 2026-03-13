@@ -40,7 +40,7 @@ class UnaryChainAlgebra(OperadAlgebra):
     """A minimal algebra wrapper used to test tensor differentials."""
 
     def __init__(self):
-        module = SimplicialChains()
+        module = SimplicialChains(QQ)
         super().__init__(module, Associative, self._structure_map)
 
     def _structure_map(self, p_element, algebra_elements):
@@ -68,7 +68,7 @@ def test_unit_action_on_tensor_module() -> None:
     had_alg = HadamardTensorAlgebra(alg, alg)
 
     x = tensor((alg(()), alg(())))
-    unit = had_alg.operad_cls.unit()
+    unit = had_alg.operad_cls.unit(QQ)
 
     assert had_alg.act(unit, [x]) == x
 
@@ -79,7 +79,7 @@ def test_binary_action_multiplies_tensor_scalars() -> None:
     had = cast(HadamardProduct, had_alg.operad_cls)
 
     x = tensor((alg(()), alg(())))
-    p = had(2)(((1, 2), (1, 2)))
+    p = had(2, QQ)(((1, 2), (1, 2)))
 
     result = had_alg.act(p, [2 * x, 3 * x])
     assert result == 6 * x

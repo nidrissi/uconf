@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 from sage.all import (
     Integer,
-    QQ,
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
@@ -35,7 +34,7 @@ class BarrattEccles(CombinatorialFreeModule):
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
-    def __init__(self, n, base_ring=QQ):
+    def __init__(self, n, base_ring):
         """Initialize ``E_n`` over ``base_ring``."""
 
         assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -156,10 +155,10 @@ class BarrattEccles(CombinatorialFreeModule):
         return self._arity
 
     @staticmethod
-    def unit() -> "BarrattEccles.Element":
+    def unit(base_ring) -> "BarrattEccles.Element":
         """Return the operadic unit in arity ``1``."""
 
-        return BarrattEccles(1)(((1,),))
+        return BarrattEccles(1, base_ring)(((1,),))
 
     def planar_basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
         """Iterate over planar basis elements in degree ``d``."""

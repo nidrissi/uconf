@@ -28,7 +28,6 @@ from typing import Any, ClassVar, Iterator
 from sage.all import (
     CombinatorialFreeModule,
     GradedModulesWithBasis,
-    QQ,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     UniqueRepresentation,
@@ -97,7 +96,7 @@ class BarConstruction(UniqueRepresentation):
         """
         return getattr(self.operad_cls, "connectivity", 0)
 
-    def __call__(self, n: int, base_ring=QQ) -> "BarConstruction.Component":
+    def __call__(self, n: int, base_ring) -> "BarConstruction.Component":
         return BarConstruction.Component(self, n, base_ring)
 
     @staticmethod
@@ -115,7 +114,7 @@ class BarConstruction(UniqueRepresentation):
         """Infinitesimal cocomposition at the factory level."""
         return x.infinitesimal_cocompose(i, m, n)
 
-    def counit_element(self, base_ring=QQ) -> "BarConstruction.Element":
+    def counit_element(self, base_ring) -> "BarConstruction.Element":
         """Return the counit element (single leaf tree in arity 1).
 
         The bar construction B(P) has a canonical counit ε: B(P)(1) → k,
@@ -131,7 +130,7 @@ class BarConstruction(UniqueRepresentation):
 
         name: ClassVar[str] = "B"
 
-        def __init__(self, factory: "BarConstruction", n: int, base_ring=QQ):
+        def __init__(self, factory: "BarConstruction", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             self.factory = factory
             self._arity = int(n)
