@@ -26,6 +26,7 @@ from sage.all import (
     Rational,
     tensor,
 )
+from uconf.core.parented_element import ParentedElementMixin
 
 
 # ---------------------------------------------------------------------------
@@ -216,12 +217,15 @@ class SimplicialChains(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["SimplicialChains"], CombinatorialFreeModule.Element
+    ):
         """Elements of :class:`SimplicialChains`."""
 
         def boundary(self) -> "SimplicialChains.Element":
             """Apply the simplicial boundary ∂."""
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def iterated_diagonal(self, times: int = 1):
             r"""Iterated Alexander-Whitney diagonal.
@@ -242,7 +246,7 @@ class SimplicialChains(CombinatorialFreeModule):
                 Number of extra factors (``times=1`` → 2-fold tensor,
                 ``times=k`` → ``(k+1)``-fold tensor).
             """
-            SC = self.parent()
+            SC = self._parent()
             if times == 0:
                 return self
             target = tensor([SC] * (times + 1))
@@ -401,9 +405,12 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- Element class ------------------------------------------------------
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["SimplicialCochains"], CombinatorialFreeModule.Element
+    ):
         """Elements of :class:`SimplicialCochains`."""
 
         def coboundary(self) -> "SimplicialCochains.Element":
             """Apply the coboundary δ."""
-            return self.parent().coboundary(self)
+            parent = self._parent()
+            return parent.coboundary(self)

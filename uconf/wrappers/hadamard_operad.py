@@ -25,6 +25,7 @@ from sage.all import (
 )
 
 from uconf.core.operad import OperadLike
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 
 
@@ -287,17 +288,20 @@ class HadamardProduct(UniqueRepresentation):
         def from_factors(
             self, left_element, right_element
         ) -> "HadamardProduct.Element":
-            if left_element.parent().arity() != self.arity():
+            left_parent = left_element.parent()
+            right_parent = right_element.parent()
+
+            if left_parent.arity() != self.arity():
                 raise TypeError(
-                    f"Left element arity {left_element.parent().arity()} does not match target arity {self.arity()}."
+                    f"Left element arity {left_parent.arity()} does not match target arity {self.arity()}."
                 )
-            if right_element.parent().arity() != self.arity():
+            if right_parent.arity() != self.arity():
                 raise TypeError(
-                    f"Right element arity {right_element.parent().arity()} does not match target arity {self.arity()}."
+                    f"Right element arity {right_parent.arity()} does not match target arity {self.arity()}."
                 )
-            if left_element.parent().base_ring() != self.base_ring():
+            if left_parent.base_ring() != self.base_ring():
                 raise TypeError("Left element must have the same base ring as target.")
-            if right_element.parent().base_ring() != self.base_ring():
+            if right_parent.base_ring() != self.base_ring():
                 raise TypeError("Right element must have the same base ring as target.")
 
             return self.sum_of_terms(
@@ -320,34 +324,36 @@ class HadamardProduct(UniqueRepresentation):
         def unit(self) -> "HadamardProduct.Element":
             return self.factory.unit(self.base_ring())
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["HadamardProduct.Component"],
+        CombinatorialFreeModule.Element,
+    ):
         """Element wrapper carrying Hadamard-operad structure maps."""
 
         def arity(self) -> int:
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "HadamardProduct.Element":
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def permute(self, sigma) -> "HadamardProduct.Element":
+            parent = self._parent()
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
-            result = self.parent().zero()
+            result = parent.zero()
             for basis, coeff in self:
                 left_basis, right_basis = basis
-                left_term = self.parent().left_parent().term(left_basis).permute(sigma)
-                right_term = (
-                    self.parent().right_parent().term(right_basis).permute(sigma)
-                )
-                result += self.parent().from_factors(left_term, right_term) * coeff
+                left_term = parent.left_parent().term(left_basis).permute(sigma)
+                right_term = parent.right_parent().term(right_basis).permute(sigma)
+                result += parent.from_factors(left_term, right_term) * coeff
             return result
 
 

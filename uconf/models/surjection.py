@@ -20,6 +20,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.parented_element import ParentedElementMixin
 
 
 class Surjection(CombinatorialFreeModule):
@@ -313,29 +314,33 @@ class Surjection(CombinatorialFreeModule):
         res.reverse()
         return res
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(ParentedElementMixin["Surjection"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity surjection component."""
 
         def boundary(self) -> Surjection.Element:
             """Apply the differential."""
 
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def arity(self) -> int:
             """Return the arity of this element."""
 
-            return self.parent().arity()
+            return self._parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with group element."""
 
-            return self.parent().planarize(self)
+            parent = self._parent()
+            return parent.planarize(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
 
+            parent = self._parent()
+
             return max(
-                (self.parent()._complexity_on_basis(basis) for basis in self.support()),
+                (parent._complexity_on_basis(basis) for basis in self.support()),
                 default=0,
             )
 
@@ -343,14 +348,14 @@ class Surjection(CombinatorialFreeModule):
             """
             Permutes the basis elements of self by precomposing with sigma.
             """
+            parent = self._parent()
             if isinstance(sigma, (list, tuple)):
-                sigma = self.parent()._symmetric_group(sigma)
+                sigma = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
 
             def permuted_term_generator():
@@ -359,7 +364,7 @@ class Surjection(CombinatorialFreeModule):
                     permuted_basis = tuple(sigma(i) for i in u)
                     yield (permuted_basis, coeff)
 
-            return self.parent().sum_of_terms(permuted_term_generator())
+            return parent.sum_of_terms(permuted_term_generator())
 
         def is_planar(self) -> bool:
             """Return whether each supported basis term satisfies planarity."""

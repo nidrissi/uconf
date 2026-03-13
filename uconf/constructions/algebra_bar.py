@@ -35,6 +35,7 @@ from typing import ClassVar
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
@@ -421,25 +422,32 @@ class BarComplexAlgebra(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["BarComplexAlgebra"], CombinatorialFreeModule.Element
+    ):
         """An element of the bar complex B_P(A)."""
 
         def boundary(self) -> "BarComplexAlgebra.Element":
             """Apply the full bar differential d = d_1 + d_2 + d_A + d_act."""
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def d1(self) -> "BarComplexAlgebra.Element":
             """Apply ∂_P to each vertex decoration."""
-            return self.parent()._d1(self)
+            parent = self._parent()
+            return parent._d1(self)
 
         def d2(self) -> "BarComplexAlgebra.Element":
             """Apply the structural bar differential (contract internal edges)."""
-            return self.parent()._d2(self)
+            parent = self._parent()
+            return parent._d2(self)
 
         def dA(self) -> "BarComplexAlgebra.Element":
             """Apply ∂_A to each leaf decoration."""
-            return self.parent()._dA(self)
+            parent = self._parent()
+            return parent._dA(self)
 
         def dact(self) -> "BarComplexAlgebra.Element":
             """Apply the P-algebra action at all-leaf-children vertices."""
-            return self.parent()._dact(self)
+            parent = self._parent()
+            return parent._dact(self)

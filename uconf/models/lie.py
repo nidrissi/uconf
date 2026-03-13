@@ -12,6 +12,7 @@ from sage.all import (
     matrix,
     vector,
 )
+from uconf.core.parented_element import ParentedElementMixin
 
 
 class Lie(CombinatorialFreeModule):
@@ -404,37 +405,39 @@ class Lie(CombinatorialFreeModule):
         result_assoc = {w: c for w, c in result_assoc.items() if c != 0}
         return target._element_from_assoc(result_assoc)
 
-    class Element(CombinatorialFreeModule.Element):
+    class Element(ParentedElementMixin["Lie"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity Lie component."""
 
         def arity(self) -> int:
             """Return the element arity."""
 
-            return self.parent().arity()
+            return self._parent().arity()
 
         def boundary(self) -> "Lie.Element":
             """Apply the differential (trivial in this model)."""
 
-            return self.parent().boundary(self)
+            parent = self._parent()
+            return parent.boundary(self)
 
         def permute(self, sigma: Permutation | list | tuple) -> "Lie.Element":
             """Apply the right action of a permutation on generators."""
 
+            parent = self._parent()
+
             if isinstance(sigma, (list, tuple)):
-                sigma_perm: Permutation = self.parent()._symmetric_group(sigma)
+                sigma_perm: Permutation = parent._symmetric_group(sigma)
             elif not (
-                hasattr(sigma, "parent")
-                and sigma.parent() == self.parent()._symmetric_group
+                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{self.parent().arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
                 )
             else:
                 sigma_perm: Permutation = sigma
 
             assoc: dict[tuple[int, ...], Any] = {}
             for key, coeff in self:
-                key_assoc = self.parent()._assoc_from_basis_key(key)
+                key_assoc = parent._assoc_from_basis_key(key)
                 for word, word_coeff in key_assoc.items():
                     permuted_word = tuple(sigma_perm(i) for i in word)
                     assoc[permuted_word] = (
@@ -443,4 +446,4 @@ class Lie(CombinatorialFreeModule):
                     )
 
             assoc = {w: c for w, c in assoc.items() if c != 0}
-            return self.parent()._element_from_assoc(assoc)
+            return parent._element_from_assoc(assoc)
