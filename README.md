@@ -28,6 +28,28 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 
 Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
 
+### Connected (co)operads — global assumption
+
+**All operads and cooperads in this package are connected:** P(0) = 0 and
+P(1) = 𝑘·unit (resp. counit).  This is a hard requirement rather than a
+special case.
+
+Connectedness ensures that every internal vertex of a bar/cobar tree has
+arity ≥ 2, bounding the number of vertices in an arity-𝑛 component by 𝑛 − 1.
+This makes every (arity, degree) basis finite and removes the need for an
+external `max_weight` cap in bar/cobar constructions.
+
+Each operad/cooperad class exposes a `connectivity: int` attribute (class
+attribute on concrete models, property on wrappers) representing the constant
+𝑘 such that P(𝑛) is concentrated in degrees ≥ 𝑘·(𝑛−1):
+
+| Class | `connectivity` |
+|---|---|
+| `Surjection`, `BarrattEccles`, `Lie`, `Commutative`, `Associative`, … | 0 |
+| `ShiftedOperad(P, d)` | `P.connectivity + d` |
+| `ShiftedCooperad(C, d)` | `C.connectivity + d` |
+| `HadamardProduct(P, Q)` | `P.connectivity + Q.connectivity` |
+
 ### Operad models
 
 - `models/surjection.py` — `Surjection`

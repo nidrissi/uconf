@@ -34,6 +34,17 @@ class ShiftedCooperad(UniqueRepresentation):
         self.shift_degree = int(shift_degree)
         self.name = f"{cooperad_cls.name}[{self.shift_degree}]"
 
+    @property
+    def connectivity(self) -> int:
+        """Connectivity of the shifted cooperad.
+
+        ``ShiftedCooperad(C, d)(n)`` lives in degrees >= (k + d)*(n-1) where k
+        is the connectivity of C, because the degree-shift by ``d*(n-1)``
+        raises the lower bound by ``d*(n-1)``.
+        """
+        base_k = getattr(self.cooperad_cls, "connectivity", 0)
+        return base_k + self.shift_degree
+
     def __call__(self, n: int, base_ring=QQ) -> "ShiftedCooperad.Component":
         return ShiftedCooperad.Component(self, n, base_ring)
 

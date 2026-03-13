@@ -1,4 +1,12 @@
-"""Typing protocols for operad-like objects used in this project."""
+"""Typing protocols for operad-like objects used in this project.
+
+.. note::
+   This package works exclusively with **connected** operads, i.e. operads P
+   satisfying P(0) = 0 and P(1) = k (the ground field, spanned by the unit).
+   Connectedness implies that every internal vertex of a tree in the bar
+   construction has arity >= 2, which bounds the number of vertices in arity n
+   by n - 1.  All concrete models and wrappers in this package are connected.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +29,11 @@ class OperadProtocol(Protocol):
 
     name: str
     """Name of the operad, used for printing."""
+
+    connectivity: int
+    """Lower bound k such that P(n) is concentrated in degrees >= k*(n-1) for
+    all n >= 0.  Basic operads have k = 0 (non-negative degrees).
+    ``ShiftedOperad(P, d)`` has k = P.connectivity + d."""
 
     def __init__(self, n: int, base_ring=...):
         """Returns the arity-``n`` component over ``base_ring``."""

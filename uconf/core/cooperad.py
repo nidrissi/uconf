@@ -1,4 +1,12 @@
-"""Typing protocols for cooperad-like objects used in this project."""
+"""Typing protocols for cooperad-like objects used in this project.
+
+.. note::
+   This package works exclusively with **connected** cooperads, i.e. cooperads C
+   satisfying C(0) = 0 and C(1) = k (the ground field, spanned by the counit).
+   Connectedness implies that every internal vertex of a tree in the cobar
+   construction has arity >= 2, which bounds the number of vertices in arity n
+   by n - 1.  All concrete models and wrappers in this package are connected.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +29,11 @@ class CooperadProtocol(Protocol):
 
     name: str
     """Name of the cooperad, used for printing."""
+
+    connectivity: int
+    """Lower bound k such that C(n) is concentrated in degrees >= k*(n-1) for
+    all n >= 0.  Basic cooperads have k = 0 (non-negative degrees).
+    ``ShiftedCooperad(C, d)`` has k = C.connectivity + d."""
 
     def __init__(self, n: int, base_ring=...):
         """Returns the arity-``n`` component over ``base_ring``."""

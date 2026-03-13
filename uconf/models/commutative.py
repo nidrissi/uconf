@@ -16,6 +16,8 @@ class Commutative(CombinatorialFreeModule):
     """Commutative operad component in fixed arity."""
 
     name: ClassVar[str] = "Com"
+    connectivity: ClassVar[int] = 0
+    """All components live in non-negative degrees."""
 
     def __init__(self, n: int, base_ring=QQ):
         """Initialize ``Com(n)`` over ``base_ring``."""

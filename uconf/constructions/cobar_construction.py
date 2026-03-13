@@ -12,6 +12,12 @@ where:
 - d_1 is the internal differential from C
 - d_2 is the structural differential from vertex expansions
 
+.. note::
+   This module requires a **connected** cooperad input.  Connectedness means
+   C(0) = 0 and C(1) = k (counit only), so every internal tree vertex has
+   arity >= 2.  For a tree with n leaves this bounds the number of internal
+   vertices by n - 1, making the basis in every (arity, degree) finite.
+
 Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 """
 
@@ -51,23 +57,25 @@ class CobarConstruction(UniqueRepresentation):
 
     Args:
         cooperad_cls: Base cooperad provider (class or wrapper instance).
-        max_weight: Maximum tree weight for enumeration helpers (default 3).
+            Must be a **connected** cooperad (C(0) = 0, C(1) = k·counit).
 
     The cobar construction Ω(C) is a dg-operad whose arity-n component has
     basis elements given by rooted trees with n leaves, where internal
     vertices are decorated by elements of C̄ (the coaugmentation coideal).
 
     For connected cooperads, C̄(1) = 0, so all internal vertices have arity >= 2.
+    This bounds the number of internal vertices in arity n by n - 1, making
+    every (arity, degree) basis finite without requiring an external weight cap.
 
     Note:
         Unlike ``BarConstruction``, this module does not automatically normalize
-        trees to shuffle form. Utilities ``to_shuffle_tree_cobar`` and
-        ``is_shuffle_tree`` in ``trees`` can be used explicitly when needed.
+        trees to shuffle form.  Utilities ``to_shuffle_tree_cobar`` and
+        ``is_shuffle_tree`` in ``uconf.core.trees`` can be used explicitly when
+        needed.
     """
 
-    def __init__(self, cooperad_cls: CooperadLike, max_weight: int = 3):
+    def __init__(self, cooperad_cls: CooperadLike):
         self.cooperad_cls = cooperad_cls
-        self.max_weight = int(max_weight)
         self.name = f"Ω({cooperad_cls.name})"
 
     def __call__(self, n: int, base_ring=QQ) -> "CobarConstruction.Component":
@@ -125,7 +133,6 @@ class CobarConstruction(UniqueRepresentation):
             self.factory = factory
             self._arity = int(n)
             self._cooperad_cls = factory.cooperad_cls
-            self._max_weight = factory.max_weight
 
             name = f"{factory.name}{n}"
             super().__init__(
@@ -194,6 +201,11 @@ class CobarConstruction(UniqueRepresentation):
 
         def arity(self) -> int:
             return self._arity
+
+        @property
+        def connectivity(self) -> int:
+            """Connectivity inherited from the underlying cooperad."""
+            return getattr(self._cooperad_cls, "connectivity", 0)
 
         def degree_on_basis(self, tree) -> int:
             """Compute the degree of a tree in Ω(C).

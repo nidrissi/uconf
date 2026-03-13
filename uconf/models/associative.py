@@ -17,6 +17,8 @@ class Associative(CombinatorialFreeModule):
     """Associative operad component in fixed arity."""
 
     name: ClassVar[str] = "Ass"
+    connectivity: ClassVar[int] = 0
+    """All components live in non-negative degrees."""
 
     def __init__(self, n: int, base_ring=QQ):
         """Initialize ``Ass(n)`` over ``base_ring``."""

@@ -32,6 +32,8 @@ class BarrattEccles(CombinatorialFreeModule):
     """
 
     name: ClassVar[str] = "BE"
+    connectivity: ClassVar[int] = 0
+    """All components live in non-negative degrees."""
 
     def __init__(self, n, base_ring=QQ):
         """Initialize ``E_n`` over ``base_ring``."""

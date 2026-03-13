@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+from typing import ClassVar
 
 from sage.all import QQ, tensor
 
@@ -13,6 +14,11 @@ class SurjectionDual(Surjection):
     """Linear dual companion of :class:`uconf.surjection.Surjection`."""
 
     name = "S*"
+    connectivity: ClassVar[int] = 0
+    """Elements live in non-positive degrees; the minimum degree is n - (n+d) = -d <= 0
+    for primal degree d >= 0.  We use k = 0 as the connectivity convention (inherited
+    from the primal surjection operad) since the cobar construction uses the arity bound
+    n - 1 for the weight, independent of the sign of the degree."""
 
     def __init__(self, n: int, base_ring=QQ):
         """Initialize fixed-arity linear dual component and internal caches."""
