@@ -832,28 +832,16 @@ def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
     Handles three calling conventions:
 
     - ``basis_it(degree)`` — degree-aware (e.g. ``Surjection``, ``BarrattEccles``).
-    - ``basis_it()`` — degree-unaware; results are filtered by ``degree_on_basis``.
     - Fallback via Sage's ``basis()`` family, filtered by ``degree_on_basis``.
     """
     basis_it = getattr(operad_parent, "basis_it", None)
     if basis_it is not None:
-        try:
-            for elem in basis_it(degree):
-                yield from elem.support()
-            return
-        except TypeError:
-            # basis_it does not accept a degree argument
-            for elem in basis_it():
-                for key in elem.support():
-                    if operad_parent.degree_on_basis(key) == degree:
-                        yield key
-            return
+        for elem in basis_it(degree):
+            yield from elem.support()
+        return
     for key in operad_parent.basis():
-        try:
-            if operad_parent.degree_on_basis(key) == degree:
-                yield key
-        except Exception:
-            pass
+        if operad_parent.degree_on_basis(key) == degree:
+            yield key
 
 
 def _shuffle_partitions(sorted_leaves: tuple, k: int) -> Iterator[list]:

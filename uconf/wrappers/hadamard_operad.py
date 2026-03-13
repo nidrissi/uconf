@@ -155,7 +155,7 @@ class HadamardProduct(UniqueRepresentation):
 
             # Planarize the right factor: q -> q_pl ⊗ σ
             right_elem = right_parent.term(right_basis)
-            right_planarized = right_parent.planarize(right_elem)  # type: ignore[attr-defined]
+            right_planarized = right_parent.planarize(right_elem)
 
             target = tensor([self, self._symmetric_group_algebra])
             result = target.zero()
@@ -263,18 +263,20 @@ class HadamardProduct(UniqueRepresentation):
             A pair ``(left_key, right_key)`` is *planar* when ``right_key``
             is a planar element of the right factor.  Requires the right
             factor to implement ``planar_basis_it``.  The left factor is
-            iterated with ``basis_it(d_left)`` (degree-indexed) when
-            available, or with ``basis_it()`` filtered by degree otherwise.
+            iterated with ``basis_it(d_left)`` (degree-indexed).
             """
-            if not hasattr(self._right_parent, "planar_basis_it"):
-                return
 
             left_parent = self._left_parent
             right_parent = self._right_parent
 
+            if not hasattr(right_parent, "planar_basis_it"):
+                raise NotImplementedError(
+                    "Right parent does not support planar_basis_it, so planar basis is not available."
+                )
+
             for d_right in range(d + 1):
                 d_left = d - d_right
-                right_elems = list(right_parent.planar_basis_it(d_right))  # type: ignore[attr-defined]
+                right_elems = list(right_parent.planar_basis_it(d_right))
                 if not right_elems:
                     continue
 
@@ -282,16 +284,16 @@ class HadamardProduct(UniqueRepresentation):
                 left_elems = []
                 if hasattr(left_parent, "basis_it"):
                     try:
-                        left_elems = list(left_parent.basis_it(d_left))  # type: ignore[attr-defined]
+                        left_elems = list(left_parent.basis_it(d_left))
                     except TypeError:
                         # Degree-free basis_it (e.g. Lie)
-                        for elem in left_parent.basis_it():  # type: ignore[attr-defined]
+                        for elem in left_parent.basis_it():
                             for key in elem.support():
                                 if left_parent.degree_on_basis(key) == d_left:
                                     left_elems.append(left_parent.term(key))
                 else:
                     try:
-                        for key in left_parent.basis():  # type: ignore[attr-defined]
+                        for key in left_parent.basis():
                             if left_parent.degree_on_basis(key) == d_left:
                                 left_elems.append(left_parent.term(key))
                     except (AttributeError, NotImplementedError):

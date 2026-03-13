@@ -100,7 +100,7 @@ class QuasiPlanarMixin:
             # group_key is a basis key of SymmetricGroupAlgebra,
             # which is a permutation
             if S_n(group_key) == sigma:
-                result += coeff * self.term(planar_key)  # type: ignore[attr-defined]
+                result += coeff * self(planar_key)
 
         return result
 
