@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from uconf.models.surjection import Surjection
 
 from sage.all import (
+    Integer,
     QQ,
     CombinatorialFreeModule,
     Family,
@@ -26,7 +27,7 @@ class BarrattEccles(CombinatorialFreeModule):
     """Barratt--Eccles operad component in fixed arity.
 
     Basis elements are tuples of permutations in ``S_n`` with no consecutive
-    duplicates.
+    duplicates. Degenerate inputs map to zero, while malformed inputs raise.
     """
 
     name: ClassVar[str] = "BE"
@@ -55,36 +56,25 @@ class BarrattEccles(CombinatorialFreeModule):
         )
 
     def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
-        """Build elements from a basis key or a sparse coefficient dictionary."""
-        # Case 1: x is a Dictionary (Linear Combination)
+        """Build elements from a basis key or a sparse coefficient dictionary.
+
+        Tuples with consecutive duplicate permutations map to zero. Invalid
+        permutation data raises.
+        """
         if isinstance(x, dict):
-            # Validate keys before passing to super
             clean_dict = {}
             for key, coeff in x.items():
                 clean_key = self._validate_basis_key(key)
                 if clean_key is None:
-                    # Skip zero terms
                     continue
                 clean_dict[clean_key] = coeff
-            return super()._element_constructor_(clean_dict)
+            return self.sum_of_terms(clean_dict.items())
 
-        # Case 2: x is a Basis Key (Tuple)
-        # We try to treat it as a single basis element
         if isinstance(x, (tuple, list)):
-            # Check if it looks like a tuple of permutations vs a list of terms
-            # Simple heuristic: is the first element a Permutation or convertable to one?
-            try:
-                clean_key = self._validate_basis_key(x)
-                # Check for consecutive identical permutations
-                if clean_key is None:
-                    return self.zero()
-                else:
-                    # Return the monomial 1 * basis_element
-                    return self.term(clean_key)
-            except (ValueError, TypeError) as e:
-                raise TypeError(
-                    f"Item is not a valid element of {self}. Got {x} ({type(x)})"
-                ) from e
+            clean_key = self._validate_basis_key(x)
+            if clean_key is None:
+                return self.zero()
+            return self.term(clean_key)
         raise TypeError(
             f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
         )
@@ -92,30 +82,55 @@ class BarrattEccles(CombinatorialFreeModule):
     def _validate_basis_key(
         self, basis_tuple: tuple | list, keep_dupes=False
     ) -> tuple[SymmetricGroup] | None:
-        """Validate a basis tuple and coerce entries to elements of ``S_n``."""
+        """Validate a basis tuple and coerce entries to elements of ``S_n``.
+
+        Returns ``None`` for degenerate tuples with consecutive duplicates and
+        raises on malformed permutation data.
+        """
         if not isinstance(basis_tuple, (tuple, list)):
-            raise TypeError(f"Basis key must be a tuple, got {type(basis_tuple)}")
+            raise TypeError(
+                f"Basis key must be a tuple or list, got {type(basis_tuple)}"
+            )
 
         clean_tuple = []
         for i, p in enumerate(basis_tuple):
-            # 1. Check if it is already a Sage Permutation
             if hasattr(p, "parent") and p.parent() == self._symmetric_group:
                 clean_tuple.append(p)
+                continue
+
+            if hasattr(p, "tuple") and not isinstance(p, (tuple, list)):
+                entries = tuple(p.tuple())
+                converted = self._symmetric_group(list(entries))
+            elif isinstance(p, (tuple, list)):
+                entries = tuple(p)
+                converted = self._symmetric_group(p)
             else:
-                # 2. Try to coerce it (e.g. from list [1, 2, 3])
-                try:
-                    p_converted = self._symmetric_group(p)
-                    clean_tuple.append(p_converted)
-                except (ValueError, TypeError) as e:
-                    raise TypeError(
-                        f"Item {i} in basis tuple is not a valid element of S_{self.arity()}. "
-                        f"Got {p} ({type(p)})."
-                    ) from e
+                raise TypeError(
+                    f"Item {i} in basis tuple must be a permutation or one-line tuple/list. "
+                    f"Got {p} ({type(p)})."
+                )
+
+            if len(entries) != self.arity():
+                raise ValueError(
+                    f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}; "
+                    f"got length {len(entries)}."
+                )
+            if any(not isinstance(entry, (int, Integer)) for entry in entries):
+                bad_entry = next(
+                    entry for entry in entries if not isinstance(entry, (int, Integer))
+                )
+                raise TypeError(
+                    f"Permutation entries must be integers. Got {bad_entry} ({type(bad_entry)})."
+                )
+            if set(entries) != set(range(1, self.arity() + 1)):
+                raise ValueError(
+                    f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}. Got {entries}."
+                )
+            clean_tuple.append(converted)
 
         if len(clean_tuple) > 0 and not keep_dupes:
             for i in range(len(clean_tuple) - 1):
                 if clean_tuple[i] == clean_tuple[i + 1]:
-                    # Consecutive identical permutations yield zero
                     return None
         return tuple(clean_tuple)
 

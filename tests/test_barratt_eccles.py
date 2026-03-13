@@ -87,6 +87,45 @@ def test_barratt_eccles_compose_requires_same_base_ring() -> None:
         BarrattEccles.compose(x, 1, y)
 
 
+def test_barratt_eccles_constructor_keeps_degenerate_inputs_zero() -> None:
+    e2 = BarrattEccles(2)
+    assert e2(((1, 2), (1, 2))) == e2.zero()
+
+
+@pytest.mark.parametrize(
+    ("key", "error_type"),
+    [
+        (((1, 2, 3),), ValueError),
+        (((1, 3),), ValueError),
+        (((1, "2"),), TypeError),
+    ],
+)
+def test_barratt_eccles_constructor_raises_on_invalid_basis_key(
+    key: tuple[tuple[object, ...], ...], error_type: type[Exception]
+) -> None:
+    e2 = BarrattEccles(2)
+    with pytest.raises(error_type):
+        e2(key)
+
+
+def test_barratt_eccles_constructor_raises_on_invalid_container() -> None:
+    e2 = BarrattEccles(2)
+    with pytest.raises(TypeError):
+        e2("12")
+
+
+def test_barratt_eccles_dict_constructor_skips_only_degenerate_terms() -> None:
+    e2 = BarrattEccles(2)
+    element = e2({((1, 2),): 3, ((1, 2), (1, 2)): 5})
+    assert _as_dict(element) == {((2, 1),): 3}
+
+
+def test_barratt_eccles_dict_constructor_raises_on_invalid_key() -> None:
+    e2 = BarrattEccles(2)
+    with pytest.raises(ValueError):
+        e2({((1, 2),): 1, ((1, 3),): 2})
+
+
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_barratt_eccles_operadic_unit_axioms(input_pos: int) -> None:
     e3 = BarrattEccles(3)

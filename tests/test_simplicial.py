@@ -91,13 +91,33 @@ class TestSimplicialChains:
 
     def test_negative_vertex_rejected(self):
         C = SimplicialChains()
-        x = C((-1, 0, 1))
-        assert x == C.zero()
+        with pytest.raises(ValueError):
+            C((-1, 0, 1))
 
     def test_non_integer_vertex_rejected(self):
         C = SimplicialChains()
-        x = C((0, 1.5, 2))
-        assert x == C.zero()
+        with pytest.raises(TypeError):
+            C((0, 1.5, 2))
+
+    def test_out_of_order_simplex_raises(self):
+        C = SimplicialChains()
+        with pytest.raises(ValueError):
+            C((0, 2, 1))
+
+    def test_invalid_simplex_container_raises(self):
+        C = SimplicialChains()
+        with pytest.raises(TypeError):
+            C("012")
+
+    def test_dict_constructor_skips_only_degenerate_terms(self):
+        C = SimplicialChains()
+        x = C({(0, 1, 2): 3, (0, 0, 1): 5})
+        assert _as_dict(x) == {(0, 1, 2): 3}
+
+    def test_dict_constructor_raises_on_invalid_term(self):
+        C = SimplicialChains()
+        with pytest.raises(ValueError):
+            C({(0, 1, 2): 1, (0, 2, 1): 2})
 
     def test_degree(self):
         C = SimplicialChains()
@@ -306,3 +326,35 @@ class TestSurjectionAction:
             assert _as_dict(lhs) == _as_dict(rhs), (
                 f"Chain map failed: u={list(u.support())}, n={n}"
             )
+
+
+class TestSimplicialCochains:
+    def test_cochain_constructor_keeps_degenerate_inputs_zero(self):
+        C = SimplicialCochains(2)
+        assert C(()) == C.zero()
+        assert C((0, 0, 1)) == C.zero()
+
+    def test_cochain_constructor_raises_on_invalid_vertex_order(self):
+        C = SimplicialCochains(2)
+        with pytest.raises(ValueError):
+            C((0, 2, 1))
+
+    def test_cochain_constructor_raises_on_vertex_out_of_range(self):
+        C = SimplicialCochains(2)
+        with pytest.raises(ValueError):
+            C((0, 1, 3))
+
+    def test_cochain_constructor_raises_on_non_integer_vertex(self):
+        C = SimplicialCochains(2)
+        with pytest.raises(TypeError):
+            C((0, 1.5))
+
+    def test_cochain_dict_constructor_skips_only_degenerate_terms(self):
+        C = SimplicialCochains(2)
+        x = C({(0, 1): 2, (0, 0, 1): 5})
+        assert _as_dict(x) == {(0, 1): 2}
+
+    def test_cochain_dict_constructor_raises_on_invalid_term(self):
+        C = SimplicialCochains(2)
+        with pytest.raises(ValueError):
+            C({(0, 1): 1, (0, 1, 3): 2})

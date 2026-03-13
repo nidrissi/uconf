@@ -19,6 +19,7 @@ from __future__ import annotations
 from itertools import combinations, combinations_with_replacement, pairwise
 
 from sage.all import (
+    Integer,
     QQ,
     CombinatorialFreeModule,
     GradedModulesWithBasis,
@@ -36,7 +37,8 @@ class SimplicialChains(CombinatorialFreeModule):
     r"""Normalized simplicial chains on `\Delta^\infty`.
 
     A basis element is a **single** non-degenerate simplex, i.e. a
-    strictly-increasing tuple of non-negative integers.  For example::
+    strictly-increasing tuple of non-negative integers. Degenerate simplices
+    map to zero, while malformed simplices raise. For example::
 
         (0, 1, 2)   # the 2-simplex [0,1,2]
         (3,)        # the vertex 3
@@ -71,6 +73,9 @@ class SimplicialChains(CombinatorialFreeModule):
 
         * A *dict* ``{simplex: coeff, ...}`` – linear combination.
         * A *tuple/list* of integers – single simplex.
+
+        Empty simplices and simplices with consecutive repeated vertices map to
+        zero. Invalid simplex data raises.
         """
         if isinstance(x, dict):
             clean = {}
@@ -78,7 +83,7 @@ class SimplicialChains(CombinatorialFreeModule):
                 k = self._validate_basis_key(key)
                 if k is not None:
                     clean[k] = clean.get(k, 0) + coeff
-            return super()._element_constructor_(clean)
+            return self.sum_of_terms(clean.items())
 
         if isinstance(x, (tuple, list)):
             k = self._validate_basis_key(x)
@@ -93,18 +98,28 @@ class SimplicialChains(CombinatorialFreeModule):
         """Validate a single simplex as a basis key.
 
         A valid simplex is a strictly-increasing non-empty tuple of
-        non-negative integers.  Returns ``None`` for invalid or degenerate
-        inputs.
+        non-negative integers. Returns ``None`` for degenerate inputs and
+        raises on malformed inputs.
         """
         if not isinstance(key, (tuple, list)):
-            return None
+            raise TypeError(f"Simplex key must be a tuple or list, got {type(key)}.")
         s = tuple(key)
         if len(s) == 0:
             return None
-        if any((not isinstance(v, int)) or v < 0 for v in s):
-            return None
-        if any(a >= b for a, b in pairwise(s)):
-            return None
+        for v in s:
+            if not isinstance(v, (int, Integer)):
+                raise TypeError(
+                    f"Simplex vertices must be integers. Got {v} ({type(v)})."
+                )
+            if v < 0:
+                raise ValueError(f"Simplex vertices must be non-negative. Got {v}.")
+        for a, b in pairwise(s):
+            if a == b:
+                return None
+            if a > b:
+                raise ValueError(
+                    f"Simplex vertices must be strictly increasing. Got {s}."
+                )
         return s
 
     # -- grading ------------------------------------------------------------
@@ -289,19 +304,36 @@ class SimplicialCochains(CombinatorialFreeModule):
     # -- element constructor ------------------------------------------------
 
     def _element_constructor_(self, x):
+        """Build an element from a simplex tuple or a sparse dict.
+
+        Empty simplices and simplices with consecutive repeated vertices map to
+        zero. Invalid simplex data, including vertices outside ``{0, ..., N}``,
+        raises.
+        """
         if isinstance(x, dict):
             clean = {}
             for key, coeff in x.items():
-                k = SimplicialChains._validate_basis_key(key)
+                k = self._validate_basis_key(key)
                 if k is not None:
                     clean[k] = clean.get(k, 0) + coeff
-            return super()._element_constructor_(clean)
+            return self.sum_of_terms(clean.items())
         if isinstance(x, (tuple, list)):
-            k = SimplicialChains._validate_basis_key(x)
+            k = self._validate_basis_key(x)
             if k is None:
                 return self.zero()
             return self.term(k)
         raise TypeError(f"Expected dict or simplex tuple, got {type(x)}.")
+
+    def _validate_basis_key(self, key) -> "tuple | None":
+        """Validate a simplex tuple in the ambient simplex ``Δ^N``."""
+        simplex = SimplicialChains._validate_basis_key(key)
+        if simplex is None:
+            return None
+        if simplex[-1] > self._N:
+            raise ValueError(
+                f"Simplex vertices must lie in {{0, ..., {self._N}}}. Got {simplex}."
+            )
+        return simplex
 
     # -- grading ------------------------------------------------------------
 
