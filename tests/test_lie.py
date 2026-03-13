@@ -20,7 +20,7 @@ def _as_dict(x):
 
 @pytest.mark.parametrize("n", range(0, 6))
 def test_basis_it_size(n: int) -> None:
-    basis = list(Lie(n).basis_it())
+    basis = list(Lie(n).basis_it(0))
     if n == 0:
         expected_size = 0
     else:
@@ -297,5 +297,5 @@ def test_lie_differential_squared_zero(n: int) -> None:
     """d²(x) = 0 for every basis element of Lie(n) (boundary is identically 0)."""
     l = Lie(n)
     zero = l.zero()
-    for elem in l.basis_it():
+    for elem in l.basis_it(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n})"

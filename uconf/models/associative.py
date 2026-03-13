@@ -7,9 +7,16 @@ with zero differential.
 from __future__ import annotations
 
 import itertools
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
+from sage.all import (
+    QQ,
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    SymmetricGroupAlgebra,
+    tensor,
+)
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -35,7 +42,11 @@ class Associative(CombinatorialFreeModule):
         self._arity = int(n)
         self._symmetric_group = SymmetricGroup(n)
         self.boundary = self.module_morphism(
-            on_basis=lambda basis: self.zero(), codomain=self
+            on_basis=lambda x: self.zero(), codomain=self
+        )
+        self.planarize = self.module_morphism(
+            on_basis=self._planarize_on_basis,
+            codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
 
     def _basis_keys(self) -> list[tuple[int, ...]]:
@@ -94,11 +105,25 @@ class Associative(CombinatorialFreeModule):
 
         return Associative(1)((1,))
 
-    def basis_it(self):
-        """Iterate over basis elements in this arity."""
+    def basis_it(self, d: int) -> Iterator[Element]:
+        """Iterate over basis elements in this arity and the given degree."""
 
-        for key in self._basis_keys():
-            yield self.term(key)
+        if d == 0:
+            for key in self._basis_keys():
+                yield self(key)
+
+    def planar_basis_it(self, d: int) -> Iterator[Element]:
+        """Iterate over planar basis elements in this arity and the given degree."""
+
+        if d == 0:
+            yield self(tuple(range(1, self.arity() + 1)))
+
+    def _planarize_on_basis(self, basis_element: tuple):
+        """Split into planar representative and symmetric-group factor."""
+        n = self.arity()
+        sigma = self._symmetric_group(tuple(basis_element))
+        planar = tuple(range(1, n + 1))
+        return self(planar), SymmetricGroupAlgebra(self.base_ring(), n)(sigma)
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis element."""

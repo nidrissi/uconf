@@ -226,7 +226,7 @@ class BarConstruction(UniqueRepresentation):
 
                 # Use the base operad's planarize morphism on the decoration.
                 dec_elem = op_parent.term(dec)
-                planarized = op_parent.planarize(dec_elem)  # type: ignore[attr-defined]
+                planarized = op_parent.planarize(dec_elem)
 
                 # For Surjection / BarrattEccles this is a single term;
                 # for other operads it may be a linear combination.
@@ -285,7 +285,7 @@ class BarConstruction(UniqueRepresentation):
                 op_parent = self._operad_cls(k, base_ring)
                 if not hasattr(op_parent, "planarize"):
                     return False
-                planarized = op_parent.planarize(op_parent.term(dec))  # type: ignore[attr-defined]
+                planarized = op_parent.planarize(op_parent.term(dec))
                 Sk = SymmetricGroup(k)
                 identity_k = Sk.identity()
                 for (_pl_dec, sigma_key), _coeff in planarized:

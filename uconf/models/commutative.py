@@ -6,7 +6,7 @@ differential. Arity ``0`` is the zero module.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
 from uconf.core.parented_element import ParentedElementMixin
@@ -83,10 +83,10 @@ class Commutative(CombinatorialFreeModule):
 
         return Commutative(1)(())
 
-    def basis_it(self):
-        """Iterate over basis elements in this arity."""
+    def basis_it(self, d: int) -> Iterator[Commutative.Element]:
+        """Iterate over basis elements in this arity and the given degree."""
 
-        if self.arity() >= 1:
+        if self.arity() >= 1 and d == 0:
             yield self.term(())
 
     def degree_on_basis(self, basis_element: tuple) -> int:

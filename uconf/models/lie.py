@@ -291,11 +291,12 @@ class Lie(CombinatorialFreeModule):
 
         return self._arity
 
-    def basis_it(self) -> Iterator["Lie.Element"]:
-        """Iterate over the canonical Lie basis in this fixed arity."""
+    def basis_it(self, d: int) -> Iterator["Lie.Element"]:
+        """Iterate over the canonical Lie basis in this fixed arity and the given degree."""
 
-        for key in self._basis_keys():
-            yield self.term(key)
+        if d == 0:
+            for key in self._basis_keys():
+                yield self.term(key)
 
     @staticmethod
     def unit():
