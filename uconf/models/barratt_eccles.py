@@ -12,10 +12,12 @@ if TYPE_CHECKING:
 from sage.all import (
     QQ,
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     Permutations,
     SymmetricGroup,
     SymmetricGroupAlgebra,
+    cached_method,
     tensor,
 )
 
@@ -161,6 +163,16 @@ class BarrattEccles(CombinatorialFreeModule):
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
             yield x.permute(sigma)
+
+    @cached_method
+    def graded_basis(self, d: int) -> Family:
+        """Return the ``Family`` of all basis elements in degree ``d``."""
+        return Family(tuple(self.basis_it(d)))
+
+    @cached_method
+    def graded_planar_basis(self, d: int) -> Family:
+        """Return the ``Family`` of planar basis elements in degree ``d``."""
+        return Family(tuple(self.planar_basis_it(d)))
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split a basis element into planar representative and group element."""
@@ -350,7 +362,7 @@ class BarrattEccles(CombinatorialFreeModule):
 
             # 2. Iterate linearly
             for basis_tuple, coeff in self:
-                k = len(basis_tuple)  # Degree
+                k = len(basis_tuple) - 1  # Degree (length - 1)
 
                 # 3. Apply formula: Sum (front_face) (x) (back_face)
                 for i in range(k + 1):

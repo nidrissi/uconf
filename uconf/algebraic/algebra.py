@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Generic, Protocol, TypeVar
+from sage.all import UniqueRepresentation
 
 from uconf.core.operad import OperadLike, OperadProtocol
 
@@ -41,7 +42,9 @@ class StructureMap(Protocol[OperadElementInputType, AlgebraElementType]):
     ) -> AlgebraElementType: ...
 
 
-class OperadAlgebra(Generic[OperadElementType, AlgebraElementType]):
+class OperadAlgebra(
+    Generic[OperadElementType, AlgebraElementType], UniqueRepresentation
+):
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an

@@ -93,7 +93,7 @@ class OperadFactoryProtocol(Protocol):
 
     name: str
 
-    def __call__(self, n: int, base_ring=...) -> Any:
+    def __call__(self, n: int, base_ring=...) -> Component:
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
@@ -109,6 +109,8 @@ class OperadFactoryProtocol(Protocol):
     ) -> Any:
         """Computes ``x \\circ_i y``."""
         ...
+
+    class Component(OperadProtocol): ...
 
 
 OperadLike: TypeAlias = type[OperadProtocol] | OperadFactoryProtocol

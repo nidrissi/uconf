@@ -12,12 +12,23 @@ operad ``P ⊙ Q``:
 
 from __future__ import annotations
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, QQ, SymmetricGroup
+from typing import Any, Iterator
+
+from sage.all import (
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    QQ,
+    SymmetricGroup,
+    SymmetricGroupAlgebra,
+    UniqueRepresentation,
+    tensor,
+)
 
 from uconf.core.operad import OperadLike
+from uconf.core.quasi_planar import QuasiPlanarMixin
 
 
-class HadamardProduct:
+class HadamardProduct(UniqueRepresentation):
     """Factory for Hadamard-product operad components."""
 
     def __init__(
@@ -87,7 +98,7 @@ class HadamardProduct:
 
         return accumulated
 
-    class Component(CombinatorialFreeModule):
+    class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of ``P ⊙ Q``."""
 
         def __init__(self, factory: "HadamardProduct", n: int, base_ring=QQ):
@@ -106,11 +117,54 @@ class HadamardProduct:
             self._left_parent = factory.left_operad_cls(n, base_ring)
             self._right_parent = factory.right_operad_cls(n, base_ring)
             self._symmetric_group = SymmetricGroup(self._arity)
+            self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
             self.rename(name)
             self.boundary = self.module_morphism(
                 on_basis=self._boundary_on_basis,
                 codomain=self,
             )
+            # Set up planarize if the right factor supports it
+            if hasattr(self._right_parent, "planarize"):
+                self.planarize = self.module_morphism(
+                    on_basis=self._planarize_on_basis,
+                    codomain=tensor([self, self._symmetric_group_algebra]),
+                )
+
+        def _planarize_on_basis(self, basis_element: tuple) -> Any:
+            """Planarize via the right factor's quasi-planar structure.
+
+            For a basis element ``(p, q)`` where ``q`` is in an operad with
+            ``planarize``, we decompose ``q = q_pl · σ`` and return
+            ``(p · σ⁻¹, q_pl) ⊗ σ``.
+            """
+            left_basis, right_basis = basis_element
+            right_parent = self._right_parent
+            left_parent = self._left_parent
+
+            # Planarize the right factor: q -> q_pl ⊗ σ
+            right_elem = right_parent.term(right_basis)
+            right_planarized = right_parent.planarize(right_elem)  # type: ignore[attr-defined]
+
+            target = tensor([self, self._symmetric_group_algebra])
+            result = target.zero()
+
+            for tensor_basis, coeff in right_planarized:
+                right_pl_key, sigma_key = tensor_basis
+                # sigma_key is a permutation in S_n
+                sigma = self._symmetric_group(sigma_key)
+                sigma_inv = sigma.inverse()
+
+                # Permute the left factor by σ⁻¹
+                left_elem = left_parent.term(left_basis)
+                left_permuted = left_elem.permute(sigma_inv)
+
+                for new_left_key, left_coeff in left_permuted:
+                    had_key = (new_left_key, right_pl_key)
+                    result += (coeff * left_coeff) * self.term(had_key).tensor(
+                        self._symmetric_group_algebra.term(sigma_key)
+                    )
+
+            return result
 
         def _validate_basis_key(self, basis_key):
             if not isinstance(basis_key, (tuple, list)) or len(basis_key) != 2:
@@ -185,6 +239,50 @@ class HadamardProduct:
             return self._left_parent.degree_on_basis(
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
+
+        def planar_basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
+            """Iterate over planar basis elements of degree ``d``.
+
+            A pair ``(left_key, right_key)`` is *planar* when ``right_key``
+            is a planar element of the right factor.  Requires the right
+            factor to implement ``planar_basis_it``.  The left factor is
+            iterated with ``basis_it(d_left)`` (degree-indexed) when
+            available, or with ``basis_it()`` filtered by degree otherwise.
+            """
+            if not hasattr(self._right_parent, "planar_basis_it"):
+                return
+
+            left_parent = self._left_parent
+            right_parent = self._right_parent
+
+            for d_right in range(d + 1):
+                d_left = d - d_right
+                right_elems = list(right_parent.planar_basis_it(d_right))  # type: ignore[attr-defined]
+                if not right_elems:
+                    continue
+
+                # Gather left elements at degree d_left.
+                left_elems = []
+                if hasattr(left_parent, "basis_it"):
+                    try:
+                        left_elems = list(left_parent.basis_it(d_left))  # type: ignore[attr-defined]
+                    except TypeError:
+                        # Degree-free basis_it (e.g. Lie)
+                        for elem in left_parent.basis_it():  # type: ignore[attr-defined]
+                            for key in elem.support():
+                                if left_parent.degree_on_basis(key) == d_left:
+                                    left_elems.append(left_parent.term(key))
+                else:
+                    try:
+                        for key in left_parent.basis():  # type: ignore[attr-defined]
+                            if left_parent.degree_on_basis(key) == d_left:
+                                left_elems.append(left_parent.term(key))
+                    except (AttributeError, NotImplementedError):
+                        pass
+
+                for left_elem in left_elems:
+                    for right_elem in right_elems:
+                        yield self.from_factors(left_elem, right_elem)
 
         def from_factors(
             self, left_element, right_element

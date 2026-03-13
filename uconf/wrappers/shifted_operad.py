@@ -14,6 +14,7 @@ from sage.all import (
     GradedModulesWithBasis,
     QQ,
     SymmetricGroup,
+    UniqueRepresentation,
 )
 from uconf.core.operad import OperadLike
 from uconf.core.signs import (
@@ -23,7 +24,7 @@ from uconf.core.signs import (
 )
 
 
-class ShiftedOperad:
+class ShiftedOperad(UniqueRepresentation):
     """Factory for shifted operad components.
 
     Args:
