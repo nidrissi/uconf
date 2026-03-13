@@ -5,7 +5,7 @@ import math
 from random import Random
 
 import pytest
-from sage.all import ZZ
+from sage.all import ZZ, QQ
 
 from uconf import Surjection
 
@@ -44,7 +44,7 @@ PLANAR_LARGE = tuple(usual_planar_test(6, 3))
 
 
 def test_surjection_unit() -> None:
-    u = Surjection.unit()
+    u = Surjection.unit(QQ)
     assert _as_dict(u) == {(1,): 1}, "Surjection unit should be (1,)."
 
 
@@ -123,7 +123,7 @@ def test_surjection_dict_constructor_raises_on_invalid_key() -> None:
 def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
     s3 = Surjection(3, QQ)
     x = s3((1, 2, 3))
-    one = Surjection.unit()
+    one = Surjection.unit(QQ)
 
     left = Surjection.compose(one, 1, x)
     right = Surjection.compose(x, input_pos, one)
