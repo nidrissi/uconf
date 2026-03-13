@@ -26,6 +26,10 @@ class CooperadComponent(Protocol):
     all n >= 0.  Basic cooperads have k = 0 (non-negative degrees).
     ``ShiftedCooperad(C, d)`` has k = C.connectivity + d."""
 
+    factory: CooperadLike
+    """Reference to the parent cooperad factory, used for printing and error
+    messages."""
+
     def __init__(self, n: int, base_ring=...):
         """Returns the arity-``n`` component over ``base_ring``."""
         ...

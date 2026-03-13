@@ -106,3 +106,6 @@ class CoAssociative(Associative):
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Return the partial cocomposition dual to ``Associative.compose``."""
             return CoAssociative.infinitesimal_cocompose(self, i, m, n)
+
+
+CoAssociative.factory = CoAssociative

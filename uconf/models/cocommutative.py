@@ -90,3 +90,6 @@ class CoCommutative(Commutative):
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Return the partial cocomposition dual to ``Commutative.compose``."""
             return CoCommutative.infinitesimal_cocompose(self, i, m, n)
+
+
+CoCommutative.factory = CoCommutative

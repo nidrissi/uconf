@@ -207,7 +207,7 @@ class TestEComoduleMap:
 
     def test_k0_term_is_identity_tensor_generator(self):
         """The k=0 term should be BE[(id,)] ⊗ cobar_gen(x)."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _, BE2 = _BH_setup(2)
 
         # Degree-1 planar element: ((1,), (id,)) at weight 1
         planar_elems = list(BH2.planar_basis_it(1))
@@ -216,7 +216,7 @@ class TestEComoduleMap:
         dec_key = list(planar_elems[0].support())[0]
         dec_elem = BH2(dec_key)
 
-        result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        result = e_comodule_on_generator(dec_elem)
 
         id2 = BE2._symmetric_group.identity()
         id_be_key = (id2,)
@@ -233,13 +233,13 @@ class TestEComoduleMap:
 
     def test_comodule_contains_k0_term(self):
         """The comodule map always has a k=0 term equal to (id,) ⊗ generator."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _, BE2 = _BH_setup(2)
 
         for d in range(1, 3):
             for pl_elem in BH2.planar_basis_it(d):
                 dec_key = list(pl_elem.support())[0]
                 dec_elem = BH2(dec_key)
-                result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+                result = e_comodule_on_generator(dec_elem)
 
                 id_be_key = (BE2._symmetric_group.identity(),)
                 cobar_tree_key = (dec_key,) + tuple(range(1, 3))
@@ -252,7 +252,7 @@ class TestEComoduleMap:
 
     def test_comodule_on_degree2_element_has_k1_term(self):
         """For a degree-2 element with non-trivial boundary, k=1 terms appear."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         s21 = S2([2, 1])
@@ -266,7 +266,7 @@ class TestEComoduleMap:
         if dec_elem == BH2.zero():
             pytest.skip("Element is zero")
 
-        result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        result = e_comodule_on_generator(dec_elem)
 
         # Check the result has more than just the k=0 term
         terms = list(result)
@@ -274,7 +274,7 @@ class TestEComoduleMap:
 
     def test_comodule_be_keys_are_valid(self):
         """All BE keys in the comodule map output should be valid BE elements."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         s21 = S2([2, 1])
         id2 = S2.identity()
@@ -287,7 +287,7 @@ class TestEComoduleMap:
         if dec_elem == BH2.zero():
             pytest.skip("Element is zero")
 
-        result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        result = e_comodule_on_generator(dec_elem)
 
         for (be_key, cobar_key), coeff in result:
             # BE key should be a valid basis element (no consecutive duplicates)
@@ -298,15 +298,13 @@ class TestEComoduleMap:
         """E-comodule map on B(Surjection)(2), which is quasi-planar."""
         BS = BarConstruction(Surjection)
         B2 = BS(2)
-        OBS = CobarConstruction(BS)
-        OBS2 = OBS(2)
         BE2 = BarrattEccles(2)
 
         # Planar degree-1 element: (1,2) in Surjection(2)
         tree_key = ((1, 2), 1, 2)
         dec_elem = B2(tree_key)
 
-        result = e_comodule_on_generator(dec_elem, B2, OBS2, BE2)
+        result = e_comodule_on_generator(dec_elem)
 
         # Should at minimum have the k=0 term
         id_be_key = (BE2._symmetric_group.identity(),)
@@ -325,7 +323,7 @@ class TestEComoduleMap:
             pytest.skip("No planar basis elements found")
 
         dec_elem = BH2(list(planar[0].support())[0])
-        result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        result = e_comodule_on_generator(dec_elem)
 
         expected_parent = tensor([BE2, OBH2])
         assert result.parent() is expected_parent or result == expected_parent.zero()
@@ -362,7 +360,7 @@ def _delta_equiv(cobar_key, B_n, O_n, BE_n):
         new_outer = [sigma_vals[outer_leaves[j] - 1] for j in range(n)]
 
         pl_elem = B_n(pl_key)
-        delta_std = e_comodule_on_generator(pl_elem, B_n, O_n, BE_n)
+        delta_std = e_comodule_on_generator(pl_elem)
 
         # Diagonal action of new_outer on E ⊗ Ω(C):
         #   BE part : precompose each permutation by the leaf permutation
@@ -451,7 +449,7 @@ class TestComoduleAxioms:
         dec_elem = BH2(bar_d0)
         cobar_gen = OBH2((bar_d0, 1, 2))
 
-        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        delta_x = e_comodule_on_generator(dec_elem)
         T = tensor([BE2, OBH2])
 
         d_delta = T.zero()
@@ -489,7 +487,7 @@ class TestComoduleAxioms:
         dec_elem = BH2(bar_d1)
         cobar_gen = OBH2((bar_d1, 1, 2))
 
-        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        delta_x = e_comodule_on_generator(dec_elem)
         T = tensor([BE2, OBH2])
 
         # d_tensor(Δ(x))
@@ -527,7 +525,7 @@ class TestComoduleAxioms:
             dec_elem = BH2(dec_key)
             cobar_gen = OBH2((dec_key, 1, 2))
 
-            delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+            delta_x = e_comodule_on_generator(dec_elem)
 
             d_delta = T.zero()
             for (be_key, ck), coeff in delta_x:
@@ -564,7 +562,7 @@ class TestComoduleAxioms:
         bar_d0 = (had_d0, 1, 2)
         dec_elem = BH2(bar_d0)
 
-        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        delta_x = e_comodule_on_generator(dec_elem)
         T_EE_OC = tensor([BE2, BE2, OBH2])
 
         lhs = T_EE_OC.zero()
@@ -593,7 +591,7 @@ class TestComoduleAxioms:
         bar_d1 = (had_d1, 1, 2)
         dec_elem = BH2(bar_d1)
 
-        delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+        delta_x = e_comodule_on_generator(dec_elem)
         T_EE_OC = tensor([BE2, BE2, OBH2])
 
         lhs = T_EE_OC.zero()
@@ -619,7 +617,7 @@ class TestComoduleAxioms:
         for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
             dec_key = list(pl_elem.support())[0]
             dec_elem = BH2(dec_key)
-            delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
+            delta_x = e_comodule_on_generator(dec_elem)
 
             lhs = T_EE_OC.zero()
             rhs = T_EE_OC.zero()

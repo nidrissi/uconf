@@ -40,19 +40,17 @@ Hadamard product :math:`P \\otimes \\mathcal{E}` or :math:`P \\otimes \\Surj`.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from sage.all import SymmetricGroup, tensor
 
+from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.cooperad import CooperadComponent
+from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.models.barratt_eccles import BarrattEccles
 
 
-def e_comodule_on_generator(
-    dec_elem: Any,
-    cooperad_component: Any,
-    cobar_component: Any,
-    be_component: Optional[Any] = None,
-) -> Any:
+def e_comodule_on_generator(dec_elem: Any) -> Any:
     """Compute the :math:`\\mathcal{E}_\\nu`-comodule map on a planar generator.
 
     Given a planar element *dec_elem* :math:`\\in \\mathcal{C}_\\mathrm{pl}(n)`,
@@ -97,13 +95,18 @@ def e_comodule_on_generator(
     pruned early.  The recursion depth is bounded by
     :math:`\\deg_{\\mathcal{C}}(\\text{dec\\_elem})`.
     """
+    cooperad_component: CooperadComponent = dec_elem.parent()
+    assert isinstance(cooperad_component, QuasiPlanarMixin), (
+        "Expected a quasi-planar cooperad component."
+    )
+
     n = cooperad_component.arity()
     base_ring = cooperad_component.base_ring()
+    cobar_component = CobarConstruction(cooperad_component.factory)(n, base_ring)
+    be_component = BarrattEccles(n, base_ring)
+
     S_n = SymmetricGroup(n)
     identity_n = S_n.identity()
-
-    if be_component is None:
-        be_component = BarrattEccles(n, base_ring)
 
     target = tensor([be_component, cobar_component])
 
