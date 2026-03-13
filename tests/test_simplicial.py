@@ -46,7 +46,7 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
         contribution = coeff
         for idx in range(r):
             contribution *= SimplicialCochains.evaluate(
-                cochains[idx], SC.term(factor_keys[idx])
+                cochains[idx], SC(factor_keys[idx])
             )
             if contribution == 0:
                 break
@@ -75,7 +75,7 @@ class TestSimplicialChains:
     def test_construction_tensor(self):
         SC = SimplicialChains()
         T = tensor([SC, SC])
-        x = T.term(((0, 1, 2), (0, 1)))
+        x = tensor([SC((0, 1, 2)), SC((0, 1))])
         assert x != T.zero()
 
     def test_degenerate_rejected(self):
@@ -165,15 +165,14 @@ class TestBoundary:
         """∂² = 0 on tensor products using tensor_boundary."""
         SC = SimplicialChains()
         T = tensor([SC, SC])
-        x = T.term(((0, 1, 2), (0, 1)))
+        x = tensor([SC((0, 1, 2)), SC((0, 1))])
         b = SimplicialChains.tensor_boundary
         assert b(b(x)) == T.zero()
 
     def test_boundary_tensor_product(self):
         """∂([0,1] ⊗ [2,3]) = [1]⊗[2,3] - [0]⊗[2,3] - [0,1]⊗[3] + [0,1]⊗[2]."""
         SC = SimplicialChains()
-        T = tensor([SC, SC])
-        x = T.term(((0, 1), (2, 3)))
+        x = tensor([SC((0, 1)), SC((2, 3))])
         bdry = SimplicialChains.tensor_boundary(x)
         d = _as_dict(bdry)
         expected = {

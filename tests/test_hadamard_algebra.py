@@ -1,7 +1,7 @@
 """Tests for the Hadamard tensor algebra wrapper."""
 
 import pytest
-from sage.all import QQ, ZZ
+from sage.all import QQ, ZZ, tensor
 from typing import cast
 
 from uconf import (
@@ -32,7 +32,7 @@ class TrivialAssAlgebra(OperadAlgebra):
             for a_elem in algebra_elements:
                 for _a_basis, a_coeff in a_elem:
                     coeff *= a_coeff
-            result += coeff * self.module.term(())
+            result += coeff * self.module(())
         return result
 
 
@@ -64,19 +64,21 @@ def test_hadamard_tensor_algebra_construction() -> None:
 
 
 def test_unit_action_on_tensor_module() -> None:
-    had_alg = HadamardTensorAlgebra(TrivialAssAlgebra(), TrivialAssAlgebra())
+    alg = TrivialAssAlgebra()
+    had_alg = HadamardTensorAlgebra(alg, alg)
 
-    x = had_alg.module.term(((), ()))
+    x = tensor((alg(()), alg(())))
     unit = had_alg.operad_cls.unit()
 
     assert had_alg.act(unit, [x]) == x
 
 
 def test_binary_action_multiplies_tensor_scalars() -> None:
-    had_alg = HadamardTensorAlgebra(TrivialAssAlgebra(), TrivialAssAlgebra())
+    alg = TrivialAssAlgebra()
+    had_alg = HadamardTensorAlgebra(alg, alg)
     had = cast(HadamardProduct, had_alg.operad_cls)
 
-    x = had_alg.module.term(((), ()))
+    x = tensor((alg(()), alg(())))
     p = had(2)(((1, 2), (1, 2)))
 
     result = had_alg.act(p, [2 * x, 3 * x])
@@ -84,14 +86,15 @@ def test_binary_action_multiplies_tensor_scalars() -> None:
 
 
 def test_boundary_uses_tensor_sign_rule() -> None:
-    had_alg = HadamardTensorAlgebra(UnaryChainAlgebra(), UnaryChainAlgebra())
-    x = had_alg.module.term(((0, 1), (0, 1)))
+    alg = UnaryChainAlgebra()
+    had_alg = HadamardTensorAlgebra(alg, alg)
+    x = tensor((alg((0, 1)), alg((0, 1))))
 
     expected = had_alg.module.zero()
-    expected += had_alg.module.term(((1,), (0, 1)))
-    expected -= had_alg.module.term(((0,), (0, 1)))
-    expected -= had_alg.module.term(((0, 1), (1,)))
-    expected += had_alg.module.term(((0, 1), (0,)))
+    expected += tensor((alg((1,)), alg((0, 1))))
+    expected -= tensor((alg((0,)), alg((0, 1))))
+    expected -= tensor((alg((0, 1)), alg((1,))))
+    expected += tensor((alg((0, 1)), alg((0,))))
 
     assert _as_dict(had_alg.boundary(x)) == _as_dict(expected)
 

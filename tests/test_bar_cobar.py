@@ -295,7 +295,7 @@ class TestBarConstructionLie:
         B1 = BLie(1)
 
         # Create element: 3 * (single leaf)
-        elem = 3 * B1.term(1)
+        elem = 3 * B1(1)
         assert B1.counit(elem) == 3
 
         # Zero element
@@ -315,7 +315,7 @@ class TestBarConstructionLie:
         B1 = BLie(1)
 
         # Element with only the single-leaf tree
-        elem = 5 * B1.term(1)
+        elem = 5 * B1(1)
         assert B1.reduced(elem) == B1.zero()
 
         # For arity 2, reduced is identity
@@ -547,7 +547,7 @@ class TestCobarConstruction:
         OmegaS = CobarConstruction(SurjectionDual)
         unit = OmegaS.unit()
         assert unit.arity() == 1
-        assert unit == OmegaS(1).term(1)
+        assert unit == OmegaS(1)(1)
 
     def test_cobar_degree(self):
         OmegaS = CobarConstruction(SurjectionDual)
@@ -663,9 +663,9 @@ class TestContractEdge:
         # New vertex has arity 3, children 1, 2, 3
         # Result depends on new_decoration
 
-        # Lie.compose(Lie(2).term((1,)), 1, Lie(2).term((1,))) computes the composition
+        # Lie.compose(Lie(2)((1,)), 1, Lie(2)((1,))) computes the composition
         L2 = Lie(2)
-        bracket = L2.term((1,))
+        bracket = L2((1,))
         composed = Lie.compose(bracket, 1, bracket)
         # In Lie, id ∘_1 id = id in arity 3, which has basis keys permutations of (1, 2)
         # Lie(3) basis keys are permutations of (1, 2)
@@ -715,17 +715,17 @@ class TestBarCoderivation:
         # LHS: Δ_{i;m,n}(d(x)), recast into tgt
         lhs = tgt.zero()
         for (ak, bk), coeff in B.infinitesimal_cocompose(dx, i, m, n):
-            lhs += coeff * Bm.term(ak).tensor(Bn.term(bk))
+            lhs += coeff * Bm(ak).tensor(Bn(bk))
 
         # RHS: (d⊗id + (-1)^|a| id⊗d)(Δ_{i;m,n}(x))
         rhs = tgt.zero()
         for (ak, bk), coeff in B.infinitesimal_cocompose(x, i, m, n):
             a_deg = Bm.degree_on_basis(ak)
-            for dak, da_coeff in Bm.term(ak).boundary():
-                rhs += coeff * da_coeff * Bm.term(dak).tensor(Bn.term(bk))
+            for dak, da_coeff in Bm(ak).boundary():
+                rhs += coeff * da_coeff * Bm(dak).tensor(Bn(bk))
             sign_a = (-1) ** a_deg
-            for dbk, db_coeff in Bn.term(bk).boundary():
-                rhs += coeff * sign_a * db_coeff * Bm.term(ak).tensor(Bn.term(dbk))
+            for dbk, db_coeff in Bn(bk).boundary():
+                rhs += coeff * sign_a * db_coeff * Bm(ak).tensor(Bn(dbk))
 
         assert lhs == rhs, f"Coderivation property failed for tree {tree}"
 
@@ -780,7 +780,7 @@ class TestCoAssociative:
     def test_coassociative_reduced(self):
         """Reduced kills the arity-1 counit component."""
         C1 = CoAssociative(1)
-        elem = 3 * C1.term((1,))
+        elem = 3 * C1((1,))
         assert CoAssociative.reduced(elem) == C1.zero()
         C2 = CoAssociative(2)
         elem2 = C2((1, 2))
@@ -799,8 +799,8 @@ class TestCoAssociative:
 
         # Verify: composing back should give original basis element
         for (left_key, right_key), coeff in delta:
-            tau = CoAssociative(2).term(left_key)
-            rho = CoAssociative(2).term(right_key)
+            tau = CoAssociative(2)(left_key)
+            rho = CoAssociative(2)(right_key)
             composed = Associative.compose(tau, 1, rho)
             assert dict(composed) == {(1, 2, 3): 1}
 
@@ -837,7 +837,7 @@ class TestCoCommutative:
     def test_cocommutative_reduced(self):
         """Reduced kills the arity-1 counit component."""
         C1 = CoCommutative(1)
-        elem = 5 * C1.term(())
+        elem = 5 * C1(())
         assert CoCommutative.reduced(elem) == C1.zero()
         C2 = CoCommutative(2)
         elem2 = C2(())
@@ -939,7 +939,7 @@ class TestBarPlanarize:
         Sn = SymmetricGroup(n)
         total = component.zero()
         for (pl_tree, sigma_key), coeff in result:
-            T_pl = component.term(pl_tree)
+            T_pl = component(pl_tree)
             sigma = Sn(sigma_key)
             total += coeff * T_pl.permute(sigma)
         return total == elem

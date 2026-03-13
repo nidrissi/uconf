@@ -353,6 +353,10 @@ class BarConstruction(UniqueRepresentation):
                 else:
                     return sign * self.term(shuffle_key)
 
+            if isinstance(x, int) and self._arity == 1 and x == 1:
+                # Special case: allow integer 1 to represent the single-leaf tree in arity 1
+                return self.term(1)
+
             return super()._element_constructor_(x)
 
         def arity(self) -> int:

@@ -67,7 +67,7 @@ def _seq_lhs(x, i, j, m, n, p) -> dict:
     d1 = SL.infinitesimal_cocompose(x, i, m, n + p - 1)
     result: dict = {}
     for (a, d_key), c1 in d1:
-        d_elem = SL(n + p - 1).term(d_key)
+        d_elem = SL(n + p - 1)(d_key)
         for (b, c_key), c2 in SL.infinitesimal_cocompose(d_elem, j, n, p):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -80,7 +80,7 @@ def _seq_rhs(x, i, j, m, n, p) -> dict:
     d1 = SL.infinitesimal_cocompose(x, i + j - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
-        e_elem = SL(m + n - 1).term(e)
+        e_elem = SL(m + n - 1)(e)
         for (a, b), c2 in SL.infinitesimal_cocompose(e_elem, i, m, n):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -93,7 +93,7 @@ def _par_lhs(x, i, j, m, n, p) -> dict:
     d1 = SL.infinitesimal_cocompose(x, j + n - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
-        e_elem = SL(m + n - 1).term(e)
+        e_elem = SL(m + n - 1)(e)
         for (a, b), c2 in SL.infinitesimal_cocompose(e_elem, i, m, n):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -111,7 +111,7 @@ def _par_rhs(x, i, j, m, n, p) -> dict:
     d1 = SL.infinitesimal_cocompose(x, i, m + p - 1, n)
     result: dict = {}
     for (f, b), c1 in d1:
-        f_elem = SL(m + p - 1).term(f)
+        f_elem = SL(m + p - 1)(f)
         b_deg = Sn.degree_on_basis(b)
         for (a, c_key), c2 in SL.infinitesimal_cocompose(f_elem, j, m, p):
             c_deg = Sp.degree_on_basis(c_key)
@@ -135,10 +135,10 @@ def _coderivation_rhs(x, i, m, n) -> dict:
     result: dict = {}
     for (l_key, r_key), c in SL.infinitesimal_cocompose(x, i, m, n):
         sign = (-1) ** Sl.degree_on_basis(l_key)
-        for dl_key, dc in Sl.term(l_key).boundary():
+        for dl_key, dc in Sl(l_key).boundary():
             key = (dl_key, r_key)
             result[key] = result.get(key, 0) + int(c) * int(dc)
-        for dr_key, dc in Sr.term(r_key).boundary():
+        for dr_key, dc in Sr(r_key).boundary():
             key = (l_key, dr_key)
             result[key] = result.get(key, 0) + sign * int(c) * int(dc)
     return {k: v for k, v in result.items() if v != 0}

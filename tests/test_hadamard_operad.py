@@ -33,10 +33,10 @@ def test_boundary_uses_tensor_sign_rule() -> None:
     right_boundary = right_parent.boundary(right_parent(right_basis))
 
     for new_left_basis, coeff in left_boundary:
-        expected += h2.term((new_left_basis, right_basis)) * coeff
+        expected += h2((new_left_basis, right_basis)) * coeff
 
     for new_right_basis, coeff in right_boundary:
-        expected += h2.term((left_basis, new_right_basis)) * (-coeff)
+        expected += h2((left_basis, new_right_basis)) * (-coeff)
 
     assert _as_dict(x.boundary()) == _as_dict(expected)
 
