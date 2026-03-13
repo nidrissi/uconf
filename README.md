@@ -179,8 +179,8 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 
 ### Protocols and utilities
 
-- `core/operad.py` — `OperadProtocol` (minimal structural contract for operads).
-- `core/cooperad.py` — `CooperadProtocol` (dual cooperadic contract).
+- `core/operad.py` — `OperadComponent` (minimal structural contract for operads).
+- `core/cooperad.py` — `CooperadComponent` (dual cooperadic contract).
 - `core/operad.py` — `OperadLike` accepts either an operad class (for example
   `Lie`) or an operad factory/wrapper instance (for example
   `ShiftedOperad(Lie, -1)` and `HadamardProduct(Associative, Associative)`).
@@ -342,8 +342,8 @@ mu = alg.act(u, [f1, f2])
 
 ### API contracts
 
-- `test_common_operad.py`: `OperadProtocol` conformance (`Surjection`, `BarrattEccles`).
-- `test_common_cooperad.py`: `CooperadProtocol` conformance (`SurjectionDual`).
+- `test_common_operad.py`: `OperadComponent` conformance (`Surjection`, `BarrattEccles`).
+- `test_common_cooperad.py`: `CooperadComponent` conformance (`SurjectionDual`).
 
 ### Main operads
 

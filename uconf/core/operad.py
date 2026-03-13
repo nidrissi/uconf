@@ -11,20 +11,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Protocol, Self, TypeAlias, TypeVar, runtime_checkable
-
-
-OperadParentT = TypeVar("OperadParentT", bound="OperadProtocol", covariant=True)
-
-
-class SupportsOperadParent(Protocol[OperadParentT]):
-    """Protocol for Sage elements exposing a typed ``parent()`` method."""
-
-    def parent(self) -> OperadParentT: ...
+from typing import Any, Protocol, Self, TypeAlias, runtime_checkable
 
 
 @runtime_checkable
-class OperadProtocol(Protocol):
+class OperadComponent(Protocol):
     """Structural contract for one fixed-arity operad component."""
 
     name: str
@@ -81,7 +72,7 @@ class OperadProtocol(Protocol):
         """Validates and normalizes a basis key (implementation detail)."""
         ...
 
-    class Element(SupportsOperadParent["OperadProtocol"], Protocol):
+    class Element(Protocol):
         """Structural contract for elements of an operad component.
 
         Elements represent sparse linear combinations and are iterable over
@@ -103,10 +94,11 @@ class OperadProtocol(Protocol):
         # This is ugly but I cannot find a better way to express the fact that the element class should inherit from CombinatorialFreeModule.Element.
         def __iter__(self) -> Iterator[tuple[Any, Any]]: ...
         def __rmul__(self, other) -> Self: ...
+        def parent(self) -> OperadLike: ...
 
 
 @runtime_checkable
-class OperadFactoryProtocol(Protocol):
+class OperadFactory(Protocol):
     """Structural contract for operad factories and wrappers.
 
     Factory instances (for example shifted/Hadamard wrappers) are callable by
@@ -132,8 +124,8 @@ class OperadFactoryProtocol(Protocol):
         """Computes ``x \\circ_i y``."""
         ...
 
-    class Component(OperadProtocol): ...
+    class Component(OperadComponent): ...
 
 
-OperadLike: TypeAlias = type[OperadProtocol] | OperadFactoryProtocol
+OperadLike: TypeAlias = type[OperadComponent] | OperadFactory
 """Type alias for accepted operad inputs (class or factory instance)."""

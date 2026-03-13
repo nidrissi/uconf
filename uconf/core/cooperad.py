@@ -11,20 +11,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Iterable, Protocol, Self, TypeAlias, TypeVar, runtime_checkable
-
-
-CooperadParentT = TypeVar("CooperadParentT", bound="CooperadProtocol", covariant=True)
-
-
-class SupportsCooperadParent(Protocol[CooperadParentT]):
-    """Protocol for Sage elements exposing a typed ``parent()`` method."""
-
-    def parent(self) -> CooperadParentT: ...
+from typing import Any, Iterable, Protocol, Self, TypeAlias, runtime_checkable
 
 
 @runtime_checkable
-class CooperadProtocol(Protocol):
+class CooperadComponent(Protocol):
     """Structural contract for one fixed-arity cooperad component."""
 
     name: str
@@ -82,7 +73,7 @@ class CooperadProtocol(Protocol):
         """Validates and normalizes a basis key (implementation detail)."""
         ...
 
-    class Element(SupportsCooperadParent["CooperadProtocol"], Protocol):
+    class Element(Protocol):
         """Structural contract for elements of a cooperad component.
 
 
@@ -117,10 +108,11 @@ class CooperadProtocol(Protocol):
         # This is ugly but I cannot find a better way to express the fact that the element class should inherit from CombinatorialFreeModule.Element.
         def __iter__(self) -> Iterator[tuple[Any, Any]]: ...
         def __rmul__(self, other) -> Self: ...
+        def parent(self) -> CooperadLike: ...
 
 
 @runtime_checkable
-class CooperadFactoryProtocol(Protocol):
+class CooperadFactory(Protocol):
     """Structural contract for cooperad factories and wrappers."""
 
     name: str
@@ -148,5 +140,5 @@ class CooperadFactoryProtocol(Protocol):
         ...
 
 
-CooperadLike: TypeAlias = type[CooperadProtocol] | CooperadFactoryProtocol
+CooperadLike: TypeAlias = type[CooperadComponent] | CooperadFactory
 """Type alias for accepted cooperad inputs (class or factory instance)."""

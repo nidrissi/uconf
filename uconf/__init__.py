@@ -9,7 +9,7 @@ project:
 - :class:`Lie`
 - :class:`Associative`
 - :class:`Commutative`
-- :class:`CooperadProtocol`
+- :class:`CooperadComponent`
 
 It also wires two standard maps at import time:
 
@@ -46,7 +46,7 @@ from uconf.constructions import (
     CobarConstruction,
     e_comodule_on_generator,
 )
-from uconf.core import CooperadProtocol, OperadProtocol
+from uconf.core import CooperadComponent, OperadComponent
 from uconf.models import (
     Associative,
     BarrattEccles,
@@ -62,8 +62,8 @@ from uconf.models import (
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
 
 __all__ = [
-    "OperadProtocol",
-    "CooperadProtocol",
+    "OperadComponent",
+    "CooperadComponent",
     "Surjection",
     "SurjectionDual",
     "BarrattEccles",
