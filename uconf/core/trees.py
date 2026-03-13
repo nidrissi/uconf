@@ -826,6 +826,213 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
     return new_tree, total_sign
 
 
+def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
+    """Yield all basis keys of *operad_parent* in the given degree.
+
+    Handles three calling conventions:
+
+    - ``basis_it(degree)`` — degree-aware (e.g. ``Surjection``, ``BarrattEccles``).
+    - ``basis_it()`` — degree-unaware; results are filtered by ``degree_on_basis``.
+    - Fallback via Sage's ``basis()`` family, filtered by ``degree_on_basis``.
+    """
+    basis_it = getattr(operad_parent, "basis_it", None)
+    if basis_it is not None:
+        try:
+            for elem in basis_it(degree):
+                yield from elem.support()
+            return
+        except TypeError:
+            # basis_it does not accept a degree argument
+            for elem in basis_it():
+                for key in elem.support():
+                    if operad_parent.degree_on_basis(key) == degree:
+                        yield key
+            return
+    for key in operad_parent.basis():
+        try:
+            if operad_parent.degree_on_basis(key) == degree:
+                yield key
+        except Exception:
+            pass
+
+
+def _shuffle_partitions(sorted_leaves: tuple, k: int) -> Iterator[list]:
+    """Yield all partitions of *sorted_leaves* into *k* non-empty parts sorted by min.
+
+    Elements are processed in ascending order; each new element either joins an
+    already-opened part or opens the next new part.  Because elements arrive
+    sorted and parts are opened in sequence, ``min(parts[i]) < min(parts[i+1])``
+    for all *i*.
+
+    Each yielded value is a list of *k* sorted tuples of leaf labels.
+    """
+    n = len(sorted_leaves)
+    if k <= 0 or k > n:
+        return
+
+    parts: list[list[int]] = [[] for _ in range(k)]
+
+    def _backtrack(idx: int, num_open: int) -> Iterator[list]:
+        if idx == n:
+            if num_open == k:
+                yield [tuple(p) for p in parts]
+            return
+        elem = sorted_leaves[idx]
+        # Place elem into an existing open part.
+        for i in range(num_open):
+            parts[i].append(elem)
+            yield from _backtrack(idx + 1, num_open)
+            parts[i].pop()
+        # Open a new part with this element as its minimum.
+        if num_open < k:
+            parts[num_open].append(elem)
+            yield from _backtrack(idx + 1, num_open + 1)
+            parts[num_open].pop()
+
+    parts[0].append(sorted_leaves[0])
+    yield from _backtrack(1, 1)
+
+
+def _shuffle_subtrees_iter(
+    leaf_set: tuple,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator:
+    """Enumerate all shuffle trees/leaves for a given leaf set and bar degree.
+
+    A *shuffle tree* has children at every internal vertex sorted by their
+    minimum leaf label.  Supports any leaf set (not just ``{1, ..., n}``).
+    """
+    n = len(leaf_set)
+    if n == 0:
+        return
+    if n == 1:
+        if target_degree == 0:
+            yield leaf_set[0]
+        return
+    if max_weight < 1 or target_degree < 1:
+        return
+
+    sorted_ls = tuple(sorted(leaf_set))
+
+    # Root has v_arity children (2 ≤ v_arity ≤ n).
+    for v_arity in range(2, n + 1):
+        root_parent = operad_cls(v_arity, base_ring)
+        # The root vertex contributes (root_dec_deg + 1) to the bar degree.
+        for root_dec_deg in range(target_degree):
+            child_total = target_degree - root_dec_deg - 1
+            if child_total < 0:
+                continue
+            for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                if v_arity == n:
+                    # All children are individual leaves; child_total must be 0.
+                    if child_total == 0:
+                        yield (root_dec,) + sorted_ls
+                else:
+                    # Partition sorted_ls into v_arity non-empty shuffle parts.
+                    for parts in _shuffle_partitions(sorted_ls, v_arity):
+                        yield from _shuffle_children_iter(
+                            parts,
+                            max_weight - 1,
+                            operad_cls,
+                            base_ring,
+                            child_total,
+                            root_dec,
+                        )
+
+
+def _shuffle_children_iter(
+    parts: list,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    total_deg: int,
+    root_dec: tuple,
+) -> Iterator[tuple]:
+    """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` where each
+    *t_i* covers *parts[i]* and the bar-degrees of *t_1, ..., t_k* sum to *total_deg*.
+    """
+
+    # Build sub-trees for all children incrementally.
+    def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
+        """Yield lists of sub-trees for parts[idx:] with degrees summing to *remaining*."""
+        if idx == len(parts):
+            if remaining == 0:
+                yield []
+            return
+        part = parts[idx]
+        n_part = len(part)
+        if n_part == 1:
+            # Leaf — contributes 0 to bar degree.
+            if remaining < 0:
+                return
+            first = part[0]
+            for rest in _children_combinations(idx + 1, remaining):
+                yield [first] + rest
+        else:
+            # Internal subtree — bar degree ≥ 1.
+            min_rest = sum(1 for p in parts[idx + 1 :] if len(p) >= 2)
+            max_d = remaining - min_rest
+            if max_d < 1:
+                return
+            for d_first in range(1, max_d + 1):
+                first_trees = list(
+                    _shuffle_subtrees_iter(
+                        part, max_weight, operad_cls, base_ring, d_first
+                    )
+                )
+                if not first_trees:
+                    continue
+                for rest in _children_combinations(idx + 1, remaining - d_first):
+                    for ft in first_trees:
+                        yield [ft] + rest
+
+    for children in _children_combinations(0, total_deg):
+        yield (root_dec,) + tuple(children)
+
+
+def enumerate_shuffle_trees_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator[tuple]:
+    """Enumerate all shuffle-tree basis elements of ``B(P)(arity)`` in bar degree *target_degree*.
+
+    A *shuffle tree* is a rooted tree with leaves ``{1, ..., arity}`` in which
+    children at every vertex are sorted by their minimum leaf label.  Together
+    with one decoration per vertex drawn from any basis of ``P(k)``, shuffle
+    trees form a **vector-space** basis for the bar construction of any connected
+    symmetric operad — not just quasi-planar ones.
+
+    Unlike :func:`enumerate_planar_trees_in_degree`, this function does **not**
+    require the base operad to implement ``planarize`` or ``planar_basis_it``.
+    It relies only on ``operad_cls(k, base_ring)`` having a ``basis_it``
+    method (degree-aware or not) or Sage's ``basis()`` family.
+
+    Args:
+        arity: Number of leaves (arity of the bar-construction component).
+        weight_bound: Maximum number of internal vertices.  Pass ``arity - 1``
+            for connected operads (the hard upper bound from
+            ``sum(m_v - 1) = n - 1``).
+        operad_cls: Operad factory.
+        base_ring: Coefficient ring.
+        target_degree: Exact bar degree to enumerate (≥ 1 for non-trivial trees).
+
+    Yields:
+        Decorated shuffle trees as nested tuples valid as basis keys of
+        ``BarConstruction(operad_cls)(arity)``.
+    """
+    if arity < 2 or target_degree < 1 or weight_bound < 1:
+        return
+    yield from _shuffle_subtrees_iter(
+        tuple(range(1, arity + 1)), weight_bound, operad_cls, base_ring, target_degree
+    )
+
+
 def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     """Normalize a tree to shuffle form for the cobar construction Ω(C).
 

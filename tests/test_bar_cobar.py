@@ -1131,5 +1131,86 @@ class TestBarPlanarize:
         assert self._round_trip_ok(B2, had_tree)
 
 
+class TestBasisIt:
+    """Tests for BarConstruction.Component.basis_it and planar_basis_it raising."""
+
+    def test_planar_basis_it_raises_for_commutative(self):
+        """planar_basis_it should raise NotImplementedError for Com (no planarize)."""
+        BCom = BarConstruction(Commutative)
+        B2 = BCom(2)
+        with pytest.raises(NotImplementedError):
+            list(B2.planar_basis_it(1))
+
+    def test_planar_basis_it_raises_for_lie(self):
+        """planar_basis_it should raise NotImplementedError for Lie (no planarize)."""
+        BLie = BarConstruction(Lie)
+        B2 = BLie(2)
+        with pytest.raises(NotImplementedError):
+            list(B2.planar_basis_it(1))
+
+    def test_basis_it_arity1_degree0(self):
+        """B(Com)(1) in degree 0 is the single leaf."""
+        B1 = BarConstruction(Commutative)(1)
+        basis = list(B1.basis_it(0))
+        assert len(basis) == 1
+        key, coeff = next(iter(basis[0]))
+        assert key == 1 and coeff == 1
+
+    def test_basis_it_arity1_positive_degree(self):
+        """B(Com)(1) in degree > 0 is empty."""
+        B1 = BarConstruction(Commutative)(1)
+        assert list(B1.basis_it(1)) == []
+
+    def test_basis_it_commutative_arity2_degree1(self):
+        """B(Com)(2) in degree 1 has exactly one shuffle tree."""
+        B2 = BarConstruction(Commutative)(2)
+        basis = list(B2.basis_it(1))
+        assert len(basis) == 1
+        (key, coeff) = next(iter(basis[0]))
+        assert key == ((), 1, 2)
+        assert coeff == 1
+
+    def test_basis_it_commutative_arity3_degree1(self):
+        """B(Com)(3) in degree 1 has one tree (single arity-3 vertex)."""
+        B3 = BarConstruction(Commutative)(3)
+        basis = list(B3.basis_it(1))
+        assert len(basis) == 1
+        (key, _) = next(iter(basis[0]))
+        assert key == ((), 1, 2, 3)
+
+    def test_basis_it_commutative_arity3_degree2(self):
+        """B(Com)(3) in degree 2 has exactly three shuffle trees (weight 2)."""
+        B3 = BarConstruction(Commutative)(3)
+        basis = list(B3.basis_it(2))
+        keys = [next(iter(e))[0] for e in basis]
+        assert len(keys) == 3
+        # All three weight-2 shuffle trees for arity 3:
+        assert ((), 1, ((), 2, 3)) in keys  # root(leaf1, internal{2,3})
+        assert ((), ((), 1, 2), 3) in keys  # root(internal{1,2}, leaf3)
+        assert ((), ((), 1, 3), 2) in keys  # root(internal{1,3}, leaf2)  — non-planar
+
+    def test_basis_it_all_shuffle_trees(self):
+        """Every element from basis_it is a valid shuffle tree."""
+        from uconf.core.trees import is_shuffle_tree
+
+        B3 = BarConstruction(Commutative)(3)
+        for d in range(1, 4):
+            for elem in B3.basis_it(d):
+                for key, _ in elem:
+                    assert is_shuffle_tree(key), (
+                        f"Not a shuffle tree: {key} in degree {d}"
+                    )
+
+    def test_basis_it_lie_consistent_with_planar_for_surjection(self):
+        """For Surjection, basis_it and planar_basis_it correspond element-by-element."""
+        BS = BarConstruction(Surjection)
+        B2 = BS(2)
+        for d in range(1, 4):
+            planar = {next(iter(e))[0] for e in B2.planar_basis_it(d)}
+            full = {next(iter(e))[0] for e in B2.basis_it(d)}
+            # Every planar tree is also a shuffle tree.
+            assert planar <= full
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

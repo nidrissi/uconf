@@ -45,6 +45,7 @@ from uconf.core.trees import (
     children,
     decoration,
     enumerate_planar_trees_in_degree,
+    enumerate_shuffle_trees_in_degree,
     internal_edges_dfs,
     is_leaf,
     leaves,
@@ -296,26 +297,63 @@ class BarConstruction(UniqueRepresentation):
             """Iterate over planar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar
-            element of the base operad.  Trees are enumerated up to weight
-            "Trees are enumerated with the connectivity-derived weight bound
-            ``n - 1`` (since every internal vertex has arity >= 2 in a
-            connected operad, a tree with n leaves has at most n - 1 vertices).
-            The operad's ``planar_basis_it`` is used at the exact required
-            decoration degree.
+            element of the base operad and the global leaf permutation is the
+            identity (children occupy consecutive leaf ranges).
+
+            Trees are enumerated with the connectivity-derived weight bound
+            ``n - 1`` (every internal vertex has arity ≥ 2 in a connected
+            operad, so a tree with n leaves has at most n − 1 vertices).
 
             Requires the base operad to implement ``planarize`` and
-            ``planar_basis_it``.
+            ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
+            Use :meth:`basis_it` for a full shuffle-tree basis that works with
+            any connected operad.
             """
+            if not self._operad_has_planarize():
+                raise NotImplementedError(
+                    f"planar_basis_it requires {self._operad_cls.name!r} to implement "
+                    "planarize and planar_basis_it (quasi-planar operad). "
+                    "Use basis_it() for the full shuffle-tree basis instead."
+                )
+
             n = self._arity
             base_ring = self.base_ring()
 
             if n < 2:
-                # Arity 1: single leaf, degree 0.
                 if n == 1 and d == 0:
                     yield self.term(1)
                 return
 
             for tree in enumerate_planar_trees_in_degree(
+                n, self._max_weight, self._operad_cls, base_ring, d
+            ):
+                yield self.term(tree)
+
+        def basis_it(self, d: int) -> Iterator["BarConstruction.Element"]:
+            """Iterate over shuffle-tree basis elements of degree ``d``.
+
+            Works for **any** connected operad, not just quasi-planar ones.
+            Unlike :meth:`planar_basis_it`, this does not require the base
+            operad to implement ``planarize``.
+
+            The basis consists of all rooted trees with leaves
+            ``{1, ..., n}`` whose children are sorted by minimum leaf
+            label at every vertex (*shuffle trees*), decorated by any
+            basis element of the underlying operad.  For quasi-planar
+            operads the shuffle basis and the planar basis are related by
+            the isomorphism ``B(P)_pl ⊗ k[S_n] ≅ B(P)``; for
+            non-quasi-planar operads (e.g. ``Commutative``) the shuffle
+            trees provide the canonical vector-space basis.
+            """
+            n = self._arity
+            base_ring = self.base_ring()
+
+            if n == 1:
+                if d == 0:
+                    yield self.term(1)
+                return
+
+            for tree in enumerate_shuffle_trees_in_degree(
                 n, self._max_weight, self._operad_cls, base_ring, d
             ):
                 yield self.term(tree)
