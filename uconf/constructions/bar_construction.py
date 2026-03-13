@@ -12,6 +12,12 @@ where:
 - d_1 is the internal differential from P
 - d_2 is the structural differential from edge contractions
 
+.. note::
+   This module requires a **connected** operad input.  Connectedness means
+   P(0) = 0 and P(1) = k (unit only), so every internal tree vertex has
+   arity >= 2.  For a tree with n leaves this bounds the number of internal
+   vertices by n - 1, making the basis in every (arity, degree) finite.
+
 Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 """
 
@@ -60,23 +66,35 @@ class BarConstruction(UniqueRepresentation):
 
     Args:
         operad_cls: Base operad provider (class or wrapper instance).
-        max_weight: Maximum tree weight for enumeration helpers (default 3).
+            Must be a **connected** operad (P(0) = 0, P(1) = k·unit).
 
     The bar construction B(P) is a dg-cooperad whose arity-n component has
     basis elements given by rooted trees with n leaves, where internal
     vertices are decorated by elements of P̄ (the augmentation ideal).
 
     For connected operads, P̄(1) = 0, so all internal vertices have arity >= 2.
+    This bounds the number of internal vertices in arity n by n - 1, making
+    every (arity, degree) basis finite without requiring an external weight cap.
     """
 
     def __init__(
         self,
         operad_cls: OperadLike,
-        max_weight: int = 3,
     ):
         self.operad_cls = operad_cls
-        self.max_weight = int(max_weight)
         self.name = f"B({operad_cls.name})"
+
+    @property
+    def connectivity(self) -> int:
+        """Connectivity of the bar construction.
+
+        For an operad P with connectivity k (degrees >= k*(n-1)), the minimum
+        bar degree of a single-vertex tree in arity n is k*(n-1) + 1.  The
+        connectivity of B(P) as a cooperad is therefore k + 1 in the sense that
+        B(P)(n) is concentrated in degrees >= (k+1)*(n-1) + 1 (for k >= 0).
+        We store k here as a reference value derived from the underlying operad.
+        """
+        return getattr(self.operad_cls, "connectivity", 0)
 
     def __call__(self, n: int, base_ring=QQ) -> "BarConstruction.Component":
         return BarConstruction.Component(self, n, base_ring)
@@ -117,7 +135,10 @@ class BarConstruction(UniqueRepresentation):
             self.factory = factory
             self._arity = int(n)
             self._operad_cls = factory.operad_cls
-            self._max_weight = factory.max_weight
+            # The maximum number of internal vertices in arity n is n - 1,
+            # because every internal vertex has arity >= 2 (connected operad)
+            # and sum(arity_v - 1) = n - 1 for a tree with n leaves.
+            self._max_weight = max(0, self._arity - 1)
 
             name = f"{factory.name}{n}"
             super().__init__(
@@ -276,8 +297,11 @@ class BarConstruction(UniqueRepresentation):
 
             A tree is *planar* when every vertex decoration is a planar
             element of the base operad.  Trees are enumerated up to weight
-            ``self._max_weight`` using the operad's ``planar_basis_it`` at
-            the exact required decoration degree.
+            "Trees are enumerated with the connectivity-derived weight bound
+            ``n - 1`` (since every internal vertex has arity >= 2 in a
+            connected operad, a tree with n leaves has at most n - 1 vertices).
+            The operad's ``planar_basis_it`` is used at the exact required
+            decoration degree.
 
             Requires the base operad to implement ``planarize`` and
             ``planar_basis_it``.
@@ -361,6 +385,11 @@ class BarConstruction(UniqueRepresentation):
 
         def arity(self) -> int:
             return self._arity
+
+        @property
+        def connectivity(self) -> int:
+            """Connectivity inherited from the underlying operad."""
+            return getattr(self._operad_cls, "connectivity", 0)
 
         def degree_on_basis(self, tree) -> int:
             """Compute the degree of a tree in B(P).

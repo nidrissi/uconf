@@ -41,6 +41,17 @@ class HadamardProduct(UniqueRepresentation):
         self.right_operad_cls = right_operad_cls
         self.name = f"{left_operad_cls.name}⊙{right_operad_cls.name}"
 
+    @property
+    def connectivity(self) -> int:
+        """Connectivity of the Hadamard product.
+
+        ``(P ⊙ Q)(n)`` lives in degrees >= (k_P + k_Q)*(n-1) since the degree
+        of a tensor ``(p, q)`` is ``deg_P(p) + deg_Q(q) >= k_P*(n-1) + k_Q*(n-1)``.
+        """
+        k_left = getattr(self.left_operad_cls, "connectivity", 0)
+        k_right = getattr(self.right_operad_cls, "connectivity", 0)
+        return k_left + k_right
+
     def __call__(self, n: int, base_ring=QQ) -> "HadamardProduct.Component":
         return HadamardProduct.Component(self, n, base_ring)
 
@@ -225,6 +236,11 @@ class HadamardProduct(UniqueRepresentation):
 
         def arity(self) -> int:
             return self._arity
+
+        @property
+        def connectivity(self) -> int:
+            """Connectivity of this Hadamard component (sum of left and right)."""
+            return self.factory.connectivity
 
         def left_parent(self):
             return self._left_parent

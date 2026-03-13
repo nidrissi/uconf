@@ -458,6 +458,15 @@ def enumerate_planar_trees_in_degree(
     The enumeration mirrors the binary-root topologies produced by
     ``enumerate_trees_by_weight``, extended to planar decorations and
     restricted to consecutive child-leaf ranges.
+
+    Args:
+        arity: Number of leaves (arity of the bar-construction component).
+        weight_bound: Maximum number of internal vertices.  For connected
+            operads, callers should pass ``arity - 1`` (the hard upper bound
+            from the branching constraint ``sum(m_v - 1) = n - 1``).
+        operad_cls: Operad factory; must supply ``planar_basis_it``.
+        base_ring: Coefficient ring.
+        target_degree: Exact bar degree to enumerate.
     """
     if arity < 2 or target_degree < 1:
         return

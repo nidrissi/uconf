@@ -30,6 +30,8 @@ class Lie(CombinatorialFreeModule):
     """
 
     name: ClassVar[str] = "Lie"
+    connectivity: ClassVar[int] = 0
+    """All components live in degree 0 (the Lie operad is concentrated in degree 0)."""
 
     # Class-level caches keyed by (n, base_ring).
     # _cls_basis_keys: (n, base_ring) -> list[tuple[int, ...]]

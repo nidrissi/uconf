@@ -32,6 +32,8 @@ class Surjection(CombinatorialFreeModule):
     """
 
     name: ClassVar[str] = "S"
+    connectivity: ClassVar[int] = 0
+    """All components live in non-negative degrees."""
 
     def __init__(self, n: int, base_ring=QQ):
         """Initialize ``S_n`` over ``base_ring``."""
