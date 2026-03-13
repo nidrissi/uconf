@@ -13,7 +13,7 @@ from uconf.models.surjection import Surjection
 class SurjectionDual(Surjection):
     """Linear dual companion of :class:`uconf.surjection.Surjection`."""
 
-    name = "S*"
+    name: ClassVar[str] = "S*"
     connectivity: ClassVar[int] = 0
     """Elements live in non-positive degrees; the minimum degree is n - (n+d) = -d <= 0
     for primal degree d >= 0.  We use k = 0 as the connectivity convention (inherited
@@ -174,3 +174,6 @@ class SurjectionDual(Surjection):
             """Return the partial cocomposition dual to ``compose``."""
 
             return SurjectionDual.infinitesimal_cocompose(self, i, m, n)
+
+
+SurjectionDual.factory = SurjectionDual
