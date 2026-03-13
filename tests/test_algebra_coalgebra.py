@@ -112,7 +112,7 @@ class TestOperadAlgebra:
         alg = TrivialAssAlgebra()
         module = alg.module
         a = module(())
-        unit = Associative.unit()
+        unit = Associative.unit(QQ)
         result = alg.act(unit, [a])
         assert result == a
 
@@ -121,7 +121,7 @@ class TestOperadAlgebra:
         alg = TrivialAssAlgebra()
         module = alg.module
         a = module(())
-        p = Associative(2)((1, 2))
+        p = Associative(2, QQ)((1, 2))
         result = alg.act(p, [a, a])
         assert result == a
 
@@ -130,7 +130,7 @@ class TestOperadAlgebra:
         alg = TrivialAssAlgebra()
         module = alg.module
         a = module(())
-        p = Associative(2)((1, 2))
+        p = Associative(2, QQ)((1, 2))
         with pytest.raises(ValueError, match="Expected 2"):
             alg.act(p, [a])
 
@@ -274,7 +274,7 @@ class TestBarComplexAlgebra:
 
     def test_commutative_bar_algebra(self):
         """Bar complex also works with the Commutative operad."""
-        module = Commutative(1)
+        module = Commutative(1, QQ)
 
         def comm_structure_map(p_elem, a_list):
             result = module.zero()
@@ -287,8 +287,8 @@ class TestBarComplexAlgebra:
             return result
 
         alg = OperadAlgebra(module, Commutative, comm_structure_map)
-        B = BarComplexAlgebra(alg)
-        # Weight-1 arity-2 tree: Commutative(2) has basis {()}
+        B = BarComplexAlgebra(alg, QQ)
+        # Weight-1 arity-2 tree: Commutative(2, QQ) has basis {()}
         tree = ((), 1, 2)
         elem = B((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
@@ -316,7 +316,7 @@ class TestCobarComplexCoalgebra:
     def test_weight1_binary_degree(self):
         """Weight-1 binary tree in Ω_C(V) has degree = -1 (deg_C(c)-1 = 0-1)."""
         C = _make_cobar_complex()
-        # CoAssociative(2) basis key = (1,2) in degree 0
+        # CoAssociative(2, QQ) basis key = (1,2) in degree 0
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         v_tuple = ((), ())
@@ -361,8 +361,8 @@ class TestBarComplexLie:
     def test_d_squared_zero_weight1(self):
         """d² = 0 on a weight-1 Lie tree for the trivial Lie algebra."""
         alg = self._make_trivial_lie_algebra()
-        B = BarComplexAlgebra(alg)
-        # Lie(2) has basis key (1,) in degree 0
+        B = BarComplexAlgebra(alg, QQ)
+        # Lie(2, QQ) has basis key (1,) in degree 0
         lie_dec = (1,)
         tree = (lie_dec, 1, 2)
         elem = B((tree, ((), ())))

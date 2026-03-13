@@ -1,6 +1,7 @@
 """Regression tests for protocols."""
 
 import pytest
+from sage.all import QQ
 
 from uconf import (
     Associative,
@@ -26,7 +27,7 @@ from uconf import (
 )
 def test_operad_protocol(operad_cls: type, r: int) -> None:
     """Check that arity components satisfy the component-level protocol."""
-    assert isinstance(operad_cls(r), OperadComponent), (
+    assert isinstance(operad_cls(r, QQ), OperadComponent), (
         f"{operad_cls.__name__} should satisfy OperadComponent."
     )
 
@@ -39,7 +40,7 @@ def test_operad_protocol(operad_cls: type, r: int) -> None:
 def test_cooperad_protocol(cooperad_cls: type, r: int) -> None:
     """Check that SurjectionDual components satisfy CooperadComponent."""
 
-    assert isinstance(cooperad_cls(r), CooperadComponent), (
+    assert isinstance(cooperad_cls(r, QQ), CooperadComponent), (
         f"{cooperad_cls.__name__} should satisfy CooperadComponent."
     )
 
@@ -52,7 +53,7 @@ def test_cooperad_protocol(cooperad_cls: type, r: int) -> None:
 def test_cooperad_protocol_bar(operad_cls: type, r: int) -> None:
     """Check that the bar construction of Surjection satisfies CooperadComponent."""
 
-    BarP = BarConstruction(operad_cls)(r)
+    BarP = BarConstruction(operad_cls)(r, QQ)
     assert isinstance(BarP, CooperadComponent), (
         f"BarConstruction({operad_cls.__name__}) should satisfy CooperadFactory."
     )
@@ -66,7 +67,7 @@ def test_cooperad_protocol_bar(operad_cls: type, r: int) -> None:
 def test_operad_protocol_cobar(cooperad_cls: type, r: int) -> None:
     """Check that the cobar construction of SurjectionDual satisfies CooperadComponent."""
 
-    OmegaP = CobarConstruction(cooperad_cls)(r)
+    OmegaP = CobarConstruction(cooperad_cls)(r, QQ)
     assert isinstance(OmegaP, OperadComponent), (
         f"CobarConstruction({cooperad_cls.__name__}) should satisfy OperadFactory."
     )
@@ -88,7 +89,7 @@ def test_operad_protocol_hadamard(
 ) -> None:
     """Check that Hadamard-product components satisfy OperadComponent."""
 
-    had_component = HadamardProduct(left_operad_cls, right_operad_cls)(r)
+    had_component = HadamardProduct(left_operad_cls, right_operad_cls)(r, QQ)
     assert isinstance(had_component, OperadComponent), (
         f"HadamardProduct({left_operad_cls.__name__}, {right_operad_cls.__name__}) "
         "should satisfy OperadComponent."

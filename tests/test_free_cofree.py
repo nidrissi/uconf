@@ -33,7 +33,7 @@ def _as_dict(x):
 
 
 def _zero_diff_module(base_ring=QQ):
-    """Return Commutative(1) as a 1-dim dg-module with zero differential."""
+    """Return Commutative(1, QQ) as a 1-dim dg-module with zero differential."""
     return Commutative(1, base_ring=base_ring)
 
 
@@ -48,23 +48,23 @@ class TestFreeAlgebraModule:
     def test_single_leaf_degree(self):
         """A single-leaf element has degree = deg_M(m)."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         key = (1, ((),))
         assert mod.degree_on_basis(key) == 0
 
     def test_weight1_binary_degree(self):
         """A weight-1 binary tree decorated by P has degree = deg_P(p) + deg_M × 2."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         # Ass(2) has basis key (1,2), degree 0
         key = ((1, 2), 1, 2)  # tree
         full_key = (key, ((), ()))
         assert mod.degree_on_basis(full_key) == 0
 
     def test_weight1_lie_degree(self):
-        """Lie(2) has basis key (1,) in degree 0."""
+        """Lie(2, QQ) has basis key (1,) in degree 0."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Lie, M)
+        mod = FreeAlgebraModule(Lie, M, QQ)
         key = ((1,), 1, 2)  # tree with Lie decoration (1,) in arity 2
         full_key = (key, ((), ()))
         assert mod.degree_on_basis(full_key) == 0
@@ -72,14 +72,14 @@ class TestFreeAlgebraModule:
     def test_zero_differential_on_leaf(self):
         """Differential is zero on single-leaf elements when M has zero differential."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         elem = mod((1, ((),)))
         assert elem.boundary() == mod.zero()
 
     def test_zero_differential_on_weight1(self):
         """d²=0 on weight-1 element (trivially, since d(vertex)=0 and d(M)=0)."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         tree = ((1, 2), 1, 2)
         elem = mod((tree, ((), ())))
         assert elem.boundary() == mod.zero()
@@ -87,7 +87,7 @@ class TestFreeAlgebraModule:
     def test_element_constructor_dict(self):
         """Dict construction builds linear combinations."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         tree = ((1, 2), 1, 2)
         full_key = (tree, ((), ()))
         single_leaf = (1, ((),))
@@ -99,7 +99,7 @@ class TestFreeAlgebraModule:
     def test_validate_rejects_bad_key(self):
         """Invalid keys are silently rejected (mapped to zero)."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M)
+        mod = FreeAlgebraModule(Associative, M, QQ)
         assert mod._validate_basis_key("bad") is None
         assert (
             mod._validate_basis_key((1, ((), ()))) is None
@@ -117,14 +117,14 @@ class TestFreeOperadAlgebra:
     def test_construction_associative(self):
         """FreeOperadAlgebra stores operad_cls and exposes module."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         assert F.operad_cls is Associative
         assert isinstance(F.module, FreeAlgebraModule)
 
     def test_include(self):
         """η(m) = module((1, (m,)))."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         m_key = ()
         included = F.include(m_key)
         assert _as_dict(included) == {(1, ((),)): 1}
@@ -132,7 +132,7 @@ class TestFreeOperadAlgebra:
     def test_act_unary_unit(self):
         """γ(id_1; η(m)) = η(m)  (unit axiom)."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         m = F.module((1, ((),)))
         unit = Associative.unit()  # id in P(1)
         result = F.act(unit, [m])
@@ -142,10 +142,10 @@ class TestFreeOperadAlgebra:
     def test_act_binary_grafts_two_leaves(self):
         """γ(μ; η(m1), η(m2)) builds binary tree with two M-leaves."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         m1 = F.module((1, ((),)))
         m2 = F.module((1, ((),)))
-        mu = Associative(2)((1, 2))
+        mu = Associative(2, QQ)((1, 2))
         result = F.act(mu, [m1, m2])
         # Expected: single term ((1,2), 1, 2) with m-tuple ((), ())
         expected_tree = ((1, 2), 1, 2)
@@ -154,10 +154,10 @@ class TestFreeOperadAlgebra:
     def test_act_binary_comm_grafts(self):
         """FreeOperadAlgebra also works with Commutative operad."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Commutative, M)
+        F = FreeOperadAlgebra(Commutative, M, QQ)
         m1 = F.module((1, ((),)))
         m2 = F.module((1, ((),)))
-        com = Commutative(2)(())
+        com = Commutative(2, QQ)(())
         result = F.act(com, [m1, m2])
         expected_tree = ((), 1, 2)
         assert _as_dict(result) == {(expected_tree, ((), ())): 1}
@@ -165,17 +165,17 @@ class TestFreeOperadAlgebra:
     def test_act_arity_mismatch_raises(self):
         """act() raises ValueError when wrong number of inputs supplied."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         m = F.module((1, ((),)))
-        mu = Associative(2)((1, 2))
+        mu = Associative(2, QQ)((1, 2))
         with pytest.raises(ValueError, match="Expected 2"):
             F.act(mu, [m])
 
     def test_act_nests_subtrees(self):
         """γ grafts sub-trees, not just leaves: weight-1 ⊗ weight-1 → weight-2."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
-        mu = Associative(2)((1, 2))
+        F = FreeOperadAlgebra(Associative, M, QQ)
+        mu = Associative(2, QQ)((1, 2))
         # Build a weight-1 element first
         t1 = F.act(mu, [F.module((1, ((),))), F.module((1, ((),)))])
         # Now graft t1 as left child and a leaf as right child
@@ -190,7 +190,7 @@ class TestFreeOperadAlgebra:
     def test_boundary_zero_trivial(self):
         """Differential is 0 for trivial Ass operad (deg=0) and trivial M."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         tree = ((1, 2), 1, 2)
         elem = F.module((tree, ((), ())))
         assert F.boundary(elem) == F.module.zero()
@@ -198,9 +198,9 @@ class TestFreeOperadAlgebra:
     def test_act_lie(self):
         """FreeOperadAlgebra works with the Lie operad."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Lie, M)
-        lie_dec = (1,)  # Lie(2) basis key
-        bracket = Lie(2)(lie_dec)
+        F = FreeOperadAlgebra(Lie, M, QQ)
+        lie_dec = (1,)  # Lie(2, QQ) basis key
+        bracket = Lie(2, QQ)(lie_dec)
         m1 = F.module((1, ((),)))
         m2 = F.module((1, ((),)))
         result = F.act(bracket, [m1, m2])
@@ -218,20 +218,20 @@ class TestCofreeCoalgebraModule:
 
     def test_single_leaf_degree(self):
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M)
+        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
         assert mod.degree_on_basis((1, ((),))) == 0
 
     def test_weight1_binary_degree(self):
         """Weight-1 binary tree has degree = deg_C((1,2)) = 0."""
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M)
+        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
         tree = ((1, 2), 1, 2)
         assert mod.degree_on_basis((tree, ((), ()))) == 0
 
     def test_zero_differential_trivial(self):
         """Differential is zero when C and M both have zero differential."""
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M)
+        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
         tree = ((1, 2), 1, 2)
         elem = mod((tree, ((), ())))
         assert elem.boundary() == mod.zero()
@@ -247,14 +247,14 @@ class TestCofreeConilpotentCoalgebra:
 
     def test_construction(self):
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         assert T.cooperad_cls is CoAssociative
         assert isinstance(T.module, CofreeCoalgebraModule)
 
     def test_project_single_leaf(self):
         """π((1, (m,))) = m in M."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         elem = T.module((1, ((),)))
         projected = T.project(elem)
         assert _as_dict(projected) == {(): 1}
@@ -262,7 +262,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_project_kills_weight1_tree(self):
         """π kills elements of weight ≥ 1 (internal vertex present)."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         tree = ((1, 2), 1, 2)
         elem = T.module((tree, ((), ())))
         projected = T.project(elem)
@@ -271,7 +271,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_single_leaf_gives_zero(self):
         """δ_k is zero on single-leaf elements (no root vertex to split)."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         elem = T.module((1, ((),)))
         result = T.coact(elem, 2)
         assert result.is_zero()
@@ -279,7 +279,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_binary_tree_arity2(self):
         """δ_2 on a binary tree (root arity 2) splits at root."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         elem = T.module((tree, ((), ())))
@@ -298,7 +298,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_wrong_arity_gives_zero(self):
         """δ_3 is zero on a binary tree (root arity 2 ≠ 3)."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         elem = T.module((tree, ((), ())))
@@ -308,7 +308,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_infinitesimal_cocompose_arity3_to_2x2(self):
         """Δ^{1;2,2} on arity-3 tree gives a tensor of two arity-2 trees."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         # But arity-3 tree has no weight-2 subtree unless it's nested
         # Use a weight-2 tree for a proper split
         c_dec2 = (1, 2)
@@ -322,7 +322,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_infinitesimal_cocompose_wrong_arity_raises(self):
         """infinitesimal_cocompose raises ValueError for invalid i, m, n."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         elem = T.module.zero()
         with pytest.raises(ValueError, match="Arities must be positive"):
             T.infinitesimal_cocompose(elem, 1, 0, 2)
@@ -332,7 +332,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_boundary_zero(self):
         """Differential is zero for trivial CoAss and trivial M."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
         tree = ((1, 2), 1, 2)
         elem = T.module((tree, ((), ())))
         assert T.boundary(elem) == T.module.zero()
@@ -351,8 +351,8 @@ class TestFreeAlgebraBarComplex:
         from uconf.constructions.bar_algebra import BarComplexAlgebra
 
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Lie, M)
-        B = BarComplexAlgebra(F)
+        F = FreeOperadAlgebra(Lie, M, QQ)
+        B = BarComplexAlgebra(F, QQ)
 
         lie_dec = (1,)
         # Outer tree: weight-1 Lie binary tree with two single-leaf inner trees
@@ -366,8 +366,8 @@ class TestFreeAlgebraBarComplex:
         from uconf.constructions.bar_algebra import BarComplexAlgebra
 
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M)
-        B = BarComplexAlgebra(F)
+        F = FreeOperadAlgebra(Associative, M, QQ)
+        B = BarComplexAlgebra(F, QQ)
 
         mu = (1, 2)
         outer_tree = (mu, 1, 2)

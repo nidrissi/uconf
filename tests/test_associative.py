@@ -3,7 +3,7 @@
 import itertools
 
 import pytest
-from sage.all import ZZ
+from sage.all import ZZ, QQ
 
 from uconf import Associative
 
@@ -39,27 +39,27 @@ def _inverse_one_line(sigma: tuple[int, ...]) -> tuple[int, ...]:
 
 
 def test_associative_unit() -> None:
-    unit = Associative.unit()
+    unit = Associative.unit(QQ)
     assert _as_dict(unit) == {(1,): 1}
 
 
 def test_associative_basic_composition() -> None:
-    x = Associative(2)((1, 2))
-    y = Associative(2)((2, 1))
+    x = Associative(2, QQ)((1, 2))
+    y = Associative(2, QQ)((2, 1))
     result = Associative.compose(x, 1, y)
     assert _as_dict(result) == {(2, 1, 3): 1}
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_associative_unit_axioms(input_pos: int) -> None:
-    x = Associative(3)((2, 1, 3))
-    one = Associative.unit()
+    x = Associative(3, QQ)((2, 1, 3))
+    one = Associative.unit(QQ)
     assert _as_dict(Associative.compose(one, 1, x)) == _as_dict(x)
     assert _as_dict(Associative.compose(x, input_pos, one)) == _as_dict(x)
 
 
 def test_associative_requires_same_base_ring() -> None:
-    x = Associative(2)((1, 2))
+    x = Associative(2, QQ)((1, 2))
     y = Associative(2, base_ring=ZZ)((1, 2))
     with pytest.raises(TypeError, match="same base ring"):
         Associative.compose(x, 1, y)
@@ -69,9 +69,9 @@ def test_associative_requires_same_base_ring() -> None:
 def test_associative_sequential_associativity_axiom(m: int, n: int, p: int) -> None:
     """Check ``(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z)`` on a non-trivial basis sample."""
 
-    xs = list(Associative(m).basis_it(0))
-    ys = list(Associative(n).basis_it(0))
-    zs = list(Associative(p).basis_it(0))
+    xs = list(Associative(m, QQ).basis_it(0))
+    ys = list(Associative(n, QQ).basis_it(0))
+    zs = list(Associative(p, QQ).basis_it(0))
 
     sample_x = xs[: min(4, len(xs))]
     sample_y = ys[: min(3, len(ys))]
@@ -89,9 +89,9 @@ def test_associative_parallel_associativity_axiom() -> None:
     """Check ``(x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y`` for ``i < k``."""
 
     m, n, p = 4, 2, 3
-    xs = list(Associative(m).basis_it(0))[:3]
-    ys = list(Associative(n).basis_it(0))[:2]
-    zs = list(Associative(p).basis_it(0))[:2]
+    xs = list(Associative(m, QQ).basis_it(0))[:3]
+    ys = list(Associative(n, QQ).basis_it(0))[:2]
+    zs = list(Associative(p, QQ).basis_it(0))[:2]
 
     for x, y, z in itertools.product(xs, ys, zs):
         for i in range(1, m):
@@ -105,8 +105,8 @@ def test_associative_compose_equivariant_under_block_permutations() -> None:
     """Check ``(σx)∘_i(τy) = (x∘_{σ^{-1}(i)}y)^{σ∘_iτ}``."""
 
     m, n = 3, 2
-    xs = list(Associative(m).basis_it(0))[:3]
-    ys = list(Associative(n).basis_it(0))[:2]
+    xs = list(Associative(m, QQ).basis_it(0))[:3]
+    ys = list(Associative(n, QQ).basis_it(0))[:2]
     sigmas = list(itertools.permutations(range(1, m + 1), m))[:4]
     taus = list(itertools.permutations(range(1, n + 1), n))
 
@@ -122,8 +122,8 @@ def test_associative_compose_equivariant_under_block_permutations() -> None:
 def test_associative_equivariance_on_linear_combinations() -> None:
     """Check the same equivariance identity on non-basis elements."""
 
-    x = 2 * Associative(3)((1, 3, 2)) - Associative(3)((2, 1, 3))
-    y = 3 * Associative(2)((2, 1)) + Associative(2)((1, 2))
+    x = 2 * Associative(3, QQ)((1, 3, 2)) - Associative(3, QQ)((2, 1, 3))
+    y = 3 * Associative(2, QQ)((2, 1)) + Associative(2, QQ)((1, 2))
     sigma = (2, 3, 1)
     tau = (2, 1)
     i = 2
@@ -139,6 +139,6 @@ def test_associative_equivariance_on_linear_combinations() -> None:
 @pytest.mark.parametrize("n", range(1, 6))
 def test_associative_differential_squared_zero(n: int) -> None:
     """d²(x) = 0 for every basis element of Ass(n) (boundary is identically 0)."""
-    zero = Associative(n).zero()
-    for elem in Associative(n).basis_it(0):
+    zero = Associative(n, QQ).zero()
+    for elem in Associative(n, QQ).basis_it(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Ass({n})"

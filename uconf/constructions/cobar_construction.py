@@ -26,7 +26,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sage.all import (
-    QQ,
     CombinatorialFreeModule,
     GradedModulesWithBasis,
     SymmetricGroup,
@@ -78,10 +77,10 @@ class CobarConstruction(UniqueRepresentation):
         self.cooperad_cls = cooperad_cls
         self.name = f"Ω({cooperad_cls.name})"
 
-    def __call__(self, n: int, base_ring=QQ) -> "CobarConstruction.Component":
+    def __call__(self, n: int, base_ring) -> "CobarConstruction.Component":
         return CobarConstruction.Component(self, n, base_ring)
 
-    def unit(self, base_ring=QQ) -> "CobarConstruction.Element":
+    def unit(self, base_ring) -> "CobarConstruction.Element":
         """Return the unit element (identity in arity 1).
 
         For the free operad, the unit is represented by a single leaf.
@@ -128,7 +127,7 @@ class CobarConstruction(UniqueRepresentation):
 
         name: ClassVar[str] = "Ω"
 
-        def __init__(self, factory: "CobarConstruction", n: int, base_ring=QQ):
+        def __init__(self, factory: "CobarConstruction", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             self.factory = factory
             self._arity = int(n)

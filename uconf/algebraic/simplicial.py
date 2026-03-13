@@ -19,7 +19,7 @@ from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
 
-from sage.all import QQ, tensor
+from sage.all import  tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
@@ -82,7 +82,7 @@ def surjection_chain_action(
 
     Returns
     -------
-    Element of ``tensor([SimplicialChains()]*r)`` (native Sage tensor)
+    Element of ``tensor([SimplicialChains(R)]*r)`` (native Sage tensor)
     if ``r >= 2``; element of :class:`SimplicialChains` if ``r == 1``.
 
     Raises
@@ -423,7 +423,7 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
     where `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, N: int, base_ring=QQ):
+    def __init__(self, N: int, base_ring):
         super().__init__(
             module=SimplicialCochains(N=N, base_ring=base_ring),
             operad_cls=Surjection,
@@ -451,7 +451,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
     `\theta_u` is the chain action of :func:`surjection_chain_action`.
     """
 
-    def __init__(self, base_ring=QQ):
+    def __init__(self, base_ring):
 
         super().__init__(
             module=SimplicialChains(base_ring=base_ring),

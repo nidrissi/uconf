@@ -17,7 +17,6 @@ from typing import Any, Iterator
 from sage.all import (
     CombinatorialFreeModule,
     GradedModulesWithBasis,
-    QQ,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     UniqueRepresentation,
@@ -52,14 +51,14 @@ class HadamardProduct(UniqueRepresentation):
         k_right = getattr(self.right_operad_cls, "connectivity", 0)
         return k_left + k_right
 
-    def __call__(self, n: int, base_ring=QQ) -> "HadamardProduct.Component":
+    def __call__(self, n: int, base_ring) -> "HadamardProduct.Component":
         return HadamardProduct.Component(self, n, base_ring)
 
-    def unit(self, base_ring=QQ) -> "HadamardProduct.Element":
+    def unit(self, base_ring) -> "HadamardProduct.Element":
         component = self(1, base_ring)
         return component.from_factors(
-            self.left_operad_cls.unit(),
-            self.right_operad_cls.unit(),
+            self.left_operad_cls.unit(base_ring),
+            self.right_operad_cls.unit(base_ring),
         )
 
     def compose(
@@ -104,16 +103,16 @@ class HadamardProduct(UniqueRepresentation):
 
                 for left_basis, left_coeff in left_composed:
                     for right_basis, right_coeff in right_composed:
-                        accumulated += target.term((left_basis, right_basis)) * (
+                        accumulated += (
                             x_coeff * y_coeff * left_coeff * right_coeff
-                        )
+                        ) * target.term((left_basis, right_basis))
 
         return accumulated
 
     class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of ``P ⊙ Q``."""
 
-        def __init__(self, factory: "HadamardProduct", n: int, base_ring=QQ):
+        def __init__(self, factory: "HadamardProduct", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(

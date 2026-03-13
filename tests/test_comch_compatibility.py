@@ -1,5 +1,7 @@
 import pytest
 
+from sage.all import QQ
+
 from uconf import BarrattEccles, Surjection
 
 pytest.importorskip("comch")
@@ -63,7 +65,7 @@ def _uconf_be_to_comch(element) -> BarrattEcclesElement:
 
 
 def _uconf_surjection_from_basis(basis: tuple[int, ...]):
-    return Surjection(max(basis))(basis)
+    return Surjection(max(basis), QQ)(basis)
 
 
 def _comch_surjection_from_basis(basis: tuple[int, ...]) -> SurjectionElement:
@@ -72,7 +74,7 @@ def _comch_surjection_from_basis(basis: tuple[int, ...]) -> SurjectionElement:
 
 def _uconf_be_from_basis(basis: tuple[tuple[int, ...], ...]):
     one_line_basis = tuple(list(perm) for perm in basis)
-    return BarrattEccles(len(basis[0]))(one_line_basis)
+    return BarrattEccles(len(basis[0]), QQ)(one_line_basis)
 
 
 def _comch_be_from_basis(basis: tuple[tuple[int, ...], ...]) -> BarrattEcclesElement:
@@ -82,7 +84,7 @@ def _comch_be_from_basis(basis: tuple[tuple[int, ...], ...]) -> BarrattEcclesEle
 @pytest.mark.parametrize("r", range(1, 5))
 @pytest.mark.parametrize("d", range(0, 3))
 def test_surjection_boundary_matches_comch(r: int, d: int) -> None:
-    for basis_element in Surjection(r).basis_it(d):
+    for basis_element in Surjection(r, QQ).basis_it(d):
         uconf_boundary = basis_element.boundary()
         comch_boundary = _uconf_surjection_to_comch(basis_element).boundary()
         assert _uconf_surjection_dict(uconf_boundary) == _comch_surjection_dict(
@@ -133,7 +135,7 @@ def test_surjection_complexity_matches_comch(basis: tuple[int, ...]) -> None:
 def test_barratt_eccles_boundary_matches_comch() -> None:
     for r in range(1, 4):
         for d in range(0, 3):
-            for basis_element in BarrattEccles(r).basis_it(d):
+            for basis_element in BarrattEccles(r, QQ).basis_it(d):
                 uconf_boundary = basis_element.boundary()
                 comch_boundary = _uconf_be_to_comch(basis_element).boundary()
                 assert _uconf_be_dict(uconf_boundary) == _comch_be_dict(comch_boundary)
@@ -166,7 +168,7 @@ def test_barratt_eccles_compose_matches_comch(
 def test_table_reduction_matches_comch() -> None:
     for r in range(1, 4):
         for d in range(0, 3):
-            for basis_element in BarrattEccles(r).basis_it(d):
+            for basis_element in BarrattEccles(r, QQ).basis_it(d):
                 uconf_tr = basis_element.table_reduction()
                 comch_tr = _uconf_be_to_comch(basis_element).table_reduction()
                 assert _uconf_surjection_dict(uconf_tr) == _comch_surjection_dict(

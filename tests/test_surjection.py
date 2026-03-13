@@ -35,7 +35,7 @@ def _as_dict(x):
 def usual_planar_test(rmax: int, dmax: int) -> Iterable[Surjection.Element]:
     for r in range(1, rmax):
         for d in range(1, dmax):
-            yield from Surjection(r).planar_basis_it(d)
+            yield from Surjection(r, QQ).planar_basis_it(d)
 
 
 PLANAR_XSMALL = tuple(usual_planar_test(4, 2))
@@ -50,7 +50,7 @@ def test_surjection_unit() -> None:
 
 @pytest.mark.parametrize("sigma", ([2, 1],))
 def test_surjection_permutation_action(sigma: list[int]) -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     x = s2((1, 2))
     swapped = x.permute(sigma)
     assert _as_dict(swapped) == {(2, 1): 1}, "Expected transposed surjection tuple."
@@ -60,27 +60,27 @@ def test_surjection_permutation_action(sigma: list[int]) -> None:
 
 
 def test_surjection_basic_composition() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     x = s2((1, 2))
     composed = Surjection.compose(x, 1, x)
     assert _as_dict(composed) == {(1, 2, 3): 1}, "Expected basis element (1,2,3)."
 
 
 def test_surjection_complexity_uses_full_label_range() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     x = s2((1, 2, 1))
     assert x.complexity() == 2
 
 
 def test_surjection_compose_requires_same_base_ring() -> None:
-    x = Surjection(2)((1, 2))
+    x = Surjection(2, QQ)((1, 2))
     y = Surjection(2, base_ring=ZZ)((1, 2))
     with pytest.raises(TypeError, match="same base ring"):
         Surjection.compose(x, 1, y)
 
 
 def test_surjection_constructor_keeps_degenerate_inputs_zero() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     assert s2((1, 1, 2)) == s2.zero()
     assert s2((1, 1, 1)) == s2.zero()
 
@@ -96,32 +96,32 @@ def test_surjection_constructor_keeps_degenerate_inputs_zero() -> None:
 def test_surjection_constructor_raises_on_invalid_basis_key(
     key: tuple[object, ...], error_type: type[Exception]
 ) -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     with pytest.raises(error_type):
         s2(key)
 
 
 def test_surjection_constructor_raises_on_invalid_container() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     with pytest.raises(TypeError):
         s2("12")
 
 
 def test_surjection_dict_constructor_skips_only_degenerate_terms() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     element = s2({(1, 2): 3, (1, 1, 2): 5})
     assert _as_dict(element) == {(1, 2): 3}
 
 
 def test_surjection_dict_constructor_raises_on_invalid_key() -> None:
-    s2 = Surjection(2)
+    s2 = Surjection(2, QQ)
     with pytest.raises(ValueError):
         s2({(1, 2): 1, (1, 3): 2})
 
 
 @pytest.mark.parametrize("input_pos", [1, 2, 3])
 def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
-    s3 = Surjection(3)
+    s3 = Surjection(3, QQ)
     x = s3((1, 2, 3))
     one = Surjection.unit()
 
@@ -136,7 +136,7 @@ def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
 @pytest.mark.parametrize("r", range(1, 5))
 @pytest.mark.parametrize("d", range(0, 5))
 def test_surjection_basis(r: int, d: int) -> None:
-    basis = list(Surjection(r).basis_it(d))
+    basis = list(Surjection(r, QQ).basis_it(d))
     assert len(basis) == len(set(basis)), "Duplicate elements found in basis_it"
     for el in basis:
         assert isinstance(el, Surjection.Element), (
@@ -152,8 +152,8 @@ def test_surjection_basis(r: int, d: int) -> None:
 @pytest.mark.parametrize("r", range(2, 5))
 @pytest.mark.parametrize("d", range(1, 4))
 def test_planar_surjection_basis(r: int, d: int) -> None:
-    planar_basis = list(Surjection(r).planar_basis_it(d))
-    basis = list(Surjection(r).basis_it(d))
+    planar_basis = list(Surjection(r, QQ).planar_basis_it(d))
+    basis = list(Surjection(r, QQ).basis_it(d))
     assert set(planar_basis).issubset(basis), (
         "Planar basis should be a subset of the full basis."
     )
@@ -219,9 +219,9 @@ def test_surjection_parallel_composition_axiom_arity3(i: int, j: int) -> None:
     """
     if i >= j:
         return
-    p = Surjection(3)((1, 2, 3, 1))  # degree 1
-    q = Surjection(2)((1, 2, 1))  # degree 1
-    r = Surjection(2)((1, 2, 1))  # degree 1
+    p = Surjection(3, QQ)((1, 2, 3, 1))  # degree 1
+    q = Surjection(2, QQ)((1, 2, 1))  # degree 1
+    r = Surjection(2, QQ)((1, 2, 1))  # degree 1
     sign = (-1) ** (q.degree() * r.degree())
     lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
     rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
@@ -233,9 +233,9 @@ def test_surjection_parallel_composition_axiom_arity4(i: int, j: int) -> None:
     """Parallel composition axiom for p in S(4), q in S(3), r in S(2)."""
     if i >= j:
         return
-    p = Surjection(4)((1, 2, 3, 4))  # degree 0
-    q = Surjection(3)((1, 2, 3, 1))  # degree 1
-    r = Surjection(2)((1, 2, 1))  # degree 1
+    p = Surjection(4, QQ)((1, 2, 3, 4))  # degree 0
+    q = Surjection(3, QQ)((1, 2, 3, 1))  # degree 1
+    r = Surjection(2, QQ)((1, 2, 1))  # degree 1
     sign = (-1) ** (q.degree() * r.degree())
     lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
     rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
@@ -247,9 +247,9 @@ def test_surjection_parallel_composition_axiom_arity5(i: int, j: int) -> None:
     """Parallel composition axiom for p in S(5), q, r in S(2)."""
     if i >= j:
         return
-    p = Surjection(5)((1, 2, 3, 4, 5))  # degree 0
-    q = Surjection(2)((1, 2, 1))  # degree 1
-    r = Surjection(2)((1, 2, 1))  # degree 1
+    p = Surjection(5, QQ)((1, 2, 3, 4, 5))  # degree 0
+    q = Surjection(2, QQ)((1, 2, 1))  # degree 1
+    r = Surjection(2, QQ)((1, 2, 1))  # degree 1
     sign = (-1) ** (q.degree() * r.degree())
     lhs = Surjection.compose(Surjection.compose(p, i, q), j + q.arity() - 1, r)
     rhs = sign * Surjection.compose(Surjection.compose(p, j, r), i, q)
@@ -296,9 +296,9 @@ def test_surjection_sequential_composition_axiom(
     x_tuple: tuple, y_tuple: tuple, z_tuple: tuple, m: int, n: int, p: int
 ) -> None:
     """(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z) for all valid i, j."""
-    x = Surjection(m)(x_tuple)
-    y = Surjection(n)(y_tuple)
-    z = Surjection(p)(z_tuple)
+    x = Surjection(m, QQ)(x_tuple)
+    y = Surjection(n, QQ)(y_tuple)
+    z = Surjection(p, QQ)(z_tuple)
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             lhs = Surjection.compose(Surjection.compose(x, i, y), i + j - 1, z)
@@ -363,8 +363,8 @@ def test_surjection_equivariance(
     x_tuple: tuple, sigma: list[int], y_tuple: tuple, tau: list[int], m: int, n: int
 ) -> None:
     """(σ·x)∘_i(τ·y) = (σ∘_iτ)·(x∘_{σ^{-1}(i)} y) for all valid i."""
-    x = Surjection(m)(x_tuple)
-    y = Surjection(n)(y_tuple)
+    x = Surjection(m, QQ)(x_tuple)
+    y = Surjection(n, QQ)(y_tuple)
     sigma_inv = _inverse_one_line(sigma)
     for i in range(1, m + 1):
         lhs = Surjection.compose(x.permute(sigma), i, y.permute(tau))
@@ -385,8 +385,8 @@ def test_surjection_equivariance(
 @pytest.mark.parametrize("d", range(0, 4))
 def test_surjection_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S(n)."""
-    zero = Surjection(n).zero()
-    for elem in Surjection(n).basis_it(d):
+    zero = Surjection(n, QQ).zero()
+    for elem in Surjection(n, QQ).basis_it(d):
         assert elem.boundary().boundary() == zero, (
             f"d²({elem}) ≠ 0 in S({n}) degree {d}"
         )
@@ -404,8 +404,8 @@ def test_surjection_differential_squared_zero(n: int, d: int) -> None:
 def test_surjection_derivation_property(n1: int, d1: int, n2: int, d2: int) -> None:
     """d(x∘_i y) = d(x)∘_i y + (-1)^|x| x∘_i d(y) for all valid i."""
     rng = Random(20260311)
-    basis1 = list(Surjection(n1).basis_it(d1))
-    basis2 = list(Surjection(n2).basis_it(d2))
+    basis1 = list(Surjection(n1, QQ).basis_it(d1))
+    basis2 = list(Surjection(n2, QQ).basis_it(d2))
     for _ in range(10):
         x = rng.choice(basis1)
         y = rng.choice(basis2)

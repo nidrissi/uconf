@@ -27,7 +27,7 @@ def _BH_setup(n: int = 2):
     BHn = BH(n)
     OBH = CobarConstruction(BH)
     OBHn = OBH(n)
-    BEn = BarrattEccles(n)
+    BEn = BarrattEccles(n, QQ)
     return BH, BHn, OBH, OBHn, BEn
 
 
@@ -90,7 +90,7 @@ class TestDSigmaOnBarrattEccles:
         """Σ_σ d_σ(x)·σ == boundary(x)."""
         BBE = BarConstruction(BarrattEccles)
         B2 = BBE(2)
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         s21 = S2([2, 1])
@@ -121,8 +121,8 @@ class TestDSigmaOnHadamard:
 
         # BE planar degree-1 key: (id, s21)
         be_key = (
-            BarrattEccles(2)._symmetric_group.identity(),
-            BarrattEccles(2)._symmetric_group([2, 1]),
+            BarrattEccles(2, QQ)._symmetric_group.identity(),
+            BarrattEccles(2, QQ)._symmetric_group([2, 1]),
         )
         had_key = ((1,), be_key)
         tree = (had_key, 1, 2)
@@ -149,16 +149,16 @@ class TestGradedBasisMethods:
     """Tests for the cached graded-basis Family methods."""
 
     def test_surjection_graded_basis_size(self):
-        """Surjection(2).graded_basis(d) has the expected number of elements."""
-        S2 = Surjection(2)
+        """Surjection(2, QQ).graded_basis(d) has the expected number of elements."""
+        S2 = Surjection(2, QQ)
         # Degree d: surjections {1,...,d+2} -> {1,2} with surjection property
         # For d=1: (1,2,1), (1,2,2), (2,1,1), (2,1,2) - but some may be degenerate
         basis_d1 = S2.graded_basis(1)
         assert len(basis_d1) >= 1
 
     def test_surjection_graded_planar_basis(self):
-        """Surjection(2).graded_planar_basis(d) are all planar."""
-        S2 = Surjection(2)
+        """Surjection(2, QQ).graded_planar_basis(d) are all planar."""
+        S2 = Surjection(2, QQ)
         for d in range(3):
             for elem in S2.graded_planar_basis(d):
                 for key in elem.support():
@@ -167,15 +167,15 @@ class TestGradedBasisMethods:
                     )
 
     def test_barratt_eccles_graded_basis(self):
-        """BarrattEccles(2).graded_basis(d) has the right size."""
-        BE2 = BarrattEccles(2)
+        """BarrattEccles(2, QQ).graded_basis(d) has the right size."""
+        BE2 = BarrattEccles(2, QQ)
         # degree 0: just (id,) → 1 element for planar, 2 for full (id and (1,2))
         basis_d0 = BE2.graded_basis(0)
         assert len(basis_d0) == 2  # (id,) and ((1,2),) in arity 2
 
     def test_barratt_eccles_graded_planar_basis(self):
-        """BarrattEccles(2).graded_planar_basis(d) only contains planar elements."""
-        BE2 = BarrattEccles(2)
+        """BarrattEccles(2, QQ).graded_planar_basis(d) only contains planar elements."""
+        BE2 = BarrattEccles(2, QQ)
         for d in range(3):
             for elem in BE2.graded_planar_basis(d):
                 # A planar BE element starts with the identity permutation
@@ -192,7 +192,7 @@ class TestGradedBasisMethods:
             for elem in HLE2.planar_basis_it(d):
                 for (l_key, r_key), coeff in elem:
                     # Right factor should be planar (starts with identity)
-                    assert r_key[0] == BarrattEccles(2)._symmetric_group.identity(), (
+                    assert r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity(), (
                         f"Non-planar right key {r_key} in HadamardProduct planar_basis_it({d})"
                     )
 
@@ -298,9 +298,9 @@ class TestEComoduleMap:
         """E-comodule map on B(Surjection)(2), which is quasi-planar."""
         BS = BarConstruction(Surjection)
         B2 = BS(2)
-        BE2 = BarrattEccles(2)
+        BE2 = BarrattEccles(2, QQ)
 
-        # Planar degree-1 element: (1,2) in Surjection(2)
+        # Planar degree-1 element: (1,2) in Surjection(2, QQ)
         tree_key = ((1, 2), 1, 2)
         dec_elem = B2(tree_key)
 

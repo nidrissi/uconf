@@ -4,7 +4,6 @@ import itertools as py_itertools
 from typing import Any, ClassVar, Iterator
 
 from sage.all import (
-    QQ,
     CombinatorialFreeModule,
     GradedModulesWithBasis,
     Permutation,
@@ -45,7 +44,7 @@ class Lie(CombinatorialFreeModule):
     # _cls_assoc: (n, base_ring) -> {basis_key: {word: coefficient}}
     _cls_assoc: ClassVar[dict] = {}
 
-    def __init__(self, n, base_ring=QQ):
+    def __init__(self, n, base_ring):
         """Initialize ``Lie(n)`` over ``base_ring``."""
 
         assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -299,10 +298,10 @@ class Lie(CombinatorialFreeModule):
                 yield self.term(key)
 
     @staticmethod
-    def unit():
+    def unit(base_ring):
         """Return the operadic unit in arity ``1``."""
 
-        return Lie(1)(())
+        return Lie(1, base_ring)(())
 
     def degree_on_basis(self, element) -> int:
         """Return homological degree on basis elements (always ``0`` here)."""

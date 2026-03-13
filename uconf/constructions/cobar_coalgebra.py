@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.core.parented_element import ParentedElementMixin
@@ -55,7 +55,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
 
     Args:
         coalgebra: A :class:`uconf.coalgebra.CooperadCoalgebra` instance.
-        base_ring: Coefficient ring (default ``QQ``).
+        base_ring: Coefficient ring.
 
     Basis keys are pairs ``(tree, v_tuple)`` where:
 
@@ -68,7 +68,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
 
     name: ClassVar[str] = "Ω"
 
-    def __init__(self, coalgebra: CooperadCoalgebra, base_ring=QQ):
+    def __init__(self, coalgebra: CooperadCoalgebra, base_ring):
         self._coalgebra = coalgebra
         self._cooperad_cls = coalgebra.cooperad_cls
         self._module = coalgebra.module

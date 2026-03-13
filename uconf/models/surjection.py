@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 from sage.all import (
     Integer,
-    QQ,
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
@@ -35,7 +34,7 @@ class Surjection(CombinatorialFreeModule):
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
-    def __init__(self, n: int, base_ring=QQ):
+    def __init__(self, n: int, base_ring):
         """Initialize ``S_n`` over ``base_ring``."""
 
         assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -122,10 +121,10 @@ class Surjection(CombinatorialFreeModule):
         return self._arity
 
     @staticmethod
-    def unit() -> "Surjection.Element":
+    def unit(base_ring) -> "Surjection.Element":
         """Return the operadic unit in arity ``1``."""
 
-        return Surjection(1)((1,))
+        return Surjection(1, base_ring)((1,))
 
     def basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over basis elements in degree ``d``."""

@@ -110,7 +110,7 @@ def _table_reduction_on_basis(self: BarrattEccles):
 
         n = self.arity()
         d = len(basis_element) - 1
-        target = Surjection(n)
+        target = Surjection(n, self.base_ring())
 
         def term_generator():
             for pi_ord in Partitions(
@@ -145,7 +145,7 @@ def _table_reduction(self: BarrattEccles.Element) -> Surjection.Element:
     if not hasattr(parent, "_table_reduction"):
         parent._table_reduction = parent.module_morphism(
             on_basis=_table_reduction_on_basis(parent),
-            codomain=Surjection(parent.arity()),
+            codomain=Surjection(parent.arity(), parent.base_ring()),
         )
     return parent._table_reduction(self)
 
@@ -163,7 +163,7 @@ def _section_on_basis(self: Surjection):
         """Compute the section image of one surjection basis element."""
 
         n = self.arity()
-        target = BarrattEccles(n)
+        target = BarrattEccles(n, self.base_ring())
         caesura_indices = Surjection._caesuras(u)
         sections = [[i for i in range(len(u)) if i not in caesura_indices]]
         for d in reversed(caesura_indices):
@@ -194,7 +194,7 @@ def _section(self: Surjection.Element) -> BarrattEccles.Element:
     if not hasattr(parent, "_section"):
         parent._section = parent.module_morphism(
             on_basis=_section_on_basis(parent),
-            codomain=BarrattEccles(parent.arity()),
+            codomain=BarrattEccles(parent.arity(), parent.base_ring()),
         )
     return parent._section(self)
 

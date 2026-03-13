@@ -30,7 +30,7 @@ class CooperadComponent(Protocol):
     """Reference to the parent cooperad factory, used for printing and error
     messages."""
 
-    def __init__(self, n: int, base_ring=...):
+    def __init__(self, n: int, base_ring):
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
@@ -121,7 +121,7 @@ class CooperadFactory(Protocol):
 
     name: str
 
-    def __call__(self, n: int, base_ring=...) -> Any:
+    def __call__(self, n: int, base_ring) -> Any:
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 

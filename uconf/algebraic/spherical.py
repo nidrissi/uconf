@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from math import prod
 
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.models.surjection import Surjection
@@ -176,7 +176,7 @@ class ReducedSphereCochains(CombinatorialFreeModule):
     The unique basis element is represented by the empty tuple ``()``.
     """
 
-    def __init__(self, d: int, base_ring=QQ):
+    def __init__(self, d: int, base_ring):
         assert d >= 0
         name = f"N*(S^{d})"
         super().__init__(
@@ -235,7 +235,7 @@ class SurjectionSphereCochainAlgebra(OperadAlgebra):
     top cochain of `\Delta^d` and restricting to the sphere quotient.
     """
 
-    def __init__(self, d: int, base_ring=QQ):
+    def __init__(self, d: int, base_ring):
         module = ReducedSphereCochains(d=d, base_ring=base_ring)
         self._sphere_dim = d
         super().__init__(

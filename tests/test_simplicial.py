@@ -31,11 +31,11 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
     ----------
     cochains : tuple[SimplicialCochains.Element, ...]
         One arity-1 cochain per tensor factor.
-    chain : element of tensor([SimplicialChains()]*r)
+    chain : element of tensor([SimplicialChains(QQ)]*r)
         A chain with r tensor factors, r = len(cochains).
     """
     r = len(cochains)
-    SC = SimplicialChains()
+    SC = SimplicialChains(QQ)
     value = 0
     for basis_key, coeff in chain:
         # basis_key = (s1, ..., sr) for r >= 2, or a single simplex for r == 1
@@ -68,59 +68,59 @@ def _surjection_cochain_action(u, cochains):
 
 class TestSimplicialChains:
     def test_construction_single_simplex(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C((0, 1, 2))
         assert x != C.zero()
 
     def test_construction_tensor(self):
-        SC = SimplicialChains()
+        SC = SimplicialChains(QQ)
         T = tensor([SC, SC])
         x = tensor([SC((0, 1, 2)), SC((0, 1))])
         assert x != T.zero()
 
     def test_degenerate_rejected(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         # (0, 0, 1) has repeated entry → degenerate
         x = C((0, 0, 1))
         assert x == C.zero()
 
     def test_empty_simplex_rejected(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C(())
         assert x == C.zero()
 
     def test_negative_vertex_rejected(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         with pytest.raises(ValueError):
             C((-1, 0, 1))
 
     def test_non_integer_vertex_rejected(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         with pytest.raises(TypeError):
             C((0, 1.5, 2))
 
     def test_out_of_order_simplex_raises(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         with pytest.raises(ValueError):
             C((0, 2, 1))
 
     def test_invalid_simplex_container_raises(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         with pytest.raises(TypeError):
             C("012")
 
     def test_dict_constructor_skips_only_degenerate_terms(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C({(0, 1, 2): 3, (0, 0, 1): 5})
         assert _as_dict(x) == {(0, 1, 2): 3}
 
     def test_dict_constructor_raises_on_invalid_term(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         with pytest.raises(ValueError):
             C({(0, 1, 2): 1, (0, 2, 1): 2})
 
     def test_degree(self):
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C((0, 1, 2))
         assert x.degree() == 2
 
@@ -134,13 +134,13 @@ class TestSimplicialChains:
 class TestBoundary:
     def test_boundary_vertex(self):
         """Boundary of a 0-simplex is zero."""
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C((0,))
         assert x.boundary() == C.zero()
 
     def test_boundary_edge(self):
         """∂[0,1] = [1] - [0]."""
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C((0, 1))
         bdry = x.boundary()
         d = _as_dict(bdry)
@@ -148,7 +148,7 @@ class TestBoundary:
 
     def test_boundary_triangle(self):
         """∂[0,1,2] = [1,2] - [0,2] + [0,1]."""
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         x = C((0, 1, 2))
         bdry = x.boundary()
         d = _as_dict(bdry)
@@ -156,14 +156,14 @@ class TestBoundary:
 
     def test_boundary_squared_is_zero(self):
         """∂² = 0 for several simplices."""
-        C = SimplicialChains()
+        C = SimplicialChains(QQ)
         for n in range(1, 5):
             x = SimplicialChains.fundamental_chain(n)
             assert x.boundary().boundary() == C.zero(), f"∂² ≠ 0 for Δ^{n}"
 
     def test_boundary_squared_tensor(self):
         """∂² = 0 on tensor products using tensor_boundary."""
-        SC = SimplicialChains()
+        SC = SimplicialChains(QQ)
         T = tensor([SC, SC])
         x = tensor([SC((0, 1, 2)), SC((0, 1))])
         b = SimplicialChains.tensor_boundary
@@ -171,7 +171,7 @@ class TestBoundary:
 
     def test_boundary_tensor_product(self):
         """∂([0,1] ⊗ [2,3]) = [1]⊗[2,3] - [0]⊗[2,3] - [0,1]⊗[3] + [0,1]⊗[2]."""
-        SC = SimplicialChains()
+        SC = SimplicialChains(QQ)
         x = tensor([SC((0, 1)), SC((2, 3))])
         bdry = SimplicialChains.tensor_boundary(x)
         d = _as_dict(bdry)
@@ -205,7 +205,7 @@ class TestAWDiagonal:
 
     def test_iterated_diagonal_triangle(self):
         """Δ²([0,1,2]) should give 3-fold tensor terms."""
-        SC = SimplicialChains()
+        SC = SimplicialChains(QQ)
         x = SimplicialChains.fundamental_chain(2)
         diag = x.iterated_diagonal(times=2)
         T3 = tensor([SC, SC, SC])
@@ -246,7 +246,7 @@ class TestSurjectionAction:
         Here u ∈ S(r) has degree d, x is the volume form in degree n, and we
         test θ_u(x, …, x) with r copies of x.
         """
-        for u in Surjection(r).planar_basis_it(d):
+        for u in Surjection(r, QQ).planar_basis_it(d):
             for n in range(d, d + 4):
                 x = SimplicialCochains.volume_form(n)
                 l = [x] * r
@@ -256,7 +256,7 @@ class TestSurjectionAction:
 
     def test_action_zero_on_low_degree(self):
         """θ_u(x) = 0 if |x| < |u|."""
-        S2 = Surjection(2)
+        S2 = Surjection(2, QQ)
         u = S2((1, 2, 1))  # degree 1
         x = SimplicialCochains.volume_form(0)  # degree 0
         result = _surjection_cochain_action(u, [x] * 2)
@@ -271,7 +271,7 @@ class TestSurjectionAction:
     def test_chain_map_property_arity2(self, d: int):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 2."""
         rng = Random(20260312)
-        basis = list(Surjection(2).planar_basis_it(d))
+        basis = list(Surjection(2, QQ).planar_basis_it(d))
         possible_simplices: dict[int, list[tuple[int, ...]]] = {}
         for n in range(d, d + 4):
             possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
@@ -279,8 +279,8 @@ class TestSurjectionAction:
         for _ in range(30):
             u = rng.choice(list(basis))
             n = rng.randint(d, d + 3)
-            x = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
-            y = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            x = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
+            y = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
             lhs = _surjection_cochain_action(u, [x, y]).coboundary()
             rhs_1 = _surjection_cochain_action(u.boundary(), [x, y])
             rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y])
@@ -299,7 +299,7 @@ class TestSurjectionAction:
     def test_chain_map_property_arity3(self, d: int):
         """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 3."""
         rng = Random(20260312)
-        basis = list(Surjection(3).planar_basis_it(d))
+        basis = list(Surjection(3, QQ).planar_basis_it(d))
         possible_simplices: dict[int, list[tuple[int, ...]]] = {}
         for n in range(d, d + 4):
             possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
@@ -307,9 +307,9 @@ class TestSurjectionAction:
         for _ in range(30):
             u = rng.choice(list(basis))
             n = rng.randint(d, d + 3)
-            x = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
-            y = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
-            z = SimplicialCochains(n)(rng.choice(possible_simplices[n]))
+            x = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
+            y = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
+            z = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
 
             lhs = _surjection_cochain_action(u, [x, y, z]).coboundary()
             rhs_1 = _surjection_cochain_action(u.boundary(), [x, y, z])
@@ -329,31 +329,31 @@ class TestSurjectionAction:
 
 class TestSimplicialCochains:
     def test_cochain_constructor_keeps_degenerate_inputs_zero(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         assert C(()) == C.zero()
         assert C((0, 0, 1)) == C.zero()
 
     def test_cochain_constructor_raises_on_invalid_vertex_order(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         with pytest.raises(ValueError):
             C((0, 2, 1))
 
     def test_cochain_constructor_raises_on_vertex_out_of_range(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         with pytest.raises(ValueError):
             C((0, 1, 3))
 
     def test_cochain_constructor_raises_on_non_integer_vertex(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         with pytest.raises(TypeError):
             C((0, 1.5))
 
     def test_cochain_dict_constructor_skips_only_degenerate_terms(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         x = C({(0, 1): 2, (0, 0, 1): 5})
         assert _as_dict(x) == {(0, 1): 2}
 
     def test_cochain_dict_constructor_raises_on_invalid_term(self):
-        C = SimplicialCochains(2)
+        C = SimplicialCochains(2, QQ)
         with pytest.raises(ValueError):
             C({(0, 1): 1, (0, 1, 3): 2})
