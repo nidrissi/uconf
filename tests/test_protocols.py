@@ -10,9 +10,9 @@ from uconf import (
     CoAssociative,
     CoCommutative,
     Commutative,
-    CooperadProtocol,
+    CooperadComponent,
     Lie,
-    OperadProtocol,
+    OperadComponent,
     Surjection,
     SurjectionDual,
     CobarConstruction,
@@ -26,9 +26,9 @@ from uconf import (
 )
 def test_operad_protocol(operad_cls: type, r: int) -> None:
     """Check that arity components satisfy the component-level protocol."""
-    assert isinstance(
-        operad_cls(r), OperadProtocol
-    ), f"{operad_cls.__name__} should satisfy OperadProtocol."
+    assert isinstance(operad_cls(r), OperadComponent), (
+        f"{operad_cls.__name__} should satisfy OperadComponent."
+    )
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -37,11 +37,11 @@ def test_operad_protocol(operad_cls: type, r: int) -> None:
     [SurjectionDual, CoAssociative, CoCommutative],
 )
 def test_cooperad_protocol(cooperad_cls: type, r: int) -> None:
-    """Check that SurjectionDual components satisfy CooperadProtocol."""
+    """Check that SurjectionDual components satisfy CooperadComponent."""
 
-    assert isinstance(
-        cooperad_cls(r), CooperadProtocol
-    ), f"{cooperad_cls.__name__} should satisfy CooperadProtocol."
+    assert isinstance(cooperad_cls(r), CooperadComponent), (
+        f"{cooperad_cls.__name__} should satisfy CooperadComponent."
+    )
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -50,12 +50,12 @@ def test_cooperad_protocol(cooperad_cls: type, r: int) -> None:
     [Surjection, Associative, Commutative, Lie, BarrattEccles],
 )
 def test_cooperad_protocol_bar(operad_cls: type, r: int) -> None:
-    """Check that the bar construction of Surjection satisfies CooperadProtocol."""
+    """Check that the bar construction of Surjection satisfies CooperadComponent."""
 
     BarP = BarConstruction(operad_cls)(r)
-    assert isinstance(
-        BarP, CooperadProtocol
-    ), f"BarConstruction({operad_cls.__name__}) should satisfy CooperadFactoryProtocol."
+    assert isinstance(BarP, CooperadComponent), (
+        f"BarConstruction({operad_cls.__name__}) should satisfy CooperadFactory."
+    )
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -64,12 +64,12 @@ def test_cooperad_protocol_bar(operad_cls: type, r: int) -> None:
     [SurjectionDual, CoAssociative, CoCommutative],
 )
 def test_operad_protocol_cobar(cooperad_cls: type, r: int) -> None:
-    """Check that the cobar construction of SurjectionDual satisfies CooperadProtocol."""
+    """Check that the cobar construction of SurjectionDual satisfies CooperadComponent."""
 
     OmegaP = CobarConstruction(cooperad_cls)(r)
-    assert isinstance(
-        OmegaP, OperadProtocol
-    ), f"CobarConstruction({cooperad_cls.__name__}) should satisfy OperadFactoryProtocol."
+    assert isinstance(OmegaP, OperadComponent), (
+        f"CobarConstruction({cooperad_cls.__name__}) should satisfy OperadFactory."
+    )
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -86,10 +86,10 @@ def test_operad_protocol_hadamard(
     right_operad_cls: type,
     r: int,
 ) -> None:
-    """Check that Hadamard-product components satisfy OperadProtocol."""
+    """Check that Hadamard-product components satisfy OperadComponent."""
 
     had_component = HadamardProduct(left_operad_cls, right_operad_cls)(r)
-    assert isinstance(had_component, OperadProtocol), (
+    assert isinstance(had_component, OperadComponent), (
         f"HadamardProduct({left_operad_cls.__name__}, {right_operad_cls.__name__}) "
-        "should satisfy OperadProtocol."
+        "should satisfy OperadComponent."
     )

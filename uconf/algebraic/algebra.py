@@ -20,13 +20,13 @@ from collections.abc import Sequence
 from typing import Any, Generic, Protocol, TypeVar
 from sage.all import UniqueRepresentation
 
-from uconf.core.operad import OperadLike, OperadProtocol
+from uconf.core.operad import OperadLike, OperadComponent
 
 AlgebraElementType = TypeVar("AlgebraElementType")
-OperadElementType = TypeVar("OperadElementType", bound=OperadProtocol.Element)
+OperadElementType = TypeVar("OperadElementType", bound=OperadComponent.Element)
 OperadElementInputType = TypeVar(
     "OperadElementInputType",
-    bound=OperadProtocol.Element,
+    bound=OperadComponent.Element,
     contravariant=True,
 )
 
@@ -48,7 +48,7 @@ class OperadAlgebra(
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an
-    operad class ``operad_cls`` (satisfying :class:`uconf.operad.OperadProtocol`)
+    operad class ``operad_cls`` (satisfying :class:`uconf.operad.OperadComponent`)
     together with an explicit structure map.
 
     The structure map is supplied as a callable via ``structure_map``::
@@ -59,7 +59,7 @@ class OperadAlgebra(
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        operad_cls: Operad provider (class or factory, OperadProtocol-compatible).
+        operad_cls: Operad provider (class or factory, OperadComponent-compatible).
         structure_map: Callable implementing the P-algebra action γ.
     """
 
