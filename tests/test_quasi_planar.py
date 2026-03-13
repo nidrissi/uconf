@@ -58,7 +58,7 @@ class TestDSigmaOnSurjection:
         for sigma in S2:
             d_sig = B2.d_sigma(elem, sigma)
             for pl_key, coeff in d_sig:
-                pl_elem = B2.term(pl_key)
+                pl_elem = B2(pl_key)
                 reconstructed += coeff * pl_elem.permute(sigma)
 
         assert reconstructed == elem.boundary(), (
@@ -162,7 +162,7 @@ class TestGradedBasisMethods:
         for d in range(3):
             for elem in S2.graded_planar_basis(d):
                 for key in elem.support():
-                    assert S2.term(key).is_planar(), (
+                    assert S2(key).is_planar(), (
                         f"Non-planar element in graded_planar_basis({d})"
                     )
 
@@ -214,7 +214,7 @@ class TestEComoduleMap:
         assert len(planar_elems) >= 1, "Need at least one planar element"
 
         dec_key = list(planar_elems[0].support())[0]
-        dec_elem = BH2.term(dec_key)
+        dec_elem = BH2(dec_key)
 
         result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
 
@@ -238,7 +238,7 @@ class TestEComoduleMap:
         for d in range(1, 3):
             for pl_elem in BH2.planar_basis_it(d):
                 dec_key = list(pl_elem.support())[0]
-                dec_elem = BH2.term(dec_key)
+                dec_elem = BH2(dec_key)
                 result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
 
                 id_be_key = (BE2._symmetric_group.identity(),)
@@ -261,7 +261,7 @@ class TestEComoduleMap:
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
         tree_key = (had_key, 1, 2)
-        dec_elem = BH2.term(tree_key)
+        dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
             pytest.skip("Element is zero")
@@ -282,7 +282,7 @@ class TestEComoduleMap:
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
         tree_key = (had_key, 1, 2)
-        dec_elem = BH2.term(tree_key)
+        dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
             pytest.skip("Element is zero")
@@ -291,7 +291,7 @@ class TestEComoduleMap:
 
         for (be_key, cobar_key), coeff in result:
             # BE key should be a valid basis element (no consecutive duplicates)
-            be_elem = BE2.term(be_key)
+            be_elem = BE2(be_key)
             assert be_elem != BE2.zero(), f"BE key {be_key} gave zero element"
 
     def test_comodule_on_b_surjection(self):
@@ -304,7 +304,7 @@ class TestEComoduleMap:
 
         # Planar degree-1 element: (1,2) in Surjection(2)
         tree_key = ((1, 2), 1, 2)
-        dec_elem = B2.term(tree_key)
+        dec_elem = B2(tree_key)
 
         result = e_comodule_on_generator(dec_elem, B2, OBS2, BE2)
 
@@ -324,7 +324,7 @@ class TestEComoduleMap:
         if not planar:
             pytest.skip("No planar basis elements found")
 
-        dec_elem = BH2.term(list(planar[0].support())[0])
+        dec_elem = BH2(list(planar[0].support())[0])
         result = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
 
         expected_parent = tensor([BE2, OBH2])
@@ -350,7 +350,7 @@ def _delta_equiv(cobar_key, B_n, O_n, BE_n):
     inner_bar_tree = cobar_key[0]
     outer_leaves = list(cobar_key[1:])
 
-    bar_elem = B_n.term(inner_bar_tree)
+    bar_elem = B_n(inner_bar_tree)
     planarized = B_n.planarize(bar_elem)
 
     result = T_loc.zero()
@@ -361,15 +361,15 @@ def _delta_equiv(cobar_key, B_n, O_n, BE_n):
         # sigma permutes the outer leaves: new_outer[j] = sigma(outer_leaves[j])
         new_outer = [sigma_vals[outer_leaves[j] - 1] for j in range(n)]
 
-        pl_elem = B_n.term(pl_key)
+        pl_elem = B_n(pl_key)
         delta_std = e_comodule_on_generator(pl_elem, B_n, O_n, BE_n)
 
         # Diagonal action of new_outer on E ⊗ Ω(C):
         #   BE part : precompose each permutation by the leaf permutation
         #   Ω(C) part: permute the outer cobar leaf labels
         for (be_key, ck), c in delta_std:
-            new_be = BE_n.term(be_key).permute(new_outer)
-            new_ck = O_n.term(ck).permute(new_outer)
+            new_be = BE_n(be_key).permute(new_outer)
+            new_ck = O_n(ck).permute(new_outer)
             result += c * pl_coeff * new_be.tensor(new_ck)
 
     return result
@@ -390,18 +390,18 @@ def _normalize_oc(oc_elem, B_n, O_n):
         from uconf.core.trees import is_leaf
 
         if is_leaf(cobar_key):
-            result += coeff * O_n.term(cobar_key)
+            result += coeff * O_n(cobar_key)
             continue
         inner_bar_tree = cobar_key[0]
         outer_leaves = list(cobar_key[1:])
-        bar_elem = B_n.term(inner_bar_tree)
+        bar_elem = B_n(inner_bar_tree)
         planarized = B_n.planarize(bar_elem)
         for (pl_key, sigma_key), pl_coeff in planarized:
             sigma = Sn(sigma_key)
             sigma_vals = list(sigma.tuple())
             new_outer = [sigma_vals[outer_leaves[j] - 1] for j in range(n)]
             new_cobar_key = tuple([pl_key] + new_outer)
-            result += coeff * pl_coeff * O_n.term(new_cobar_key)
+            result += coeff * pl_coeff * O_n(new_cobar_key)
     return result
 
 
@@ -410,8 +410,8 @@ def _normalize_tensor_E_OC(tensor_elem, B_n, O_n, BE_n):
     T_loc = tensor([BE_n, O_n])
     result = T_loc.zero()
     for (be_key, cobar_key), coeff in tensor_elem:
-        be_elem = BE_n.term(be_key)
-        norm_oc = _normalize_oc(O_n.term(cobar_key), B_n, O_n)
+        be_elem = BE_n(be_key)
+        norm_oc = _normalize_oc(O_n(cobar_key), B_n, O_n)
         result += coeff * be_elem.tensor(norm_oc)
     return result
 
@@ -448,22 +448,22 @@ class TestComoduleAxioms:
 
         had_d0 = ((1,), (id2,))
         bar_d0 = (had_d0, 1, 2)
-        dec_elem = BH2.term(bar_d0)
-        cobar_gen = OBH2.term((bar_d0, 1, 2))
+        dec_elem = BH2(bar_d0)
+        cobar_gen = OBH2((bar_d0, 1, 2))
 
         delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
         T = tensor([BE2, OBH2])
 
         d_delta = T.zero()
         for (be_key, ck), coeff in delta_x:
-            be_elem = BE2.term(be_key)
-            cobar_el = OBH2.term(ck)
+            be_elem = BE2(be_key)
+            cobar_el = OBH2(ck)
             deg_e = BE2.degree_on_basis(be_key)
             for nbk, c in be_elem.boundary():
-                d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+                d_delta += coeff * c * BE2(nbk).tensor(cobar_el)
             sign = (-1) ** deg_e
             for nck, c in cobar_el.boundary():
-                d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+                d_delta += coeff * sign * c * be_elem.tensor(OBH2(nck))
 
         d_omega_x = cobar_gen.boundary()
         delta_d_omega = T.zero()
@@ -486,8 +486,8 @@ class TestComoduleAxioms:
 
         had_d1 = ((1,), (id2, s21))
         bar_d1 = (had_d1, 1, 2)
-        dec_elem = BH2.term(bar_d1)
-        cobar_gen = OBH2.term((bar_d1, 1, 2))
+        dec_elem = BH2(bar_d1)
+        cobar_gen = OBH2((bar_d1, 1, 2))
 
         delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
         T = tensor([BE2, OBH2])
@@ -495,14 +495,14 @@ class TestComoduleAxioms:
         # d_tensor(Δ(x))
         d_delta = T.zero()
         for (be_key, ck), coeff in delta_x:
-            be_elem = BE2.term(be_key)
-            cobar_el = OBH2.term(ck)
+            be_elem = BE2(be_key)
+            cobar_el = OBH2(ck)
             deg_e = BE2.degree_on_basis(be_key)
             for nbk, c in be_elem.boundary():
-                d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+                d_delta += coeff * c * BE2(nbk).tensor(cobar_el)
             sign = (-1) ** deg_e
             for nck, c in cobar_el.boundary():
-                d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+                d_delta += coeff * sign * c * be_elem.tensor(OBH2(nck))
 
         norm_d_delta = _normalize_tensor_E_OC(d_delta, BH2, OBH2, BE2)
 
@@ -524,21 +524,21 @@ class TestComoduleAxioms:
 
         for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
             dec_key = list(pl_elem.support())[0]
-            dec_elem = BH2.term(dec_key)
-            cobar_gen = OBH2.term((dec_key, 1, 2))
+            dec_elem = BH2(dec_key)
+            cobar_gen = OBH2((dec_key, 1, 2))
 
             delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
 
             d_delta = T.zero()
             for (be_key, ck), coeff in delta_x:
-                be_elem = BE2.term(be_key)
-                cobar_el = OBH2.term(ck)
+                be_elem = BE2(be_key)
+                cobar_el = OBH2(ck)
                 deg_e = BE2.degree_on_basis(be_key)
                 for nbk, c in be_elem.boundary():
-                    d_delta += coeff * c * BE2.term(nbk).tensor(cobar_el)
+                    d_delta += coeff * c * BE2(nbk).tensor(cobar_el)
                 sign = (-1) ** deg_e
                 for nck, c in cobar_el.boundary():
-                    d_delta += coeff * sign * c * be_elem.tensor(OBH2.term(nck))
+                    d_delta += coeff * sign * c * be_elem.tensor(OBH2(nck))
 
             norm_d_delta = _normalize_tensor_E_OC(d_delta, BH2, OBH2, BE2)
 
@@ -562,7 +562,7 @@ class TestComoduleAxioms:
 
         had_d0 = ((1,), (id2,))
         bar_d0 = (had_d0, 1, 2)
-        dec_elem = BH2.term(bar_d0)
+        dec_elem = BH2(bar_d0)
 
         delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
         T_EE_OC = tensor([BE2, BE2, OBH2])
@@ -571,20 +571,16 @@ class TestComoduleAxioms:
         rhs = T_EE_OC.zero()
 
         for (be_key, ck), coeff in delta_x:
-            be_elem = BE2.term(be_key)
-            cobar_elem = OBH2.term(ck)
+            be_elem = BE2(be_key)
+            cobar_elem = OBH2(ck)
 
             for (lk, rk), dc in be_elem.diagonal():
-                lhs += coeff * dc * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
+                lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(cobar_elem)
 
             for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
-                rhs += coeff * d_coeff * be_elem.tensor(BE2.term(be2_key)).tensor(
-                    OBH2.term(ck2)
-                )
+                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(OBH2(ck2))
 
-        assert lhs == rhs, (
-            f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
-        )
+        assert lhs == rhs, f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
 
     def test_coassociativity_degree1_generator(self):
         """Coassociativity holds for the canonical degree-1 planar generator."""
@@ -595,7 +591,7 @@ class TestComoduleAxioms:
 
         had_d1 = ((1,), (id2, s21))
         bar_d1 = (had_d1, 1, 2)
-        dec_elem = BH2.term(bar_d1)
+        dec_elem = BH2(bar_d1)
 
         delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
         T_EE_OC = tensor([BE2, BE2, OBH2])
@@ -604,20 +600,16 @@ class TestComoduleAxioms:
         rhs = T_EE_OC.zero()
 
         for (be_key, ck), coeff in delta_x:
-            be_elem = BE2.term(be_key)
-            cobar_elem = OBH2.term(ck)
+            be_elem = BE2(be_key)
+            cobar_elem = OBH2(ck)
 
             for (lk, rk), dc in be_elem.diagonal():
-                lhs += coeff * dc * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
+                lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(cobar_elem)
 
             for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
-                rhs += coeff * d_coeff * be_elem.tensor(BE2.term(be2_key)).tensor(
-                    OBH2.term(ck2)
-                )
+                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(OBH2(ck2))
 
-        assert lhs == rhs, (
-            f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
-        )
+        assert lhs == rhs, f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
 
     def test_coassociativity_all_degree1_planar_generators(self):
         """Coassociativity holds for every degree-1 planar generator of B(Lie⊙E)(2)."""
@@ -626,31 +618,25 @@ class TestComoduleAxioms:
 
         for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
             dec_key = list(pl_elem.support())[0]
-            dec_elem = BH2.term(dec_key)
+            dec_elem = BH2(dec_key)
             delta_x = e_comodule_on_generator(dec_elem, BH2, OBH2, BE2)
 
             lhs = T_EE_OC.zero()
             rhs = T_EE_OC.zero()
 
             for (be_key, ck), coeff in delta_x:
-                be_elem = BE2.term(be_key)
-                cobar_elem = OBH2.term(ck)
+                be_elem = BE2(be_key)
+                cobar_elem = OBH2(ck)
 
                 for (lk, rk), dc in be_elem.diagonal():
-                    lhs += (
-                        coeff
-                        * dc
-                        * BE2.term(lk).tensor(BE2.term(rk)).tensor(cobar_elem)
-                    )
+                    lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(cobar_elem)
 
                 for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
-                    rhs += coeff * d_coeff * be_elem.tensor(
-                        BE2.term(be2_key)
-                    ).tensor(OBH2.term(ck2))
+                    rhs += (
+                        coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(OBH2(ck2))
+                    )
 
-            assert lhs == rhs, (
-                f"Coassociativity failed for generator {dec_key}"
-            )
+            assert lhs == rhs, f"Coassociativity failed for generator {dec_key}"
 
 
 # ---------------------------------------------------------------------------

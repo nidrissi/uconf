@@ -51,7 +51,7 @@ class TrivialAssAlgebra(OperadAlgebra):
             for a_elem in algebra_elements:
                 for _a_key, a_coeff in a_elem:
                     coeff = coeff * a_coeff
-            result += coeff * self.module.term(())
+            result += coeff * self.module(())
         return result
 
 
@@ -81,15 +81,15 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
         result = target.zero()
         for _v_key, v_coeff in v_element:
             for sigma in itertools.permutations(range(1, n + 1)):
-                left_elem = left_parent.term(sigma)
+                left_elem = left_parent(sigma)
                 if n == 1:
-                    right_elem = right_parent.term(())
+                    right_elem = right_parent(())
                     result += v_coeff * left_elem.tensor(right_elem)
                 else:
-                    right_elem = right_parent.term(())
+                    right_elem = right_parent(())
                     right_full = right_elem
                     for _ in range(n - 1):
-                        right_full = right_full.tensor(right_parent.term(()))
+                        right_full = right_full.tensor(right_parent(()))
                     result += v_coeff * left_elem.tensor(right_full)
         return result
 
@@ -111,7 +111,7 @@ class TestOperadAlgebra:
         """Unit axiom: γ_1(id; a) = a."""
         alg = TrivialAssAlgebra()
         module = alg.module
-        a = module.term(())
+        a = module(())
         unit = Associative.unit()
         result = alg.act(unit, [a])
         assert result == a
@@ -120,8 +120,8 @@ class TestOperadAlgebra:
         """Binary product γ_2(σ; a, a) = a (trivial algebra)."""
         alg = TrivialAssAlgebra()
         module = alg.module
-        a = module.term(())
-        p = Associative(2).term((1, 2))
+        a = module(())
+        p = Associative(2)((1, 2))
         result = alg.act(p, [a, a])
         assert result == a
 
@@ -129,8 +129,8 @@ class TestOperadAlgebra:
         """act() raises ValueError when len(algebra_elements) != arity."""
         alg = TrivialAssAlgebra()
         module = alg.module
-        a = module.term(())
-        p = Associative(2).term((1, 2))
+        a = module(())
+        p = Associative(2)((1, 2))
         with pytest.raises(ValueError, match="Expected 2"):
             alg.act(p, [a])
 
@@ -138,7 +138,7 @@ class TestOperadAlgebra:
         """Boundary of algebra element is 0 (Commutative module has zero differential)."""
         alg = TrivialAssAlgebra()
         module = alg.module
-        a = module.term(())
+        a = module(())
         assert alg.boundary(a) == module.zero()
 
 
@@ -159,7 +159,7 @@ class TestCooperadCoalgebra:
         """Boundary of coalgebra element is 0."""
         coalg = TrivialCoassCoalgebra()
         module = coalg.module
-        v = module.term(())
+        v = module(())
         assert coalg.boundary(v) == module.zero()
 
 
@@ -191,7 +191,7 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         tree = (mu, 1, 2)
         a_tuple = ((), ())
-        elem = B.term((tree, a_tuple))
+        elem = B((tree, a_tuple))
         assert elem.degree() == 1
 
     def test_weight1_ternary_degree(self):
@@ -209,17 +209,17 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         tree = (mu, 1, 2)
         a_tuple = ((), ())
-        elem = B.term((tree, a_tuple))
+        elem = B((tree, a_tuple))
         result = elem.dact()
         # Should give +(1, ((),)) -- single leaf with the product value
-        assert result == B.term((1, ((),)))
+        assert result == B((1, ((),)))
 
     def test_d_squared_zero_weight1_binary(self):
         """d² = 0 on a weight-1 binary tree element."""
         B = _make_bar_complex()
         mu = (1, 2)
         tree = (mu, 1, 2)
-        elem = B.term((tree, ((), ())))
+        elem = B((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
 
     def test_d_squared_zero_weight2_tree1(self):
@@ -228,7 +228,7 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         # Tree: (μ; 1, (μ; 2, 3))
         tree = (mu, 1, (mu, 2, 3))
-        elem = B.term((tree, ((), (), ())))
+        elem = B((tree, ((), (), ())))
         assert elem.boundary().boundary() == B.zero()
 
     def test_d_squared_zero_weight2_tree2(self):
@@ -237,7 +237,7 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         # Tree: (μ; (μ; 1, 2), 3)
         tree = (mu, (mu, 1, 2), 3)
-        elem = B.term((tree, ((), (), ())))
+        elem = B((tree, ((), (), ())))
         assert elem.boundary().boundary() == B.zero()
 
     def test_d_squared_zero_weight1_ternary(self):
@@ -245,15 +245,15 @@ class TestBarComplexAlgebra:
         B = _make_bar_complex()
         mu3 = (1, 2, 3)
         tree = (mu3, 1, 2, 3)
-        elem = B.term((tree, ((), (), ())))
+        elem = B((tree, ((), (), ())))
         assert elem.boundary().boundary() == B.zero()
 
     def test_linear_combination_d_squared_zero(self):
         """d² = 0 on a linear combination of bar elements."""
         B = _make_bar_complex()
         mu = (1, 2)
-        t1 = B.term(((mu, 1, (mu, 2, 3)), ((), (), ())))
-        t2 = B.term(((mu, (mu, 1, 2), 3), ((), (), ())))
+        t1 = B(((mu, 1, (mu, 2, 3)), ((), (), ())))
+        t2 = B(((mu, (mu, 1, 2), 3), ((), (), ())))
         combo = 3 * t1 - 2 * t2
         assert combo.boundary().boundary() == B.zero()
 
@@ -263,7 +263,7 @@ class TestBarComplexAlgebra:
         mu = (1, 2)
         # Tree: (μ; 1, (μ; 2, 3)) -- d_2 contracts the internal edge
         tree = (mu, 1, (mu, 2, 3))
-        elem = B.term((tree, ((), (), ())))
+        elem = B((tree, ((), (), ())))
         d2_result = elem.d2()
         # The result should contain a weight-1 ternary tree
         has_ternary = False
@@ -283,14 +283,14 @@ class TestBarComplexAlgebra:
                 for a_elem in a_list:
                     for _a_key, a_coeff in a_elem:
                         coeff = coeff * a_coeff
-                result += coeff * module.term(())
+                result += coeff * module(())
             return result
 
         alg = OperadAlgebra(module, Commutative, comm_structure_map)
         B = BarComplexAlgebra(alg)
         # Weight-1 arity-2 tree: Commutative(2) has basis {()}
         tree = ((), 1, 2)
-        elem = B.term((tree, ((), ())))
+        elem = B((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
 
 
@@ -328,7 +328,7 @@ class TestCobarComplexCoalgebra:
         C = _make_cobar_complex()
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
-        elem = C.term((tree, ((), ())))
+        elem = C((tree, ((), ())))
         assert elem.d1() == C.zero()
 
     def test_dV_zero_for_trivial(self):
@@ -336,7 +336,7 @@ class TestCobarComplexCoalgebra:
         C = _make_cobar_complex()
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
-        elem = C.term((tree, ((), ())))
+        elem = C((tree, ((), ())))
         assert elem.dV() == C.zero()
 
 
@@ -365,5 +365,5 @@ class TestBarComplexLie:
         # Lie(2) has basis key (1,) in degree 0
         lie_dec = (1,)
         tree = (lie_dec, 1, 2)
-        elem = B.term((tree, ((), ())))
+        elem = B((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
