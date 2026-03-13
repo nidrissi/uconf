@@ -348,7 +348,7 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_lie_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Lie; Free_Lie(M))."""
-        from uconf.constructions.algebra_bar import BarComplexAlgebra
+        from uconf.constructions.bar_algebra import BarComplexAlgebra
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Lie, M)
@@ -363,7 +363,7 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_ass_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M))."""
-        from uconf.constructions.algebra_bar import BarComplexAlgebra
+        from uconf.constructions.bar_algebra import BarComplexAlgebra
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M)
