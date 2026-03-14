@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 from typing import ClassVar
 
-from sage.all import tensor
+from sage.all import cached_method, tensor
 
 from uconf.models.surjection import Surjection
 
@@ -21,12 +21,10 @@ class SurjectionDual(Surjection):
     n - 1 for the weight, independent of the sign of the degree."""
 
     def __init__(self, n: int, base_ring):
-        """Initialize fixed-arity linear dual component and internal caches."""
+        """Initialize fixed-arity linear dual component."""
 
         super().__init__(n, base_ring=base_ring)
         self._primal_parent = Surjection(n, base_ring=self.base_ring())
-        self._dual_boundary_cache: dict[int, dict[tuple[int, ...], dict]] = {}
-        self._inf_cocompose_cache: dict[tuple[int, int, int, int], dict] = {}
 
     def basis_it(self, d: int):
         """Iterate over basis elements in dual degree ``d`` (non-positive)."""
@@ -43,35 +41,43 @@ class SurjectionDual(Surjection):
 
         return self.arity() - len(basis_element)
 
+    @cached_method
+    def _boundary_rows_for_degree(
+        self, primal_degree: int
+    ) -> dict[tuple[int, ...], dict]:
+        """Return the transposed boundary "matrix" for a fixed primal degree.
+
+        For each ``source_basis`` of primal degree ``primal_degree + 1``,
+        iterates over its primal boundary and accumulates, for every
+        ``target_basis``, the coefficient ``<target_basis*, ∂(source_basis)>``.
+        The result maps each ``target_basis`` to the dict
+        ``{source_basis: coeff}`` representing the row of ``∂^T``.
+        """
+
+        source_degree = primal_degree + 1
+        rows: dict[tuple[int, ...], dict] = {}
+        for source_term in self._primal_parent.basis_it(source_degree):
+            source_basis = next(iter(source_term.support()))
+            source_boundary = self._primal_parent._boundary_on_basis(source_basis)
+            for target_basis, coeff in source_boundary:
+                if target_basis not in rows:
+                    rows[target_basis] = {}
+                rows[target_basis][source_basis] = (
+                    rows[target_basis].get(source_basis, self.base_ring().zero())
+                    + coeff
+                )
+        return rows
+
     def _boundary_on_basis(self, basis_element: tuple) -> "SurjectionDual.Element":
         """Compute the differential by transposing ``Surjection`` differential."""
 
         primal_degree = len(basis_element) - self.arity()
-
-        if primal_degree not in self._dual_boundary_cache:
-            source_degree = primal_degree + 1
-            rows: dict[tuple[int, ...], dict] = {}
-            for source_term in self._primal_parent.basis_it(source_degree):
-                source_basis = next(iter(source_term.support()))
-                source_boundary = self._primal_parent._boundary_on_basis(source_basis)
-                for target_basis, coeff in source_boundary:
-                    if target_basis not in rows:
-                        rows[target_basis] = {}
-                    rows[target_basis][source_basis] = (
-                        rows[target_basis].get(source_basis, self.base_ring().zero())
-                        + coeff
-                    )
-            self._dual_boundary_cache[primal_degree] = rows
-
-        row = self._dual_boundary_cache[primal_degree].get(basis_element, {})
+        row = self._boundary_rows_for_degree(primal_degree).get(basis_element, {})
         return self.sum_of_terms(row.items())
 
+    @cached_method
     def _cocompose_rows(self, i: int, m: int, n: int, u_degree: int) -> dict:
         """Return cached pairing rows for ``Δ^{i;m,n}`` in fixed primal degree."""
-
-        key = (i, m, n, u_degree)
-        if key in self._inf_cocompose_cache:
-            return self._inf_cocompose_cache[key]
 
         left_parent = SurjectionDual(m, base_ring=self.base_ring())
         right_parent = SurjectionDual(n, base_ring=self.base_ring())
@@ -101,7 +107,6 @@ class SurjectionDual(Surjection):
                             + coeff
                         )
 
-        self._inf_cocompose_cache[key] = rows
         return rows
 
     @staticmethod

@@ -8,6 +8,7 @@ from sage.all import (
     GradedModulesWithBasis,
     Permutation,
     SymmetricGroup,
+    cached_method,
     matrix,
     vector,
 )
@@ -21,28 +22,17 @@ class Lie(CombinatorialFreeModule):
     ``[x_i, -]`` ending in ``x_n``.
 
     Computational data (PBW matrix, its left-inverse, word/basis-key lists, and
-    associative expansions) are cached at the **class level**, keyed by
-    ``(arity, base_ring)``.  This means the expensive one-time computations are
-    shared across all ``Lie(n)`` instances constructed with the same parameters,
-    which is important because :meth:`compose` creates a fresh target module on
-    every call.
+    associative expansions) are cached via :func:`sage.misc.cachefunc.cached_method`.
+    Since :class:`~sage.combinat.free_module.CombinatorialFreeModule` inherits from
+    :class:`~sage.structure.unique_representation.UniqueRepresentation`, ``Lie(n,
+    base_ring)`` always returns the same instance for a given ``(n, base_ring)`` pair,
+    so these instance-level caches are automatically shared across all callers—including
+    :meth:`compose`, which creates a new ``Lie`` parent on each invocation.
     """
 
     name: ClassVar[str] = "Lie"
     connectivity: ClassVar[int] = 0
     """All components live in degree 0 (the Lie operad is concentrated in degree 0)."""
-
-    # Class-level caches keyed by (n, base_ring).
-    # _cls_basis_keys: (n, base_ring) -> list[tuple[int, ...]]
-    _cls_basis_keys: ClassVar[dict] = {}
-    # _cls_word_basis: (n, base_ring) -> list[tuple[int, ...]]
-    _cls_word_basis: ClassVar[dict] = {}
-    # _cls_pbw_matrix: (n, base_ring) -> sage Matrix
-    _cls_pbw_matrix: ClassVar[dict] = {}
-    # _cls_pbw_left_inv: (n, base_ring) -> sage Matrix
-    _cls_pbw_left_inv: ClassVar[dict] = {}
-    # _cls_assoc: (n, base_ring) -> {basis_key: {word: coefficient}}
-    _cls_assoc: ClassVar[dict] = {}
 
     def __init__(self, n, base_ring):
         """Initialize ``Lie(n)`` over ``base_ring``."""
@@ -62,22 +52,16 @@ class Lie(CombinatorialFreeModule):
             on_basis=lambda basis: self.zero(), codomain=self
         )
 
+    @cached_method
     def _basis_keys(self) -> list[tuple[int, ...]]:
         """Return and cache the list of basis keys in this arity."""
 
-        cache_key = (int(self.arity()), self.base_ring())
-        if cache_key in Lie._cls_basis_keys:
-            return Lie._cls_basis_keys[cache_key]
-
         n = int(self.arity())
         if n == 0:
-            result: list[tuple[int, ...]] = []
-        elif n == 1:
-            result = [()]
-        else:
-            result = list(py_itertools.permutations(range(1, n), n - 1))
-        Lie._cls_basis_keys[cache_key] = result
-        return result
+            return []
+        if n == 1:
+            return [()]
+        return list(py_itertools.permutations(range(1, n), n - 1))
 
     def _validate_basis_key(self, basis_key: tuple | list) -> tuple[int, ...] | None:
         """Validate and normalize a basis key.
@@ -153,72 +137,47 @@ class Lie(CombinatorialFreeModule):
 
         return {w: c for w, c in out.items() if c != 0}
 
+    @cached_method
     def _assoc_from_basis_key(
         self, basis_key: tuple[int, ...]
     ) -> dict[tuple[int, ...], Any]:
         """Expand one Lie basis element into the associative word basis.
 
-        Results are cached at the class level (keyed by ``(arity, base_ring,
-        basis_key)``) so repeated calls—including from :meth:`compose` and
-        :meth:`Element.permute`—never recompute the same expansion.
+        Results are cached via :func:`~sage.misc.cachefunc.cached_method`.
         """
-
-        cache_key = (int(self.arity()), self.base_ring())
-        if cache_key not in Lie._cls_assoc:
-            Lie._cls_assoc[cache_key] = {}
-        per_arity = Lie._cls_assoc[cache_key]
-        if basis_key in per_arity:
-            return per_arity[basis_key]
 
         n = int(self.arity())
         if n == 0:
-            result: dict[tuple[int, ...], Any] = {}
-        elif n == 1:
-            result = {(1,): self.base_ring().one()}
-        else:
-            seq = basis_key + (n,)
-            current: dict[tuple[int, ...], Any] = {(seq[-1],): self.base_ring().one()}
-            for a in reversed(seq[:-1]):
-                current = self._bracket({(a,): self.base_ring().one()}, current)
-            result = current
+            return {}
+        if n == 1:
+            return {(1,): self.base_ring().one()}
+        seq = basis_key + (n,)
+        current: dict[tuple[int, ...], Any] = {(seq[-1],): self.base_ring().one()}
+        for a in reversed(seq[:-1]):
+            current = self._bracket({(a,): self.base_ring().one()}, current)
+        return current
 
-        per_arity[basis_key] = result
-        return result
-
+    @cached_method
     def _word_basis(self) -> list[tuple[int, ...]]:
         """Return and cache the associative word basis in arity ``n``."""
 
-        cache_key = (int(self.arity()), self.base_ring())
-        if cache_key in Lie._cls_word_basis:
-            return Lie._cls_word_basis[cache_key]
-
         n = int(self.arity())
         if n == 0:
-            result: list[tuple[int, ...]] = []
-        else:
-            result = list(py_itertools.permutations(range(1, n + 1), n))
-        Lie._cls_word_basis[cache_key] = result
-        return result
+            return []
+        return list(py_itertools.permutations(range(1, n + 1), n))
 
+    @cached_method
     def _pbw_matrix(self):
         """Return the PBW change-of-basis matrix from Lie to words."""
-
-        cache_key = (int(self.arity()), self.base_ring())
-        if cache_key in Lie._cls_pbw_matrix:
-            return Lie._cls_pbw_matrix[cache_key]
 
         words = self._word_basis()
         keys = self._basis_keys()
 
         if self.arity() == 0:
-            mat = matrix(self.base_ring(), 0, 0, [])
-            Lie._cls_pbw_matrix[cache_key] = mat
-            return mat
+            return matrix(self.base_ring(), 0, 0, [])
 
         if self.arity() == 1:
-            mat = matrix(self.base_ring(), 1, 1, [1])
-            Lie._cls_pbw_matrix[cache_key] = mat
-            return mat
+            return matrix(self.base_ring(), 1, 1, [1])
 
         data = []
         for w in words:
@@ -226,36 +185,28 @@ class Lie(CombinatorialFreeModule):
                 data.append(
                     self._assoc_from_basis_key(key).get(w, self.base_ring().zero())
                 )
-        mat = matrix(self.base_ring(), len(words), len(keys), data)
-        Lie._cls_pbw_matrix[cache_key] = mat
-        return mat
+        return matrix(self.base_ring(), len(words), len(keys), data)
 
+    @cached_method
     def _pbw_left_inverse(self):
-        """Return the left-inverse ``L`` of the PBW matrix, cached at class level.
+        """Return the left-inverse ``L`` of the PBW matrix.
 
         ``L`` satisfies ``L * M = I`` where ``M`` is the PBW matrix
-        (shape ``n! × (n-1)!``).  It is computed once per ``(arity, base_ring)``
-        as ``L = (M^T M)^{-1} M^T`` and stored in :attr:`_cls_pbw_left_inv`.
-        Applying ``L`` as a matrix–vector product replaces the per-call
+        (shape ``n! × (n-1)!``).  It is computed once via
+        :func:`~sage.misc.cachefunc.cached_method` as ``L = (M^T M)^{-1} M^T``
+        and applying ``L`` as a matrix–vector product replaces the per-call
         ``solve_right`` (fresh Gaussian elimination) in
         :meth:`_element_from_assoc`.
         """
-
-        cache_key = (int(self.arity()), self.base_ring())
-        if cache_key in Lie._cls_pbw_left_inv:
-            return Lie._cls_pbw_left_inv[cache_key]
 
         pbw = self._pbw_matrix()
 
         if self.arity() <= 1:
             # Square 1×1 or 0×0 — the matrix is already its own inverse.
-            Lie._cls_pbw_left_inv[cache_key] = pbw
             return pbw
 
         pbw_T = pbw.transpose()
-        left_inv = (pbw_T * pbw).inverse() * pbw_T
-        Lie._cls_pbw_left_inv[cache_key] = left_inv
-        return left_inv
+        return (pbw_T * pbw).inverse() * pbw_T
 
     def _element_from_assoc(self, assoc: dict[tuple[int, ...], Any]) -> "Lie.Element":
         """Reconstruct a Lie element from associative coefficients.
