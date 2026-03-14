@@ -149,7 +149,7 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- standard element ---------------------------------------------------
 
     @staticmethod
-    def fundamental_chain(base_ring, n: int) -> "SimplicialChains.Element":
+    def fundamental_chain(n: int, base_ring) -> "SimplicialChains.Element":
         r"""The chain `[0, 1, \dots, n]` in `C_n(\Delta^n)`.
 
         Parameters
@@ -395,9 +395,9 @@ class SimplicialCochains(CombinatorialFreeModule):
     # -- basis enumeration --------------------------------------------------
 
     @staticmethod
-    def dual_basis_it(N: int):
+    def dual_basis_it(N: int, base_ring):
         """Iterate over all dual-basis cochains on ``Δ^N``."""
-        parent = SimplicialCochains(N=N)
+        parent = SimplicialCochains(N, base_ring)
         for k in range(1, N + 2):
             for simplex in combinations(range(N + 1), k):
                 yield parent.term(simplex)

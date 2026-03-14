@@ -807,7 +807,7 @@ class TestCoAssociative:
     def test_cobar_coassociative_d_squared_zero_arity3(self):
         """d^2 = 0 for Ω(CoAss)(3)."""
         OmegaCA = CobarConstruction(CoAssociative)
-        O3 = OmegaCA(4, QQ)
+        O3 = OmegaCA(3, QQ)
         # Weight-1 tree with (1,2,3) decoration
         tree = ((1, 2, 3), 1, 2, 3)
         elem = O3(tree)

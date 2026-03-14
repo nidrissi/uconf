@@ -125,7 +125,7 @@ class TestSimplicialChains:
         assert x.degree() == 2
 
     def test_fundamental_chain(self):
-        x = SimplicialChains.fundamental_chain(QQ, 3)
+        x = SimplicialChains.fundamental_chain(3, QQ)
         assert x.degree() == 3
         d = _as_dict(x)
         assert d == {(0, 1, 2, 3): 1}
@@ -158,7 +158,7 @@ class TestBoundary:
         """∂² = 0 for several simplices."""
         C = SimplicialChains(QQ)
         for n in range(1, 5):
-            x = SimplicialChains.fundamental_chain(QQ, n)
+            x = SimplicialChains.fundamental_chain(n, QQ)
             assert x.boundary().boundary() == C.zero(), f"∂² ≠ 0 for Δ^{n}"
 
     def test_boundary_squared_tensor(self):
@@ -187,14 +187,14 @@ class TestBoundary:
 class TestAWDiagonal:
     def test_diagonal_edge(self):
         """Δ([0,1]) = [0]⊗[0,1] + [0,1]⊗[1]."""
-        x = SimplicialChains.fundamental_chain(QQ, 1)
+        x = SimplicialChains.fundamental_chain(1, QQ)
         diag = x.iterated_diagonal(times=1)
         d = _as_dict(diag)
         assert d == {((0,), (0, 1)): 1, ((0, 1), (1,)): 1}
 
     def test_diagonal_triangle(self):
         """Δ([0,1,2]) = [0]⊗[0,1,2] + [0,1]⊗[1,2] + [0,1,2]⊗[2]."""
-        x = SimplicialChains.fundamental_chain(QQ, 2)
+        x = SimplicialChains.fundamental_chain(2, QQ)
         diag = x.iterated_diagonal(times=1)
         d = _as_dict(diag)
         assert d == {
@@ -206,7 +206,7 @@ class TestAWDiagonal:
     def test_iterated_diagonal_triangle(self):
         """Δ²([0,1,2]) should give 3-fold tensor terms."""
         SC = SimplicialChains(QQ)
-        x = SimplicialChains.fundamental_chain(QQ, 2)
+        x = SimplicialChains.fundamental_chain(2, QQ)
         diag = x.iterated_diagonal(times=2)
         T3 = tensor([SC, SC, SC])
         assert diag.parent() == T3
@@ -219,7 +219,7 @@ class TestAWDiagonal:
         """∂∘Δ = Δ∘∂ (AW diagonal is a chain map)."""
         b = SimplicialChains.tensor_boundary
         for n in range(1, 4):
-            x = SimplicialChains.fundamental_chain(QQ, n)
+            x = SimplicialChains.fundamental_chain(n, QQ)
             lhs = b(x.iterated_diagonal(times=1))
             rhs = x.boundary().iterated_diagonal(times=1)
             assert _as_dict(lhs) == _as_dict(rhs), f"Diagonal not a chain map on Δ^{n}"
