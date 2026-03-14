@@ -30,6 +30,7 @@ The cooperad axioms tested here are:
 """
 
 import pytest
+from sage.all import QQ
 
 from uconf import Surjection, SurjectionDual
 
@@ -64,10 +65,11 @@ def _flat(delta) -> dict:
 def _seq_lhs(x, i, j, m, n, p) -> dict:
     """``(id_m ⊗ Δ^{j;n,p}) ∘ Δ^{i;m,n+p-1}(x)`` as a flat triple dict."""
     SL = SurjectionDual
+    base_ring = x.parent().base_ring()
     d1 = SL.infinitesimal_cocompose(x, i, m, n + p - 1)
     result: dict = {}
     for (a, d_key), c1 in d1:
-        d_elem = SL(n + p - 1)(d_key)
+        d_elem = SL(n + p - 1, base_ring)(d_key)
         for (b, c_key), c2 in SL.infinitesimal_cocompose(d_elem, j, n, p):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -77,10 +79,11 @@ def _seq_lhs(x, i, j, m, n, p) -> dict:
 def _seq_rhs(x, i, j, m, n, p) -> dict:
     """``(Δ^{i;m,n} ⊗ id_p) ∘ Δ^{i+j-1;m+n-1,p}(x)`` as a flat triple dict."""
     SL = SurjectionDual
+    base_ring = x.parent().base_ring()
     d1 = SL.infinitesimal_cocompose(x, i + j - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
-        e_elem = SL(m + n - 1)(e)
+        e_elem = SL(m + n - 1, base_ring)(e)
         for (a, b), c2 in SL.infinitesimal_cocompose(e_elem, i, m, n):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -90,10 +93,11 @@ def _seq_rhs(x, i, j, m, n, p) -> dict:
 def _par_lhs(x, i, j, m, n, p) -> dict:
     """``(Δ^{i;m,n} ⊗ id_p) ∘ Δ^{j+n-1;m+n-1,p}(x)`` as flat triple dict."""
     SL = SurjectionDual
+    base_ring = x.parent().base_ring()
     d1 = SL.infinitesimal_cocompose(x, j + n - 1, m + n - 1, p)
     result: dict = {}
     for (e, c_key), c1 in d1:
-        e_elem = SL(m + n - 1)(e)
+        e_elem = SL(m + n - 1, base_ring)(e)
         for (a, b), c2 in SL.infinitesimal_cocompose(e_elem, i, m, n):
             key = (a, b, c_key)
             result[key] = result.get(key, 0) + int(c1) * int(c2)
@@ -106,12 +110,13 @@ def _par_rhs(x, i, j, m, n, p) -> dict:
     ``τ`` swaps the S*(n) and S*(p) factors back to (a, b, c) order.
     """
     SL = SurjectionDual
-    Sn = SL(n)
-    Sp = SL(p)
+    base_ring = x.parent().base_ring()
+    Sn = SL(n, base_ring)
+    Sp = SL(p, base_ring)
     d1 = SL.infinitesimal_cocompose(x, i, m + p - 1, n)
     result: dict = {}
     for (f, b), c1 in d1:
-        f_elem = SL(m + p - 1)(f)
+        f_elem = SL(m + p - 1, base_ring)(f)
         b_deg = Sn.degree_on_basis(b)
         for (a, c_key), c2 in SL.infinitesimal_cocompose(f_elem, j, m, p):
             c_deg = Sp.degree_on_basis(c_key)
@@ -130,8 +135,9 @@ def _coderivation_lhs(x, i, m, n) -> dict:
 def _coderivation_rhs(x, i, m, n) -> dict:
     """``(d⊗id + (-1)^{|a|} id⊗d) Δ^{i;m,n}(x)`` as flat dict."""
     SL = SurjectionDual
-    Sl = SL(m)
-    Sr = SL(n)
+    base_ring = x.parent().base_ring()
+    Sl = SL(m, base_ring)
+    Sr = SL(n, base_ring)
     result: dict = {}
     for (l_key, r_key), c in SL.infinitesimal_cocompose(x, i, m, n):
         sign = (-1) ** Sl.degree_on_basis(l_key)
@@ -218,9 +224,10 @@ def test_infinitesimal_cocompose_transposes_compose_pairing() -> None:
 def test_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S*(n)."""
     SL = SurjectionDual
-    for elem in SL(n).basis_it(d):
+    parent = SL(n, QQ)
+    for elem in parent.basis_it(d):
         d2 = elem.boundary().boundary()
-        assert d2 == SL(n).zero(), f"d²({elem}) = {d2} ≠ 0 in S*({n}) degree {d}"
+        assert d2 == parent.zero(), f"d²({elem}) = {d2} ≠ 0 in S*({n}) degree {d}"
 
 
 # ===========================================================================
@@ -351,7 +358,7 @@ def test_equivariance_right_block(
     the cocomposition.
     """
     SL = SurjectionDual
-    x = SL(m + n - 1)(x_tuple)
+    x = SL(m + n - 1, QQ)(x_tuple)
     rho = _right_block_perm(tau_oneline, i, m, n)
 
     # LHS: Δ(x · rho)

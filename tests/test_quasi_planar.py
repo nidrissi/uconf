@@ -1,7 +1,7 @@
 """Tests for quasi-planar structures and the E-comodule map."""
 
 import pytest
-from sage.all import SymmetricGroup, tensor
+from sage.all import QQ, SymmetricGroup, tensor
 
 from uconf import (
     BarConstruction,
@@ -24,9 +24,9 @@ def _BH_setup(n: int = 2):
     """Return (BH_factory, BHn, OBH_factory, OBHn, BE_n) for B(Lie⊙E)(n)."""
     HLE = HadamardProduct(Lie, BarrattEccles)
     BH = BarConstruction(HLE)
-    BHn = BH(n)
+    BHn = BH(n, QQ)
     OBH = CobarConstruction(BH)
-    OBHn = OBH(n)
+    OBHn = OBH(n, QQ)
     BEn = BarrattEccles(n, QQ)
     return BH, BHn, OBH, OBHn, BEn
 
@@ -41,12 +41,12 @@ class TestDSigmaOnSurjection:
 
     def _make_bar_surjection(self, n: int):
         BS = BarConstruction(Surjection)
-        return BS(n)
+        return BS(n, QQ)
 
     def test_d_sigma_sum_equals_boundary(self):
         """Σ_σ d_σ(x) ⊗ σ == boundary(x) (basic quasi-planar identity)."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         # Weight-1, degree-2 bar tree: (1,2,1) in S(2)
         tree = ((1, 2, 1), 1, 2)
         elem = B2(tree)
@@ -68,7 +68,7 @@ class TestDSigmaOnSurjection:
     def test_d_sigma_iterate_two_steps(self):
         """d_{(σ1,σ2)} = d_{σ1} ∘ d_{σ2}."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         tree = ((1, 2, 1), 1, 2)
         elem = B2(tree)
         S2 = SymmetricGroup(2)
@@ -89,7 +89,7 @@ class TestDSigmaOnBarrattEccles:
     def test_d_sigma_sums_to_boundary(self):
         """Σ_σ d_σ(x)·σ == boundary(x)."""
         BBE = BarConstruction(BarrattEccles)
-        B2 = BBE(2)
+        B2 = BBE(2, QQ)
         BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
@@ -187,7 +187,7 @@ class TestGradedBasisMethods:
     def test_hadamard_planar_basis_it(self):
         """HadamardProduct(Lie, BE)(2).planar_basis_it(d) contains planar pairs."""
         HLE = HadamardProduct(Lie, BarrattEccles)
-        HLE2 = HLE(2)
+        HLE2 = HLE(2, QQ)
         for d in range(3):
             for elem in HLE2.planar_basis_it(d):
                 for (l_key, r_key), coeff in elem:
@@ -297,7 +297,7 @@ class TestEComoduleMap:
     def test_comodule_on_b_surjection(self):
         """E-comodule map on B(Surjection)(2), which is quasi-planar."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         BE2 = BarrattEccles(2, QQ)
 
         # Planar degree-1 element: (1,2) in Surjection(2, QQ)
@@ -648,7 +648,7 @@ class TestQuasiPlanarMixinInheritance:
     def test_bar_construction_inherits_mixin(self):
         """BarConstruction.Component should inherit from QuasiPlanarMixin."""
         BS = BarConstruction(Surjection)
-        B2 = BS(2)
+        B2 = BS(2, QQ)
         assert isinstance(B2, QuasiPlanarMixin)
 
     def test_hadamard_bar_inherits_mixin(self):

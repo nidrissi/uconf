@@ -970,7 +970,7 @@ class TestBarPlanarize:
         from sage.all import SymmetricGroup
 
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         tree = ((2, 1, 2, 3), 1, 2, 3)
         elem = B3(tree)
         result = elem.planarize()
@@ -985,14 +985,14 @@ class TestBarPlanarize:
     def test_planarize_surjection_weight2_roundtrip(self):
         """Round-trip T_pl.permute(σ) == T for a weight-2 Surjection tree."""
         BS = BarConstruction(Surjection)
-        B4 = BS(4)
+        B4 = BS(4, QQ)
         tree = ((2, 1, 2, 3), ((1, 2), 1, 2), 3, 4)
         assert self._round_trip_ok(B4, tree)
 
     def test_planarize_surjection_roundtrip_weight1(self):
         """Round-trip holds for various weight-1 Surjection trees."""
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         for tree in [
             ((1, 2, 3), 1, 2, 3),
             ((2, 1, 2, 3), 1, 2, 3),
@@ -1009,7 +1009,7 @@ class TestBarPlanarize:
         from sage.all import SymmetricGroup
 
         BBE = BarConstruction(BarrattEccles)
-        B2 = BBE(2)
+        B2 = BBE(2, QQ)
         BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
@@ -1030,7 +1030,7 @@ class TestBarPlanarize:
     def test_planarize_barratt_eccles_roundtrip(self):
         """Round-trip holds for B(BE)(2) elements."""
         BBE = BarConstruction(BarrattEccles)
-        B2 = BBE(2)
+        B2 = BBE(2, QQ)
         BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
@@ -1057,7 +1057,7 @@ class TestBarPlanarize:
     def test_planar_basis_it_surjection_degree1_arity3(self):
         """B(Surj)(3) degree-1 planar basis is exactly {(1,2,3)}."""
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         basis = list(B3.planar_basis_it(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
@@ -1077,7 +1077,7 @@ class TestBarPlanarize:
         from sage.all import SymmetricGroup
 
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         S3 = SymmetricGroup(3)
         for d in range(3):
             for elem in B3.planar_basis_it(d):
@@ -1090,7 +1090,7 @@ class TestBarPlanarize:
     def test_planar_basis_it_barratt_eccles(self):
         """B(BE)(2) degree-1 planar basis contains the identity-starting tuple."""
         BBE = BarConstruction(BarrattEccles)
-        B2 = BBE(2)
+        B2 = BBE(2, QQ)
         basis = list(B2.planar_basis_it(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
@@ -1106,7 +1106,7 @@ class TestBarPlanarize:
     def test_element_planarize_method(self):
         """Element.planarize() delegates to Component.planarize()."""
         BS = BarConstruction(Surjection)
-        B3 = BS(3)
+        B3 = BS(3, QQ)
         tree = ((2, 1, 2, 3), 1, 2, 3)
         elem = B3(tree)
         # Both call paths should give the same result
@@ -1122,7 +1122,7 @@ class TestBarPlanarize:
         """Round-trip holds for B(S⊙BE)(2)."""
         HBE = HadamardProduct(Surjection, BarrattEccles)
         BH = BarConstruction(HBE)
-        B2 = BH(2)
+        B2 = BH(2, QQ)
         BE2 = BarrattEccles(2, QQ)
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
@@ -1150,7 +1150,7 @@ class TestBasisIt:
 
     def test_basis_it_arity1_degree0(self):
         """B(Com)(1) in degree 0 is the single leaf."""
-        B1 = BarConstruction(Commutative)(1)
+        B1 = BarConstruction(Commutative)(1, QQ)
         basis = list(B1.basis_it(0))
         assert len(basis) == 1
         key, coeff = next(iter(basis[0]))
@@ -1158,12 +1158,12 @@ class TestBasisIt:
 
     def test_basis_it_arity1_positive_degree(self):
         """B(Com)(1) in degree > 0 is empty."""
-        B1 = BarConstruction(Commutative)(1)
+        B1 = BarConstruction(Commutative)(1, QQ)
         assert list(B1.basis_it(1)) == []
 
     def test_basis_it_commutative_arity2_degree1(self):
         """B(Com)(2) in degree 1 has exactly one shuffle tree."""
-        B2 = BarConstruction(Commutative)(2)
+        B2 = BarConstruction(Commutative)(2, QQ)
         basis = list(B2.basis_it(1))
         assert len(basis) == 1
         (key, coeff) = next(iter(basis[0]))
@@ -1172,7 +1172,7 @@ class TestBasisIt:
 
     def test_basis_it_commutative_arity3_degree1(self):
         """B(Com)(3) in degree 1 has one tree (single arity-3 vertex)."""
-        B3 = BarConstruction(Commutative)(3)
+        B3 = BarConstruction(Commutative)(3, QQ)
         basis = list(B3.basis_it(1))
         assert len(basis) == 1
         (key, _) = next(iter(basis[0]))
@@ -1180,7 +1180,7 @@ class TestBasisIt:
 
     def test_basis_it_commutative_arity3_degree2(self):
         """B(Com)(3) in degree 2 has exactly three shuffle trees (weight 2)."""
-        B3 = BarConstruction(Commutative)(3)
+        B3 = BarConstruction(Commutative)(3, QQ)
         basis = list(B3.basis_it(2))
         keys = [next(iter(e))[0] for e in basis]
         assert len(keys) == 3
@@ -1193,7 +1193,7 @@ class TestBasisIt:
         """Every element from basis_it is a valid shuffle tree."""
         from uconf.core.trees import is_shuffle_tree
 
-        B3 = BarConstruction(Commutative)(3)
+        B3 = BarConstruction(Commutative)(3, QQ)
         for d in range(1, 4):
             for elem in B3.basis_it(d):
                 for key, _ in elem:

@@ -1,6 +1,7 @@
 """Tests for the shifted-cooperad wrapper."""
 
 from uconf import ShiftedCooperad, SurjectionDual
+from sage.all import QQ
 
 
 def _as_dict(x):
@@ -9,7 +10,7 @@ def _as_dict(x):
 
 def test_degree_shift_surjection_linear_dual() -> None:
     shifted = ShiftedCooperad(SurjectionDual, 1)
-    c2 = shifted(2)
+    c2 = shifted(2, QQ)
     x = c2((1, 2, 1))
     basis = next(iter(x.support()))
     assert c2.degree_on_basis(basis) == 0
@@ -17,14 +18,14 @@ def test_degree_shift_surjection_linear_dual() -> None:
 
 def test_counit_preserved_by_shift_wrapper() -> None:
     shifted = ShiftedCooperad(SurjectionDual, 1)
-    x = shifted(1)((1,))
+    x = shifted(1, QQ)((1,))
     assert x.counit() == 1
 
 
 def test_shifted_infinitesimal_cocompose_sign() -> None:
     base = SurjectionDual(3, QQ)((1, 2, 3, 2))
     shifted = ShiftedCooperad(SurjectionDual, 1)
-    shifted_x = shifted(3)((1, 2, 3, 2))
+    shifted_x = shifted(3, QQ)((1, 2, 3, 2))
 
     base_delta = SurjectionDual.infinitesimal_cocompose(base, i=1, m=2, n=2)
     shifted_delta = shifted_x.infinitesimal_cocompose(i=1, m=2, n=2)
