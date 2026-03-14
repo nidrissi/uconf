@@ -19,7 +19,7 @@ from functools import reduce
 from itertools import combinations, pairwise
 from typing import TYPE_CHECKING
 
-from sage.all import  tensor
+from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
