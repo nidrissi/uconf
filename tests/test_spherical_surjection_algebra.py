@@ -28,7 +28,7 @@ def _top_coeff(x, top_key):
 def test_sphere_surjection_unitality() -> None:
     alg = SurjectionSphereCochainAlgebra(d=3, base_ring=QQ)
     g = alg.module.generator()
-    unit = Surjection.unit()
+    unit = Surjection.unit(QQ)
 
     assert alg.act(unit, [g]) == g
     assert alg.act(unit, [7 * g]) == 7 * g

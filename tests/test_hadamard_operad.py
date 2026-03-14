@@ -88,8 +88,8 @@ def test_hadamard_accepts_shifted_operad_provider() -> None:
     shifted_lie = ShiftedOperad(Lie, -1)
     had = HadamardProduct(Surjection, shifted_lie)
 
-    x = had(2, ZZ)(((1, 2), (1,)))
-    y = had(2, ZZ)(((1, 2, 1), (1,)))
+    x = had(2, QQ)(((1, 2), (1,)))
+    y = had(2, QQ)(((1, 2, 1), (1,)))
     composed = had.compose(x, 1, y)
 
     assert x.arity() == 2

@@ -134,7 +134,7 @@ class TestFreeOperadAlgebra:
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M, QQ)
         m = F.module((1, ((),)))
-        unit = Associative.unit()  # id in P(1)
+        unit = Associative.unit(QQ)  # id in P(1)
         result = F.act(unit, [m])
         # Should give a weight-1 tree (id, leaf1) → (id_key, 1) with m-tuple ((),)
         assert result != F.module.zero()
