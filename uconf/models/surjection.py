@@ -362,7 +362,7 @@ class Surjection(CombinatorialFreeModule):
 
             def _planar(input_list: tuple[int, ...]) -> bool:
                 """Check if the first occurrence of each integer in input_list
-            are in increasing order."""
+            is in increasing order."""
                 first_occurrences = {}
                 for i, val in enumerate(input_list):
                     if val not in first_occurrences:
