@@ -325,7 +325,8 @@ def enumerate_trees_by_weight(
         parent = operad_cls(arity, base_ring)
         if hasattr(parent, "basis_it"):
             # Iterate over all degrees
-            for deg in range(20):  # reasonable upper bound
+            # TODO #21 This "reasonable upper bound" is hacky. We can use the connectivity assumption to get a better bound.
+            for deg in range(20):
                 try:
                     for elem in parent.basis_it(deg):
                         dec = next(iter(elem.support()))
@@ -468,6 +469,7 @@ def enumerate_planar_trees_in_degree(
         base_ring: Coefficient ring.
         target_degree: Exact bar degree to enumerate.
     """
+    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
     if arity < 2 or target_degree < 1:
         return
 
@@ -541,6 +543,7 @@ def _planar_subtrees_for_leaves(
             yield leaf_set[0]
         return
 
+    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
     if max_weight < 1 or target_degree < 1:
         return
 
@@ -900,6 +903,7 @@ def _shuffle_subtrees_iter(
         if target_degree == 0:
             yield leaf_set[0]
         return
+    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
     if max_weight < 1 or target_degree < 1:
         return
 
@@ -1014,6 +1018,7 @@ def enumerate_shuffle_trees_in_degree(
         Decorated shuffle trees as nested tuples valid as basis keys of
         ``BarConstruction(operad_cls)(arity)``.
     """
+    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
     if arity < 2 or target_degree < 1 or weight_bound < 1:
         return
     yield from _shuffle_subtrees_iter(
