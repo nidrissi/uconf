@@ -195,7 +195,8 @@ class ShiftedCooperad(UniqueRepresentation):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
 
             base_permuted = (
