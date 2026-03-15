@@ -176,6 +176,8 @@ class ShiftedOperad(UniqueRepresentation):
 
             return self._base_parent
 
+        # TODO #21 This wrapper is missing a basis iterator. We can implement this by iterating over the base parent's basis and applying the shift, but we need to be careful about efficiency and caching.
+
         def from_base(self, element) -> "ShiftedOperad.Element":
             if element.parent() is self._base_parent:
                 return self.sum_of_terms((basis, coeff) for basis, coeff in element)
