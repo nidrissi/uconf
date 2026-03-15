@@ -306,131 +306,6 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     return validate_vertex(tree)
 
 
-def enumerate_trees_by_weight(
-    arity: int,
-    weight_bound: int,
-    operad_cls,
-    base_ring,
-) -> Iterator[tuple]:
-    """Enumerate all valid trees in a given arity up to weight bound.
-
-    Yields tree basis keys with leaves {1, ..., arity} and weight in [1, weight_bound].
-    Uses the operad's ``basis_it`` method if available.
-    """
-    if arity < 2:
-        return  # No nontrivial trees for arity < 2 (connected assumption)
-
-    # Weight 1 trees: single internal vertex with arity leaves
-    if weight_bound >= 1:
-        parent = operad_cls(arity, base_ring)
-        if hasattr(parent, "basis_it"):
-            # Iterate over all degrees
-            # TODO #21 This "reasonable upper bound" is hacky. We can use the connectivity assumption to get a better bound.
-            for deg in range(20):
-                try:
-                    for elem in parent.basis_it(deg):
-                        dec = next(iter(elem.support()))
-                        tree = (dec,) + tuple(range(1, arity + 1))
-                        yield tree
-                except (StopIteration, ValueError):
-                    break
-        else:
-            # Fallback: just use degree 0
-            try:
-                for dec in parent.basis():
-                    tree = (dec,) + tuple(range(1, arity + 1))
-                    yield tree
-            except (AttributeError, NotImplementedError):
-                pass
-
-    # Weight >= 2: recursively combine smaller trees
-    if weight_bound >= 2:
-        # For each way to partition arity into vertex_arity children
-        for v_arity in range(2, arity):  # vertex_arity of root
-            # For each decoration of the root
-            root_parent = operad_cls(v_arity, base_ring)
-            root_decorations = []
-            if hasattr(root_parent, "basis_it"):
-                for deg in range(20):
-                    try:
-                        for elem in root_parent.basis_it(deg):
-                            root_decorations.append(next(iter(elem.support())))
-                    except (StopIteration, ValueError):
-                        break
-            else:
-                try:
-                    root_decorations = list(root_parent.basis())
-                except (AttributeError, NotImplementedError):
-                    pass
-
-            for root_dec in root_decorations:
-                # For each partition of {1,...,arity} into v_arity nonempty subsets
-                # and for each assignment of subtrees to these subsets
-                yield from _enumerate_with_root(
-                    arity, v_arity, root_dec, weight_bound - 1, operad_cls, base_ring
-                )
-
-
-def _enumerate_with_root(
-    arity: int,
-    v_arity: int,
-    root_dec: tuple,
-    remaining_weight: int,
-    operad_cls,
-    base_ring,
-) -> Iterator[tuple]:
-    """Helper to enumerate trees with a fixed root vertex."""
-    from itertools import combinations
-
-    # Enumerate partitions of {1,...,arity} into v_arity nonempty ordered parts
-    # For simplicity, we use ordered partitions where part[i] contains min(part[i])
-    # in increasing order across parts
-
-    if v_arity == 2:
-        # Partition into two parts
-        leaves_set = set(range(1, arity + 1))
-        for size in range(1, arity):
-            for part1 in combinations(range(1, arity + 1), size):
-                part1_set = set(part1)
-                part2 = tuple(sorted(leaves_set - part1_set))
-                # Child 1 gets part1, child 2 gets part2
-                # Enumerate subtrees for each part
-                for child1 in _subtrees_for_leaves(
-                    part1, remaining_weight, operad_cls, base_ring
-                ):
-                    for child2 in _subtrees_for_leaves(
-                        part2, remaining_weight - weight(child1), operad_cls, base_ring
-                    ):
-                        if weight(child1) + weight(child2) <= remaining_weight:
-                            yield (root_dec, child1, child2)
-
-
-def _subtrees_for_leaves(
-    leaf_set: tuple,
-    max_weight: int,
-    operad_cls,
-    base_ring,
-) -> Iterator:
-    """Enumerate subtrees with exactly the given leaves (as a tuple)."""
-    n = len(leaf_set)
-    if n == 0:
-        return
-    if n == 1:
-        yield leaf_set[0]  # Single leaf
-        return
-
-    # For n >= 2, we need internal vertices
-    if max_weight < 1:
-        return
-
-    # Create a mapping from {1,...,n} to leaf_set
-    mapping = {i + 1: leaf_set[i] for i in range(n)}
-
-    # Enumerate trees with arity n and relabel
-    for tree in enumerate_trees_by_weight(n, max_weight, operad_cls, base_ring):
-        yield relabel_leaves(tree, mapping)
-
-
 def enumerate_planar_trees_in_degree(
     arity: int,
     weight_bound: int,
@@ -467,11 +342,14 @@ def enumerate_planar_trees_in_degree(
             from the branching constraint ``sum(m_v - 1) = n - 1``).
         operad_cls: Operad factory; must supply ``planar_basis_it``.
         base_ring: Coefficient ring.
-        target_degree: Exact bar degree to enumerate.
+        target_degree: Exact bar degree to enumerate.  May be any integer,
+            including zero or negative, when the base operad has elements
+            of negative degree (e.g. a shifted operad).
     """
-    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
-    if arity < 2 or target_degree < 1:
+    if arity < 2:
         return
+
+    connectivity = getattr(operad_cls, "connectivity", 0)
 
     # ------------------------------------------------------------------
     # Weight 1: single internal vertex with arity leaves.
@@ -479,7 +357,8 @@ def enumerate_planar_trees_in_degree(
     # ------------------------------------------------------------------
     if weight_bound >= 1:
         dec_degree = target_degree - 1
-        if dec_degree >= 0:
+        min_dec_degree = connectivity * (arity - 1)
+        if dec_degree >= min_dec_degree:
             parent = operad_cls(arity, base_ring)
             if hasattr(parent, "planar_basis_it"):
                 for elem in parent.planar_basis_it(dec_degree):
@@ -492,21 +371,29 @@ def enumerate_planar_trees_in_degree(
     # both children's subtrees remain planar.  The two ranges are
     # {1,...,a} and {a+1,...,n} for a in 1..n-1.
     # ------------------------------------------------------------------
-    if weight_bound >= 2 and target_degree >= 2 and arity >= 3:
+    if weight_bound >= 2 and arity >= 3:
         root_parent = operad_cls(2, base_ring)
         if not hasattr(root_parent, "planar_basis_it"):
             return
 
-        for root_dec_degree in range(target_degree - 1):
-            remaining = target_degree - root_dec_degree - 1
-            for root_dec_elem in root_parent.planar_basis_it(root_dec_degree):
-                for root_dec in root_dec_elem.support():
-                    # Consecutive splits: child 1 gets {1,...,a}, child 2 gets {a+1,...,n}
-                    for a in range(1, arity):
-                        part1 = tuple(range(1, a + 1))
-                        part2 = tuple(range(a + 1, arity + 1))
-                        for deg1 in range(remaining + 1):
+        min_root_dec_degree = connectivity  # v_arity = 2
+
+        for a in range(1, arity):
+            part1 = tuple(range(1, a + 1))
+            part2 = tuple(range(a + 1, arity + 1))
+            min_deg1 = _min_subtree_bar_degree(len(part1), connectivity)
+            min_deg2 = _min_subtree_bar_degree(len(part2), connectivity)
+            min_child_total = min_deg1 + min_deg2
+            max_root_dec_degree = target_degree - 1 - min_child_total
+            for root_dec_degree in range(min_root_dec_degree, max_root_dec_degree + 1):
+                remaining = target_degree - root_dec_degree - 1
+                for root_dec_elem in root_parent.planar_basis_it(root_dec_degree):
+                    for root_dec in root_dec_elem.support():
+                        max_deg1 = remaining - min_deg2
+                        for deg1 in range(min_deg1, max_deg1 + 1):
                             deg2 = remaining - deg1
+                            if deg2 < min_deg2:
+                                continue
                             for c1 in _planar_subtrees_for_leaves(
                                 part1,
                                 weight_bound - 1,
@@ -543,8 +430,7 @@ def _planar_subtrees_for_leaves(
             yield leaf_set[0]
         return
 
-    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
-    if max_weight < 1 or target_degree < 1:
+    if max_weight < 1:
         return
 
     mapping = {i + 1: leaf_set[i] for i in range(n)}
@@ -847,6 +733,19 @@ def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
             yield key
 
 
+def _min_subtree_bar_degree(part_size: int, connectivity: int) -> int:
+    """Minimum bar degree of an internal subtree with ``part_size`` leaves.
+
+    For a tree with weight ≥ 1 and ``part_size`` leaves decorated by an operad
+    with given ``connectivity``, the minimum bar degree is
+    ``1 + connectivity * (part_size - 1)`` (achieved by a single-vertex corolla).
+    Returns 0 for leaves (``part_size == 1``).
+    """
+    if part_size == 1:
+        return 0
+    return 1 + connectivity * (part_size - 1)
+
+
 def _shuffle_partitions(sorted_leaves: tuple, k: int) -> Iterator[list]:
     """Yield all partitions of *sorted_leaves* into *k* non-empty parts sorted by min.
 
@@ -895,6 +794,7 @@ def _shuffle_subtrees_iter(
 
     A *shuffle tree* has children at every internal vertex sorted by their
     minimum leaf label.  Supports any leaf set (not just ``{1, ..., n}``).
+    Handles operads with negative-degree elements (e.g. shifted operads).
     """
     n = len(leaf_set)
     if n == 0:
@@ -903,28 +803,41 @@ def _shuffle_subtrees_iter(
         if target_degree == 0:
             yield leaf_set[0]
         return
-    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
-    if max_weight < 1 or target_degree < 1:
+    if max_weight < 1:
         return
 
+    connectivity = getattr(operad_cls, "connectivity", 0)
     sorted_ls = tuple(sorted(leaf_set))
 
     # Root has v_arity children (2 ≤ v_arity ≤ n).
     for v_arity in range(2, n + 1):
         root_parent = operad_cls(v_arity, base_ring)
+        # Minimum decoration degree for a vertex of this arity.
+        min_root_dec_deg = connectivity * (v_arity - 1)
         # The root vertex contributes (root_dec_deg + 1) to the bar degree.
-        for root_dec_deg in range(target_degree):
-            child_total = target_degree - root_dec_deg - 1
-            if child_total < 0:
-                continue
-            for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
-                if v_arity == n:
-                    # All children are individual leaves; child_total must be 0.
-                    if child_total == 0:
-                        yield (root_dec,) + sorted_ls
-                else:
-                    # Partition sorted_ls into v_arity non-empty shuffle parts.
-                    for parts in _shuffle_partitions(sorted_ls, v_arity):
+        if v_arity == n:
+            # Corolla: all children are individual leaves so child_total = 0.
+            root_dec_deg = target_degree - 1
+            if root_dec_deg >= min_root_dec_deg:
+                for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                    yield (root_dec,) + sorted_ls
+        else:
+            # Partition sorted_ls into v_arity non-empty shuffle parts.
+            for parts in _shuffle_partitions(sorted_ls, v_arity):
+                # Minimum child total: sum of minimum bar degrees of internal parts.
+                min_child_total = sum(
+                    _min_subtree_bar_degree(len(p), connectivity)
+                    for p in parts
+                    if len(p) >= 2
+                )
+                # root_dec_deg ranges from min_root_dec_deg up to the value where
+                # child_total = target_degree - root_dec_deg - 1 is still achievable.
+                max_root_dec_deg = target_degree - 1 - min_child_total
+                for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
+                    child_total = target_degree - root_dec_deg - 1
+                    for root_dec in _operad_basis_keys_in_degree(
+                        root_parent, root_dec_deg
+                    ):
                         yield from _shuffle_children_iter(
                             parts,
                             max_weight - 1,
@@ -947,6 +860,16 @@ def _shuffle_children_iter(
     *t_i* covers *parts[i]* and the bar-degrees of *t_1, ..., t_k* sum to *total_deg*.
     """
 
+    connectivity = getattr(operad_cls, "connectivity", 0)
+
+    # Precompute suffix minimum degrees: min_from[idx] is the minimum total
+    # bar-degree contribution from parts[idx:].
+    min_from = [0] * (len(parts) + 1)
+    for i in range(len(parts) - 1, -1, -1):
+        min_from[i] = (
+            _min_subtree_bar_degree(len(parts[i]), connectivity) + min_from[i + 1]
+        )
+
     # Build sub-trees for all children incrementally.
     def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
         """Yield lists of sub-trees for parts[idx:] with degrees summing to *remaining*."""
@@ -954,22 +877,23 @@ def _shuffle_children_iter(
             if remaining == 0:
                 yield []
             return
+        # Early termination: check if remaining can be achieved by parts[idx:].
+        if remaining < min_from[idx]:
+            return
         part = parts[idx]
         n_part = len(part)
         if n_part == 1:
             # Leaf — contributes 0 to bar degree.
-            if remaining < 0:
-                return
             first = part[0]
             for rest in _children_combinations(idx + 1, remaining):
                 yield [first] + rest
         else:
-            # Internal subtree — bar degree ≥ 1.
-            min_rest = sum(1 for p in parts[idx + 1 :] if len(p) >= 2)
-            max_d = remaining - min_rest
-            if max_d < 1:
+            # Internal subtree — bar degree ≥ min_deg_this.
+            min_deg_this = _min_subtree_bar_degree(n_part, connectivity)
+            max_d = remaining - min_from[idx + 1]
+            if max_d < min_deg_this:
                 return
-            for d_first in range(1, max_d + 1):
+            for d_first in range(min_deg_this, max_d + 1):
                 first_trees = list(
                     _shuffle_subtrees_iter(
                         part, max_weight, operad_cls, base_ring, d_first
@@ -1012,14 +936,15 @@ def enumerate_shuffle_trees_in_degree(
             ``sum(m_v - 1) = n - 1``).
         operad_cls: Operad factory.
         base_ring: Coefficient ring.
-        target_degree: Exact bar degree to enumerate (≥ 1 for non-trivial trees).
+        target_degree: Exact bar degree to enumerate.  May be any integer,
+            including zero or negative, when the base operad has elements
+            of negative degree (e.g. a shifted operad).
 
     Yields:
         Decorated shuffle trees as nested tuples valid as basis keys of
         ``BarConstruction(operad_cls)(arity)``.
     """
-    # TODO #21 There can be trees in degree < 1 if the operad has negative-degree elements!
-    if arity < 2 or target_degree < 1 or weight_bound < 1:
+    if arity < 2 or weight_bound < 1:
         return
     yield from _shuffle_subtrees_iter(
         tuple(range(1, arity + 1)), weight_bound, operad_cls, base_ring, target_degree
