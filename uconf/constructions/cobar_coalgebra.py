@@ -31,11 +31,15 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.algebraic.free_algebra import (
+    _module_basis_keys_in_degree,
+    _tuples_in_degree_precomputed,
+)
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -160,6 +164,80 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         )
         v_deg = sum(self._module.degree_on_basis(v) for v in v_tuple)
         return tree_deg + v_deg
+
+    # -----------------------------------------------------------------------
+    # Basis iteration
+    # -----------------------------------------------------------------------
+
+    def basis_it(self, d: int) -> Iterator["CobarComplexCoalgebra.Element"]:
+        """Iterate over basis elements of degree *d*.
+
+        Yields all ``(tree, v_tuple)`` pairs with total degree ``d``, where
+        ``tree`` is a cobar-construction shuffle tree of cobar degree ``d_cobar``
+        and ``v_tuple`` is a tuple of ``n`` basis keys of the coalgebra module
+        *V* with total V-degree ``d - d_cobar``.
+
+        The arity is bounded as follows:
+
+        - For cooperads with ``connectivity ≥ 1`` (cobar degree ≥ 0), arity
+          ``n ≤ d + 1`` when *V* is non-negatively graded.
+        - For cooperads with ``connectivity = 0`` (e.g. ``CoAssociative``), the
+          cobar degree can be negative.  The method uses ``n ≤ d + 1`` as a
+          practical arity bound, which may miss contributions from arity
+          ``n > d + 1`` with very negative cobar trees.  The result is always
+          complete when the cooperad has ``connectivity ≥ 1``.
+
+        Args:
+            d: Homological degree to enumerate.
+
+        Yields:
+            Elements of this module with degree ``d``.
+        """
+        from uconf.constructions.cobar_construction import CobarConstruction
+
+        V = self._module
+        C = self._cooperad_cls
+        R = self.base_ring()
+        cobar_cls = CobarConstruction(C)
+        connectivity = getattr(C, "connectivity", 0)
+
+        # Arity bound: n ≤ max_n.
+        # For connectivity ≥ 1: cobar_deg ≥ 0, so d_V ≤ d, and arity ≤ d + 1.
+        # For connectivity = 0: cobar_deg can be -(n-1), so d_V = d + n - 1,
+        #   and max_d_V grows with n.  Use the same bound n ≤ max(d+1, 1) as a
+        #   practical limit; enumerate V-keys up to max_d_V = d + max_n - 1.
+        max_n = max(d + 1, 1)
+        max_d_V = d + max_n - 1  # upper bound on V-tuple degree (cobar may be neg.)
+
+        # Pre-collect V-keys by degree from 0 to max_d_V.
+        v_keys_by_deg: dict[int, list] = {}
+        for d_v in range(max_d_V + 1):
+            keys = list(_module_basis_keys_in_degree(V, d_v))
+            if keys:
+                v_keys_by_deg[d_v] = keys
+
+        min_v_deg = min(v_keys_by_deg.keys(), default=0)
+
+        # Arity 1: single leaf (cobar tree = leaf "1", cobar degree = 0)
+        for v_key in v_keys_by_deg.get(d, []):
+            yield self.term((1, (v_key,)))
+
+        for n in range(2, max_n + 1):
+            cobar_comp = cobar_cls(n, R)
+            min_cobar = (connectivity - 1) * (n - 1)
+            for d_cobar in range(min_cobar, d + 1):
+                d_V = d - d_cobar
+                if d_V < 0 or d_V > max_d_V:
+                    continue
+                if d_V < n * min_v_deg:
+                    continue
+                v_tuples = list(_tuples_in_degree_precomputed(v_keys_by_deg, n, d_V))
+                if not v_tuples:
+                    continue
+                for cobar_elem in cobar_comp.basis_it(d_cobar):
+                    for tree_key in cobar_elem.support():
+                        for v_tuple in v_tuples:
+                            yield self.term((tree_key, v_tuple))
 
     # -----------------------------------------------------------------------
     # Differential
