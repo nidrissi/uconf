@@ -107,7 +107,6 @@ def _table_reduction_on_basis(self: BarrattEccles):
 
     def _compute_table_reduction(basis_element: tuple) -> Surjection.Element:
         """Compute table reduction on one Barratt--Eccles basis element."""
-
         n = self.arity()
         d = len(basis_element) - 1
         target = Surjection(n, self.base_ring())
@@ -140,7 +139,6 @@ def _table_reduction_on_basis(self: BarrattEccles):
 
 def _table_reduction(self: BarrattEccles.Element) -> Surjection.Element:
     """Evaluate table reduction on an element of the Barratt--Eccles operad."""
-
     parent = self.parent()
     if not hasattr(parent, "_table_reduction"):
         parent._table_reduction = parent.module_morphism(
@@ -161,7 +159,6 @@ def _section_on_basis(self: Surjection):
 
     def _compute_section(u: tuple) -> BarrattEccles.Element:
         """Compute the section image of one surjection basis element."""
-
         n = self.arity()
         target = BarrattEccles(n, self.base_ring())
         caesura_indices = Surjection._caesuras(u)
@@ -189,7 +186,6 @@ def _section_on_basis(self: Surjection):
 
 def _section(self: Surjection.Element) -> BarrattEccles.Element:
     """Evaluate the section map on an element of the surjection operad."""
-
     parent = self.parent()
     if not hasattr(parent, "_section"):
         parent._section = parent.module_morphism(

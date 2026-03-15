@@ -38,6 +38,7 @@ class ShiftedOperad(UniqueRepresentation):
     - Composition twist
       ``(-1)^(d * ((i-1)(n-1) + (m-1)|y|))``
       with ``m = arity(x)``, ``n = arity(y)``, and ``|y|`` in the base operad.
+
     """
 
     def __init__(self, operad_cls: OperadLike, shift_degree: int):
@@ -174,7 +175,6 @@ class ShiftedOperad(UniqueRepresentation):
 
         def underlying_parent(self):
             """Return the underlying base-operad Sage parent in this arity."""
-
             return self._base_parent
 
         def basis_it(self, d: int) -> "Iterator[ShiftedOperad.Element]":
@@ -243,7 +243,8 @@ class ShiftedOperad(UniqueRepresentation):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
 
             base_permuted = (
@@ -256,7 +257,6 @@ class ShiftedOperad(UniqueRepresentation):
 
         def base_element(self):
             """Return the underlying element in the base operad component."""
-
             parent = self._parent()
             return parent.base_parent().sum_of_terms(
                 (basis, coeff) for basis, coeff in self
@@ -264,7 +264,6 @@ class ShiftedOperad(UniqueRepresentation):
 
         def underlying_element(self):
             """Return the underlying element in the base operad component."""
-
             return self.base_element()
 
 

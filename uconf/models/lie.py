@@ -36,7 +36,6 @@ class Lie(CombinatorialFreeModule):
 
     def __init__(self, n, base_ring):
         """Initialize ``Lie(n)`` over ``base_ring``."""
-
         assert n >= 0, f"Arity must be non-negative. Got {n}."
         name = f"{self.name}{n}"
         super().__init__(
@@ -55,7 +54,6 @@ class Lie(CombinatorialFreeModule):
     @cached_method
     def _basis_keys(self) -> list[tuple[int, ...]]:
         """Return and cache the list of basis keys in this arity."""
-
         n = int(self.arity())
         if n == 0:
             return []
@@ -69,7 +67,6 @@ class Lie(CombinatorialFreeModule):
         Returns ``None`` only in arity ``0`` where no nonzero basis elements
         exist.
         """
-
         if self.arity() == 0:
             return None
 
@@ -98,7 +95,6 @@ class Lie(CombinatorialFreeModule):
 
     def _element_constructor_(self, x):
         """Build elements from basis keys or sparse dictionaries."""
-
         if isinstance(x, dict):
             clean_dict = {}
             for key, coeff in x.items():
@@ -115,14 +111,13 @@ class Lie(CombinatorialFreeModule):
             return self.term(clean_key)
 
         raise TypeError(
-            f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
+            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
         )
 
     def _bracket(
         self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]
     ):
         """Compute commutator ``[left, right]`` on associative expansions."""
-
         out: dict[tuple[int, ...], Any] = {}
         for wl, cl in left.items():
             for wr, cr in right.items():
@@ -145,7 +140,6 @@ class Lie(CombinatorialFreeModule):
 
         Results are cached via :func:`~sage.misc.cachefunc.cached_method`.
         """
-
         n = int(self.arity())
         if n == 0:
             return {}
@@ -160,7 +154,6 @@ class Lie(CombinatorialFreeModule):
     @cached_method
     def _word_basis(self) -> list[tuple[int, ...]]:
         """Return and cache the associative word basis in arity ``n``."""
-
         n = int(self.arity())
         if n == 0:
             return []
@@ -169,7 +162,6 @@ class Lie(CombinatorialFreeModule):
     @cached_method
     def _pbw_matrix(self):
         """Return the PBW change-of-basis matrix from Lie to words."""
-
         words = self._word_basis()
         keys = self._basis_keys()
 
@@ -198,7 +190,6 @@ class Lie(CombinatorialFreeModule):
         ``solve_right`` (fresh Gaussian elimination) in
         :meth:`_element_from_assoc`.
         """
-
         pbw = self._pbw_matrix()
 
         if self.arity() <= 1:
@@ -214,7 +205,6 @@ class Lie(CombinatorialFreeModule):
         Uses the precomputed left-inverse of the PBW matrix (a single
         matrix–vector multiply) instead of a fresh ``solve_right`` call.
         """
-
         if not assoc:
             return self.zero()
 
@@ -238,12 +228,10 @@ class Lie(CombinatorialFreeModule):
 
     def arity(self) -> int:
         """Return the arity of this Lie operad component."""
-
         return self._arity
 
     def basis_it(self, d: int) -> Iterator["Lie.Element"]:
         """Iterate over the canonical Lie basis in this fixed arity and the given degree."""
-
         if d == 0:
             for key in self._basis_keys():
                 yield self.term(key)
@@ -251,17 +239,14 @@ class Lie(CombinatorialFreeModule):
     @staticmethod
     def unit(base_ring):
         """Return the operadic unit in arity ``1``."""
-
         return Lie(1, base_ring)(())
 
     def degree_on_basis(self, element) -> int:
         """Return homological degree on basis elements (always ``0`` here)."""
-
         return 0
 
     def _repr_term(self, basis_element: tuple[int, ...]) -> str:
         """String representation of one basis element as nested brackets."""
-
         n = self.arity()
         if n == 0:
             return "0"
@@ -275,7 +260,6 @@ class Lie(CombinatorialFreeModule):
 
     def _latex_term(self, basis_element: tuple[int, ...]) -> str:
         """LaTeX representation of one basis element as nested brackets."""
-
         n = self.arity()
         if n == 0:
             return "0"
@@ -306,7 +290,6 @@ class Lie(CombinatorialFreeModule):
         3. Recover the Lie coordinates via a pre-cached left-inverse matrix
            (one matrix–vector multiply) rather than a fresh linear solve.
         """
-
         x_parent = x.parent()
         y_parent = y.parent()
         m = x_parent.arity()
@@ -363,18 +346,15 @@ class Lie(CombinatorialFreeModule):
 
         def arity(self) -> int:
             """Return the element arity."""
-
             return self._parent().arity()
 
         def boundary(self) -> "Lie.Element":
             """Apply the differential (trivial in this model)."""
-
             parent = self._parent()
             return parent.boundary(self)
 
         def permute(self, sigma: Permutation | list | tuple) -> "Lie.Element":
             """Apply the right action of a permutation on generators."""
-
             parent = self._parent()
 
             if isinstance(sigma, (list, tuple)):
@@ -383,7 +363,8 @@ class Lie(CombinatorialFreeModule):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
             else:
                 sigma_perm: Permutation = sigma

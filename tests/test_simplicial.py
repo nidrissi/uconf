@@ -33,6 +33,7 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
         One arity-1 cochain per tensor factor.
     chain : element of tensor([SimplicialChains(QQ)]*r)
         A chain with r tensor factors, r = len(cochains).
+
     """
     r = len(cochains)
     SC = SimplicialChains(QQ)

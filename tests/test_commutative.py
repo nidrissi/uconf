@@ -16,7 +16,6 @@ def _block_permutation(
     sigma: tuple[int, ...], i: int, tau: tuple[int, ...]
 ) -> tuple[int, ...]:
     """Return the block permutation ``sigma ∘_i tau`` in one-line notation."""
-
     shift = len(tau) - 1
     result = []
     for value in sigma:
@@ -31,7 +30,6 @@ def _block_permutation(
 
 def _inverse_one_line(sigma: tuple[int, ...]) -> tuple[int, ...]:
     """Return inverse permutation in one-line notation."""
-
     inv = [0] * len(sigma)
     for pos, value in enumerate(sigma, start=1):
         inv[value - 1] = pos
@@ -67,7 +65,6 @@ def test_commutative_requires_same_base_ring() -> None:
 @pytest.mark.parametrize("m,n,p", [(2, 3, 2), (3, 2, 3), (4, 2, 2)])
 def test_commutative_sequential_associativity_axiom(m: int, n: int, p: int) -> None:
     """Check ``(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z)`` for all valid ``i,j``."""
-
     x = Commutative(m, QQ)(())
     y = Commutative(n, QQ)(())
     z = Commutative(p, QQ)(())
@@ -81,7 +78,6 @@ def test_commutative_sequential_associativity_axiom(m: int, n: int, p: int) -> N
 @pytest.mark.parametrize("m,n,p", [(4, 2, 3), (5, 2, 2)])
 def test_commutative_parallel_associativity_axiom(m: int, n: int, p: int) -> None:
     """Check ``(x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y`` for ``i < k``."""
-
     x = Commutative(m, QQ)(())
     y = Commutative(n, QQ)(())
     z = Commutative(p, QQ)(())
@@ -94,7 +90,6 @@ def test_commutative_parallel_associativity_axiom(m: int, n: int, p: int) -> Non
 
 def test_commutative_axioms_on_linear_combinations() -> None:
     """Check associativity identities on non-basis elements."""
-
     x = 2 * Commutative(3, QQ)(())
     y = -3 * Commutative(2, QQ)(())
     z = 5 * Commutative(2, QQ)(())
@@ -110,7 +105,6 @@ def test_commutative_axioms_on_linear_combinations() -> None:
 
 def test_commutative_compose_equivariant_under_block_permutations() -> None:
     """Check ``(σx)∘_i(τy) = (x∘_{σ^{-1}(i)}y)^{σ∘_iτ}``."""
-
     m, n = 4, 3
     x = Commutative(m, QQ)(())
     y = Commutative(n, QQ)(())
@@ -129,7 +123,6 @@ def test_commutative_compose_equivariant_under_block_permutations() -> None:
 
 def test_commutative_equivariance_on_linear_combinations() -> None:
     """Check the same equivariance identity on non-basis elements."""
-
     x = 7 * Commutative(3, QQ)(())
     y = -5 * Commutative(2, QQ)(())
     sigma = (3, 1, 2)

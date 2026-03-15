@@ -75,6 +75,7 @@ class BarConstruction(UniqueRepresentation):
     For connected operads, P̄(1) = 0, so all internal vertices have arity >= 2.
     This bounds the number of internal vertices in arity n by n - 1, making
     every (arity, degree) basis finite without requiring an external weight cap.
+
     """
 
     def __init__(
