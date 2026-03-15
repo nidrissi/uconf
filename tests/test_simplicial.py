@@ -1,8 +1,5 @@
 """Tests for simplicial chains, cochains, and the surjection action."""
 
-# TODO Add tests for the surjection action on chains
-# TODO Add tests for cochain boundaries
-
 from random import Random
 from typing import Iterable
 
@@ -268,11 +265,12 @@ class TestSurjectionAction:
         s = list(iterable)
         return chain.from_iterable(combinations(s, r) for r in range(1, len(s) + 1))
 
+    @pytest.mark.parametrize("r", [2, 3])
     @pytest.mark.parametrize("d", range(1, 4))
-    def test_chain_map_property_arity2(self, d: int):
-        """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 2."""
+    def test_chain_map_property(self, r: int, d: int):
+        """∂(θ_u(x_1,…,x_r)) = θ_{∂u}(x) + Σ_k (-1)^{|u|+Σ_{l<k}|x_l|} θ_u(…,∂x_k,…)."""
         rng = Random(20260312)
-        basis = list(Surjection(2, QQ).planar_basis_it(d))
+        basis = list(Surjection(r, QQ).planar_basis_it(d))
         possible_simplices: dict[int, list[tuple[int, ...]]] = {}
         for n in range(d, d + 4):
             possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
@@ -280,49 +278,21 @@ class TestSurjectionAction:
         for _ in range(30):
             u = rng.choice(list(basis))
             n = rng.randint(d, d + 3)
-            x = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-            y = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-            lhs = _surjection_cochain_action(u, [x, y]).coboundary()
-            rhs_1 = _surjection_cochain_action(u.boundary(), [x, y])
-            rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y])
-            rhs_3 = _surjection_cochain_action(u, [x, y.coboundary()])
-            rhs = (
-                rhs_1
-                + (-1) ** (u.degree()) * rhs_2
-                + (-1) ** (u.degree() + x.degree()) * rhs_3
-            )
+            cochains = [
+                SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
+                for _ in range(r)
+            ]
 
-            assert _as_dict(lhs) == _as_dict(rhs), (
-                f"Chain map failed: u={list(u.support())}, x={x}, y={y}"
-            )
+            lhs = _surjection_cochain_action(u, cochains).coboundary()
+            rhs = _surjection_cochain_action(u.boundary(), cochains)
+            cum_deg = 0
+            for k in range(r):
+                sign = (-1) ** (u.degree() + cum_deg)
+                modified = list(cochains)
+                modified[k] = cochains[k].coboundary()
+                rhs = rhs + sign * _surjection_cochain_action(u, modified)
+                cum_deg += cochains[k].degree()
 
-    @pytest.mark.parametrize("d", range(1, 4))
-    def test_chain_map_property_arity3(self, d: int):
-        """∂(θ_u(x)) = θ_{∂u}(x) + (-1)^|u| θ_u(∂x) for arity 3."""
-        rng = Random(20260312)
-        basis = list(Surjection(3, QQ).planar_basis_it(d))
-        possible_simplices: dict[int, list[tuple[int, ...]]] = {}
-        for n in range(d, d + 4):
-            possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))
-
-        for _ in range(30):
-            u = rng.choice(list(basis))
-            n = rng.randint(d, d + 3)
-            x = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-            y = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-            z = SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-
-            lhs = _surjection_cochain_action(u, [x, y, z]).coboundary()
-            rhs_1 = _surjection_cochain_action(u.boundary(), [x, y, z])
-            rhs_2 = _surjection_cochain_action(u, [x.coboundary(), y, z])
-            rhs_3 = _surjection_cochain_action(u, [x, y.coboundary(), z])
-            rhs_4 = _surjection_cochain_action(u, [x, y, z.coboundary()])
-            rhs = (
-                rhs_1
-                + (-1) ** (u.degree()) * rhs_2
-                + (-1) ** (u.degree() + x.degree()) * rhs_3
-                + (-1) ** (u.degree() + x.degree() + y.degree()) * rhs_4
-            )
             assert _as_dict(lhs) == _as_dict(rhs), (
                 f"Chain map failed: u={list(u.support())}, n={n}"
             )
