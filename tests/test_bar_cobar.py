@@ -1212,5 +1212,82 @@ class TestBasisIt:
             assert planar <= full
 
 
+class TestBarConstructionNegativeDegree:
+    """Regression tests for BarConstruction with negative-degree operads (issue #21)."""
+
+    def test_basis_it_shifted_lie_arity2_degree0(self):
+        """B(sLie)(2) in degree 0 should be non-empty (issue #21 example)."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        BsLie2 = BsLie(2, QQ)
+        basis = list(BsLie2.basis_it(0))
+        assert basis != []
+
+    def test_basis_it_shifted_lie_arity2_degree0_exact_key(self):
+        """B(sLie)(2) in degree 0 has exactly one corolla tree."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        BsLie2 = BsLie(2, QQ)
+        basis = list(BsLie2.basis_it(0))
+        assert len(basis) == 1
+        (key, coeff) = next(iter(basis[0]))
+        # Corolla with root decorated by sLie(2) basis element (1,) and leaves 1, 2
+        assert key == ((1,), 1, 2)
+        assert coeff == 1
+
+    def test_basis_it_shifted_lie_arity3_degree_minus1(self):
+        """B(sLie)(3) in degree -1 has two corolla trees (one per Lie(3) basis element)."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        BsLie3 = BsLie(3, QQ)
+        basis = list(BsLie3.basis_it(-1))
+        assert len(basis) == 2  # Two Lie(3) basis elements
+
+    def test_basis_it_shifted_lie_arity3_degree0(self):
+        """B(sLie)(3) in degree 0 has multi-vertex shuffle trees."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        BsLie3 = BsLie(3, QQ)
+        basis = list(BsLie3.basis_it(0))
+        assert basis != []
+
+    def test_basis_it_shifted_lie_negative_degree_only_valid(self):
+        """B(sLie)(2) in degree -1 should be empty (below minimum)."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        BsLie2 = BsLie(2, QQ)
+        # sLie(2) has degree -1; minimum bar degree of corolla = -1+1 = 0.
+        # No tree can have bar degree < 0 for arity 2.
+        assert list(BsLie2.basis_it(-1)) == []
+
+    def test_basis_it_shifted_lie_all_shuffle_trees(self):
+        """Every element from basis_it on B(sLie) is a valid shuffle tree."""
+        from uconf.core.trees import is_shuffle_tree
+
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        B3 = BsLie(3, QQ)
+        for d in range(-1, 2):
+            for elem in B3.basis_it(d):
+                for key, _ in elem:
+                    assert is_shuffle_tree(key), (
+                        f"Not a shuffle tree: {key} in degree {d}"
+                    )
+
+    def test_boundary_squared_zero_shifted_lie(self):
+        """Boundary squares to zero on B(sLie) basis elements."""
+        sLie = ShiftedOperad(Lie, -1)
+        BsLie = BarConstruction(sLie)
+        for n in (2, 3):
+            B = BsLie(n, QQ)
+            for d in range(-1, 2):
+                for elem in B.basis_it(d):
+                    d1 = B.boundary(elem)
+                    d2 = B.boundary(d1)
+                    assert d2 == B.zero(), (
+                        f"boundary^2 != 0 on {elem} in B(sLie)({n}) degree {d}"
+                    )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

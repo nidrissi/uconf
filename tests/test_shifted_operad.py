@@ -84,3 +84,45 @@ def test_readme_example_smoke() -> None:
     z = shift_lie.compose(x, 2, x)
     expected = -Lie.compose(Lie(2, QQ)((1,)), 2, Lie(2, QQ)((1,)))
     assert _as_dict(z.base_element()) == _as_dict(expected)
+
+
+def test_basis_it_negative_shift() -> None:
+    """ShiftedOperad(Lie, -1)(n) has elements in degree -(n-1)."""
+    sLie = ShiftedOperad(Lie, -1)
+
+    # arity 2: degree = 0 + (-1)*(2-1) = -1
+    sLie2 = sLie(2, QQ)
+    assert list(sLie2.basis_it(-1)) != []
+    assert list(sLie2.basis_it(0)) == []
+
+    # arity 3: degree = 0 + (-1)*(3-1) = -2
+    sLie3 = sLie(3, QQ)
+    assert list(sLie3.basis_it(-2)) != []
+    assert list(sLie3.basis_it(-1)) == []
+    assert list(sLie3.basis_it(0)) == []
+
+
+def test_basis_it_positive_shift() -> None:
+    """ShiftedOperad(Lie, 1)(n) has elements in degree n-1."""
+    sLie = ShiftedOperad(Lie, 1)
+
+    # arity 2: degree = 0 + 1*(2-1) = 1
+    sLie2 = sLie(2, QQ)
+    assert list(sLie2.basis_it(1)) != []
+    assert list(sLie2.basis_it(0)) == []
+
+    # arity 3: degree = 0 + 1*(3-1) = 2
+    sLie3 = sLie(3, QQ)
+    assert list(sLie3.basis_it(2)) != []
+    assert list(sLie3.basis_it(1)) == []
+
+
+def test_basis_it_keys_match_degree_on_basis() -> None:
+    """Every key yielded by basis_it(d) satisfies degree_on_basis == d."""
+    sLie = ShiftedOperad(Lie, -1)
+    for n in (2, 3):
+        comp = sLie(n, QQ)
+        d = -(n - 1)
+        for elem in comp.basis_it(d):
+            for key, _ in elem:
+                assert comp.degree_on_basis(key) == d
