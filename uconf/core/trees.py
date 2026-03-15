@@ -306,131 +306,6 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     return validate_vertex(tree)
 
 
-def enumerate_trees_by_weight(
-    arity: int,
-    weight_bound: int,
-    operad_cls,
-    base_ring,
-) -> Iterator[tuple]:
-    """Enumerate all valid trees in a given arity up to weight bound.
-
-    Yields tree basis keys with leaves {1, ..., arity} and weight in [1, weight_bound].
-    Uses the operad's ``basis_it`` method if available.
-    """
-    if arity < 2:
-        return  # No nontrivial trees for arity < 2 (connected assumption)
-
-    # Weight 1 trees: single internal vertex with arity leaves
-    if weight_bound >= 1:
-        parent = operad_cls(arity, base_ring)
-        if hasattr(parent, "basis_it"):
-            # Iterate over all degrees
-            # TODO #21 This "reasonable upper bound" is hacky. We can use the connectivity assumption to get a better bound.
-            for deg in range(20):
-                try:
-                    for elem in parent.basis_it(deg):
-                        dec = next(iter(elem.support()))
-                        tree = (dec,) + tuple(range(1, arity + 1))
-                        yield tree
-                except (StopIteration, ValueError):
-                    break
-        else:
-            # Fallback: just use degree 0
-            try:
-                for dec in parent.basis():
-                    tree = (dec,) + tuple(range(1, arity + 1))
-                    yield tree
-            except (AttributeError, NotImplementedError):
-                pass
-
-    # Weight >= 2: recursively combine smaller trees
-    if weight_bound >= 2:
-        # For each way to partition arity into vertex_arity children
-        for v_arity in range(2, arity):  # vertex_arity of root
-            # For each decoration of the root
-            root_parent = operad_cls(v_arity, base_ring)
-            root_decorations = []
-            if hasattr(root_parent, "basis_it"):
-                for deg in range(20):
-                    try:
-                        for elem in root_parent.basis_it(deg):
-                            root_decorations.append(next(iter(elem.support())))
-                    except (StopIteration, ValueError):
-                        break
-            else:
-                try:
-                    root_decorations = list(root_parent.basis())
-                except (AttributeError, NotImplementedError):
-                    pass
-
-            for root_dec in root_decorations:
-                # For each partition of {1,...,arity} into v_arity nonempty subsets
-                # and for each assignment of subtrees to these subsets
-                yield from _enumerate_with_root(
-                    arity, v_arity, root_dec, weight_bound - 1, operad_cls, base_ring
-                )
-
-
-def _enumerate_with_root(
-    arity: int,
-    v_arity: int,
-    root_dec: tuple,
-    remaining_weight: int,
-    operad_cls,
-    base_ring,
-) -> Iterator[tuple]:
-    """Helper to enumerate trees with a fixed root vertex."""
-    from itertools import combinations
-
-    # Enumerate partitions of {1,...,arity} into v_arity nonempty ordered parts
-    # For simplicity, we use ordered partitions where part[i] contains min(part[i])
-    # in increasing order across parts
-
-    if v_arity == 2:
-        # Partition into two parts
-        leaves_set = set(range(1, arity + 1))
-        for size in range(1, arity):
-            for part1 in combinations(range(1, arity + 1), size):
-                part1_set = set(part1)
-                part2 = tuple(sorted(leaves_set - part1_set))
-                # Child 1 gets part1, child 2 gets part2
-                # Enumerate subtrees for each part
-                for child1 in _subtrees_for_leaves(
-                    part1, remaining_weight, operad_cls, base_ring
-                ):
-                    for child2 in _subtrees_for_leaves(
-                        part2, remaining_weight - weight(child1), operad_cls, base_ring
-                    ):
-                        if weight(child1) + weight(child2) <= remaining_weight:
-                            yield (root_dec, child1, child2)
-
-
-def _subtrees_for_leaves(
-    leaf_set: tuple,
-    max_weight: int,
-    operad_cls,
-    base_ring,
-) -> Iterator:
-    """Enumerate subtrees with exactly the given leaves (as a tuple)."""
-    n = len(leaf_set)
-    if n == 0:
-        return
-    if n == 1:
-        yield leaf_set[0]  # Single leaf
-        return
-
-    # For n >= 2, we need internal vertices
-    if max_weight < 1:
-        return
-
-    # Create a mapping from {1,...,n} to leaf_set
-    mapping = {i + 1: leaf_set[i] for i in range(n)}
-
-    # Enumerate trees with arity n and relabel
-    for tree in enumerate_trees_by_weight(n, max_weight, operad_cls, base_ring):
-        yield relabel_leaves(tree, mapping)
-
-
 def enumerate_planar_trees_in_degree(
     arity: int,
     weight_bound: int,
@@ -960,7 +835,9 @@ def _shuffle_subtrees_iter(
                 max_root_dec_deg = target_degree - 1 - min_child_total
                 for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
                     child_total = target_degree - root_dec_deg - 1
-                    for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                    for root_dec in _operad_basis_keys_in_degree(
+                        root_parent, root_dec_deg
+                    ):
                         yield from _shuffle_children_iter(
                             parts,
                             max_weight - 1,
@@ -989,7 +866,9 @@ def _shuffle_children_iter(
     # bar-degree contribution from parts[idx:].
     min_from = [0] * (len(parts) + 1)
     for i in range(len(parts) - 1, -1, -1):
-        min_from[i] = _min_subtree_bar_degree(len(parts[i]), connectivity) + min_from[i + 1]
+        min_from[i] = (
+            _min_subtree_bar_degree(len(parts[i]), connectivity) + min_from[i + 1]
+        )
 
     # Build sub-trees for all children incrementally.
     def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
