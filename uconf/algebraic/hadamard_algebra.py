@@ -17,10 +17,12 @@ extended multilinearly.  The differential on ``A ⊗ B`` is the tensor one:
 from __future__ import annotations
 
 import itertools
+from typing import Iterator
 
 from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.algebraic.free_algebra import _module_basis_keys_in_degree
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -106,6 +108,33 @@ class HadamardTensorAlgebra(OperadAlgebra):
                         ) * (scalar * left_out_coeff * right_out_coeff)
 
         return result
+
+    def basis_it(self, d: int) -> Iterator:
+        """Iterate over basis elements of degree *d*.
+
+        Yields all ``(left_key, right_key)`` tensor-module basis elements with
+        ``deg_A(left_key) + deg_B(right_key) = d``.  Both factors are
+        enumerated via :func:`_module_basis_keys_in_degree`.
+
+        Args:
+            d: Homological degree to enumerate.
+
+        Yields:
+            Elements of the tensor module ``A ⊗ B`` with degree ``d``.
+        """
+        left_mod = self.left_module
+        right_mod = self.right_module
+        for d_left in range(d + 1):
+            d_right = d - d_left
+            left_keys = list(_module_basis_keys_in_degree(left_mod, d_left))
+            if not left_keys:
+                continue
+            right_keys = list(_module_basis_keys_in_degree(right_mod, d_right))
+            if not right_keys:
+                continue
+            for left_key in left_keys:
+                for right_key in right_keys:
+                    yield self.module.term((left_key, right_key))
 
     def boundary(self, a):
         """Tensor differential induced from the two dg-module differentials."""

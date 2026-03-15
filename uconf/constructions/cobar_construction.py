@@ -23,7 +23,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -38,6 +38,7 @@ from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
     decoration,
+    enumerate_shuffle_trees_cobar_in_degree,
     expand_vertex,
     graft,
     is_leaf,
@@ -132,6 +133,7 @@ class CobarConstruction(UniqueRepresentation):
             self.factory = factory
             self._arity = int(n)
             self._cooperad_cls = factory.cooperad_cls
+            self._max_weight = max(0, self._arity - 1)
 
             name = f"{factory.name}{n}"
             super().__init__(
@@ -217,6 +219,33 @@ class CobarConstruction(UniqueRepresentation):
             if is_leaf(tree):
                 return 0
             return subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
+
+        def basis_it(self, d: int) -> Iterator["CobarConstruction.Element"]:
+            """Iterate over shuffle-tree basis elements of degree *d*.
+
+            Works for **any** connected cooperad.  For the cobar construction
+            the degree of a tree is ``Σ_v (deg_C(dec(v)) - 1)``, which may be
+            negative when the cooperad has degree-0 elements (e.g.
+            ``CoAssociative``).
+
+            Args:
+                d: Cobar degree to enumerate.
+
+            Yields:
+                Elements of this cobar component with cobar degree ``d``.
+            """
+            n = self._arity
+            base_ring = self.base_ring()
+
+            if n == 1:
+                if d == 0:
+                    yield self.term(1)
+                return
+
+            for tree in enumerate_shuffle_trees_cobar_in_degree(
+                n, self._max_weight, self._cooperad_cls, base_ring, d
+            ):
+                yield self.term(tree)
 
         def _repr_term(self, basis_element) -> str:
             """String representation of one cobar basis tree."""

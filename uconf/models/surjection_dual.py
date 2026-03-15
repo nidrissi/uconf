@@ -29,7 +29,8 @@ class SurjectionDual(Surjection):
     def basis_it(self, d: int):
         """Iterate over basis elements in dual degree ``d`` (non-positive)."""
 
-        assert d <= 0, f"d must be a non-positive integer, got d={d}."
+        if d > 0:
+            return  # SurjectionDual lives in non-positive degrees
         r = self.arity()
         for values in itertools.product(range(1, r + 1), repeat=r - d):
             res = self(values)
