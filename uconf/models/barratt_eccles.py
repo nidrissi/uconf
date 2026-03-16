@@ -36,7 +36,6 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def __init__(self, n, base_ring):
         """Initialize ``E_n`` over ``base_ring``."""
-
         assert n >= 0, f"Arity must be non-negative. Got {n}."
         name = f"{self.name}{n}"
         super().__init__(
@@ -78,7 +77,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 return self.zero()
             return self.term(clean_key)
         raise TypeError(
-            f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
+            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
         )
 
     def _validate_basis_key(
@@ -151,18 +150,15 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def arity(self) -> int:
         """Return the fixed arity of this operad component."""
-
         return self._arity
 
     @staticmethod
     def unit(base_ring) -> "BarrattEccles.Element":
         """Return the operadic unit in arity ``1``."""
-
         return BarrattEccles(1, base_ring)(((1,),))
 
     def planar_basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
         """Iterate over planar basis elements in degree ``d``."""
-
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         u = self._symmetric_group.identity()
@@ -175,7 +171,6 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
         """Iterate over all basis elements in degree ``d``."""
-
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
@@ -193,7 +188,6 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split a basis element into planar representative and group element."""
-
         perm = basis_element[0]
         perm_inverse = perm.inverse()
         permuted = tuple(perm_inverse * p for p in basis_element)
@@ -216,13 +210,11 @@ class BarrattEccles(CombinatorialFreeModule):
     # 2. Implement the hook the Category expects
     def degree_on_basis(self, element: tuple) -> int:
         """Return homological degree of a basis element."""
-
         return len(element) - 1
 
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
         """Operadic composition ``x \\circ_i y`` using shuffle/EZ lifting."""
-
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
         m = x.parent().arity()
@@ -305,7 +297,6 @@ class BarrattEccles(CombinatorialFreeModule):
 
     def _complexity_on_basis(self, element: tuple) -> int:
         """Return pairwise complexity of a basis element."""
-
         result = 0
         n = self.arity()
 
@@ -327,24 +318,20 @@ class BarrattEccles(CombinatorialFreeModule):
 
         def arity(self) -> int:
             """Return the arity of this element."""
-
             return self._parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with a group element."""
-
             parent = self._parent()
             return parent.planarize(self)
 
         def boundary(self) -> BarrattEccles.Element:
             """Apply the simplicial differential."""
-
             parent = self._parent()
             return parent.boundary(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
-
             parent = self._parent()
 
             return max(
@@ -363,7 +350,8 @@ class BarrattEccles(CombinatorialFreeModule):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
 
             def permuted_term_generator():
@@ -406,5 +394,4 @@ class BarrattEccles(CombinatorialFreeModule):
 
         def table_reduction(self) -> Surjection.Element:
             """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
-
             raise NotImplementedError("Table reduction is not implemented yet")

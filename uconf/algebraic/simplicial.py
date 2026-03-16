@@ -89,6 +89,7 @@ def surjection_chain_action(
     ------
     TypeError
         If ``surj`` and ``chain`` have different base rings.
+
     """
     if surj.parent().base_ring() != chain.parent().base_ring():
         raise TypeError("Surjection and chain must have the same base ring.")
@@ -147,7 +148,8 @@ def surjection_chain_action(
 
         - **Final intervals**: Positions i where surj_tuple[i] appears for the last time
         - **Inner intervals**: All other positions
-        - **position_exp**: Sum of the positions of the last vertices in all inner interval simplex factors
+        - **position_exp**: Sum of the positions of the last vertices in all inner interval
+          simplex factors
         - **ordering_sign_exp**: Koszul sign computed from inversions when sorting by
           u-values, weighted by lengths of simplex factors
         - **lengths**: For final intervals, the length is len(simplex_factor) - 1;
@@ -157,20 +159,22 @@ def surjection_chain_action(
         ------
         AssertionError
             If the lengths of surj_tuple and simplex_factors do not match.
+
         """
         assert len(surj_tuple) == len(simplex_factors), (
             "Length mismatch in BF sign computation."
         )
 
-        # Find the indices of "final" intervals, i.e., the values i such that u_i is the last occurrence of that value in surj_tuple.
-        # The other intervals are called "inner" intervals.
+        # Find the indices of "final" intervals, i.e., the values i such that u_i is the last
+        # occurrence of that value in surj_tuple. The other intervals are called "inner" intervals.
         final_intervals: dict[int, int] = dict()
         for i in reversed(range(len(surj_tuple))):
             u = surj_tuple[i]
             if u not in final_intervals:
                 final_intervals[u] = i
 
-        # The position exponent is the sum of the positions of the last vertices in each *inner* interval.
+        # The position exponent is the sum of the positions of the last vertices in each
+        # *inner* interval.
         position_exp = 0
         for i in range(len(surj_tuple)):
             u = surj_tuple[i]
@@ -178,7 +182,8 @@ def surjection_chain_action(
                 # last vertex of the simplex factor
                 position_exp += positions[simplex_factors[i][-1]]
 
-        # The length of a final interval is its number of elements minus one, the length of inner intervals is their number of elements.
+        # The length of a final interval is its number of elements minus one; the length of
+        # inner intervals is their number of elements.
         lengths = []
         for i, u in enumerate(surj_tuple):
             if i == final_intervals[u]:
@@ -222,6 +227,7 @@ def surjection_chain_action(
         Returns
         -------
         tuple or None
+
         """
         if not simplex_list:
             return None
@@ -326,6 +332,7 @@ def surjection_cochain_action(
     ------
     TypeError
         If ``surj`` and the cochains have different base rings.
+
     """
     r = surj.arity()
     assert len(cochains) == r, f"Expected {r} cochains, got {len(cochains)}."

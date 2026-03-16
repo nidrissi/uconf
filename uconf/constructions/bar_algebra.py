@@ -68,6 +68,7 @@ class BarComplexAlgebra(CombinatorialFreeModule):
     - ``a_tuple`` is a tuple of ``n`` basis keys of the underlying module A.
 
     The degree is ``deg_bar(tree) + Σ_i deg_A(a_tuple[i])``.
+
     """
 
     name: ClassVar[str] = "B"

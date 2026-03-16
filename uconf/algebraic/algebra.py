@@ -61,6 +61,7 @@ class OperadAlgebra(
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         operad_cls: Operad provider (class or factory, OperadComponent-compatible).
         structure_map: Callable implementing the P-algebra action γ.
+
     """
 
     def __init__(
@@ -92,6 +93,7 @@ class OperadAlgebra(
         Raises:
             TypeError: If ``p_element`` is not an element of ``operad_cls``.
             ValueError: If ``len(algebra_elements) != p_element.arity()``.
+
         """
         element_cls = getattr(self.operad_cls, "Element", None)
         if isinstance(element_cls, type) and not isinstance(p_element, element_cls):
@@ -116,6 +118,7 @@ class OperadAlgebra(
 
         Returns:
             The boundary ∂_A(a) in the module.
+
         """
         return self.module.boundary(a)
 

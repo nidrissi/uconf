@@ -68,6 +68,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
     - ``v_tuple`` is a tuple of ``n`` basis keys of the underlying module V.
 
     The degree is ``deg_cobar(tree) + Σ_i deg_V(v_tuple[i])``.
+
     """
 
     name: ClassVar[str] = "Ω"

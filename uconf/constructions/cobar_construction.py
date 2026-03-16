@@ -72,6 +72,7 @@ class CobarConstruction(UniqueRepresentation):
         trees to shuffle form.  Utilities ``to_shuffle_tree_cobar`` and
         ``is_shuffle_tree`` in ``uconf.core.trees`` can be used explicitly when
         needed.
+
     """
 
     def __init__(self, cooperad_cls: CooperadLike):
