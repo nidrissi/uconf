@@ -123,11 +123,9 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Operad morphisms and pullbacks
 
-- `core/morphism.py` — `OperadMorphism`, `PullbackAlgebra`
+- `core/morphism.py` — `OperadMorphism`
   - `OperadMorphism(source, target, on_element)`: wraps a linear map between operad
     components into a morphism `f: P → Q`.
-  - `PullbackAlgebra(morphism, algebra)`: given a `Q`-algebra and a morphism `f: P → Q`,
-    produces a `P`-algebra whose structure map is `γ^P(p; a_1,…,a_n) = γ^Q(f(p); a_1,…,a_n)`.
 
 - `morphisms/classical.py` — `ass_to_com`, `lie_to_ass`
   - `ass_to_com`: augmentation morphism `Ass → Com` (sends every permutation `σ ∈ S_n`
@@ -140,6 +138,10 @@ attribute on concrete models, property on wrappers) representing the constant
   - On arbitrary trees, extends via the universal property of the free operad:
     `Δ(T) = Δ(gen_root) ∘_k Δ(child_k) ∘ … ∘_1 Δ(child_1)`.
   - Target operad is `HadamardProduct(BarrattEccles, CobarConstruction(C))`.
+
+- `core/pullback_algebra.py` — `PullbackAlgebra'
+  - `PullbackAlgebra(morphism, algebra)`: given a `Q`-algebra and a morphism `f: P → Q`,
+    produces a `P`-algebra whose structure map is `γ^P(p; a_1,…,a_n) = γ^Q(f(p); a_1,…,a_n)`.
 
 - `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.

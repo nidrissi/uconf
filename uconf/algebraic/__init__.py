@@ -21,6 +21,7 @@ from uconf.algebraic.spherical import (
     ReducedSphereCochains,
     SurjectionSphereCochainAlgebra,
 )
+from uconf.algebraic.pullback_algebra import PullbackAlgebra
 
 __all__ = [
     "OperadAlgebra",
@@ -37,4 +38,5 @@ __all__ = [
     "surjection_cochain_action",
     "ReducedSphereCochains",
     "SurjectionSphereCochainAlgebra",
+    "PullbackAlgebra",
 ]

@@ -46,7 +46,8 @@ from uconf.constructions import (
     CobarConstruction,
     e_comodule_on_generator,
 )
-from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, PullbackAlgebra
+from uconf.core import CooperadComponent, OperadComponent, OperadMorphism
+from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.models import (
     Associative,
     BarrattEccles,
@@ -126,9 +127,7 @@ def _table_reduction_on_basis(self: BarrattEccles):
                     k2, removed = [], []
                     degenerate = False
                     for idx, i in enumerate(pi):
-                        filtered = [
-                            i for i in basis_element[idx].tuple() if i not in removed
-                        ]
+                        filtered = [i for i in basis_element[idx].tuple() if i not in removed]
                         if idx > 0 and k2[-1] == filtered[0]:
                             degenerate = True
                             break
