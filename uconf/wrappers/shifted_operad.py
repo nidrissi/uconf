@@ -156,9 +156,7 @@ class ShiftedOperad(UniqueRepresentation):
 
         def _boundary_on_basis(self, basis_element):
             sign = shifted_boundary_sign(self.factory.shift_degree)
-            base_bdry = sign * self._base_parent.boundary(
-                self._base_parent.term(basis_element)
-            )
+            base_bdry = sign * self._base_parent.boundary(self._base_parent.term(basis_element))
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
 
         def __call__(self, x) -> "ShiftedOperad.Element":
@@ -166,6 +164,10 @@ class ShiftedOperad(UniqueRepresentation):
 
         def arity(self) -> int:
             return self._arity
+
+        @property
+        def connectivity(self) -> int:
+            return self.factory.connectivity
 
         def base_ring(self):
             return self._base_parent.base_ring()
@@ -202,9 +204,7 @@ class ShiftedOperad(UniqueRepresentation):
                 base_coerced = self._base_parent.sum_of_terms(
                     (basis, coeff) for basis, coeff in element
                 )
-                return self.sum_of_terms(
-                    (basis, coeff) for basis, coeff in base_coerced
-                )
+                return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
         def degree_on_basis(self, basis_element) -> int:
             if isinstance(basis_element, ShiftedOperad.Element):
@@ -223,9 +223,7 @@ class ShiftedOperad(UniqueRepresentation):
         def unit(self) -> "ShiftedOperad.Element":
             return self.factory.unit(self.base_ring())
 
-    class Element(
-        ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element
-    ):
+    class Element(ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element):
         """Element wrapper carrying shifted operad structure maps."""
 
         def arity(self) -> int:
@@ -239,9 +237,7 @@ class ShiftedOperad(UniqueRepresentation):
             parent = self._parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
@@ -258,9 +254,7 @@ class ShiftedOperad(UniqueRepresentation):
         def base_element(self):
             """Return the underlying element in the base operad component."""
             parent = self._parent()
-            return parent.base_parent().sum_of_terms(
-                (basis, coeff) for basis, coeff in self
-            )
+            return parent.base_parent().sum_of_terms((basis, coeff) for basis, coeff in self)
 
         def underlying_element(self):
             """Return the underlying element in the base operad component."""
