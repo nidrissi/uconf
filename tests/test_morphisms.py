@@ -21,11 +21,11 @@ from uconf import (
     Lie,
     OperadAlgebra,
     OperadMorphism,
-    PullbackAlgebra,
     ass_to_com,
     lie_to_ass,
     make_e_comodule_morphism,
 )
+from uconf.algebraic.pullback_algebra import PullbackAlgebra
 
 
 def _as_dict(x):
@@ -141,9 +141,7 @@ class TestLieToAssMorphism:
             perm_list = list(sigma.tuple())
             lhs = lie_to_ass(x.permute(perm_list))
             rhs = lie_to_ass(x).permute(perm_list)
-            assert _as_dict(lhs) == _as_dict(rhs), (
-                f"Equivariance failed for sigma={perm_list}"
-            )
+            assert _as_dict(lhs) == _as_dict(rhs), f"Equivariance failed for sigma={perm_list}"
 
     @pytest.mark.parametrize("i", [1, 2])
     def test_compose_compatibility(self, i):
