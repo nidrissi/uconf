@@ -156,8 +156,9 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
             cobar_gen = make_cobar_generator(current_d_elem)
             result += be_elem.tensor(cobar_gen)
         else:
-            # ρ(σ̄) = BE_n.rho([σ_k, σ_{k-1}, ..., σ_1])
-            be_elem = be_component.rho(list(reversed(sigma_bar)))
+            # TODO check consistency with article
+            # ρ(σ̄) = BE_n.rho([σ_1, σ_2, ..., σ_k])
+            be_elem = be_component.rho(list(sigma_bar))
 
             if be_elem:
                 # σ_prod = σ_1 · σ_2 · ... · σ_k
