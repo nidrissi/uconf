@@ -58,6 +58,17 @@ def _component_basis_in_degree(component, d: int) -> list:
     return result
 
 
+def _min_component_degree(component, arity: int) -> int:
+    """Return the minimum possible degree in a fixed-arity component.
+
+    If the underlying operad has connectivity ``k`` (i.e. degrees in arity
+    ``n`` are bounded below by ``k*(n-1)``), then this component has minimum
+    degree ``k*(arity-1)``.
+    """
+    connectivity = int(getattr(component, "connectivity", 0))
+    return connectivity * (arity - 1)
+
+
 class HadamardProduct(UniqueRepresentation):
     """Factory for Hadamard-product operad components."""
 
@@ -124,18 +135,14 @@ class HadamardProduct(UniqueRepresentation):
                 left_y_term = left_y.term(left_y_basis)
                 right_y_term = right_y.term(right_y_basis)
 
-                left_composed = self.left_operad_cls.compose(
-                    left_x_term, i, left_y_term
-                )
-                right_composed = self.right_operad_cls.compose(
-                    right_x_term, i, right_y_term
-                )
+                left_composed = self.left_operad_cls.compose(left_x_term, i, left_y_term)
+                right_composed = self.right_operad_cls.compose(right_x_term, i, right_y_term)
 
                 for left_basis, left_coeff in left_composed:
                     for right_basis, right_coeff in right_composed:
-                        accumulated += (
-                            x_coeff * y_coeff * left_coeff * right_coeff
-                        ) * target.term((left_basis, right_basis))
+                        accumulated += (x_coeff * y_coeff * left_coeff * right_coeff) * target.term(
+                            (left_basis, right_basis)
+                        )
 
         return accumulated
 
@@ -257,9 +264,7 @@ class HadamardProduct(UniqueRepresentation):
             for new_left_basis, left_coeff in left_boundary:
                 result += self.term((new_left_basis, right_basis)) * left_coeff
             for new_right_basis, right_coeff in right_boundary:
-                result += self.term((left_basis, new_right_basis)) * (
-                    sign * right_coeff
-                )
+                result += self.term((left_basis, new_right_basis)) * (sign * right_coeff)
 
             return result
 
@@ -303,7 +308,13 @@ class HadamardProduct(UniqueRepresentation):
             left_parent = self._left_parent
             right_parent = self._right_parent
 
-            for d_left in range(d + 1):
+            min_d_left = _min_component_degree(left_parent, self._arity)
+            min_d_right = _min_component_degree(right_parent, self._arity)
+            max_d_left = d - min_d_right
+            if max_d_left < min_d_left:
+                return
+
+            for d_left in range(min_d_left, max_d_left + 1):
                 d_right = d - d_left
                 left_elems = list(_component_basis_in_degree(left_parent, d_left))
                 if not left_elems:
@@ -327,11 +338,15 @@ class HadamardProduct(UniqueRepresentation):
             right_parent = self._right_parent
 
             if not hasattr(right_parent, "planar_basis_it"):
-                raise NotImplementedError(
-                    "Right parent does not support planar_basis_it."
-                )
+                raise NotImplementedError("Right parent does not support planar_basis_it.")
 
-            for d_right in range(d + 1):
+            min_d_left = _min_component_degree(left_parent, self._arity)
+            min_d_right = _min_component_degree(right_parent, self._arity)
+            max_d_right = d - min_d_left
+            if max_d_right < min_d_right:
+                return
+
+            for d_right in range(min_d_right, max_d_right + 1):
                 d_left = d - d_right
                 right_elems = list(right_parent.planar_basis_it(d_right))
                 if not right_elems:
@@ -343,9 +358,7 @@ class HadamardProduct(UniqueRepresentation):
                     for right_elem in right_elems:
                         yield self.from_factors(left_elem, right_elem)
 
-        def from_factors(
-            self, left_element, right_element
-        ) -> "HadamardProduct.Element":
+        def from_factors(self, left_element, right_element) -> "HadamardProduct.Element":
             left_parent = left_element.parent()
             right_parent = right_element.parent()
 
@@ -399,9 +412,7 @@ class HadamardProduct(UniqueRepresentation):
             parent = self._parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
