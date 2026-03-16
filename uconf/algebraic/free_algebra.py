@@ -399,9 +399,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             )
 
 
-FreeAlgebraModule.Element = FreeAlgebraModule.Element
-
-
 class FreeOperadAlgebra(OperadAlgebra):
     """Free P-algebra on a dg-module M.
 

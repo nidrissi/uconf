@@ -316,9 +316,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             return self.parent().boundary(self)
 
 
-CofreeCoalgebraModule.Element = CofreeCoalgebraModule.Element
-
-
 class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     """Cofree conilpotent C-coalgebra on a dg-module M.
 
