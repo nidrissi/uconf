@@ -88,9 +88,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         )
         self.rename(name)
 
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
 
     # -----------------------------------------------------------------------
     # Validation and element construction
@@ -170,9 +168,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             0
             if is_leaf(tree)
             else sum(
-                self._cooperad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(
-                    decoration(v)
-                )
+                self._cooperad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(decoration(v))
                 for v in vertices_dfs(tree)
             )
         )
@@ -191,7 +187,10 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         ``m_tuple`` is a tuple of basis keys of the inner module *M*.
 
         The same arity-bounding logic as :meth:`FreeAlgebraModule.basis_it`
-        applies (see that method for details).
+        applies (see that method for details).  In particular, when both the
+        inner module and cooperad admit degree-0 generators, exhaustive
+        fixed-degree enumeration is not guaranteed and this method raises
+        ``ValueError``.
 
         Args:
             d: Homological degree to enumerate.
@@ -226,7 +225,11 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         elif connectivity > 0:
             max_n = d // connectivity + 1
         else:
-            max_n = d
+            raise ValueError(
+                "Cannot exhaustively enumerate basis_it(d): both the inner module "
+                "and cooperad admit degree-0 generators (min_deg=0, connectivity=0), "
+                "so arity is unbounded in fixed degree."
+            )
 
         for n in range(2, max_n + 1):
             max_weight = n - 1
@@ -237,9 +240,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 m_tuples = list(_tuples_in_degree_precomputed(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
-                for tree in enumerate_shuffle_trees_free_in_degree(
-                    n, max_weight, C, R, d_tree
-                ):
+                for tree in enumerate_shuffle_trees_free_in_degree(n, max_weight, C, R, d_tree):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
 
@@ -271,9 +272,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
                 for new_m_key, coeff in bdry:
-                    new_m = (
-                        m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
-                    )
+                    new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
                     result += sign * coeff * self.term((tree, new_m))
                 cumulative += self._inner_module.degree_on_basis(m_key)
             else:
@@ -303,9 +302,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             return tree
         if tree is target_vertex:
             return (new_dec,) + children(tree)
-        new_children = tuple(
-            self._replace_dec(c, target_vertex, new_dec) for c in children(tree)
-        )
+        new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
         return (decoration(tree),) + new_children
 
     # -----------------------------------------------------------------------
@@ -398,9 +395,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
             # Relabel each child to have leaves {1, ..., n_j}
             relabeled_children = []
             child_m_tuples = []
-            for j, (child, child_leaves) in enumerate(
-                zip(root_children, child_leaf_lists)
-            ):
+            for j, (child, child_leaves) in enumerate(zip(root_children, child_leaf_lists)):
                 relabel = {old: new for new, old in enumerate(child_leaves, start=1)}
                 if is_leaf(child):
                     relabeled_children.append(1)
@@ -495,9 +490,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 if cofree_mod._validate_basis_key(bot_key) is None:
                     continue
 
-                result += coeff * cofree_mod.term(top_key).tensor(
-                    cofree_mod.term(bot_key)
-                )
+                result += coeff * cofree_mod.term(top_key).tensor(cofree_mod.term(bot_key))
 
         return result
 

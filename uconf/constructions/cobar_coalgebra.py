@@ -87,15 +87,11 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         )
         self.rename(name)
 
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self._d1 = self.module_morphism(on_basis=self._d1_on_basis, codomain=self)
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
         self._dV = self.module_morphism(on_basis=self._dV_on_basis, codomain=self)
-        self._dcoact = self.module_morphism(
-            on_basis=self._dcoact_on_basis, codomain=self
-        )
+        self._dcoact = self.module_morphism(on_basis=self._dcoact_on_basis, codomain=self)
 
     # -----------------------------------------------------------------------
     # Basis key validation and element construction
@@ -159,9 +155,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         """Degree = deg_cobar(tree) + Σ_i deg_V(v_i)."""
         tree, v_tuple = key
         tree_deg = (
-            0
-            if is_leaf(tree)
-            else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
+            0 if is_leaf(tree) else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
         v_deg = sum(self._module.degree_on_basis(v) for v in v_tuple)
         return tree_deg + v_deg
@@ -178,15 +172,14 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         and ``v_tuple`` is a tuple of ``n`` basis keys of the coalgebra module
         *V* with total V-degree ``d - d_cobar``.
 
-        The arity is bounded as follows:
+                The arity is bounded as follows:
 
-        - For cooperads with ``connectivity ≥ 1`` (cobar degree ≥ 0), arity
-          ``n ≤ d + 1`` when *V* is non-negatively graded.
-        - For cooperads with ``connectivity = 0`` (e.g. ``CoAssociative``), the
-          cobar degree can be negative.  The method uses ``n ≤ d + 1`` as a
-          practical arity bound, which may miss contributions from arity
-          ``n > d + 1`` with very negative cobar trees.  The result is always
-          complete when the cooperad has ``connectivity ≥ 1``.
+                - For cooperads with ``connectivity ≥ 1`` (cobar degree bounded below
+                    by 0), arity ``n ≤ d + 1`` when *V* is non-negatively graded.
+                - For cooperads with ``connectivity = 0`` (e.g. ``CoAssociative``),
+                    fixed-degree enumeration can require arbitrarily large arity due to
+                    negative cobar tree degree.  In this case the method raises
+                    ``ValueError`` instead of returning a truncated list.
 
         Args:
             d: Homological degree to enumerate.
@@ -202,13 +195,16 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         cobar_cls = CobarConstruction(C)
         connectivity = getattr(C, "connectivity", 0)
 
-        # Arity bound: n ≤ max_n.
+        if connectivity <= 0:
+            raise ValueError(
+                "Cannot exhaustively enumerate basis_it(d) for CobarComplexCoalgebra "
+                "when cooperad connectivity is 0; cobar degree may be arbitrarily "
+                "negative as arity grows."
+            )
+
         # For connectivity ≥ 1: cobar_deg ≥ 0, so d_V ≤ d, and arity ≤ d + 1.
-        # For connectivity = 0: cobar_deg can be -(n-1), so d_V = d + n - 1,
-        #   and max_d_V grows with n.  Use the same bound n ≤ max(d+1, 1) as a
-        #   practical limit; enumerate V-keys up to max_d_V = d + max_n - 1.
         max_n = max(d + 1, 1)
-        max_d_V = d + max_n - 1  # upper bound on V-tuple degree (cobar may be neg.)
+        max_d_V = d
 
         # Pre-collect V-keys by degree from 0 to max_d_V.
         v_keys_by_deg: dict[int, list] = {}
@@ -318,17 +314,13 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
                 if v is curr_vertex:
                     break
                 v_arity = vertex_arity(v)
-                v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(
-                    decoration(v)
-                )
+                v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(decoration(v))
                 global_accum += v_deg - 1
 
             for m in range(2, curr_arity):
                 n_right = curr_arity - m + 1
                 for i in range(1, m + 1):
-                    cocomp = curr_parent.infinitesimal_cocompose(
-                        curr_elem, i, m, n_right
-                    )
+                    cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n_right)
                     for (dec_left, dec_right), coeff in cocomp:
                         right_parent = self._cooperad_cls(n_right, base_ring)
                         left_parent = self._cooperad_cls(m, base_ring)
@@ -341,9 +333,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
                             if j < i
                         )
                         koszul_exp = right_sinv_deg * before_deg
-                        total_sign = sign_from_exponent(
-                            global_accum + left_degree + koszul_exp
-                        )
+                        total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
 
                         new_tree = expand_vertex(
                             tree, curr_vertex, i, dec_left, dec_right, m, n_right
@@ -362,9 +352,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         """
         tree, v_tuple = key
         deg_cobar = (
-            0
-            if is_leaf(tree)
-            else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
+            0 if is_leaf(tree) else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
 
         result = self.zero()
@@ -402,9 +390,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
         n = len(v_tuple)
 
         deg_cobar = (
-            0
-            if is_leaf(tree)
-            else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
+            0 if is_leaf(tree) else subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
         )
 
         result = self.zero()
@@ -467,9 +453,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
                 if node == leaf_l:
                     # Replace with new subtree, relabeled to leaf_l, leaf_l+1, ..., leaf_l+k-1
                     relabel = {j: leaf_l + j - 1 for j in range(1, k + 1)}
-                    relabeled_sub = (new_dec,) + tuple(
-                        relabel[c] for c in range(1, k + 1)
-                    )
+                    relabeled_sub = (new_dec,) + tuple(relabel[c] for c in range(1, k + 1))
                     return relabeled_sub
                 elif node > leaf_l:
                     return node + k - 1
@@ -488,9 +472,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(
-        ParentedElementMixin["CobarComplexCoalgebra"], CombinatorialFreeModule.Element
-    ):
+    class Element(ParentedElementMixin["CobarComplexCoalgebra"], CombinatorialFreeModule.Element):
         """An element of the cobar complex Ω_C(V)."""
 
         def boundary(self) -> "CobarComplexCoalgebra.Element":

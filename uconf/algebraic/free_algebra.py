@@ -101,9 +101,7 @@ def _tuples_in_degree(module, n: int, d: int) -> Iterator[tuple]:
                 yield (first_key,) + rest
 
 
-def _tuples_in_degree_precomputed(
-    keys_by_deg: dict, n: int, d: int
-) -> Iterator[tuple]:
+def _tuples_in_degree_precomputed(keys_by_deg: dict, n: int, d: int) -> Iterator[tuple]:
     """Yield all ``n``-tuples of keys (from *keys_by_deg*) whose total degree equals *d*.
 
     Args:
@@ -123,6 +121,7 @@ def _tuples_in_degree_precomputed(
         for first_key in first_keys:
             for rest in _tuples_in_degree_precomputed(keys_by_deg, n - 1, d - d_first):
                 yield (first_key,) + rest
+
 
 class FreeAlgebraModule(CombinatorialFreeModule):
     """Underlying dg-module of the free P-algebra ``P ∘ M``.
@@ -157,9 +156,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         )
         self.rename(name)
 
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
 
     # -----------------------------------------------------------------------
     # Validation and element construction
@@ -239,9 +236,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             0
             if is_leaf(tree)
             else sum(
-                self._operad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(
-                    decoration(v)
-                )
+                self._operad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(decoration(v))
                 for v in vertices_dfs(tree)
             )
         )
@@ -265,14 +260,13 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         - If *M* has elements only in strictly-positive degrees (``min_deg ≥ 1``),
           then ``n ≤ d / min_deg``, giving a finite range.
-        - If *P* has ``connectivity ≥ 1``, the tree degree provides an
-          additional bound ``n ≤ d / connectivity + 1``.
-        - If both *M* and *P* have degree-0 generators (``min_deg = 0`` and
-          ``connectivity = 0``), the method enumerates only those arities
-          reachable within degree ``d`` — which may not be all arities when
-          degree-0 M-generators permit arbitrarily long tuples.  In that case
-          the result is finite only if *M* has finitely many basis elements
-          in degree 0.
+                - If *P* has ``connectivity ≥ 1``, the tree degree provides an
+                    additional bound ``n ≤ d / connectivity + 1``.
+                - If both *M* and *P* have degree-0 generators (``min_deg = 0`` and
+                    ``connectivity = 0``), arity is not bounded from degree data alone,
+                    so exhaustive degree-``d`` enumeration is not guaranteed.  In this
+                    case the method raises ``ValueError`` instead of returning a partial
+                    list.
 
         Requires *M* to implement ``basis_it(d)`` or have a finite basis
         accessible through ``basis()`` for each relevant degree.
@@ -310,7 +304,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         elif connectivity > 0:
             max_n = d // connectivity + 1
         else:
-            max_n = d
+            raise ValueError(
+                "Cannot exhaustively enumerate basis_it(d): both the inner module "
+                "and operad admit degree-0 generators (min_deg=0, connectivity=0), "
+                "so arity is unbounded in fixed degree."
+            )
 
         for n in range(2, max_n + 1):
             max_weight = n - 1  # connected operad: weight ≤ n - 1
@@ -321,9 +319,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_tuples = list(_tuples_in_degree_precomputed(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
-                for tree in enumerate_shuffle_trees_free_in_degree(
-                    n, max_weight, P, R, d_tree
-                ):
+                for tree in enumerate_shuffle_trees_free_in_degree(n, max_weight, P, R, d_tree):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
 
@@ -351,9 +347,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
                 for new_m_key, coeff in bdry:
-                    new_m = (
-                        m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
-                    )
+                    new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
                     result += sign * coeff * self.term((tree, new_m))
                 cumulative += self._inner_module.degree_on_basis(m_key)
             else:
@@ -383,9 +377,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             return tree
         if tree is target_vertex:
             return (new_dec,) + children(tree)
-        new_children = tuple(
-            self._replace_dec(c, target_vertex, new_dec) for c in children(tree)
-        )
+        new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
         return (decoration(tree),) + new_children
 
     # -----------------------------------------------------------------------
@@ -457,9 +449,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         k = p_element.arity()
         inputs = list(algebra_elements)
         if len(inputs) != k:
-            raise ValueError(
-                f"Expected {k} inputs for P({k}) action, got {len(inputs)}."
-            )
+            raise ValueError(f"Expected {k} inputs for P({k}) action, got {len(inputs)}.")
 
         result = self.module.zero()
         input_term_lists = [list(x) for x in inputs]
