@@ -16,8 +16,8 @@ from uconf import (
     Surjection,
 )
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule, CofreeConilpotentCoalgebra
-from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
+from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
+from uconf.algebraic.free_algebra import FreeAlgebraModule
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
 from uconf.constructions.bar_algebra import BarComplexAlgebra
 from uconf.constructions.cobar_coalgebra import CobarComplexCoalgebra

@@ -36,7 +36,6 @@ from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import (
     _dfs_all_iter,
     _module_basis_keys_in_degree,
-    _tuples_in_degree,
     _tuples_in_degree_precomputed,
 )
 from uconf.core.cooperad import CooperadLike
