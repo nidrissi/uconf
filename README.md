@@ -121,6 +121,26 @@ attribute on concrete models, property on wrappers) representing the constant
   - The sum terminates at `k = deg(x)` (degree truncation).
   - Zero branches pruned early for efficiency.
 
+### Operad morphisms and pullbacks
+
+- `core/morphism.py` — `OperadMorphism`, `PullbackAlgebra`
+  - `OperadMorphism(source, target, on_element)`: wraps a linear map between operad
+    components into a morphism `f: P → Q`.
+  - `PullbackAlgebra(morphism, algebra)`: given a `Q`-algebra and a morphism `f: P → Q`,
+    produces a `P`-algebra whose structure map is `γ^P(p; a_1,…,a_n) = γ^Q(f(p); a_1,…,a_n)`.
+
+- `morphisms/classical.py` — `ass_to_com`, `lie_to_ass`
+  - `ass_to_com`: augmentation morphism `Ass → Com` (sends every permutation `σ ∈ S_n`
+    to the commutative generator).
+  - `lie_to_ass`: PBW inclusion `Lie → Ass` (sends Lie brackets to commutator expansions).
+
+- `morphisms/e_comodule_morphism.py` — `make_e_comodule_morphism(cooperad_cls)`
+  - Builds the operad morphism `Δ: Ω(C) → E ⊗ Ω(C)` for a quasi-planar cooperad `C`.
+  - On generators (weight-1 cobar trees), delegates to `e_comodule_on_generator`.
+  - On arbitrary trees, extends via the universal property of the free operad:
+    `Δ(T) = Δ(gen_root) ∘_k Δ(child_k) ∘ … ∘_1 Δ(child_1)`.
+  - Target operad is `HadamardProduct(BarrattEccles, CobarConstruction(C))`.
+
 - `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.
   - Utilities for DFS traversal, arity/weight/leaves, grafting, edge contraction, and vertex expansion.
@@ -379,6 +399,52 @@ alg = C.as_surjection_algebra()
 mu = alg.act(u, [f1, f2])
 ```
 
+### Operad morphisms and pullback algebras
+
+```python
+from uconf import Associative, Commutative, Lie, OperadMorphism, PullbackAlgebra
+from uconf import ass_to_com, lie_to_ass
+from sage.all import QQ
+
+# Apply the Ass → Com augmentation morphism
+x = Associative(3, QQ)((2, 1, 3))
+ass_to_com(x)  # → Com(3) generator
+
+# Apply the Lie → Ass PBW inclusion
+bracket = Lie(2, QQ)((1,))
+lie_to_ass(bracket)  # → (1,2) - (2,1) in Ass(2)
+
+# Compose morphisms: Lie → Ass → Com kills all brackets
+ass_to_com(lie_to_ass(bracket))  # → 0
+
+# Pullback a Com-algebra along Ass → Com to get an Ass-algebra
+# com_alg = OperadAlgebra(module, Commutative, structure_map)
+# ass_alg = PullbackAlgebra(ass_to_com, com_alg)
+# ass_alg.act(mu, [a, a])  # delegates to com_alg.act(ass_to_com(mu), [a, a])
+```
+
+### E-comodule morphism Δ: Ω(C) → E ⊗ Ω(C)
+
+```python
+from uconf import (
+    BarConstruction, CobarConstruction, HadamardProduct,
+    BarrattEccles, Lie, make_e_comodule_morphism,
+)
+from sage.all import QQ
+
+# Build the cooperad B(Lie ⊙ E) and its cobar construction
+HLE = HadamardProduct(Lie, BarrattEccles)
+BH = BarConstruction(HLE)
+OBH = CobarConstruction(BH)
+
+# Build the morphism Δ: Ω(B(Lie⊙E)) → E ⊗ Ω(B(Lie⊙E))
+Delta = make_e_comodule_morphism(BH)
+
+# Apply to a cobar element
+unit = OBH.unit(QQ)
+Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
+```
+
 ## Tests (coverage)
 
 ### API contracts
@@ -399,6 +465,14 @@ mu = alg.act(u, [f1, f2])
 - `test_shifted_cooperad.py`: cooperadic shift behavior (`counit`, cocomposition signs).
 - `test_hadamard_operad.py`: additive degree, tensor-differential sign rule, diagonal action/composition.
 - `test_bar_cobar.py`: tree utilities, bar/cobar differentials (`d_1 + d_2`), basic composition/cocomposition behavior, and `\partial^2 = 0` checks on sample elements.
+
+### Morphisms and pullbacks
+
+- `test_morphisms.py`:
+  - `ass_to_com`: unit preservation, equivariance, composition compatibility, chain-map property, linearity.
+  - `lie_to_ass`: unit preservation, bracket-to-commutator, equivariance, composition compatibility.
+  - `PullbackAlgebra`: pullback of Com-algebra along `Ass → Com`, unit axiom, boundary delegation.
+  - `make_e_comodule_morphism`: unit preservation, output type, generator agreement with `e_comodule_on_generator`.
 
 ### Simplicial and external compatibility
 
@@ -423,6 +497,8 @@ mu = alg.act(u, [f1, f2])
   - `pytest -q tests/test_protocols.py tests/test_surjection.py tests/test_barratt_eccles.py tests/test_lie.py`
 - Run simplicial tests:
   - `pytest -q tests/test_simplicial.py`
+- Run morphism tests:
+  - `pytest -q tests/test_morphisms.py`
 
 ## Notes
 

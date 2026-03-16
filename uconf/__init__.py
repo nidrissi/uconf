@@ -46,7 +46,7 @@ from uconf.constructions import (
     CobarConstruction,
     e_comodule_on_generator,
 )
-from uconf.core import CooperadComponent, OperadComponent
+from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, PullbackAlgebra
 from uconf.models import (
     Associative,
     BarrattEccles,
@@ -60,9 +60,12 @@ from uconf.models import (
     SurjectionDual,
 )
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
+from uconf.morphisms import ass_to_com, lie_to_ass, make_e_comodule_morphism
 
 __all__ = [
     "OperadComponent",
+    "OperadMorphism",
+    "PullbackAlgebra",
     "CooperadComponent",
     "Surjection",
     "SurjectionDual",
@@ -96,6 +99,9 @@ __all__ = [
     "surjection_chain_action",
     "surjection_cochain_action",
     "e_comodule_on_generator",
+    "ass_to_com",
+    "lie_to_ass",
+    "make_e_comodule_morphism",
 ]
 
 
