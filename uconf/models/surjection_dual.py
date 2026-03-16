@@ -22,7 +22,6 @@ class SurjectionDual(Surjection):
 
     def __init__(self, n: int, base_ring):
         """Initialize fixed-arity linear dual component."""
-
         super().__init__(n, base_ring=base_ring)
         self._primal_parent = Surjection(n, base_ring=self.base_ring())
 
@@ -39,7 +38,6 @@ class SurjectionDual(Surjection):
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return dual homological degree (negative primal degree)."""
-
         return self.arity() - len(basis_element)
 
     @cached_method
@@ -54,7 +52,6 @@ class SurjectionDual(Surjection):
         The result maps each ``target_basis`` to the dict
         ``{source_basis: coeff}`` representing the row of ``∂^T``.
         """
-
         source_degree = primal_degree + 1
         rows: dict[tuple[int, ...], dict] = {}
         for source_term in self._primal_parent.basis_it(source_degree):
@@ -71,7 +68,6 @@ class SurjectionDual(Surjection):
 
     def _boundary_on_basis(self, basis_element: tuple) -> "SurjectionDual.Element":
         """Compute the differential by transposing ``Surjection`` differential."""
-
         primal_degree = len(basis_element) - self.arity()
         row = self._boundary_rows_for_degree(primal_degree).get(basis_element, {})
         return self.sum_of_terms(row.items())
@@ -79,7 +75,6 @@ class SurjectionDual(Surjection):
     @cached_method
     def _cocompose_rows(self, i: int, m: int, n: int, u_degree: int) -> dict:
         """Return cached pairing rows for ``Δ^{i;m,n}`` in fixed primal degree."""
-
         left_parent = SurjectionDual(m, base_ring=self.base_ring())
         right_parent = SurjectionDual(n, base_ring=self.base_ring())
         rows: dict[tuple[int, ...], dict] = {}
@@ -113,7 +108,6 @@ class SurjectionDual(Surjection):
     @staticmethod
     def counit(x: "SurjectionDual.Element"):
         """Return the cooperadic counit evaluation."""
-
         if x.arity() != 1:
             return x.parent().base_ring().zero()
         value = x.parent().base_ring().zero()
@@ -125,7 +119,6 @@ class SurjectionDual(Surjection):
     @staticmethod
     def reduced(x: "SurjectionDual.Element") -> "SurjectionDual.Element":
         """Project to the reduced part (kills the arity-1 unit component)."""
-
         if x.arity() != 1:
             return x
         return x - SurjectionDual.counit(x) * x.parent()((1,))
@@ -133,7 +126,6 @@ class SurjectionDual(Surjection):
     @staticmethod
     def infinitesimal_cocompose(x: "SurjectionDual.Element", i: int, m: int, n: int):
         """Partial cocomposition dual to ``Surjection.compose`` on basis pairing."""
-
         if m <= 0 or n <= 0:
             raise ValueError(f"Arities must be positive. Got m={m}, n={n}.")
         if not (1 <= i <= m):
@@ -168,17 +160,14 @@ class SurjectionDual(Surjection):
 
         def counit(self):
             """Return the cooperadic counit evaluation."""
-
             return SurjectionDual.counit(self)
 
         def reduced(self) -> "SurjectionDual.Element":
             """Project to the reduced part."""
-
             return SurjectionDual.reduced(self)
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Return the partial cocomposition dual to ``compose``."""
-
             return SurjectionDual.infinitesimal_cocompose(self, i, m, n)
 
 

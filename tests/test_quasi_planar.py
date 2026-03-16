@@ -192,7 +192,9 @@ class TestGradedBasisMethods:
             for elem in HLE2.planar_basis_it(d):
                 for (l_key, r_key), coeff in elem:
                     # Right factor should be planar (starts with identity)
-                    assert r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity(), (
+                    assert (
+                        r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity()
+                    ), (
                         f"Non-planar right key {r_key} in HadamardProduct planar_basis_it({d})"
                     )
 

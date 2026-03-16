@@ -7,13 +7,11 @@ from typing import Any
 
 def sign_from_exponent(exponent: int) -> int:
     """Return ``(-1)^exponent`` as ``+1`` or ``-1``."""
-
     return -1 if exponent % 2 else 1
 
 
 def permutation_signature(sigma: Any) -> int:
     """Return the signature of a permutation as ``+1`` or ``-1``."""
-
     if hasattr(sigma, "signature"):
         return int(sigma.signature())
     if hasattr(sigma, "sign"):
@@ -30,13 +28,11 @@ def permutation_signature(sigma: Any) -> int:
 
 def shifted_permutation_sign(shift_degree: int, sigma: Any) -> int:
     """Return the suspension twist ``sgn(sigma)^shift_degree``."""
-
     return permutation_signature(sigma) ** int(shift_degree)
 
 
 def shifted_boundary_sign(shift_degree: int) -> int:
     """Return the differential transport sign for an integer shift."""
-
     return sign_from_exponent(int(shift_degree))
 
 
@@ -52,7 +48,6 @@ def shifted_operadic_compose_sign(
     Formula used in :class:`uconf.shifted_operad.ShiftedOperad`:
     ``(-1)^(d * ((i-1)(n-1) + (m-1)|y|))``.
     """
-
     exponent = int(shift_degree) * (
         (int(input_position) - 1) * (int(right_arity) - 1)
         + (int(left_arity) - 1) * int(right_degree)

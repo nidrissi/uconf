@@ -345,6 +345,7 @@ def enumerate_planar_trees_in_degree(
         target_degree: Exact bar degree to enumerate.  May be any integer,
             including zero or negative, when the base operad has elements
             of negative degree (e.g. a shifted operad).
+
     """
     if arity < 2:
         return
@@ -580,6 +581,7 @@ def is_shuffle_tree(tree) -> bool:
     Example:
         ((), 1, 2) is shuffle (min({1})=1 < min({2})=2)
         ((), 2, 1) is NOT shuffle (min({2})=2 > min({1})=1)
+
     """
     if is_leaf(tree):
         return True
@@ -866,7 +868,6 @@ def _shuffle_children_iter(
     """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` where each
     *t_i* covers *parts[i]* and the bar-degrees of *t_1, ..., t_k* sum to *total_deg*.
     """
-
     connectivity = getattr(operad_cls, "connectivity", 0)
 
     # Precompute suffix minimum degrees: min_from[idx] is the minimum total
@@ -950,6 +951,7 @@ def enumerate_shuffle_trees_in_degree(
     Yields:
         Decorated shuffle trees as nested tuples valid as basis keys of
         ``BarConstruction(operad_cls)(arity)``.
+
     """
     if arity < 2 or weight_bound < 1:
         return
