@@ -57,6 +57,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
             structure_map=self._act_impl,
         )
 
+        self.module.basis_it = self.basis_it
+
     def _act_impl(self, p_element, algebra_elements):
         if p_element.parent().factory is not self.operad_cls:
             raise TypeError("p_element must belong to this Hadamard operad.")
@@ -125,7 +127,15 @@ class HadamardTensorAlgebra(OperadAlgebra):
         """
         left_mod = self.left_module
         right_mod = self.right_module
-        for d_left in range(d + 1):
+
+        # TODO right now, most modules don't have a notion of connectivity, so we start from 0!
+        min_d_left = left_mod.connectivity
+        min_d_right = right_mod.connectivity
+        max_d_left = d - min_d_right
+        if max_d_left < min_d_left:
+            return
+
+        for d_left in range(min_d_left, max_d_left + 1):
             d_right = d - d_left
             left_keys = list(_module_basis_keys_in_degree(left_mod, d_left))
             if not left_keys:
@@ -135,7 +145,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 continue
             for left_key in left_keys:
                 for right_key in right_keys:
-                    yield self.module.term((left_key, right_key))
+                    yield tensor((self.left_module(left_key), self.right_module(right_key)))
 
     def boundary(self, a):
         """Tensor differential induced from the two dg-module differentials."""
@@ -144,8 +154,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         for basis, coeff in x:
             left_basis, right_basis = basis
-            left_term = self.left_module.term(left_basis)
-            right_term = self.right_module.term(right_basis)
+            left_term = self.left_module(left_basis)
+            right_term = self.right_module(right_basis)
 
             left_degree = self.left_module.degree_on_basis(left_basis)
             sign = -1 if left_degree % 2 else 1

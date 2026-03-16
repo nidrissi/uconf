@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Generic, Protocol, TypeVar
-from sage.all import UniqueRepresentation
+from sage.all import CombinatorialFreeModule, UniqueRepresentation
 
 from uconf.core.operad import OperadLike, OperadComponent
 
@@ -66,7 +66,7 @@ class OperadAlgebra(
 
     def __init__(
         self,
-        module,
+        module: CombinatorialFreeModule,
         operad_cls: OperadLike,
         structure_map: StructureMap[OperadElementType, AlgebraElementType],
     ):

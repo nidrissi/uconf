@@ -426,7 +426,7 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     """
 
-    def __init__(self, operad_cls: OperadLike, inner_module, base_ring):
+    def __init__(self, operad_cls: OperadLike, inner_module: CombinatorialFreeModule, base_ring):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module
