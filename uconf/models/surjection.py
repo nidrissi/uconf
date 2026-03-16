@@ -36,7 +36,6 @@ class Surjection(CombinatorialFreeModule):
 
     def __init__(self, n: int, base_ring):
         """Initialize ``S_n`` over ``base_ring``."""
-
         assert n >= 0, f"Arity must be non-negative. Got {n}."
         name = f"{self.name}{n}"
         super().__init__(
@@ -79,7 +78,7 @@ class Surjection(CombinatorialFreeModule):
             return self.term(clean_key)
 
         raise TypeError(
-            f"Input must be a dictionary (for linear combinations) or a tuple/list (for basis elements). Got {x} ({type(x)})."
+            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
         )
 
     def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
@@ -117,18 +116,15 @@ class Surjection(CombinatorialFreeModule):
 
     def arity(self):
         """Return the fixed arity of this operad component."""
-
         return self._arity
 
     @staticmethod
     def unit(base_ring) -> "Surjection.Element":
         """Return the operadic unit in arity ``1``."""
-
         return Surjection(1, base_ring)((1,))
 
     def basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over basis elements in degree ``d``."""
-
         assert d >= 0, "d must be a non-negative integer, got d={d}."
         r = self.arity()
         for values in itertools.product(range(1, r + 1), repeat=r + d):
@@ -139,7 +135,6 @@ class Surjection(CombinatorialFreeModule):
 
     def planar_basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over planar basis elements in degree ``d``."""
-
         return filter(lambda u: u.is_planar(), self.basis_it(d))
 
     @cached_method
@@ -154,7 +149,6 @@ class Surjection(CombinatorialFreeModule):
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""
-
         n = self.arity()
         first_occurrence = []
         seen = set()
@@ -177,12 +171,10 @@ class Surjection(CombinatorialFreeModule):
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis surjection."""
-
         return len(basis_element) - self.arity()
 
     def _boundary_on_basis(self, basis_element: tuple) -> "Surjection.Element":
         """Compute the differential on a basis surjection."""
-
         # determining the signs of the summands
         signs = {}
         alternating_sign = 1
@@ -209,7 +201,6 @@ class Surjection(CombinatorialFreeModule):
 
     def _complexity_on_basis(self, basis_element: tuple) -> int:
         """Return pairwise complexity of one basis surjection."""
-
         result = 0
         for i, j in combinations(range(1, self.arity() + 1), 2):
             seq = [x for x in basis_element if x == i or x == j]
@@ -304,6 +295,7 @@ class Surjection(CombinatorialFreeModule):
 
         Args:
             u: A tuple representing the surjection.
+
         """
         seen: set[int] = set()
         res: list[int] = []
@@ -320,24 +312,20 @@ class Surjection(CombinatorialFreeModule):
 
         def boundary(self) -> Surjection.Element:
             """Apply the differential."""
-
             parent = self._parent()
             return parent.boundary(self)
 
         def arity(self) -> int:
             """Return the arity of this element."""
-
             return self._parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with group element."""
-
             parent = self._parent()
             return parent.planarize(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
-
             parent = self._parent()
 
             return max(
@@ -356,7 +344,8 @@ class Surjection(CombinatorialFreeModule):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
 
             def permuted_term_generator():
@@ -372,7 +361,8 @@ class Surjection(CombinatorialFreeModule):
             r = self.arity()
 
             def _planar(input_list: tuple[int, ...]) -> bool:
-                """Check if the first occurrence of each integer in input_list are in increasing order."""
+                """Check if the first occurrence of each integer in input_list
+            is in increasing order."""
                 first_occurrences = {}
                 for i, val in enumerate(input_list):
                     if val not in first_occurrences:
@@ -392,5 +382,4 @@ class Surjection(CombinatorialFreeModule):
 
         def section(self) -> BarrattEccles.Element:
             """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
-
             raise NotImplementedError("Section is not implemented yet")

@@ -214,38 +214,26 @@ class TestBarComplexAlgebra:
         # Should give +(1, ((),)) -- single leaf with the product value
         assert result == B((1, ((),)))
 
-    def test_d_squared_zero_weight1_binary(self):
-        """d² = 0 on a weight-1 binary tree element."""
-        B = _make_bar_complex()
-        mu = (1, 2)
-        tree = (mu, 1, 2)
-        elem = B((tree, ((), ())))
-        assert elem.boundary().boundary() == B.zero()
+    _MU = (1, 2)
+    _MU3 = (1, 2, 3)
 
-    def test_d_squared_zero_weight2_tree1(self):
-        """d² = 0 on weight-2 tree with right-nested structure."""
+    @pytest.mark.parametrize(
+        "tree,a_tuple",
+        [
+            # weight-1 binary tree: (μ; 1, 2)
+            ((_MU, 1, 2), ((), ())),
+            # weight-2 right-nested: (μ; 1, (μ; 2, 3))
+            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
+            # weight-2 left-nested: (μ; (μ; 1, 2), 3)
+            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
+            # weight-1 ternary tree: (μ₃; 1, 2, 3)
+            ((_MU3, 1, 2, 3), ((), (), ())),
+        ],
+    )
+    def test_d_squared_zero(self, tree: tuple, a_tuple: tuple):
+        """d² = 0 on tree elements of the bar complex."""
         B = _make_bar_complex()
-        mu = (1, 2)
-        # Tree: (μ; 1, (μ; 2, 3))
-        tree = (mu, 1, (mu, 2, 3))
-        elem = B((tree, ((), (), ())))
-        assert elem.boundary().boundary() == B.zero()
-
-    def test_d_squared_zero_weight2_tree2(self):
-        """d² = 0 on weight-2 tree with left-nested structure."""
-        B = _make_bar_complex()
-        mu = (1, 2)
-        # Tree: (μ; (μ; 1, 2), 3)
-        tree = (mu, (mu, 1, 2), 3)
-        elem = B((tree, ((), (), ())))
-        assert elem.boundary().boundary() == B.zero()
-
-    def test_d_squared_zero_weight1_ternary(self):
-        """d² = 0 on weight-1 ternary tree."""
-        B = _make_bar_complex()
-        mu3 = (1, 2, 3)
-        tree = (mu3, 1, 2, 3)
-        elem = B((tree, ((), (), ())))
+        elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
     def test_linear_combination_d_squared_zero(self):

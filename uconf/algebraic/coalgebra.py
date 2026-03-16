@@ -60,6 +60,7 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
         cooperad_cls: Cooperad provider (class or factory, CooperadComponent-compatible).
         coaction_map: Callable implementing the C-coalgebra coaction δ_n.
+
     """
 
     def __init__(
@@ -87,6 +88,7 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
         Raises:
             ValueError: If ``n <= 0``.
             TypeError: If ``coaction_map`` does not return an iterable object.
+
         """
         if n <= 0:
             raise ValueError(f"Coaction arity must be positive, got {n}.")
@@ -108,6 +110,7 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
 
         Returns:
             The boundary ∂_V(v) in the module.
+
         """
         return self.module.boundary(v)
 

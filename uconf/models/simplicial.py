@@ -49,6 +49,7 @@ class SimplicialChains(CombinatorialFreeModule):
     ----------
     base_ring :
         Coefficient ring.
+
     """
 
     def __init__(self, base_ring):
@@ -156,6 +157,7 @@ class SimplicialChains(CombinatorialFreeModule):
         ----------
         n : int  (non-negative)
             Dimension of the standard simplex ``Δ^n`` (so the chain lies in degree ``n``).
+
         """
         assert n >= 0
         return SimplicialChains(base_ring).term(tuple(range(n + 1)))
@@ -193,6 +195,7 @@ class SimplicialChains(CombinatorialFreeModule):
         ----------
         x : element of ``tensor([SimplicialChains()]*r)`` or
             :class:`SimplicialChains`
+
         """
         parent = x.parent()
         if isinstance(parent, SimplicialChains):
@@ -244,6 +247,7 @@ class SimplicialChains(CombinatorialFreeModule):
             times : int
                 Number of extra factors (``times=1`` → 2-fold tensor,
                 ``times=k`` → ``(k+1)``-fold tensor).
+
             """
             SC = self._parent()
             if times == 0:
@@ -283,6 +287,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         Dimension of the ambient standard simplex.
     base_ring
         Coefficient ring.
+
     """
 
     def __init__(self, N: int, base_ring):

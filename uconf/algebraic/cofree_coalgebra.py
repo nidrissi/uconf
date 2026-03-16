@@ -68,6 +68,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             cooperad_cls: Cooperad provider C (class or wrapper instance).
             inner_module: Cogenerating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
+
         """
         self._cooperad_cls = cooperad_cls
         self._inner_module = inner_module
@@ -276,6 +277,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         # Coaction on a binary-tree element:
         elem = cofree_coass.module.term(((1,2), 1, 2), (m1, m2))
         cofree_coass.coact(elem, 2)   # splits at root
+
     """
 
     def __init__(self, cooperad_cls: CooperadLike, inner_module, base_ring):
@@ -368,6 +370,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         Returns:
             An element of ``T^c_C(M)(m) ⊗ T^c_C(M)(n)``.
+
         """
         if m <= 0 or n <= 0:
             raise ValueError(f"Arities must be positive. Got m={m}, n={n}.")
@@ -439,6 +442,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         Returns:
             An element of the inner module M.
+
         """
         inner = self._inner_module
         result = inner.zero()
