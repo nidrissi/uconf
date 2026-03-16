@@ -8,8 +8,6 @@ Covers:
 - ``make_e_comodule_morphism`` (Δ: Ω(C) → E ⊗ Ω(C))
 """
 
-import itertools
-
 import pytest
 from sage.all import QQ, SymmetricGroup
 
@@ -88,9 +86,7 @@ class TestAssToComMorphism:
     def test_chain_map(self):
         """f(∂x) = ∂f(x) — trivial since both differentials are zero."""
         x = Associative(3, QQ)((2, 1, 3))
-        assert _as_dict(ass_to_com(x.boundary())) == _as_dict(
-            ass_to_com(x).boundary()
-        )
+        assert _as_dict(ass_to_com(x.boundary())) == _as_dict(ass_to_com(x).boundary())
 
     def test_on_zero(self):
         """f(0) = 0."""
@@ -162,9 +158,7 @@ class TestLieToAssMorphism:
     def test_chain_map(self):
         """f(∂x) = ∂f(x) — both differentials are zero."""
         x = Lie(3, QQ)((1, 2))
-        assert _as_dict(lie_to_ass(x.boundary())) == _as_dict(
-            lie_to_ass(x).boundary()
-        )
+        assert _as_dict(lie_to_ass(x.boundary())) == _as_dict(lie_to_ass(x).boundary())
 
     def test_on_zero(self):
         """f(0) = 0."""
@@ -223,7 +217,6 @@ class TestPullbackAlgebra:
         module = Commutative(1, QQ)
 
         def structure_map(p_element, algebra_elements):
-            n = p_element.arity()
             result = module.zero()
             for _, p_coeff in p_element:
                 coeff = p_coeff
@@ -250,7 +243,6 @@ class TestPullbackAlgebra:
     def test_pullback_lie_via_ass_to_com(self):
         """Pull back a Com-algebra along Lie → Ass → Com gives zero bracket."""
         com_alg = self._make_trivial_com_algebra()
-        ass_alg = PullbackAlgebra(ass_to_com, com_alg)
 
         # Compose the morphisms: make a Lie-algebra from the Ass-algebra
         composed = OperadMorphism(

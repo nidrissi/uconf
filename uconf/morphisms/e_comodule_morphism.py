@@ -16,20 +16,21 @@ from typing import Any
 
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.e_comodule import e_comodule_on_generator
+from uconf.core.cooperad import CooperadLike
 from uconf.core.morphism import OperadMorphism
-from uconf.core.trees import children, decoration, is_leaf, tree_arity, vertex_arity
+from uconf.core.trees import children, decoration, is_leaf, vertex_arity
 from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
 def make_e_comodule_morphism(
-    cooperad_cls: Any,
+    cooperad_cls: CooperadLike,
 ) -> OperadMorphism:
     """Build the operad morphism Δ: Ω(C) → E ⊗ Ω(C).
 
     Parameters
     ----------
-    cooperad_cls :
+    cooperad_cls : CooperadLike
         A quasi-planar cooperad (class or factory) for which the cobar
         construction Ω(C) is defined.
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.operad import OperadLike
 
 
@@ -49,7 +50,7 @@ class OperadMorphism:
         return self._on_element(element)
 
 
-class PullbackAlgebra:
+class PullbackAlgebra(OperadAlgebra):
     """Pull back an algebra along an operad morphism.
 
     Given a ``Q``-algebra ``algebra`` and a morphism ``f: P → Q``,
