@@ -30,11 +30,15 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.algebraic.free_algebra import (
+    _module_basis_keys_in_degree,
+    _tuples_in_degree_precomputed,
+)
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -160,6 +164,63 @@ class BarComplexAlgebra(CombinatorialFreeModule):
         )
         a_deg = sum(self._module.degree_on_basis(a) for a in a_tuple)
         return tree_deg + a_deg
+
+    # -----------------------------------------------------------------------
+    # Basis iteration
+    # -----------------------------------------------------------------------
+
+    def basis_it(self, d: int) -> Iterator["BarComplexAlgebra.Element"]:
+        """Iterate over basis elements of degree *d*.
+
+        Yields all ``(tree, a_tuple)`` pairs with total degree ``d``, where
+        ``tree`` is a bar-construction shuffle tree of bar degree ``d_bar``
+        and ``a_tuple`` is a tuple of ``n`` basis keys of the algebra module
+        *A* with total A-degree ``d - d_bar``.
+
+        The iteration covers all arities ``n ≥ 1``.  For connected operads,
+        ``deg_bar(tree) ≥ weight ≥ 1`` for ``n ≥ 2``, so the arity is bounded
+        by ``d + 1`` when *A* is non-negatively graded.
+
+        Args:
+            d: Homological degree to enumerate.
+
+        Yields:
+            Elements of this module with degree ``d``.
+        """
+        from uconf.constructions.bar_construction import BarConstruction
+
+        A = self._module
+        P = self._operad_cls
+        R = self.base_ring()
+        bar_cls = BarConstruction(P)
+
+        # Pre-collect A-keys by degree from 0 to d.
+        a_keys_by_deg: dict[int, list] = {}
+        for d_a in range(d + 1):
+            keys = list(_module_basis_keys_in_degree(A, d_a))
+            if keys:
+                a_keys_by_deg[d_a] = keys
+
+        # Arity 1: single leaf (bar tree = leaf "1", bar degree = 0)
+        for a_key in a_keys_by_deg.get(d, []):
+            yield self.term((1, (a_key,)))
+
+        # Arity n ≥ 2: tree from BarConstruction, A-tuple from module
+        # For connected P, bar degree ≥ weight ≥ 1, so d_bar ≥ 1 and
+        # arity n ≤ d_bar + 1 ≤ d + 1 when A is non-negatively graded.
+        for n in range(2, d + 2):
+            bar_comp = bar_cls(n, R)
+            for d_bar in range(1, d + 1):
+                d_A = d - d_bar
+                if d_A < 0:
+                    continue
+                a_tuples = list(_tuples_in_degree_precomputed(a_keys_by_deg, n, d_A))
+                if not a_tuples:
+                    continue
+                for bar_elem in bar_comp.basis_it(d_bar):
+                    for tree_key in bar_elem.support():
+                        for a_tuple in a_tuples:
+                            yield self.term((tree_key, a_tuple))
 
     # -----------------------------------------------------------------------
     # Differential
