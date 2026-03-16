@@ -77,31 +77,7 @@ def _module_basis_keys_in_degree(module, d: int) -> Iterator:
             yield key
 
 
-def _tuples_in_degree(module, n: int, d: int) -> Iterator[tuple]:
-    """Yield all ``n``-tuples of *module* basis keys whose total degree equals *d*.
-
-    Assumes *module* has finitely many basis keys in each degree.
-
-    Args:
-        module: A :class:`CombinatorialFreeModule` with ``degree_on_basis``.
-        n: Tuple length (≥ 0).
-        d: Exact total degree.
-
-    Yields:
-        ``n``-tuples of basis keys.
-    """
-    if n == 0:
-        if d == 0:
-            yield ()
-        return
-    for d_first in range(d + 1):
-        first_keys = list(_module_basis_keys_in_degree(module, d_first))
-        for first_key in first_keys:
-            for rest in _tuples_in_degree(module, n - 1, d - d_first):
-                yield (first_key,) + rest
-
-
-def _tuples_in_degree_precomputed(keys_by_deg: dict, n: int, d: int) -> Iterator[tuple]:
+def _tuples_in_degree(keys_by_deg: dict, n: int, d: int) -> Iterator[tuple]:
     """Yield all ``n``-tuples of keys (from *keys_by_deg*) whose total degree equals *d*.
 
     Args:
@@ -119,7 +95,7 @@ def _tuples_in_degree_precomputed(keys_by_deg: dict, n: int, d: int) -> Iterator
     for d_first in range(d + 1):
         first_keys = keys_by_deg.get(d_first, [])
         for first_key in first_keys:
-            for rest in _tuples_in_degree_precomputed(keys_by_deg, n - 1, d - d_first):
+            for rest in _tuples_in_degree(keys_by_deg, n - 1, d - d_first):
                 yield (first_key,) + rest
 
 
@@ -316,7 +292,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 d_tree = d - d_M
                 if d_tree < 0:
                     continue
-                m_tuples = list(_tuples_in_degree_precomputed(m_keys_by_deg, n, d_M))
+                m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
                 for tree in enumerate_shuffle_trees_free_in_degree(n, max_weight, P, R, d_tree):
