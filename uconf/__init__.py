@@ -37,7 +37,6 @@ from uconf.algebraic import (
     SurjectionSphereCochainAlgebra,
     surjection_chain_action,
     surjection_cochain_action,
-    hadamard_tensor_algebra,
 )
 from uconf.constructions import (
     BarComplexAlgebra,
@@ -86,7 +85,6 @@ __all__ = [
     "FreeAlgebraModule",
     "FreeOperadAlgebra",
     "HadamardTensorAlgebra",
-    "hadamard_tensor_algebra",
     "CofreeCoalgebraModule",
     "CofreeConilpotentCoalgebra",
     "BarConstruction",

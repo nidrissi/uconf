@@ -163,11 +163,3 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 )
 
         return result
-
-
-def hadamard_tensor_algebra(
-    left_algebra: OperadAlgebra,
-    right_algebra: OperadAlgebra,
-) -> HadamardTensorAlgebra:
-    """Build the canonical ``(P ⊙ Q)``-algebra on ``A ⊗ B``."""
-    return HadamardTensorAlgebra(left_algebra, right_algebra)
