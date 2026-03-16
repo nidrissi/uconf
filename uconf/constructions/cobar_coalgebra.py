@@ -38,7 +38,7 @@ from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import (
     _module_basis_keys_in_degree,
-    _tuples_in_degree_precomputed,
+    _tuples_in_degree,
 )
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
@@ -228,7 +228,7 @@ class CobarComplexCoalgebra(CombinatorialFreeModule):
                     continue
                 if d_V < n * min_v_deg:
                     continue
-                v_tuples = list(_tuples_in_degree_precomputed(v_keys_by_deg, n, d_V))
+                v_tuples = list(_tuples_in_degree(v_keys_by_deg, n, d_V))
                 if not v_tuples:
                     continue
                 for cobar_elem in cobar_comp.basis_it(d_cobar):

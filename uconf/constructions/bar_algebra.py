@@ -37,7 +37,7 @@ from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.free_algebra import (
     _module_basis_keys_in_degree,
-    _tuples_in_degree_precomputed,
+    _tuples_in_degree,
 )
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
@@ -214,7 +214,7 @@ class BarComplexAlgebra(CombinatorialFreeModule):
                 d_A = d - d_bar
                 if d_A < 0:
                     continue
-                a_tuples = list(_tuples_in_degree_precomputed(a_keys_by_deg, n, d_A))
+                a_tuples = list(_tuples_in_degree(a_keys_by_deg, n, d_A))
                 if not a_tuples:
                     continue
                 for bar_elem in bar_comp.basis_it(d_bar):

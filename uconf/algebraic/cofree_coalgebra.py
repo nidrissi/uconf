@@ -36,7 +36,7 @@ from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import (
     _dfs_all_iter,
     _module_basis_keys_in_degree,
-    _tuples_in_degree_precomputed,
+    _tuples_in_degree,
 )
 from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
@@ -236,7 +236,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_tree = d - d_M
                 if d_tree < 0:
                     continue
-                m_tuples = list(_tuples_in_degree_precomputed(m_keys_by_deg, n, d_M))
+                m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
                 for tree in enumerate_shuffle_trees_free_in_degree(n, max_weight, C, R, d_tree):
