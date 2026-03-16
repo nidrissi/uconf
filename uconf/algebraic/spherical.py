@@ -179,42 +179,21 @@ class ReducedSphereCochains(CombinatorialFreeModule):
 
     def __init__(self, d: int, base_ring):
         assert d >= 0
-        name = f"N*(S^{d})"
         super().__init__(
             base_ring,
-            tuple,
-            prefix=name,
+            [f"ɑ[{d}]"],
             category=GradedModulesWithBasis(base_ring),
         )
-        self.rename(name)
+        self.rename(f"N*(S^{d})")
         self._sphere_dim = d
-        self.boundary = self.module_morphism(
-            on_basis=lambda _basis: self.zero(), codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=lambda _: self.zero(), codomain=self)
 
     def sphere_dim(self) -> int:
         """Return the sphere dimension ``d``."""
         return self._sphere_dim
 
-    def _element_constructor_(self, x):
-        if isinstance(x, dict):
-            clean = {}
-            for key, coeff in x.items():
-                if isinstance(key, (tuple, list)) and tuple(key) == ():
-                    clean[()] = clean.get((), 0) + coeff
-            return super()._element_constructor_(clean)
-        if isinstance(x, (tuple, list)) and tuple(x) == ():
-            return self.term(())
-        raise TypeError(f"Expected () or a sparse dict, got {type(x)}.")
-
-    def degree_on_basis(self, basis_element: tuple) -> int:
-        if basis_element != ():
-            raise ValueError("ReducedSphereCochains has a unique basis element ().")
+    def degree_on_basis(self, _) -> int:
         return self._sphere_dim
-
-    def generator(self) -> "ReducedSphereCochains":
-        """Return the canonical degree-``d`` generator."""
-        return self(())
 
 
 class SurjectionSphereCochainAlgebra(OperadAlgebra):
