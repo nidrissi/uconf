@@ -67,16 +67,13 @@ class TrivialAlgebra(OperadAlgebra):
 class TestFreeAlgebraModuleBasisIt:
     """Tests for FreeAlgebraModule.basis_it."""
 
-    def test_arity1_leaf_only(self) -> None:
-        """Arity 1 (single leaf): one element per degree-0 M-generator."""
+    def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
+        """Raise when both P and M allow unbounded arity in fixed degree."""
         M = Commutative(1, base_ring=QQ)
         mod = FreeAlgebraModule(Commutative, M, QQ)
-        # Commutative operad with connectivity=0, M in degree 0.
-        # basis_it(0) = single leaf (1, ((),))
-        elems = list(mod.basis_it(0))
-        assert len(elems) == 1
-        key, _ = next(iter(elems[0]))
-        assert key == (1, ((),))
+        # Commutative operad with connectivity=0 and M in degree 0.
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(mod.basis_it(0))
 
     def test_shifted_ass_degree0_single_leaf(self) -> None:
         """ShiftedOperad(Ass,1) has connectivity=1; degree-0 = arity-1 leaf only."""
@@ -127,21 +124,17 @@ class TestFreeAlgebraModuleBasisIt:
 class TestCofreeCoalgebraModuleBasisIt:
     """Tests for CofreeCoalgebraModule.basis_it."""
 
-    def test_degree0_single_leaf(self) -> None:
-        """CoAss + Comm(1) in degree 0 = single arity-1 leaf only."""
+    def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
+        """Raise when both C and M allow unbounded arity in fixed degree."""
         M = Commutative(1, base_ring=QQ)
         mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
-        elems = list(mod.basis_it(0))
-        assert len(elems) == 1
-        key, _ = next(iter(elems[0]))
-        assert key == (1, ((),))
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(mod.basis_it(0))
 
     def test_correct_degrees(self) -> None:
         """All yielded elements have the requested degree."""
-        P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
-        # Use P as a cooperad proxy for testing (Associative decorations).
-        mod = CofreeCoalgebraModule(Associative, M, QQ)
+        mod = CofreeCoalgebraModule(ShiftedOperad(Associative, 1), M, QQ)
         for d in range(3):
             for elem in mod.basis_it(d):
                 for key, _ in elem:
@@ -267,18 +260,15 @@ class TestCobarComplexCoalgebraBasisIt:
         return CobarComplexCoalgebra(_TrivialCoalgebra(CoAssociative), QQ)
 
     def test_degree0_single_leaf(self, trivial_cobar) -> None:
-        """Degree 0 = single arity-1 leaf with the unique V-generator."""
-        elems = list(trivial_cobar.basis_it(0))
-        assert len(elems) == 1
-        key, _ = next(iter(elems[0]))
-        assert key == (1, ((),))
+        """Raise when cooperad connectivity is 0 (non-exhaustive regime)."""
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(trivial_cobar.basis_it(0))
 
     def test_correct_degrees(self, trivial_cobar) -> None:
-        """All yielded elements have the requested total degree."""
+        """The same non-exhaustive regime raises for every queried degree."""
         for d in range(3):
-            for elem in trivial_cobar.basis_it(d):
-                for key, _ in elem:
-                    assert trivial_cobar.degree_on_basis(key) == d
+            with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+                list(trivial_cobar.basis_it(d))
 
 
 # ---------------------------------------------------------------------------
@@ -371,10 +361,9 @@ class TestHadamardTensorAlgebraBasisIt:
         for d in range(3):
             for elem in had_alg.basis_it(d):
                 for (left_key, right_key), _ in elem:
-                    deg = (
-                        had_alg.left_module.degree_on_basis(left_key)
-                        + had_alg.right_module.degree_on_basis(right_key)
-                    )
+                    deg = had_alg.left_module.degree_on_basis(
+                        left_key
+                    ) + had_alg.right_module.degree_on_basis(right_key)
                     assert deg == d
 
     def test_basis_it_tensor_module_keys(self, had_alg) -> None:
@@ -403,9 +392,7 @@ class TestBasisItConsistencyWithBarConstruction:
             expected = 0
             for n in range(2, d + 2):
                 bar_comp = BarConstruction(Surjection)(n, QQ)
-                tree_count = sum(
-                    1 for _ in bar_comp.basis_it(d)
-                )
+                tree_count = sum(1 for _ in bar_comp.basis_it(d))
                 # Comm(1) has 1 generator in degree 0; n-tuple always ().
                 expected += tree_count
             # Arity-1 element has bar-degree 0; contributes to d=0 only.

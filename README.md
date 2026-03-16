@@ -105,7 +105,8 @@ attribute on concrete models, property on wrappers) representing the constant
   - Cobar complex `Ω_C(V)` of a C-coalgebra `V`.
   - `basis_it(d)` — iterates over all `(tree, v_tuple)` basis pairs of total degree `d`.
     Gives complete results when the cooperad has `connectivity ≥ 1`; for
-    `connectivity = 0` the enumeration covers arities up to `d + 1`.
+    `connectivity = 0` it raises `ValueError` instead of returning a partial
+    enumeration.
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
@@ -239,13 +240,15 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - `FreeAlgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`.
     The arity is bounded automatically from M's minimum degree and P's connectivity.
     Works correctly when M has elements only in strictly-positive degrees or P has
-    `connectivity ≥ 1`.
+    `connectivity ≥ 1`; otherwise it raises `ValueError` rather than returning a
+    partial list.
 
 - `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module, base_ring)`
   - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
   - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
   - `CofreeCoalgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`;
-    same arity-bounding logic as `FreeAlgebraModule.basis_it`.
+    same arity-bounding logic as `FreeAlgebraModule.basis_it` and the same
+    `ValueError` fail-fast behavior in non-exhaustive regimes.
 - `algebraic/spherical.py`
   - `ReducedSphereCochains(d)` — rank-1 module for reduced cochains of `S^d`,
     concentrated in degree `d`.
