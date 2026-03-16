@@ -28,6 +28,36 @@ from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 
 
+def _component_basis_in_degree(component, d: int) -> list:
+    """Return a list of degree-*d* basis elements from an operad/cooperad component.
+
+    Tries ``component.basis_it(d)`` first; falls back to ``basis()`` filtered by
+    ``degree_on_basis``.  Handles the edge case where ``basis_it`` requires no
+    degree argument (e.g. old-style ``Lie``).
+    """
+    basis_it_fn = getattr(component, "basis_it", None)
+    if basis_it_fn is not None:
+        try:
+            return list(basis_it_fn(d))
+        except TypeError:
+            # Degree-free basis_it: collect keys, then build elements
+            result = []
+            for elem in basis_it_fn():
+                for key, _ in elem:
+                    if component.degree_on_basis(key) == d:
+                        result.append(component.term(key))
+            return result
+    # Fallback: iterate basis() and filter by degree
+    result = []
+    try:
+        for key in component.basis():
+            if component.degree_on_basis(key) == d:
+                result.append(component.term(key))
+    except (AttributeError, NotImplementedError):
+        pass
+    return result
+
+
 class HadamardProduct(UniqueRepresentation):
     """Factory for Hadamard-product operad components."""
 
@@ -256,6 +286,35 @@ class HadamardProduct(UniqueRepresentation):
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
+        def basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
+            """Iterate over all basis elements of degree ``d``.
+
+            Yields all pairs ``(left_key, right_key)`` with
+            ``deg_P(left_key) + deg_Q(right_key) = d``.  Both factors are
+            enumerated via ``basis_it(d_left)`` (if available) or by
+            filtering ``basis()``.
+
+            Args:
+                d: Total degree to enumerate.
+
+            Yields:
+                Elements of this Hadamard component with degree ``d``.
+            """
+            left_parent = self._left_parent
+            right_parent = self._right_parent
+
+            for d_left in range(d + 1):
+                d_right = d - d_left
+                left_elems = list(_component_basis_in_degree(left_parent, d_left))
+                if not left_elems:
+                    continue
+                right_elems = list(_component_basis_in_degree(right_parent, d_right))
+                if not right_elems:
+                    continue
+                for left_elem in left_elems:
+                    for right_elem in right_elems:
+                        yield self.from_factors(left_elem, right_elem)
+
         def planar_basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
@@ -278,24 +337,7 @@ class HadamardProduct(UniqueRepresentation):
                 if not right_elems:
                     continue
 
-                # Gather left elements at degree d_left.
-                left_elems = []
-                if hasattr(left_parent, "basis_it"):
-                    try:
-                        left_elems = list(left_parent.basis_it(d_left))
-                    except TypeError:
-                        # Degree-free basis_it (e.g. Lie)
-                        for elem in left_parent.basis_it():
-                            for key in elem.support():
-                                if left_parent.degree_on_basis(key) == d_left:
-                                    left_elems.append(left_parent.term(key))
-                else:
-                    try:
-                        for key in left_parent.basis():
-                            if left_parent.degree_on_basis(key) == d_left:
-                                left_elems.append(left_parent.term(key))
-                    except (AttributeError, NotImplementedError):
-                        pass
+                left_elems = list(_component_basis_in_degree(left_parent, d_left))
 
                 for left_elem in left_elems:
                     for right_elem in right_elems:

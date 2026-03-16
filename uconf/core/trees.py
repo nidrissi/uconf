@@ -104,9 +104,7 @@ def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     parent = cooperad_cls(vertex_arity(tree), base_ring)
     dec = decoration(tree)
     vertex_deg = parent.degree_on_basis(dec) - 1
-    child_deg = sum(
-        subtree_degree_cobar(c, cooperad_cls, base_ring) for c in children(tree)
-    )
+    child_deg = sum(subtree_degree_cobar(c, cooperad_cls, base_ring) for c in children(tree))
     return vertex_deg + child_deg
 
 
@@ -162,13 +160,11 @@ def contract_edge(
     # Recurse into children
     new_children = []
     for child in children(tree):
-        new_children.append(
-            contract_edge(child, parent_vertex, child_pos, new_decoration)
-        )
+        new_children.append(contract_edge(child, parent_vertex, child_pos, new_decoration))
     return (decoration(tree),) + tuple(new_children)
 
 
-def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None) -> tuple:
+def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None) -> tuple | int:
     """Graft ``tree_bot`` onto leaf ``i`` of ``tree_top``.
 
     If ``relabel_bot`` is provided, it maps each leaf of ``tree_bot`` to its
@@ -215,9 +211,7 @@ def relabel_leaves(tree, mapping: dict):
     return (decoration(tree),) + new_children
 
 
-def split_at_vertex(
-    tree: tuple, target_vertex: tuple
-) -> tuple[tuple | int, int, tuple] | None:
+def split_at_vertex(tree: tuple, target_vertex: tuple) -> tuple[tuple | int, int, tuple] | None:
     """Split the tree at a given internal vertex.
 
     Returns ``(tree_top, position, tree_bot)`` where:
@@ -236,9 +230,7 @@ def split_at_vertex(
             return node
         if node is target_vertex:
             return replacement_leaf
-        new_children = tuple(
-            find_and_replace(c, replacement_leaf) for c in children(node)
-        )
+        new_children = tuple(find_and_replace(c, replacement_leaf) for c in children(node))
         return (decoration(node),) + new_children
 
     # Determine what leaf label to use as placeholder
@@ -481,9 +473,7 @@ def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> tuple:
     return rebuild(old_tree)
 
 
-def replace_vertex_decoration(
-    tree: tuple, target: tuple, new_decoration: tuple
-) -> tuple:
+def replace_vertex_decoration(tree: tuple, target: tuple, new_decoration: tuple) -> tuple:
     """Replace the decoration of a specific vertex in the tree."""
     if is_leaf(tree):
         return tree
@@ -828,18 +818,14 @@ def _shuffle_subtrees_iter(
             for parts in _shuffle_partitions(sorted_ls, v_arity):
                 # Minimum child total: sum of minimum bar degrees of internal parts.
                 min_child_total = sum(
-                    _min_subtree_bar_degree(len(p), connectivity)
-                    for p in parts
-                    if len(p) >= 2
+                    _min_subtree_bar_degree(len(p), connectivity) for p in parts if len(p) >= 2
                 )
                 # root_dec_deg ranges from min_root_dec_deg up to the value where
                 # child_total = target_degree - root_dec_deg - 1 is still achievable.
                 max_root_dec_deg = target_degree - 1 - min_child_total
                 for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
                     child_total = target_degree - root_dec_deg - 1
-                    for root_dec in _operad_basis_keys_in_degree(
-                        root_parent, root_dec_deg
-                    ):
+                    for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
                         yield from _shuffle_children_iter(
                             parts,
                             max_weight - 1,
@@ -867,9 +853,7 @@ def _shuffle_children_iter(
     # bar-degree contribution from parts[idx:].
     min_from = [0] * (len(parts) + 1)
     for i in range(len(parts) - 1, -1, -1):
-        min_from[i] = (
-            _min_subtree_bar_degree(len(parts[i]), connectivity) + min_from[i + 1]
-        )
+        min_from[i] = _min_subtree_bar_degree(len(parts[i]), connectivity) + min_from[i + 1]
 
     # Build sub-trees for all children incrementally.
     def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
@@ -896,9 +880,7 @@ def _shuffle_children_iter(
                 return
             for d_first in range(min_deg_this, max_d + 1):
                 first_trees = list(
-                    _shuffle_subtrees_iter(
-                        part, max_weight, operad_cls, base_ring, d_first
-                    )
+                    _shuffle_subtrees_iter(part, max_weight, operad_cls, base_ring, d_first)
                 )
                 if not first_trees:
                     continue
@@ -953,6 +935,201 @@ def enumerate_shuffle_trees_in_degree(
     )
 
 
+def _min_subtree_degree_generic(part_size: int, connectivity: int, vertex_offset: int) -> int:
+    """Minimum tree degree for a subtree with ``part_size`` leaves and given per-vertex offset.
+
+    The three canonical choices are:
+
+    - ``vertex_offset = +1``: bar degree, matches :func:`_min_subtree_bar_degree`.
+    - ``vertex_offset = 0``: free degree ``Σ deg_P(dec(v))``.
+    - ``vertex_offset = -1``: cobar degree ``Σ (deg_C(dec(v)) - 1)``.
+
+    Returns 0 for leaves (``part_size == 1``).
+    """
+    if part_size == 1:
+        return 0
+    return vertex_offset + connectivity * (part_size - 1)
+
+
+def _shuffle_children_iter_generic(
+    parts: list,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    total_deg: int,
+    root_dec: tuple,
+    vertex_offset: int,
+) -> Iterator[tuple]:
+    """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` with generic per-vertex offset."""
+    connectivity = getattr(operad_cls, "connectivity", 0)
+
+    min_from = [0] * (len(parts) + 1)
+    for i in range(len(parts) - 1, -1, -1):
+        min_from[i] = (
+            _min_subtree_degree_generic(len(parts[i]), connectivity, vertex_offset)
+            + min_from[i + 1]
+        )
+
+    def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
+        if idx == len(parts):
+            if remaining == 0:
+                yield []
+            return
+        if remaining < min_from[idx]:
+            return
+        part = parts[idx]
+        n_part = len(part)
+        if n_part == 1:
+            first = part[0]
+            for rest in _children_combinations(idx + 1, remaining):
+                yield [first] + rest
+        else:
+            min_deg_this = _min_subtree_degree_generic(n_part, connectivity, vertex_offset)
+            max_d = remaining - min_from[idx + 1]
+            if max_d < min_deg_this:
+                return
+            for d_first in range(min_deg_this, max_d + 1):
+                first_trees = list(
+                    _shuffle_subtrees_iter_generic(
+                        part, max_weight, operad_cls, base_ring, d_first, vertex_offset
+                    )
+                )
+                if not first_trees:
+                    continue
+                for rest in _children_combinations(idx + 1, remaining - d_first):
+                    for ft in first_trees:
+                        yield [ft] + rest
+
+    for ch in _children_combinations(0, total_deg):
+        yield (root_dec,) + tuple(ch)
+
+
+def _shuffle_subtrees_iter_generic(
+    leaf_set: tuple,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+) -> Iterator:
+    """Generic shuffle-tree enumerator with configurable per-vertex degree offset.
+
+    The three canonical choices for ``vertex_offset`` are:
+
+    - ``+1``: bar degree ``Σ (deg_P(v) + 1)``.
+    - ``0``: free degree ``Σ deg_P(v)`` (no suspension).
+    - ``-1``: cobar degree ``Σ (deg_C(v) - 1)``.
+    """
+    n = len(leaf_set)
+    if n == 0:
+        return
+    if n == 1:
+        if target_degree == 0:
+            yield leaf_set[0]
+        return
+    if max_weight < 1:
+        return
+
+    connectivity = getattr(operad_cls, "connectivity", 0)
+    sorted_ls = tuple(sorted(leaf_set))
+
+    for v_arity in range(2, n + 1):
+        root_parent = operad_cls(v_arity, base_ring)
+        min_root_dec_deg = connectivity * (v_arity - 1)
+        if v_arity == n:
+            root_dec_deg = target_degree - vertex_offset
+            if root_dec_deg >= min_root_dec_deg:
+                for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                    yield (root_dec,) + sorted_ls
+        else:
+            for parts in _shuffle_partitions(sorted_ls, v_arity):
+                min_child_total = sum(
+                    _min_subtree_degree_generic(len(p), connectivity, vertex_offset)
+                    for p in parts
+                    if len(p) >= 2
+                )
+                max_root_dec_deg = target_degree - vertex_offset - min_child_total
+                for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
+                    child_total = target_degree - root_dec_deg - vertex_offset
+                    for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                        yield from _shuffle_children_iter_generic(
+                            parts,
+                            max_weight - 1,
+                            operad_cls,
+                            base_ring,
+                            child_total,
+                            root_dec,
+                            vertex_offset,
+                        )
+
+
+def enumerate_shuffle_trees_free_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator[tuple]:
+    """Enumerate shuffle trees of ``arity`` leaves with free degree *target_degree*.
+
+    The *free degree* of a decorated tree is ``Σ_v deg_P(dec(v))`` — the sum of
+    operad/cooperad element degrees over all internal vertices, **without** the
+    per-vertex ``+1`` offset used by the bar construction.  This is the natural
+    degree for the free P-algebra composite product ``P ∘ M`` and the cofree
+    conilpotent C-coalgebra ``T^c_C(M)``.
+
+    Args:
+        arity: Number of leaves.
+        weight_bound: Maximum number of internal vertices (pass ``arity - 1``
+            for connected operads).
+        operad_cls: Operad or cooperad factory used for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact free degree to enumerate.
+
+    Yields:
+        Decorated shuffle trees (nested tuples) as valid tree basis keys.
+    """
+    if arity < 2 or weight_bound < 1:
+        return
+    yield from _shuffle_subtrees_iter_generic(
+        tuple(range(1, arity + 1)), weight_bound, operad_cls, base_ring, target_degree, 0
+    )
+
+
+def enumerate_shuffle_trees_cobar_in_degree(
+    arity: int,
+    weight_bound: int,
+    cooperad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+) -> Iterator[tuple]:
+    """Enumerate shuffle trees of ``arity`` leaves with cobar degree *target_degree*.
+
+    The *cobar degree* of a decorated tree is ``Σ_v (deg_C(dec(v)) - 1)`` — the
+    sum of desuspended cooperad element degrees over all internal vertices.  This
+    is the natural degree for the cobar construction ``Ω(C)`` and the cobar
+    complex ``Ω_C(V)``.
+
+    Args:
+        arity: Number of leaves.
+        weight_bound: Maximum number of internal vertices (pass ``arity - 1``
+            for connected cooperads).
+        cooperad_cls: Cooperad factory used for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact cobar degree to enumerate.  May be negative when
+            the cooperad has elements of low degree (e.g. ``CoAssociative`` in
+            degree 0 contributes ``-1`` per vertex).
+
+    Yields:
+        Decorated shuffle trees (nested tuples) as valid tree basis keys.
+    """
+    if arity < 2 or weight_bound < 1:
+        return
+    yield from _shuffle_subtrees_iter_generic(
+        tuple(range(1, arity + 1)), weight_bound, cooperad_cls, base_ring, target_degree, -1
+    )
+
+
 def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     """Normalize a tree to shuffle form for the cobar construction Ω(C).
 
@@ -983,9 +1160,7 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
 
     # Compute min leaf and cobar-degree for each normalized child
     min_leaves = [min_leaf(c) for c in normalized_kids]
-    cobar_degrees = [
-        subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids
-    ]
+    cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
 
     # Sort children by min leaf
     indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))

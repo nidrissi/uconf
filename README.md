@@ -83,6 +83,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - **Quasi-planar structure** (when the base operad is quasi-planar, e.g. `Surjection`, `BarrattEccles`, or a `HadamardProduct` whose right factor is quasi-planar):
     - `Component.planarize(x)` — decomposes `x` into `x_pl ⊗ σ ∈ B(P)_pl(n) ⊗ k[S_n]`.
     - `Component.planar_basis_it(d)` — iterates over strongly-planar basis trees of bar degree `d`.
+    - `Component.basis_it(d)` — iterates over **all** shuffle-tree basis elements of bar degree `d`.
     - `Component.d_sigma(x, σ)` — the `σ`-component of `boundary(x)`, i.e. `π_σ(d(x))`.
     - `Component.d_sigma_iterate(x, [σ₁,…,σₖ])` — iterated `d_σ` with zero-branch pruning.
     - `Element.planarize()` — convenience wrapper.
@@ -91,6 +92,21 @@ attribute on concrete models, property on wrappers) representing the constant
   - Cobar construction of a connected dg-cooperad: `\Omega(C) = (T(s^{-1}\bar{C}), d_1 + d_2)`.
   - Operadic model on decorated rooted trees.
   - Differential combines internal differential and vertex-expansion terms from infinitesimal cocomposition.
+  - `Component.basis_it(d)` — iterates over shuffle-tree basis elements of cobar degree `d`.
+    Works for any connected cooperad, including those with negative-degree elements (e.g.
+    `CoAssociative`).
+
+- `constructions/bar_algebra.py` — `BarComplexAlgebra(alg, base_ring)`
+  - Bar complex `B_P(A)` of a P-algebra `A`.
+  - `basis_it(d)` — iterates over all `(tree, a_tuple)` basis pairs of total degree `d`.
+    Arity is bounded by `d + 1` for connected P with non-negatively graded A.
+
+- `constructions/cobar_coalgebra.py` — `CobarComplexCoalgebra(coalg, base_ring)`
+  - Cobar complex `Ω_C(V)` of a C-coalgebra `V`.
+  - `basis_it(d)` — iterates over all `(tree, v_tuple)` basis pairs of total degree `d`.
+    Gives complete results when the cooperad has `connectivity ≥ 1`; for
+    `connectivity = 0` it raises `ValueError` instead of returning a partial
+    enumeration.
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
@@ -108,6 +124,11 @@ attribute on concrete models, property on wrappers) representing the constant
 - `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.
   - Utilities for DFS traversal, arity/weight/leaves, grafting, edge contraction, and vertex expansion.
+  - `enumerate_shuffle_trees_in_degree(arity, weight_bound, P, R, d)` — bar degree `Σ(deg_P+1)`.
+  - `enumerate_shuffle_trees_free_in_degree(arity, weight_bound, P, R, d)` — free degree `Σ deg_P`.
+    Used by `FreeAlgebraModule.basis_it` and `CofreeCoalgebraModule.basis_it`.
+  - `enumerate_shuffle_trees_cobar_in_degree(arity, weight_bound, C, R, d)` — cobar degree `Σ(deg_C-1)`.
+    Used by `CobarConstruction.Component.basis_it` and `CobarComplexCoalgebra.basis_it`.
 
 ### Simplicial models
 
@@ -201,6 +222,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
+  - `Component.basis_it(d)` — iterates over all `(left_key, right_key)` pairs with total degree `d`.
   - `Component.planar_basis_it(d)` — if the right factor `Q` has `planar_basis_it`,
     iterates over pairs `(left_key, right_pl_key)` with right key planar and total degree `d`.
 
@@ -208,6 +230,25 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Input: a `P`-algebra `A` and a `Q`-algebra `B`.
   - Output: a `(P ⊙ Q)`-algebra on `tensor([A.module, B.module])`.
   - Action is diagonal on factors and multilinear on tensor arguments.
+  - `basis_it(d)` — iterates over all `(left_key, right_key)` tensor basis elements with total degree `d`.
+
+- `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad_cls, inner_module, base_ring)`
+  - Free P-algebra on a dg-module M: `P ∘ M = ⊕_{n≥1} P(n) ⊗_{S_n} M^{⊗n}`.
+  - Basis keys are `(tree, m_tuple)` pairs where `tree` is a shuffle tree and
+    `m_tuple` is a tuple of M-basis keys.
+  - Degree: `deg(tree, m_tuple) = Σ_v deg_P(dec(v)) + Σ_i deg_M(m_i)` (no suspension).
+  - `FreeAlgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`.
+    The arity is bounded automatically from M's minimum degree and P's connectivity.
+    Works correctly when M has elements only in strictly-positive degrees or P has
+    `connectivity ≥ 1`; otherwise it raises `ValueError` rather than returning a
+    partial list.
+
+- `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module, base_ring)`
+  - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
+  - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
+  - `CofreeCoalgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`;
+    same arity-bounding logic as `FreeAlgebraModule.basis_it` and the same
+    `ValueError` fail-fast behavior in non-exhaustive regimes.
 - `algebraic/spherical.py`
   - `ReducedSphereCochains(d)` — rank-1 module for reduced cochains of `S^d`,
     concentrated in degree `d`.
