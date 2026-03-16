@@ -30,6 +30,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
     Args:
         left_algebra: A ``P``-algebra wrapper.
         right_algebra: A ``Q``-algebra wrapper.
+
     """
 
     def __init__(self, left_algebra: OperadAlgebra, right_algebra: OperadAlgebra):
@@ -140,5 +141,4 @@ def hadamard_tensor_algebra(
     right_algebra: OperadAlgebra,
 ) -> HadamardTensorAlgebra:
     """Build the canonical ``(P ⊙ Q)``-algebra on ``A ⊗ B``."""
-
     return HadamardTensorAlgebra(left_algebra, right_algebra)

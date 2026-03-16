@@ -105,7 +105,6 @@ def test_sequential_associativity_arity4() -> None:
     must hold in Lie(4, QQ).  Both sides require compositions through
     Lie(3, QQ) → Lie(4, QQ), exercising the full compose/project pipeline.
     """
-
     bracket = Lie(2, QQ)((1,))
 
     t0 = time.perf_counter()
@@ -123,7 +122,6 @@ def test_sequential_associativity_arity5() -> None:
     Uses ``(μ ∘_1 (μ ∘_1 μ)) ∘_1 μ = μ ∘_1 ((μ ∘_1 μ) ∘_1 μ)`` in Lie(5, QQ),
     a non-trivial identity requiring four composition calls in Lie(3, QQ)–Lie(5, QQ).
     """
-
     bracket = Lie(2, QQ)((1,))
     mu3 = Lie.compose(bracket, 1, bracket)  # Lie(3, QQ)
 
@@ -143,7 +141,6 @@ def test_compose_full_basis_arity5() -> None:
     itself to produce an element of Lie(5, QQ).  The result must be non-zero
     and the call must complete quickly after caches are warm.
     """
-
     l3 = Lie(3, QQ)
     x = sum((l3(k) for k in l3._basis_keys()), l3.zero())  # sum all 2! basis elts
     assert x != l3.zero(), "Sum of Lie(3, QQ) basis should be non-zero."
@@ -166,7 +163,6 @@ def test_compose_full_basis_arity6() -> None:
     This exercises the arity-6 cache path (PBW matrix 720×120, left-inverse
     120×720).  The warm call should complete in well under 30 seconds.
     """
-
     l3 = Lie(3, QQ)
     l4 = Lie(4, QQ)
     x = sum((l3(k) for k in l3._basis_keys()), l3.zero())

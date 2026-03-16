@@ -1,7 +1,7 @@
 """Tests for the Hadamard-product operad wrapper."""
 
 import pytest
-from sage.all import ZZ, QQ, GF
+from sage.all import QQ, GF
 
 from uconf import HadamardProduct, Lie, ShiftedOperad, Surjection
 

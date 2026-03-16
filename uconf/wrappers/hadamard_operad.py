@@ -264,13 +264,12 @@ class HadamardProduct(UniqueRepresentation):
             factor to implement ``planar_basis_it``.  The left factor is
             iterated with ``basis_it(d_left)`` (degree-indexed).
             """
-
             left_parent = self._left_parent
             right_parent = self._right_parent
 
             if not hasattr(right_parent, "planar_basis_it"):
                 raise NotImplementedError(
-                    "Right parent does not support planar_basis_it, so planar basis is not available."
+                    "Right parent does not support planar_basis_it."
                 )
 
             for d_right in range(d + 1):
@@ -310,11 +309,11 @@ class HadamardProduct(UniqueRepresentation):
 
             if left_parent.arity() != self.arity():
                 raise TypeError(
-                    f"Left element arity {left_parent.arity()} does not match target arity {self.arity()}."
+                    f"Left element arity {left_parent.arity()} does not match {self.arity()}."
                 )
             if right_parent.arity() != self.arity():
                 raise TypeError(
-                    f"Right element arity {right_parent.arity()} does not match target arity {self.arity()}."
+                    f"Right element arity {right_parent.arity()} does not match {self.arity()}."
                 )
             if left_parent.base_ring() != self.base_ring():
                 raise TypeError("Left element must have the same base ring as target.")
@@ -362,7 +361,8 @@ class HadamardProduct(UniqueRepresentation):
                 hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
             ):
                 raise TypeError(
-                    f"Permutation must be a list, tuple, or element of S_{parent.arity()}. Got {sigma} ({type(sigma)})."
+                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
+                    f"got {type(sigma).__name__}: {sigma!r}."
                 )
 
             result = parent.zero()

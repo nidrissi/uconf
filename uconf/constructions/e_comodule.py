@@ -15,7 +15,7 @@ by:
 
     \\Delta(s^{-1}x \\otimes \\{\\mathrm{id}\\})
       = \\sum_{k \\ge 0} \\sum_{\\underline\\sigma \\in S_n^k}
-          \\rho(\\underline\\sigma) \\otimes D_{\\underline\\sigma}(s^{-1}x \\otimes \\{\\mathrm{id}\\})
+      \\rho(\\underline\\sigma) \\otimes D_{\\underline\\sigma}(s^{-1}x \\otimes \\{\\mathrm{id}\\})
 
 where:
 
@@ -94,6 +94,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
     element), so they are skipped.  Zero branches of :math:`d_\\sigma` are
     pruned early.  The recursion depth is bounded by
     :math:`\\deg_{\\mathcal{C}}(\\text{dec\\_elem})`.
+
     """
     cooperad_component: CooperadComponent = dec_elem.parent()
     assert isinstance(cooperad_component, QuasiPlanarMixin), (
@@ -140,6 +141,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
             so far (a planar element of *cooperad_component*).
         sigma_bar :
             The list :math:`[\\sigma_1, \\ldots, \\sigma_k]` accumulated so far.
+
         """
         nonlocal result
 

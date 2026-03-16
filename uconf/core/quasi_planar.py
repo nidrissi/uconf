@@ -78,6 +78,7 @@ class QuasiPlanarMixin:
         -------
         The planar element ``d_σ(x) ∈ P_pl(n)`` such that the σ-component
         of ``d(x)`` is ``d_σ(x) ⊗ σ``.
+
         """
         from sage.all import SymmetricGroup
 
@@ -118,6 +119,7 @@ class QuasiPlanarMixin:
         Returns
         -------
         The result of applying d_{σₖ}, then d_{σ_{k-1}}, ..., then d_{σ₁}.
+
         """
         sigmas = list(sigmas)
         result = x

@@ -16,7 +16,6 @@ def _block_permutation(
     sigma: tuple[int, ...], i: int, tau: tuple[int, ...]
 ) -> tuple[int, ...]:
     """Return the block permutation ``sigma ∘_i tau`` in one-line notation."""
-
     shift = len(tau) - 1
     result = []
     for value in sigma:
@@ -31,7 +30,6 @@ def _block_permutation(
 
 def _inverse_one_line(sigma: tuple[int, ...]) -> tuple[int, ...]:
     """Return inverse permutation in one-line notation."""
-
     inv = [0] * len(sigma)
     for pos, value in enumerate(sigma, start=1):
         inv[value - 1] = pos
@@ -68,7 +66,6 @@ def test_associative_requires_same_base_ring() -> None:
 @pytest.mark.parametrize("m,n,p", [(3, 2, 2), (3, 2, 3)])
 def test_associative_sequential_associativity_axiom(m: int, n: int, p: int) -> None:
     """Check ``(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z)`` on a non-trivial basis sample."""
-
     xs = list(Associative(m, QQ).basis_it(0))
     ys = list(Associative(n, QQ).basis_it(0))
     zs = list(Associative(p, QQ).basis_it(0))
@@ -87,7 +84,6 @@ def test_associative_sequential_associativity_axiom(m: int, n: int, p: int) -> N
 
 def test_associative_parallel_associativity_axiom() -> None:
     """Check ``(x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y`` for ``i < k``."""
-
     m, n, p = 4, 2, 3
     xs = list(Associative(m, QQ).basis_it(0))[:3]
     ys = list(Associative(n, QQ).basis_it(0))[:2]
@@ -103,7 +99,6 @@ def test_associative_parallel_associativity_axiom() -> None:
 
 def test_associative_compose_equivariant_under_block_permutations() -> None:
     """Check ``(σx)∘_i(τy) = (x∘_{σ^{-1}(i)}y)^{σ∘_iτ}``."""
-
     m, n = 3, 2
     xs = list(Associative(m, QQ).basis_it(0))[:3]
     ys = list(Associative(n, QQ).basis_it(0))[:2]
@@ -121,7 +116,6 @@ def test_associative_compose_equivariant_under_block_permutations() -> None:
 
 def test_associative_equivariance_on_linear_combinations() -> None:
     """Check the same equivariance identity on non-basis elements."""
-
     x = 2 * Associative(3, QQ)((1, 3, 2)) - Associative(3, QQ)((2, 1, 3))
     y = 3 * Associative(2, QQ)((2, 1)) + Associative(2, QQ)((1, 2))
     sigma = (2, 3, 1)

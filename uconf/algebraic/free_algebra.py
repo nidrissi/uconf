@@ -79,6 +79,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             operad_cls: Operad provider P (class or wrapper instance).
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
+
         """
         self._operad_cls = operad_cls
         self._inner_module = inner_module
@@ -291,6 +292,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         free_lie = FreeOperadAlgebra(Lie, module_M, R)
         # Apply the Lie bracket to two generators:
         bracket = free_lie.act(Lie(2, R).term((1,)), [x, y])
+
     """
 
     def __init__(self, operad_cls: OperadLike, inner_module, base_ring):
@@ -311,6 +313,7 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         Returns:
             An element of ``free_module``.
+
         """
         k = p_element.arity()
         inputs = list(algebra_elements)
@@ -345,6 +348,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         Returns:
             A ``(new_tree, new_m_tuple)`` pair that is a valid
             ``FreeAlgebraModule`` basis key.
+
         """
         n_list = [len(k[1]) for k in input_keys]
         offsets = []
@@ -375,5 +379,6 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         Returns:
             The element ``module.term((1, (m_key,)))``.
+
         """
         return self.module.term((1, (m_key,)))
