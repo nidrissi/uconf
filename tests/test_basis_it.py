@@ -212,29 +212,23 @@ class TestBarComplexAlgebraBasisIt:
         key, _ = next(iter(elems[0]))
         assert key == (1, ((),))
 
-    def test_degree1_arity2_trees(self, trivial_bar) -> None:
-        """Degree 1 = arity-2 bar trees (bar degree 1) with A-tuple degree 0."""
-        elems = list(trivial_bar.basis_it(1))
-        # Ass(2) has 2 basis keys; bar degree 1 for weight-1 arity-2 tree.
-        assert len(elems) == 2
+    def test_degree1_non_exhaustive(self, trivial_bar) -> None:
+        """Degree ≥ 1 is non-exhaustive (connectivity=0 with bar shift)."""
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(trivial_bar.basis_it(1))
 
-    def test_correct_degrees(self, trivial_bar) -> None:
-        """All yielded elements have the requested total degree."""
-        for d in range(3):
-            for elem in trivial_bar.basis_it(d):
-                for key, _ in elem:
-                    assert trivial_bar.degree_on_basis(key) == d
+    def test_correct_degree0(self, trivial_bar) -> None:
+        """All yielded elements at degree 0 have the requested total degree."""
+        for elem in trivial_bar.basis_it(0):
+            for key, _ in elem:
+                assert trivial_bar.degree_on_basis(key) == 0
 
     def test_with_lie_operad(self) -> None:
-        """Bar complex with Lie operad: degree-1 elements are arity-2 Lie trees."""
+        """Bar complex with Lie operad: degree ≥ 1 is non-exhaustive (connectivity=0)."""
         alg = TrivialAlgebra(Lie)
         B = BarComplexAlgebra(alg, QQ)
-        elems_d1 = list(B.basis_it(1))
-        # Lie(2) has 1 basis key in degree 0; bar degree 1 for weight-1 tree.
-        assert len(elems_d1) == 1
-        for elem in elems_d1:
-            for key, _ in elem:
-                assert B.degree_on_basis(key) == 1
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(B.basis_it(1))
 
 
 # ---------------------------------------------------------------------------
@@ -384,19 +378,17 @@ class TestHadamardTensorAlgebraBasisIt:
 class TestBasisItConsistencyWithBarConstruction:
     """Sanity-check that BarComplexAlgebra.basis_it counts match the expected tree × module count."""
 
-    def test_bar_degree_count_surjection(self) -> None:
-        """B(Sur; Comm(1)) degree-d count = Σ_{n≥2} |B(Sur)(n) deg d| × |Comm(1)^n deg 0|."""
+    def test_bar_degree0_count_surjection(self) -> None:
+        """B(Sur; Comm(1)) degree 0 has exactly the single-leaf element."""
+        alg = TrivialAlgebra(Surjection)
+        B = BarComplexAlgebra(alg, QQ)
+        actual = _count(B.basis_it(0))
+        assert actual == 1  # single leaf with a_key = ()
+
+    def test_bar_degree_ge1_non_exhaustive(self) -> None:
+        """B(Sur; Comm(1)) degree ≥ 1 is non-exhaustive (Sur has connectivity=0)."""
         alg = TrivialAlgebra(Surjection)
         B = BarComplexAlgebra(alg, QQ)
         for d in range(1, 4):
-            expected = 0
-            for n in range(2, d + 2):
-                bar_comp = BarConstruction(Surjection)(n, QQ)
-                tree_count = sum(1 for _ in bar_comp.basis_it(d))
-                # Comm(1) has 1 generator in degree 0; n-tuple always ().
-                expected += tree_count
-            # Arity-1 element has bar-degree 0; contributes to d=0 only.
-            if d == 0:
-                expected += 1  # single leaf with a_key = ()
-            actual = _count(B.basis_it(d))
-            assert actual == expected, f"degree {d}: expected {expected}, got {actual}"
+            with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+                list(B.basis_it(d))

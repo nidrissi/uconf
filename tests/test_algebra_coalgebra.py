@@ -40,9 +40,7 @@ class TrivialAssAlgebra(OperadAlgebra):
         # All elements are scalar multiples of ()
         n = p_element.arity()
         if len(algebra_elements) != n:
-            raise ValueError(
-                f"Expected {n} algebra elements, got {len(algebra_elements)}."
-            )
+            raise ValueError(f"Expected {n} algebra elements, got {len(algebra_elements)}.")
 
         result = self.module.zero()
         for p_key, p_coeff in p_element:
@@ -312,20 +310,20 @@ class TestCobarComplexCoalgebra:
         assert deg == -1
 
     def test_d1_zero_for_trivial(self):
-        """d_1 = 0 when the cooperad boundary is zero."""
+        """d_internal = 0 when the cooperad and module boundaries are both zero."""
         C = _make_cobar_complex()
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         elem = C((tree, ((), ())))
-        assert elem.d1() == C.zero()
+        assert elem.d_internal() == C.zero()
 
-    def test_dV_zero_for_trivial(self):
-        """d_V = 0 when module boundary is zero."""
+    def test_d_internal_zero_for_trivial(self):
+        """d_internal = 0 when cooperad and module boundaries are both zero."""
         C = _make_cobar_complex()
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         elem = C((tree, ((), ())))
-        assert elem.dV() == C.zero()
+        assert elem.d_internal() == C.zero()
 
 
 # ===========================================================================
