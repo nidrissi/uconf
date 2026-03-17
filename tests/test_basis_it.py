@@ -83,15 +83,19 @@ class TestFreeAlgebraModuleBasisIt:
         assert len(elems_d0) == 1, "Only the arity-1 leaf in degree 0"
 
     def test_shifted_ass_degree1_arity2(self) -> None:
-        """ShiftedOperad(Ass,1) degree 1 = arity-2 elements only (tree degree 1)."""
+        """ShiftedOperad(Ass,1) degree 1 = exactly one arity-2 element.
+
+        ShiftedAss(2) ⊗_{S_2} Comm(1)^{⊗2}: the S_2-action on ShiftedAss(2)
+        is by sign, and Comm(1)^{⊗2} = k{((),())} carries the trivial action.
+        The coinvariant quotient is 1-dimensional.  Equivalently, ShiftedAss is
+        quasi-planar with one-dimensional planar part at each arity, so
+        basis_it uses only the planar decoration (1,2).
+        """
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
         mod = FreeAlgebraModule(P, M, QQ)
         elems_d1 = list(mod.basis_it(1))
-        # Arity 2: two leaves, one vertex of ShiftedAss(2) in degree 1.
-        # Ass(2) has 2 basis elements ((1,2) and (2,1)), both in degree 0,
-        # shifted by 1*(2-1)=1, so ShiftedAss(2) has 2 basis elements in degree 1.
-        assert len(elems_d1) == 2
+        assert len(elems_d1) == 1
 
     def test_correct_degrees(self) -> None:
         """All yielded elements have the requested degree."""
@@ -113,6 +117,25 @@ class TestFreeAlgebraModuleBasisIt:
         for elem in mod.basis_it(3):
             for key, _ in elem:
                 assert mod.degree_on_basis(key) == 3
+
+    def test_non_planar_operad_raises_not_implemented(self) -> None:
+        """Lie and Commutative (non-quasi-planar) raise NotImplementedError.
+
+        For these operads the tensor-over-S_n quotient P(n) ⊗_{S_n} M^{⊗n}
+        cannot be represented by a naive product of full bases, so basis_it()
+        raises NotImplementedError instead of silently overcounting.
+        """
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
+        # Positive-degree inner module forces basis_it to reach the planar check.
+        mod_M = CombinatorialFreeModule(QQ, ["x"], category=GradedModulesWithBasis(QQ))
+        mod_M.degree_on_basis = lambda _k: 2
+        mod_M.boundary = lambda _e: mod_M.zero()
+
+        for P in (Lie, Commutative):
+            mod = FreeAlgebraModule(P, mod_M, QQ)
+            with pytest.raises(NotImplementedError, match="planar_basis_it"):
+                list(mod.basis_it(4))
 
 
 # ---------------------------------------------------------------------------

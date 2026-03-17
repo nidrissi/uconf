@@ -163,12 +163,17 @@ class TreeModule(CombinatorialFreeModule):
     def basis_it(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
-        When the symmetric sequence supports ``planar_basis_it`` (quasi-planar
-        operads such as ``Associative``, ``Surjection``, ``BarrattEccles``),
-        only planar vertex decorations are enumerated.  This yields one
-        representative per ``S_n``-orbit, matching the isomorphism
-        ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` for the composite
-        product ``P ∘ M``.
+        Requires the symmetric sequence to support ``planar_basis_it`` on its
+        components (quasi-planar operads such as ``Associative``, ``Surjection``,
+        ``BarrattEccles``, or ``ShiftedOperad`` wrapping any of these).  Only
+        planar vertex decorations are enumerated, yielding one representative per
+        ``S_n``-orbit via the isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}``.
+
+        Raises:
+            NotImplementedError: when the symmetric sequence does not expose
+                ``planar_basis_it`` (e.g. ``Commutative``, ``Lie``).
+            ValueError: when the arity is unbounded in the requested degree
+                (both S and M admit degree-0 generators).
         """
         M = self._inner_module
         S = self._symmetric_sequence_cls
@@ -204,16 +209,29 @@ class TreeModule(CombinatorialFreeModule):
                 "so arity is unbounded in fixed degree."
             )
 
-        # Detect quasi-planar support: use planar vertex decorations when the
-        # symmetric sequence exposes planar_basis_it on its components.
-        # We probe with arity 2 (the minimal connected arity); if S(2, R) cannot
-        # be constructed or does not implement planar_basis_it, fall back to the
-        # full basis.  Common failure modes (unsupported arity, missing base_ring
-        # argument) raise TypeError, ValueError, or NotImplementedError.
+        # Require quasi-planar support: basis_it() is only correct when the
+        # symmetric sequence exposes planar_basis_it on its components, so that
+        # we can pick one representative per S_n-orbit (matching the isomorphism
+        # P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}).  For non-quasi-planar
+        # operads (e.g. Commutative, Lie) the tensor-over-S_n quotient cannot
+        # be represented by a naive product of full bases, and falling back to
+        # the full basis would silently produce an overcomplete set.
+        # Common failure modes during S(2, R) construction: TypeError,
+        # ValueError, NotImplementedError, AttributeError.
         try:
             _use_planar = hasattr(S(2, R), "planar_basis_it")
         except (TypeError, ValueError, NotImplementedError, AttributeError):
             _use_planar = False
+
+        if not _use_planar:
+            raise NotImplementedError(
+                f"basis_it() requires the symmetric sequence {S.name!r} to support "
+                "planar_basis_it() on its arity-2 component.  "
+                "Supported quasi-planar sequences include Associative, Surjection, "
+                "BarrattEccles, and ShiftedOperad wrapping any of these.  "
+                "For non-quasi-planar operads (e.g. Commutative, Lie) the basis "
+                "of the composite product P ∘ M cannot be enumerated this way."
+            )
 
         for n in range(2, max_n + 1):
             max_weight = n - 1
@@ -226,7 +244,7 @@ class TreeModule(CombinatorialFreeModule):
                     continue
                 for tree in enumerate_shuffle_trees_generic_in_degree(
                     n, max_weight, S, R, d_tree, self._vertex_degree_shift,
-                    use_planar_decs=_use_planar,
+                    use_planar_decs=True,
                 ):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
