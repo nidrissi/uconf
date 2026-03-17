@@ -5,6 +5,7 @@ from typing import Any, ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     Permutation,
     SymmetricGroup,
@@ -217,6 +218,11 @@ class Lie(CombinatorialFreeModule):
         if d == 0:
             for key in self._basis_keys():
                 yield self.term(key)
+
+    @cached_method
+    def graded_basis(self, d: int) -> Family:
+        """Return the ``Family`` of all basis elements in degree ``d``."""
+        return Family(self.basis_it(d))
 
     @staticmethod
     def unit(base_ring):

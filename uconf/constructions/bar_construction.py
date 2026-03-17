@@ -27,10 +27,12 @@ from typing import Any, ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     UniqueRepresentation,
+    cached_method,
     tensor,
 )
 
@@ -361,6 +363,16 @@ class BarConstruction(UniqueRepresentation):
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
             return validate_tree(basis_key, self._arity, self._operad_cls, self.base_ring())
+
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_it(d))
+
+        @cached_method
+        def graded_planar_basis(self, d: int) -> Family:
+            """Return the ``Family`` of planar basis elements in degree ``d``."""
+            return Family(self.planar_basis_it(d))
 
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.

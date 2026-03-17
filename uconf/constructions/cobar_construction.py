@@ -27,9 +27,11 @@ from typing import ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     UniqueRepresentation,
+    cached_method,
 )
 
 from uconf.core.cooperad import CooperadLike
@@ -251,6 +253,11 @@ class CobarConstruction(UniqueRepresentation):
             if is_leaf(basis_element):
                 return "id"
             return tree_to_string(basis_element, self.factory.cooperad_cls.name)
+
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_it(d))
 
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one cobar basis tree."""
