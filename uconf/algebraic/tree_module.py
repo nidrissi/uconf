@@ -161,7 +161,15 @@ class TreeModule(CombinatorialFreeModule):
         return v_deg + m_deg
 
     def basis_it(self, d: int) -> Iterator[Any]:
-        """Iterate over basis elements of total degree ``d``."""
+        """Iterate over basis elements of total degree ``d``.
+
+        When the symmetric sequence supports ``planar_basis_it`` (quasi-planar
+        operads such as ``Associative``, ``Surjection``, ``BarrattEccles``),
+        only planar vertex decorations are enumerated.  This yields one
+        representative per ``S_n``-orbit, matching the isomorphism
+        ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` for the composite
+        product ``P ∘ M``.
+        """
         M = self._inner_module
         S = self._symmetric_sequence_cls
         R = self.base_ring()
@@ -196,6 +204,17 @@ class TreeModule(CombinatorialFreeModule):
                 "so arity is unbounded in fixed degree."
             )
 
+        # Detect quasi-planar support: use planar vertex decorations when the
+        # symmetric sequence exposes planar_basis_it on its components.
+        # We probe with arity 2 (the minimal connected arity); if S(2, R) cannot
+        # be constructed or does not implement planar_basis_it, fall back to the
+        # full basis.  Common failure modes (unsupported arity, missing base_ring
+        # argument) raise TypeError, ValueError, or NotImplementedError.
+        try:
+            _use_planar = hasattr(S(2, R), "planar_basis_it")
+        except (TypeError, ValueError, NotImplementedError, AttributeError):
+            _use_planar = False
+
         for n in range(2, max_n + 1):
             max_weight = n - 1
             for d_M in range(d + 1):
@@ -206,7 +225,8 @@ class TreeModule(CombinatorialFreeModule):
                 if not m_tuples:
                     continue
                 for tree in enumerate_shuffle_trees_generic_in_degree(
-                    n, max_weight, S, R, d_tree, self._vertex_degree_shift
+                    n, max_weight, S, R, d_tree, self._vertex_degree_shift,
+                    use_planar_decs=_use_planar,
                 ):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
