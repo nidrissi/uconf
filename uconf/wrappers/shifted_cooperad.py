@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     UniqueRepresentation,
+    cached_method,
     tensor,
 )
 
@@ -119,6 +122,29 @@ class ShiftedCooperad(UniqueRepresentation):
                 (basis, coeff) for basis, coeff in element
             )
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
+
+        def basis_it(self, d: int) -> "Iterator[ShiftedCooperad.Element]":
+            """Iterate over basis elements of this shifted-cooperad component in degree ``d``.
+
+            The arity-``n`` component of ``ShiftedCooperad(C, s)`` has its degrees
+            shifted by ``s*(n-1)`` relative to the base cooperad ``C(n)``, so a
+            base-cooperad element in degree ``d - s*(n-1)`` appears here in degree ``d``.
+            """
+            unshifted_degree = d - self.factory.shift_degree * (self._arity - 1)
+            base_parent = self._base_parent
+            base_basis_it = getattr(base_parent, "basis_it", None)
+            if base_basis_it is not None:
+                for elem in base_basis_it(unshifted_degree):
+                    yield self.sum_of_terms((key, coeff) for key, coeff in elem)
+            else:
+                for key in base_parent.basis():
+                    if base_parent.degree_on_basis(key) == unshifted_degree:
+                        yield self.term(key)
+
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_it(d))
 
         def degree_on_basis(self, basis_element) -> int:
             if isinstance(basis_element, ShiftedCooperad.Element):

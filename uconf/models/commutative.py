@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Iterator
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, SymmetricGroup
+from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, SymmetricGroup, cached_method
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -78,6 +78,11 @@ class Commutative(CombinatorialFreeModule):
         """Iterate over basis elements in this arity and the given degree."""
         if self.arity() >= 1 and d == 0:
             yield self.term(())
+
+    @cached_method
+    def graded_basis(self, d: int) -> Family:
+        """Return the ``Family`` of all basis elements in degree ``d``."""
+        return Family(self.basis_it(d))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis element."""
