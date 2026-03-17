@@ -35,7 +35,7 @@ from sage.all import CombinatorialFreeModule, tensor
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import TreeModule
 from uconf.core.cooperad import CooperadLike
-from uconf.core.vertex_decorated import VertexDecoratedLike
+from uconf.core.vertex_decoration import VertexDecorationLike
 from uconf.core.trees import (
     children,
     decoration,
@@ -62,7 +62,7 @@ class CofreeCoalgebraModule(TreeModule):
 
     def __init__(
         self,
-        cooperad_cls: VertexDecoratedLike,
+        cooperad_cls: VertexDecorationLike,
         inner_module: CombinatorialFreeModule,
         base_ring,
         *,

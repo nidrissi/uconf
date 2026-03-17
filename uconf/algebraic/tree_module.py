@@ -25,7 +25,7 @@ from uconf.core.trees import (
     vertex_arity,
     vertices_dfs,
 )
-from uconf.core.vertex_decorated import VertexDecoratedLike
+from uconf.core.vertex_decoration import VertexDecorationLike
 
 
 def _dfs_all_iter(tree):
@@ -72,7 +72,7 @@ class TreeModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        symmetric_sequence_cls: VertexDecoratedLike,
+        symmetric_sequence_cls: VertexDecorationLike,
         inner_module: CombinatorialFreeModule,
         base_ring,
         *,
