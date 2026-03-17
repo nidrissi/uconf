@@ -132,12 +132,12 @@ class Surjection(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(tuple(self.basis_it(d)))
+        return Family(self.basis_it(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
         """Return the ``Family`` of planar basis elements in degree ``d``."""
-        return Family(tuple(self.planar_basis_it(d)))
+        return Family(self.planar_basis_it(d))
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""
