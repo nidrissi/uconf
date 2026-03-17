@@ -10,110 +10,35 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Any, Iterable, Protocol, Self, TypeAlias, runtime_checkable
+from typing import Any, Iterable, Protocol, TypeAlias, runtime_checkable
+
+from uconf.core.component import ComponentProtocol
 
 
 @runtime_checkable
-class CooperadComponent(Protocol):
+class CooperadComponent(ComponentProtocol, Protocol):
     """Structural contract for one fixed-arity cooperad component."""
-
-    name: str
-    """Name of the cooperad, used for printing."""
-
-    connectivity: int
-    """Lower bound k such that C(n) is concentrated in degrees >= k*(n-1) for
-    all n >= 0.  Basic cooperads have k = 0 (non-negative degrees).
-    ``ShiftedCooperad(C, d)`` has k = C.connectivity + d."""
 
     factory: CooperadLike
     """Reference to the parent cooperad factory, used for printing and error
     messages."""
 
-    def __init__(self, n: int, base_ring):
-        """Returns the arity-``n`` component over ``base_ring``."""
-        ...
-
-    def arity(self) -> int:
-        """Returns the arity of this cooperad component."""
-        ...
-
-    def term(self, x: object) -> Element:
-        """Returns the basis element corresponding to basis key ``x``."""
-        ...
-
-    def boundary(self, x: Element) -> Element:
-        """Applies the differential to element ``x``."""
-        ...
-
-    def degree_on_basis(self, x: object) -> int:
-        """Returns degree of basis element ``x``."""
-        ...
-
     @staticmethod
-    def counit(x: Element) -> object:
+    def counit(x: CooperadComponent.Element) -> object:
         """Returns the counit evaluation on ``x``."""
         ...
 
     @staticmethod
-    def reduced(x: Element) -> Element:
+    def reduced(x: CooperadComponent.Element) -> CooperadComponent.Element:
         """Projects ``x`` to the reduced part (kills counit in arity 1)."""
         ...
 
     @staticmethod
-    def infinitesimal_cocompose(x: Element, i: int, m: int, n: int) -> Iterable[tuple]:
+    def infinitesimal_cocompose(
+        x: CooperadComponent.Element, i: int, m: int, n: int
+    ) -> Iterable[tuple]:
         """Returns the partial cocomposition in slot ``i``, arities ``(m, n)``."""
         ...
-
-    def base_ring(self) -> Any:
-        """Returns the base ring of this component."""
-        ...
-
-    def sum_of_terms(self, terms: Iterator[tuple[Any, Any]]) -> Element:
-        """Builds element from iterator of (basis, coeff) pairs."""
-        ...
-
-    def _validate_basis_key(self, x: object) -> Any:
-        """Validates and normalizes a basis key (implementation detail)."""
-        ...
-
-    class Element(Protocol):
-        """Structural contract for elements of a cooperad component.
-
-
-        Elements represent sparse linear combinations and are iterable over
-        (basis_key, coefficient) pairs.
-        """
-
-        def arity(self) -> int:
-            """Returns the arity of this element."""
-            ...
-
-        def boundary(self) -> Self:
-            """Returns the boundary of this element."""
-            ...
-
-        def permute(self, sigma: object) -> Self:
-            """Returns the result of permuting this element by ``sigma``."""
-            ...
-
-        def counit(self) -> object:
-            """Returns the counit evaluation of this element."""
-            ...
-
-        def reduced(self) -> Self:
-            """Returns the reduced projection of this element."""
-            ...
-
-        def infinitesimal_cocompose(self, i: int, m: int, n: int) -> Iterable[tuple]:
-            """Returns the partial cocomposition of this element."""
-            ...
-
-        # This is ugly but I cannot find a better way to express the fact that the element
-        # class should inherit from CombinatorialFreeModule.Element.
-        def __iter__(self) -> Iterator[tuple[Any, Any]]: ...
-        def __rmul__(self, other) -> Self: ...
-        def parent(self) -> CooperadLike: ...
 
 
 @runtime_checkable
@@ -122,7 +47,7 @@ class CooperadFactory(Protocol):
 
     name: str
 
-    def __call__(self, n: int, base_ring) -> Any:
+    def __call__(self, n: int, base_ring) -> Component:
         """Returns the arity-``n`` component over ``base_ring``."""
         ...
 
@@ -143,6 +68,8 @@ class CooperadFactory(Protocol):
     ) -> Any:
         """Returns the partial cocomposition in slot ``i``."""
         ...
+
+    class Component(CooperadComponent): ...
 
 
 CooperadLike: TypeAlias = type[CooperadComponent] | CooperadFactory
