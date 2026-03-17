@@ -34,13 +34,14 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from sage.all import CombinatorialFreeModule
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
 from uconf.constructions.bar_construction import BarConstruction
+from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -142,7 +143,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
         # Raw operad P is stored as cooperad_cls by the base class
-        raw_P = self._cooperad_cls
+        raw_P = cast(OperadLike, self._cooperad_cls)
 
         for parent_vertex, child_pos, child_vertex in edges:
             p_arity = vertex_arity(parent_vertex)
@@ -206,7 +207,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         verts = vertices_dfs(tree)
         cumulative = 0
         # Raw operad P is stored as cooperad_cls by the base class
-        raw_P = self._cooperad_cls
+        raw_P = cast(OperadLike, self._cooperad_cls)
 
         for v in verts:
             v_arity = vertex_arity(v)

@@ -28,7 +28,7 @@ Reference: Loday-Vallette "Algebraic Operads", Section 5.8.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator
+from typing import Any, ClassVar, Iterator
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
@@ -40,6 +40,7 @@ from uconf.algebraic.free_algebra import (
 )
 from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
+from uconf.core.vertex_decorated import VertexDecoratedLike
 from uconf.core.trees import (
     children,
     decoration,
@@ -68,7 +69,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        cooperad_cls: CooperadLike,
+        cooperad_cls: VertexDecoratedLike,
         inner_module,
         base_ring,
         *,
@@ -79,7 +80,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
 
         Args:
-            cooperad_cls: Cooperad provider C (class or wrapper instance).
+            cooperad_cls: Arity-indexed vertex-decoration provider used on
+                internal vertices (typically a cooperad, but may be any object
+                matching the shared structural protocol).
             inner_module: Cogenerating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
             vertex_degree_shift: Per-vertex degree offset (0 = standard cofree,
@@ -308,7 +311,8 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 v_arity = vertex_arity(node)
                 dec = decoration(node)
                 coop_parent = self._cooperad_cls(v_arity, base_ring)
-                bdry = coop_parent.boundary(coop_parent.term(dec))
+                coop_elem: Any = coop_parent.term(dec)
+                bdry = coop_parent.boundary(coop_elem)
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_dec(tree, node, new_dec)
                     result += sign * coeff * self.term((new_tree, m_tuple))

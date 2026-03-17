@@ -33,13 +33,14 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from sage.all import CombinatorialFreeModule
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import FreeAlgebraModule
 from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.cooperad import CooperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -140,7 +141,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
         # Raw cooperad C is stored as operad_cls by the base class
-        raw_C = self._operad_cls
+        raw_C = cast(CooperadLike, self._operad_cls)
 
         for curr_vertex in verts:
             curr_arity = vertex_arity(curr_vertex)
@@ -198,7 +199,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         tree, v_tuple = key
         n = len(v_tuple)
         # Raw cooperad C is stored as operad_cls by the base class
-        raw_C = self._operad_cls
+        raw_C = cast(CooperadLike, self._operad_cls)
 
         deg_cobar = 0 if is_leaf(tree) else subtree_degree_cobar(tree, raw_C, self.base_ring())
 

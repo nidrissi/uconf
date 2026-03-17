@@ -26,13 +26,14 @@ Reference: Loday-Vallette "Algebraic Operads", Section 5.2.
 from __future__ import annotations
 
 import itertools
-from typing import ClassVar, Iterator
+from typing import Any, ClassVar, Iterator
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.operad import OperadLike
 from uconf.core.signs import sign_from_exponent
+from uconf.core.vertex_decorated import VertexDecoratedLike
 from uconf.core.trees import (
     children,
     decoration,
@@ -113,7 +114,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        operad_cls: OperadLike,
+        operad_cls: VertexDecoratedLike,
         inner_module,
         base_ring,
         *,
@@ -123,7 +124,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
-            operad_cls: Operad provider P (class or wrapper instance).
+            operad_cls: Arity-indexed vertex-decoration provider used on
+                internal vertices (typically an operad, but may be any object
+                matching the shared structural protocol).
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
             vertex_degree_shift: Per-vertex degree offset (0 = standard free,
@@ -359,7 +362,8 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 v_arity = vertex_arity(node)
                 dec = decoration(node)
                 op_parent = self._operad_cls(v_arity, base_ring)
-                bdry = op_parent.boundary(op_parent.term(dec))
+                op_elem: Any = op_parent.term(dec)
+                bdry = op_parent.boundary(op_elem)
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_dec(tree, node, new_dec)
                     result += sign * coeff * self.term((new_tree, m_tuple))
