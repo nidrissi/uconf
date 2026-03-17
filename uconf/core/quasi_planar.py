@@ -35,6 +35,7 @@ class QuasiPlanarProtocol(ComponentProtocol, Protocol):
     def planarize(self, x: QuasiPlanarProtocol.Element) -> Any: ...
 
 
+# We use a conditional base class because otherwise we have a conflict with Protocol and the SageMath metaclass.
 if TYPE_CHECKING:
     __quasi_planar_base = QuasiPlanarProtocol
 else:
