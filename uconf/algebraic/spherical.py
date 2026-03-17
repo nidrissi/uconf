@@ -179,12 +179,14 @@ class ReducedSphereCochains(CombinatorialFreeModule):
 
     def __init__(self, d: int, base_ring):
         assert d >= 0
+        self._generator_name = f"ɑ[{d}]"
         super().__init__(
             base_ring,
-            [f"ɑ[{d}]"],
+            [self._generator_name],
             category=GradedModulesWithBasis(base_ring),
         )
         self.rename(f"N*(S^{d})")
+        self._generator = self(self._generator_name)
         self._sphere_dim = d
         self.boundary = self.module_morphism(on_basis=lambda _: self.zero(), codomain=self)
 
@@ -194,6 +196,10 @@ class ReducedSphereCochains(CombinatorialFreeModule):
 
     def degree_on_basis(self, _) -> int:
         return self._sphere_dim
+
+    def generator(self):
+        """Return the generator of the reduced cochains."""
+        return self._generator
 
 
 class SurjectionSphereCochainAlgebra(OperadAlgebra):
@@ -228,7 +234,7 @@ class SurjectionSphereCochainAlgebra(OperadAlgebra):
         """Return the scalar coefficient of the generator ``()`` in ``x``."""
         coeff = 0
         for basis, scalar in x:
-            if basis == ():
+            if basis == self.module._generator_name:
                 coeff += scalar
         return coeff
 

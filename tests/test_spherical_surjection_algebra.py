@@ -17,8 +17,8 @@ def _as_dict(x):
     return {k: v for k, v in x if v != 0}
 
 
-def _sphere_coeff(x):
-    return _as_dict(x).get((), 0)
+def _sphere_coeff(x, d):
+    return _as_dict(x).get(f"ɑ[{d}]", 0)
 
 
 def _top_coeff(x, top_key):
@@ -38,9 +38,7 @@ def test_sphere_surjection_unitality() -> None:
 @pytest.mark.parametrize("k2", [2, 3])
 @pytest.mark.parametrize("d1", [0, 1, 2])
 @pytest.mark.parametrize("d2", [0, 1, 2])
-def test_sphere_surjection_associativity_on_generator(
-    k1: int, k2: int, d1: int, d2: int
-) -> None:
+def test_sphere_surjection_associativity_on_generator(k1: int, k2: int, d1: int, d2: int) -> None:
     """Check μ_{p∘_i q}(g,..,g)=μ_p(g,..,μ_q(g,..,g),..,g) for d=2."""
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
@@ -88,7 +86,7 @@ def test_sphere_surjection_matches_top_cochain_action(d: int, k: int, e: int) ->
     for u in Surjection(k, QQ).basis_it(e):
         sphere_val = alg.act(u, [g] * k)
         simplex_val = surjection_cochain_action(u, (top,) * k)
-        assert _sphere_coeff(sphere_val) == _top_coeff(simplex_val, top_key)
+        assert _sphere_coeff(sphere_val, d) == _top_coeff(simplex_val, top_key)
 
 
 def test_sphere_surjection_degree_mismatch_gives_zero() -> None:
