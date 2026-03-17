@@ -28,34 +28,27 @@ Reference: Loday-Vallette "Algebraic Operads", Section 5.8.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Iterator
+from typing import ClassVar
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, tensor
+from sage.all import CombinatorialFreeModule, tensor
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.algebraic.free_algebra import (
-    _dfs_all_iter,
-    _module_basis_keys_in_degree,
-    _tuples_in_degree,
-)
+from uconf.algebraic.tree_module import TreeModule
 from uconf.core.cooperad import CooperadLike
-from uconf.core.signs import sign_from_exponent
 from uconf.core.vertex_decorated import VertexDecoratedLike
 from uconf.core.trees import (
     children,
     decoration,
-    enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
     leaves,
     relabel_leaves,
     split_at_vertex,
-    tree_arity,
     vertex_arity,
     vertices_dfs,
 )
 
 
-class CofreeCoalgebraModule(CombinatorialFreeModule):
+class CofreeCoalgebraModule(TreeModule):
     """Underlying dg-module of the cofree conilpotent C-coalgebra ``T^c_C(M)``.
 
     Basis keys are ``(tree, m_tuple)`` pairs.  The differential is
@@ -70,7 +63,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     def __init__(
         self,
         cooperad_cls: VertexDecoratedLike,
-        inner_module,
+        inner_module: CombinatorialFreeModule,
         base_ring,
         *,
         vertex_degree_shift: int = 0,
@@ -90,263 +83,17 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             name: Display name override.  Defaults to ``T^c_C(M)``.
 
         """
-        self._cooperad_cls = cooperad_cls
-        self._inner_module = inner_module
-        self._vertex_degree_shift = vertex_degree_shift
-
         if name is None:
             name = f"T^c_{cooperad_cls.name}({inner_module})"
         super().__init__(
-            base_ring,
-            tuple,
-            prefix=name,
-            category=GradedModulesWithBasis(base_ring),
+            symmetric_sequence_cls=cooperad_cls,
+            inner_module=inner_module,
+            base_ring=base_ring,
+            vertex_degree_shift=vertex_degree_shift,
+            name=name,
         )
-        self.rename(name)
-
-        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
-
-    # -----------------------------------------------------------------------
-    # Validation and element construction
-    # -----------------------------------------------------------------------
-
-    def _validate_basis_key(self, key):
-        """Validate a ``(tree, m_tuple)`` basis key.
-
-        Returns the normalized key as a ``(tree, tuple(m_tuple))`` pair, or
-        ``None`` if the key is structurally invalid or contains invalid
-        inner-module keys.
-        """
-        if not isinstance(key, (tuple, list)) or len(key) != 2:
-            return None
-        tree, m_tuple = key[0], key[1]
-        if not isinstance(m_tuple, (tuple, list)):
-            return None
-
-        if is_leaf(tree):
-            if tree != 1 or len(m_tuple) != 1:
-                return None
-            m_key = self._validate_m_key(m_tuple[0])
-            if m_key is None:
-                return None
-            return (1, (m_key,))
-
-        n = tree_arity(tree)
-        if len(m_tuple) != n:
-            return None
-        new_m = []
-        for m_key in m_tuple:
-            vk = self._validate_m_key(m_key)
-            if vk is None:
-                return None
-            new_m.append(vk)
-        return (tree, tuple(new_m))
-
-    def _validate_m_key(self, m_key):
-        """Validate one inner-module basis key.
-
-        Delegates to ``inner_module._validate_basis_key`` if available;
-        otherwise returns ``m_key`` unchanged.
-        """
-        if hasattr(self._inner_module, "_validate_basis_key"):
-            return self._inner_module._validate_basis_key(m_key)
-        return m_key
-
-    def _element_constructor_(self, x):
-        if isinstance(x, dict):
-            clean = {}
-            for key, coeff in x.items():
-                k = self._validate_basis_key(key)
-                if k is not None:
-                    clean[k] = clean.get(k, 0) + coeff
-            return self.sum_of_terms(clean.items())
-
-        if isinstance(x, (tuple, list)) and len(x) == 2:
-            k = self._validate_basis_key(x)
-            if k is None:
-                return self.zero()
-            return self.term(k)
-
-        return super()._element_constructor_(x)
-
-    # -----------------------------------------------------------------------
-    # Degree
-    # -----------------------------------------------------------------------
-
-    def degree_on_basis(self, key) -> int:
-        """Degree = Σ_{v internal} (deg_C(dec(v)) + shift) + Σ_i deg_M(m_i).
-
-        When ``vertex_degree_shift`` is 0 (default), vertices contribute their
-        C-degree directly.  With shift +1 this gives the bar convention
-        ``Σ (deg_P + 1)``; with shift -1 the cobar convention ``Σ (deg_C - 1)``.
-        """
-        tree, m_tuple = key
-        shift = self._vertex_degree_shift
-        v_deg = (
-            0
-            if is_leaf(tree)
-            else sum(
-                self._cooperad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(decoration(v))
-                + shift
-                for v in vertices_dfs(tree)
-            )
-        )
-        m_deg = sum(self._inner_module.degree_on_basis(m) for m in m_tuple)
-        return v_deg + m_deg
-
-    # -----------------------------------------------------------------------
-    # Basis iteration
-    # -----------------------------------------------------------------------
-
-    def basis_it(self, d: int) -> Iterator["CofreeCoalgebraModule.Element"]:
-        """Iterate over basis elements of degree *d*.
-
-        Yields all ``(tree, m_tuple)`` pairs with total degree ``d``, where
-        ``tree`` is a shuffle tree decorated by the cooperad *C* and
-        ``m_tuple`` is a tuple of basis keys of the inner module *M*.
-
-        The same arity-bounding logic as :meth:`FreeAlgebraModule.basis_it`
-        applies (see that method for details).  In particular, when both the
-        inner module and cooperad admit degree-0 generators, exhaustive
-        fixed-degree enumeration is not guaranteed and this method raises
-        ``ValueError``.
-
-        Args:
-            d: Homological degree to enumerate.
-
-        Yields:
-            Elements of this module with degree ``d``.
-        """
-        M = self._inner_module
-        C = self._cooperad_cls
-        R = self.base_ring()
-
-        # Pre-collect M-keys by degree from 0 to d.
-        m_keys_by_deg: dict[int, list] = {}
-        for d_m in range(d + 1):
-            keys = list(_module_basis_keys_in_degree(M, d_m))
-            if keys:
-                m_keys_by_deg[d_m] = keys
-
-        # Arity 1: single leaf
-        for m_key in m_keys_by_deg.get(d, []):
-            yield self.term((1, (m_key,)))
-
-        if not m_keys_by_deg:
-            return
-
-        # Arity n ≥ 2: determine upper arity bound.
-        # Any n≥2 tree has tree degree ≥ vertex_degree_shift + connectivity
-        # (a single corolla of arity 2 with minimum decoration degree).
-        min_m_deg = min(m_keys_by_deg.keys())
-        connectivity = getattr(C, "connectivity", 0)
-        min_tree_deg_n2 = self._vertex_degree_shift + connectivity
-
-        if d < min_tree_deg_n2:
-            # Total degree can't accommodate even a single vertex → only
-            # single-leaf elements exist (already yielded above).
-            return
-
-        if min_m_deg > 0:
-            max_n = d // min_m_deg
-        elif connectivity > 0:
-            max_n = (d - self._vertex_degree_shift) // connectivity + 1
-        else:
-            raise ValueError(
-                "Cannot exhaustively enumerate basis_it(d): both the inner module "
-                "and cooperad admit degree-0 generators (min_deg=0, connectivity=0), "
-                "so arity is unbounded in fixed degree."
-            )
-
-        for n in range(2, max_n + 1):
-            max_weight = n - 1
-            for d_M in range(d + 1):
-                d_tree = d - d_M
-                if d_tree < 0:
-                    continue
-                m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
-                if not m_tuples:
-                    continue
-                for tree in enumerate_shuffle_trees_generic_in_degree(
-                    n, max_weight, C, R, d_tree, self._vertex_degree_shift
-                ):
-                    for m_tuple in m_tuples:
-                        yield self.term((tree, m_tuple))
-
-    # -----------------------------------------------------------------------
-    # Differential
-    # -----------------------------------------------------------------------
-
-    def _boundary_on_basis(self, key) -> "CofreeCoalgebraModule.Element":
-        """Differential d = d_C + d_M using the interleaved DFS sign rule.
-
-        For each node in DFS pre-order (vertices and leaves interleaved),
-        the sign when applying ∂ at that node is
-
-            ``(-1)^{Σ_{l before this node in DFS all order} deg(x_l)}``
-
-        where ``deg(x_l) = deg_C(dec(v)) + shift`` for a vertex and
-        ``deg_M(m)`` for a leaf.
-        """
-        tree, m_tuple = key
-        result = self.zero()
-        base_ring = self.base_ring()
-        shift = self._vertex_degree_shift
-        cumulative = 0
-
-        for node, leaf_0idx in _dfs_all_iter(tree):
-            sign = sign_from_exponent(cumulative)
-
-            if leaf_0idx is not None:
-                # d_M: apply ∂_M to this leaf
-                m_key = m_tuple[leaf_0idx]
-                m_elem = self._inner_module.term(m_key)
-                bdry = self._inner_module.boundary(m_elem)
-                for new_m_key, coeff in bdry:
-                    new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
-                    result += sign * coeff * self.term((tree, new_m))
-                cumulative += self._inner_module.degree_on_basis(m_key)
-            else:
-                # d_C: apply ∂_C to this vertex
-                v_arity = vertex_arity(node)
-                dec = decoration(node)
-                coop_parent = self._cooperad_cls(v_arity, base_ring)
-                coop_elem: Any = coop_parent.term(dec)
-                bdry = coop_parent.boundary(coop_elem)
-                for new_dec, coeff in bdry:
-                    new_tree = self._replace_dec(tree, node, new_dec)
-                    result += sign * coeff * self.term((new_tree, m_tuple))
-                cumulative += coop_parent.degree_on_basis(dec) + shift
-
-        return result
-
-    # -----------------------------------------------------------------------
-    # Tree manipulation helpers
-    # -----------------------------------------------------------------------
-
-    def _replace_dec(self, tree, target_vertex, new_dec):
-        """Replace the decoration of ``target_vertex`` in ``tree``.
-
-        Returns a new tree identical to ``tree`` except that the decoration
-        tuple of ``target_vertex`` is replaced by ``new_dec``.
-        """
-        if is_leaf(tree):
-            return tree
-        if tree is target_vertex:
-            return (new_dec,) + children(tree)
-        new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
-        return (decoration(tree),) + new_children
-
-    # -----------------------------------------------------------------------
-    # Element class
-    # -----------------------------------------------------------------------
-
-    class Element(CombinatorialFreeModule.Element):
-        """An element of the cofree conilpotent C-coalgebra module."""
-
-        def boundary(self) -> "CofreeCoalgebraModule.Element":
-            """Apply the differential d = d_C + d_M."""
-            return self.parent().boundary(self)
+        # Backward-compatible alias expected by subclasses and callers.
+        self._cooperad_cls = cooperad_cls
 
 
 class CofreeConilpotentCoalgebra(CooperadCoalgebra):
