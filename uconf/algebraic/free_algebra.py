@@ -80,8 +80,6 @@ class FreeAlgebraModule(TreeModule):
             vertex_degree_shift=vertex_degree_shift,
             name=name,
         )
-        # Backward-compatible alias expected by subclasses and callers.
-        self._operad_cls = operad_cls
 
 
 class FreeOperadAlgebra(OperadAlgebra):
