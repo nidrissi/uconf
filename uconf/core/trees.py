@@ -725,6 +725,31 @@ def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
             yield key
 
 
+def _planar_operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
+    """Yield planar basis keys of *operad_parent* in the given degree.
+
+    Uses ``planar_basis_it`` when available (quasi-planar operads such as
+    ``Associative``, ``Surjection``, ``BarrattEccles``), otherwise falls back
+    to :func:`_operad_basis_keys_in_degree`.
+
+    This is used by the free/cofree tree-module enumeration to avoid
+    over-counting: for a quasi-planar operad ``P(n) ≅ P_pl(n) ⊗ k[S_n]``,
+    the isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` shows
+    that only the planar representative from each S_n-orbit is needed.
+
+    When ``planar_basis_it`` is present and returns an empty iterator for a
+    given degree, no keys are yielded (correctly indicating no planar basis
+    elements exist in that degree).  The full-basis fallback is only used when
+    the operad does not expose ``planar_basis_it`` at all.
+    """
+    planar_basis_it = getattr(operad_parent, "planar_basis_it", None)
+    if planar_basis_it is not None:
+        for elem in planar_basis_it(degree):
+            yield from elem.support()
+        return
+    yield from _operad_basis_keys_in_degree(operad_parent, degree)
+
+
 def _min_subtree_bar_degree(part_size: int, connectivity: int) -> int:
     """Minimum bar degree of an internal subtree with ``part_size`` leaves.
 
@@ -959,6 +984,7 @@ def _shuffle_children_iter_generic(
     total_deg: int,
     root_dec: tuple,
     vertex_offset: int,
+    use_planar_decs: bool = False,
 ) -> Iterator[tuple]:
     """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` with generic per-vertex offset."""
     connectivity = getattr(operad_cls, "connectivity", 0)
@@ -991,7 +1017,8 @@ def _shuffle_children_iter_generic(
             for d_first in range(min_deg_this, max_d + 1):
                 first_trees = list(
                     _shuffle_subtrees_iter_generic(
-                        part, max_weight, operad_cls, base_ring, d_first, vertex_offset
+                        part, max_weight, operad_cls, base_ring, d_first, vertex_offset,
+                        use_planar_decs,
                     )
                 )
                 if not first_trees:
@@ -1011,6 +1038,7 @@ def _shuffle_subtrees_iter_generic(
     base_ring: Any,
     target_degree: int,
     vertex_offset: int,
+    use_planar_decs: bool = False,
 ) -> Iterator:
     """Generic shuffle-tree enumerator with configurable per-vertex degree offset.
 
@@ -1019,6 +1047,11 @@ def _shuffle_subtrees_iter_generic(
     - ``+1``: bar degree ``Σ (deg_P(v) + 1)``.
     - ``0``: free degree ``Σ deg_P(v)`` (no suspension).
     - ``-1``: cobar degree ``Σ (deg_C(v) - 1)``.
+
+    When ``use_planar_decs=True``, only the planar basis of each vertex
+    decoration is used (via ``planar_basis_it`` when available).  This is
+    the correct choice for the composite product ``P ∘ M``, where only one
+    representative per ``S_n``-orbit is needed.
     """
     n = len(leaf_set)
     if n == 0:
@@ -1032,6 +1065,7 @@ def _shuffle_subtrees_iter_generic(
 
     connectivity = getattr(operad_cls, "connectivity", 0)
     sorted_ls = tuple(sorted(leaf_set))
+    _dec_iter = _planar_operad_basis_keys_in_degree if use_planar_decs else _operad_basis_keys_in_degree
 
     for v_arity in range(2, n + 1):
         root_parent = operad_cls(v_arity, base_ring)
@@ -1039,7 +1073,7 @@ def _shuffle_subtrees_iter_generic(
         if v_arity == n:
             root_dec_deg = target_degree - vertex_offset
             if root_dec_deg >= min_root_dec_deg:
-                for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                for root_dec in _dec_iter(root_parent, root_dec_deg):
                     yield (root_dec,) + sorted_ls
         else:
             for parts in _shuffle_partitions(sorted_ls, v_arity):
@@ -1051,7 +1085,7 @@ def _shuffle_subtrees_iter_generic(
                 max_root_dec_deg = target_degree - vertex_offset - min_child_total
                 for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
                     child_total = target_degree - root_dec_deg - vertex_offset
-                    for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
+                    for root_dec in _dec_iter(root_parent, root_dec_deg):
                         yield from _shuffle_children_iter_generic(
                             parts,
                             max_weight - 1,
@@ -1060,6 +1094,7 @@ def _shuffle_subtrees_iter_generic(
                             child_total,
                             root_dec,
                             vertex_offset,
+                            use_planar_decs,
                         )
 
 
@@ -1137,6 +1172,7 @@ def enumerate_shuffle_trees_generic_in_degree(
     base_ring: Any,
     target_degree: int,
     vertex_offset: int,
+    use_planar_decs: bool = False,
 ) -> Iterator[tuple]:
     """Enumerate shuffle trees with an arbitrary per-vertex degree offset.
 
@@ -1153,6 +1189,10 @@ def enumerate_shuffle_trees_generic_in_degree(
         base_ring: Coefficient ring.
         target_degree: Exact tree degree to enumerate.
         vertex_offset: Per-vertex degree offset.
+        use_planar_decs: When ``True``, restrict vertex decorations to the
+            planar basis (via ``planar_basis_it``) instead of the full basis.
+            Use this for composite-product ``P ∘ M`` enumeration to obtain
+            one representative per ``S_n``-orbit.
 
     Yields:
         Decorated shuffle trees (nested tuples) as valid tree basis keys.
@@ -1166,6 +1206,7 @@ def enumerate_shuffle_trees_generic_in_degree(
         base_ring,
         target_degree,
         vertex_offset,
+        use_planar_decs,
     )
 
 
