@@ -21,23 +21,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
 
-from uconf.core.cooperad import CooperadComponent
-from uconf.core.operad import OperadComponent
-from uconf.core.vertex_decoration import VertexDecorationLike
+from uconf.core.component import ComponentProtocol
 
 
 @runtime_checkable
-class QuasiPlanarProtocol(Protocol):
+class QuasiPlanarProtocol(ComponentProtocol, Protocol):
     """Structural contract for a quasi-planar operad/cooperad component.
 
     A class satisfies this protocol when it exposes ``planarize`` and
     ``boundary`` (both linear maps) and ``arity()``.
     """
 
-    def planarize(self: OperadComponent | CooperadComponent, x: Any) -> Any: ...
+    def planarize(self, x: QuasiPlanarProtocol.Element) -> Any: ...
 
 
-class QuasiPlanarMixin:
+if TYPE_CHECKING:
+    __quasi_planar_base = QuasiPlanarProtocol
+else:
+    __quasi_planar_base = object
+
+
+class QuasiPlanarMixin(__quasi_planar_base):
     """Mixin providing ``d_sigma`` from ``boundary`` and ``planarize``.
 
     Mix this into any ``CombinatorialFreeModule`` component that already
@@ -52,7 +56,7 @@ class QuasiPlanarMixin:
     decomposition ``P(n) = P_pl(n) ⊗ k[S_n]``.
     """
 
-    def d_sigma(self: QuasiPlanarProtocol, x: Any, sigma: Any) -> Any:
+    def d_sigma(self, x: Any, sigma: Any) -> Any:
         """Return the ``sigma``-component of ``boundary(x)``.
 
         Given a planar element ``x ∈ P_pl(n)`` (or any element), compute
