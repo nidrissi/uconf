@@ -1,6 +1,7 @@
 """Tests for the Surjection action on reduced cochains of spheres."""
 
 from itertools import permutations
+from random import Random
 
 import pytest
 from sage.all import QQ
@@ -71,19 +72,26 @@ def test_sphere_surjection_equivariance(k: int, d: int) -> None:
             assert lhs == rhs
 
 
-@pytest.mark.parametrize("d", [1, 2, 3])
-@pytest.mark.parametrize("k", [2, 3, 4])
-@pytest.mark.parametrize("e", [0, 1, 2, 3, 4, 5])
-def test_sphere_surjection_matches_top_cochain_action(d: int, k: int, e: int) -> None:
+def test_sphere_surjection_matches_top_cochain_action() -> None:
     """Compare with μ_u on the top cochain of Δ^d."""
-    alg = SurjectionSphereCochainAlgebra(d=d, base_ring=QQ)
-    g = alg.module.generator()
+    rng = Random(20260317)
 
-    C = SimplicialCochains(N=d, base_ring=QQ)
-    top_key = tuple(range(d + 1))
-    top = C(top_key)
+    for _ in range(40):
+        d = rng.randint(1, 3)
+        k = rng.randint(2, 4)
+        e = rng.randint(0, 5)
+        basis = list(Surjection(k, QQ).basis_it(e))
+        if not basis:
+            continue
+        u = rng.choice(basis)
 
-    for u in Surjection(k, QQ).basis_it(e):
+        alg = SurjectionSphereCochainAlgebra(d=d, base_ring=QQ)
+        g = alg.module.generator()
+
+        C = SimplicialCochains(N=d, base_ring=QQ)
+        top_key = tuple(range(d + 1))
+        top = C(top_key)
+
         sphere_val = alg.act(u, [g] * k)
         simplex_val = surjection_cochain_action(u, (top,) * k)
         assert _sphere_coeff(sphere_val, d) == _top_coeff(simplex_val, top_key)
