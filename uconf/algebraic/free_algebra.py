@@ -33,7 +33,7 @@ from sage.all import CombinatorialFreeModule
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import TreeModule
 from uconf.core.operad import OperadLike
-from uconf.core.vertex_decorated import VertexDecoratedLike
+from uconf.core.vertex_decoration import VertexDecorationLike
 from uconf.core.trees import is_leaf, relabel_leaves
 
 
@@ -51,7 +51,7 @@ class FreeAlgebraModule(TreeModule):
 
     def __init__(
         self,
-        operad_cls: VertexDecoratedLike,
+        operad_cls: VertexDecorationLike,
         inner_module,
         base_ring,
         *,

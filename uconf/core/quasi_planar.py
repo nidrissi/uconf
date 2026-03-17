@@ -21,6 +21,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
 
+from uconf.core.cooperad import CooperadComponent
+from uconf.core.operad import OperadComponent
+from uconf.core.vertex_decoration import VertexDecorationLike
+
 
 @runtime_checkable
 class QuasiPlanarProtocol(Protocol):
@@ -30,12 +34,7 @@ class QuasiPlanarProtocol(Protocol):
     ``boundary`` (both linear maps) and ``arity()``.
     """
 
-    def arity(self) -> int: ...
-    def planarize(self, x: Any) -> Any: ...
-    def boundary(self, x: Any) -> Any: ...
-    def term(self, key: Any) -> Any: ...
-    def zero(self) -> Any: ...
-    def base_ring(self) -> Any: ...
+    def planarize(self: OperadComponent | CooperadComponent, x: Any) -> Any: ...
 
 
 class QuasiPlanarMixin:
@@ -53,14 +52,7 @@ class QuasiPlanarMixin:
     decomposition ``P(n) = P_pl(n) ⊗ k[S_n]``.
     """
 
-    if TYPE_CHECKING:  # declare cooperating methods for static analysis
-
-        def arity(self) -> int: ...
-        def boundary(self, x: Any) -> Any: ...
-        def planarize(self, x: Any) -> Any: ...
-        def zero(self) -> Any: ...
-
-    def d_sigma(self, x: Any, sigma: Any) -> Any:
+    def d_sigma(self: QuasiPlanarProtocol, x: Any, sigma: Any) -> Any:
         """Return the ``sigma``-component of ``boundary(x)``.
 
         Given a planar element ``x ∈ P_pl(n)`` (or any element), compute
