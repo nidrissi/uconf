@@ -61,9 +61,7 @@ class SimplicialChains(CombinatorialFreeModule):
             category=GradedModulesWithBasis(base_ring),
         )
         self.rename(name)
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
 
     # -- element constructor ------------------------------------------------
 
@@ -109,18 +107,14 @@ class SimplicialChains(CombinatorialFreeModule):
             return None
         for v in s:
             if not isinstance(v, (int, Integer)):
-                raise TypeError(
-                    f"Simplex vertices must be integers. Got {v} ({type(v)})."
-                )
+                raise TypeError(f"Simplex vertices must be integers. Got {v} ({type(v)}).")
             if v < 0:
                 raise ValueError(f"Simplex vertices must be non-negative. Got {v}.")
         for a, b in pairwise(s):
             if a == b:
                 return None
             if a > b:
-                raise ValueError(
-                    f"Simplex vertices must be strictly increasing. Got {s}."
-                )
+                raise ValueError(f"Simplex vertices must be strictly increasing. Got {s}.")
         return s
 
     # -- grading ------------------------------------------------------------
@@ -219,14 +213,12 @@ class SimplicialChains(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(
-        ParentedElementMixin["SimplicialChains"], CombinatorialFreeModule.Element
-    ):
+    class Element(ParentedElementMixin["SimplicialChains"], CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialChains`."""
 
         def boundary(self) -> "SimplicialChains.Element":
             """Apply the simplicial boundary ∂."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def iterated_diagonal(self, times: int = 1):
@@ -249,7 +241,7 @@ class SimplicialChains(CombinatorialFreeModule):
                 ``times=k`` → ``(k+1)``-fold tensor).
 
             """
-            SC = self._parent()
+            SC = self.parent()
             if times == 0:
                 return self
             target = tensor([SC] * (times + 1))
@@ -301,9 +293,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         )
         self.rename(name)
         self._N = N
-        self.coboundary = self.module_morphism(
-            on_basis=self._coboundary_on_basis, codomain=self
-        )
+        self.coboundary = self.module_morphism(on_basis=self._coboundary_on_basis, codomain=self)
 
     def simplex_dim(self) -> int:
         """Ambient simplex dimension N."""
@@ -338,9 +328,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         if simplex is None:
             return None
         if simplex[-1] > self._N:
-            raise ValueError(
-                f"Simplex vertices must lie in {{0, ..., {self._N}}}. Got {simplex}."
-            )
+            raise ValueError(f"Simplex vertices must lie in {{0, ..., {self._N}}}. Got {simplex}.")
         return simplex
 
     # -- grading ------------------------------------------------------------
@@ -409,12 +397,10 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- Element class ------------------------------------------------------
 
-    class Element(
-        ParentedElementMixin["SimplicialCochains"], CombinatorialFreeModule.Element
-    ):
+    class Element(ParentedElementMixin["SimplicialCochains"], CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialCochains`."""
 
         def coboundary(self) -> "SimplicialCochains.Element":
             """Apply the coboundary δ."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.coboundary(self)

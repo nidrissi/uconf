@@ -48,9 +48,7 @@ class Surjection(CombinatorialFreeModule):
         self._arity: int = n
         self._symmetric_group = SymmetricGroup(n)
         self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self.planarize = self.module_morphism(
             on_basis=self._planarize_on_basis,
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
@@ -77,9 +75,7 @@ class Surjection(CombinatorialFreeModule):
                 return self.zero()
             return self.term(clean_key)
 
-        raise TypeError(
-            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
-        )
+        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
         """Validate a basis tuple.
@@ -88,17 +84,13 @@ class Surjection(CombinatorialFreeModule):
         inputs.
         """
         if not isinstance(basis_tuple, (tuple, list)):
-            raise TypeError(
-                f"Basis key must be a tuple or list, got {type(basis_tuple)}"
-            )
+            raise TypeError(f"Basis key must be a tuple or list, got {type(basis_tuple)}")
 
         clean_tuple = tuple(basis_tuple)
 
         for p in clean_tuple:
             if not isinstance(p, (int, Integer)):
-                raise TypeError(
-                    f"Basis key must be a tuple of integers. Got {p} ({type(p)})."
-                )
+                raise TypeError(f"Basis key must be a tuple of integers. Got {p} ({type(p)}).")
             if p < 1 or p > self.arity():
                 raise ValueError(
                     f"Surjection entries must lie in {{1, ..., {self.arity()}}}. Got {p}."
@@ -209,9 +201,7 @@ class Surjection(CombinatorialFreeModule):
         return result
 
     @staticmethod
-    def compose(
-        x: Surjection.Element, i: int, y: Surjection.Element
-    ) -> Surjection.Element:
+    def compose(x: Surjection.Element, i: int, y: Surjection.Element) -> Surjection.Element:
         """Compose surjections by Berger--Fresse insertion at input ``i``."""
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
@@ -257,9 +247,7 @@ class Surjection(CombinatorialFreeModule):
                 return (-1) ** sign_exp
 
             positions = [idx for idx, j in enumerate(x_tuple) if j == i]
-            for p in combinations_with_replacement(
-                range(len(y_tuple)), len(positions) - 1
-            ):
+            for p in combinations_with_replacement(range(len(y_tuple)), len(positions) - 1):
                 p = (0,) + p + (len(y_tuple) - 1,)
                 split = []
                 for a, b in pairwise(p):
@@ -312,21 +300,21 @@ class Surjection(CombinatorialFreeModule):
 
         def boundary(self) -> Surjection.Element:
             """Apply the differential."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def arity(self) -> int:
             """Return the arity of this element."""
-            return self._parent().arity()
+            return self.parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with group element."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.planarize(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
-            parent = self._parent()
+            parent = self.parent()
 
             return max(
                 (parent._complexity_on_basis(basis) for basis in self.support()),
@@ -337,12 +325,10 @@ class Surjection(CombinatorialFreeModule):
             """
             Permutes the basis elements of self by precomposing with sigma.
             """
-            parent = self._parent()
+            parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
@@ -362,20 +348,17 @@ class Surjection(CombinatorialFreeModule):
 
             def _planar(input_list: tuple[int, ...]) -> bool:
                 """Check if the first occurrence of each integer in input_list
-            is in increasing order."""
+                is in increasing order."""
                 first_occurrences = {}
                 for i, val in enumerate(input_list):
                     if val not in first_occurrences:
                         first_occurrences[val] = i
 
                 first_indices = [
-                    first_occurrences[i]
-                    for i in range(1, r + 1)
-                    if i in first_occurrences
+                    first_occurrences[i] for i in range(1, r + 1) if i in first_occurrences
                 ]
                 return all(
-                    earlier < later
-                    for earlier, later in zip(first_indices, first_indices[1:])
+                    earlier < later for earlier, later in zip(first_indices, first_indices[1:])
                 )
 
             return all(_planar(key) for key in self.support())

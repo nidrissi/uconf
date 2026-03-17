@@ -32,9 +32,7 @@ class Commutative(CombinatorialFreeModule):
         self.rename(name)
         self._arity = int(n)
         self._symmetric_group = SymmetricGroup(n)
-        self.boundary = self.module_morphism(
-            on_basis=lambda basis: self.zero(), codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=lambda basis: self.zero(), codomain=self)
 
     def _validate_basis_key(self, basis_key: tuple | list) -> tuple | None:
         """Validate and normalize one basis key."""
@@ -65,9 +63,7 @@ class Commutative(CombinatorialFreeModule):
                 return self.zero()
             return self.term(clean_key)
 
-        raise TypeError(
-            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
-        )
+        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def arity(self) -> int:
         """Return the fixed arity of this operad component."""
@@ -113,22 +109,20 @@ class Commutative(CombinatorialFreeModule):
 
         def arity(self) -> int:
             """Return the arity of this element."""
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self):
             """Apply the differential."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma):
             """Return the trivial symmetric-group action on this element."""
-            parent = self._parent()
+            parent = self.parent()
 
             if isinstance(sigma, (list, tuple)):
                 parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."

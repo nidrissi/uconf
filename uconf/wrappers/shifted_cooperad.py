@@ -100,9 +100,7 @@ class ShiftedCooperad(UniqueRepresentation):
 
         def _boundary_on_basis(self, basis_element):
             sign = shifted_boundary_sign(self.factory.shift_degree)
-            base_bdry = sign * self._base_parent.boundary(
-                self._base_parent.term(basis_element)
-            )
+            base_bdry = sign * self._base_parent.boundary(self._base_parent.term(basis_element))
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
 
         def arity(self) -> int:
@@ -132,37 +130,25 @@ class ShiftedCooperad(UniqueRepresentation):
             return base_degree + self.factory.shift_degree * (self.arity() - 1)
 
         def counit(self, x: "ShiftedCooperad.Element"):
-            base_x = self.base_parent().sum_of_terms(
-                (basis, coeff) for basis, coeff in x
-            )
+            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
             return self.factory.cooperad_cls.counit(base_x)
 
         def reduced(self, x: "ShiftedCooperad.Element") -> "ShiftedCooperad.Element":
-            base_x = self.base_parent().sum_of_terms(
-                (basis, coeff) for basis, coeff in x
-            )
+            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
             return self.from_base(self.factory.cooperad_cls.reduced(base_x))
 
-        def infinitesimal_cocompose(
-            self, x: "ShiftedCooperad.Element", i: int, m: int, n: int
-        ):
+        def infinitesimal_cocompose(self, x: "ShiftedCooperad.Element", i: int, m: int, n: int):
             left_parent = self.factory(m, self.base_ring())
             right_parent = self.factory(n, self.base_ring())
             target = tensor([left_parent, right_parent])
 
-            base_x = self.base_parent().sum_of_terms(
-                (basis, coeff) for basis, coeff in x
-            )
-            base_delta = self.factory.cooperad_cls.infinitesimal_cocompose(
-                base_x, i, m, n
-            )
+            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
+            base_delta = self.factory.cooperad_cls.infinitesimal_cocompose(base_x, i, m, n)
 
             def term_generator():
                 for key, coeff in base_delta:
                     left_basis, right_basis = key
-                    right_degree = right_parent.base_parent().degree_on_basis(
-                        right_basis
-                    )
+                    right_degree = right_parent.base_parent().degree_on_basis(right_basis)
                     sign = shifted_operadic_compose_sign(
                         self.factory.shift_degree,
                         i,
@@ -181,19 +167,17 @@ class ShiftedCooperad(UniqueRepresentation):
         """Element wrapper carrying shifted cooperad structure maps."""
 
         def arity(self) -> int:
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "ShiftedCooperad.Element":
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma) -> "ShiftedCooperad.Element":
-            parent = self._parent()
+            parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
@@ -208,22 +192,20 @@ class ShiftedCooperad(UniqueRepresentation):
             return parent.from_base(sign * base_permuted)
 
         def counit(self):
-            parent = self._parent()
+            parent = self.parent()
             return parent.counit(self)
 
         def reduced(self) -> "ShiftedCooperad.Element":
-            parent = self._parent()
+            parent = self.parent()
             return parent.reduced(self)
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
-            parent = self._parent()
+            parent = self.parent()
             return parent.infinitesimal_cocompose(self, i, m, n)
 
         def base_element(self):
-            parent = self._parent()
-            return parent.base_parent().sum_of_terms(
-                (basis, coeff) for basis, coeff in self
-            )
+            parent = self.parent()
+            return parent.base_parent().sum_of_terms((basis, coeff) for basis, coeff in self)
 
 
 ShiftedCooperad.Component.Element = ShiftedCooperad.Element

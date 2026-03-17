@@ -402,14 +402,14 @@ class HadamardProduct(UniqueRepresentation):
         """Element wrapper carrying Hadamard-operad structure maps."""
 
         def arity(self) -> int:
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "HadamardProduct.Element":
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma) -> "HadamardProduct.Element":
-            parent = self._parent()
+            parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
             elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):

@@ -48,9 +48,7 @@ class BarrattEccles(CombinatorialFreeModule):
         self._arity = n
         self._symmetric_group = SymmetricGroup(n)
         self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
-        self.boundary = self.module_morphism(
-            on_basis=self._boundary_on_basis, codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self.planarize = self.module_morphism(
             on_basis=self._planarize_on_basis,
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
@@ -76,9 +74,7 @@ class BarrattEccles(CombinatorialFreeModule):
             if clean_key is None:
                 return self.zero()
             return self.term(clean_key)
-        raise TypeError(
-            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
-        )
+        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def _validate_basis_key(
         self, basis_tuple: tuple | list, keep_dupes=False
@@ -89,9 +85,7 @@ class BarrattEccles(CombinatorialFreeModule):
         raises on malformed permutation data.
         """
         if not isinstance(basis_tuple, (tuple, list)):
-            raise TypeError(
-                f"Basis key must be a tuple or list, got {type(basis_tuple)}"
-            )
+            raise TypeError(f"Basis key must be a tuple or list, got {type(basis_tuple)}")
 
         clean_tuple = []
         for i, p in enumerate(basis_tuple):
@@ -261,9 +255,7 @@ class BarrattEccles(CombinatorialFreeModule):
                         # 1. Calculate the Sign of the shuffle
                         # Formula: (-1)^(sum of 1-based indices of y-steps) - q(q+1)/2
                         # This is equivalent to the sign of the permutation un-shuffling the lists
-                        y_indices_sum = sum(
-                            k + 1 for k, step in enumerate(sh) if step == 1
-                        )
+                        y_indices_sum = sum(k + 1 for k, step in enumerate(sh) if step == 1)
                         sign_exponent = y_indices_sum - (q * (q + 1) // 2)
                         sign = (-1) ** sign_exponent
 
@@ -311,28 +303,26 @@ class BarrattEccles(CombinatorialFreeModule):
             result = max(result, complexity)
         return result
 
-    class Element(
-        ParentedElementMixin["BarrattEccles"], CombinatorialFreeModule.Element
-    ):
+    class Element(ParentedElementMixin["BarrattEccles"], CombinatorialFreeModule.Element):
         """Elements of the Barratt--Eccles operad component."""
 
         def arity(self) -> int:
             """Return the arity of this element."""
-            return self._parent().arity()
+            return self.parent().arity()
 
         def planarize(self):
             """Project to planar representative tensored with a group element."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.planarize(self)
 
         def boundary(self) -> BarrattEccles.Element:
             """Apply the simplicial differential."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def complexity(self) -> int:
             """Return the maximum pairwise complexity on basis support."""
-            parent = self._parent()
+            parent = self.parent()
 
             return max(
                 (parent._complexity_on_basis(basis) for basis in self.support()),
@@ -343,12 +333,10 @@ class BarrattEccles(CombinatorialFreeModule):
             """
             Permutes the basis elements of self by precomposing with sigma.
             """
-            parent = self._parent()
+            parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
@@ -367,7 +355,7 @@ class BarrattEccles(CombinatorialFreeModule):
             # 1. Construct the Tensor Product Parent
             # Sage handles this automatically: self.tensor(self) creates the module E (x) E
 
-            parent = self._parent()
+            parent = self.parent()
             tensor_module = parent.tensor(parent)
 
             result = tensor_module.zero()

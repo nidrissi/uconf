@@ -227,14 +227,14 @@ class ShiftedOperad(UniqueRepresentation):
         """Element wrapper carrying shifted operad structure maps."""
 
         def arity(self) -> int:
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "ShiftedOperad.Element":
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma) -> "ShiftedOperad.Element":
-            parent = self._parent()
+            parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
             elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
@@ -253,7 +253,7 @@ class ShiftedOperad(UniqueRepresentation):
 
         def base_element(self):
             """Return the underlying element in the base operad component."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.base_parent().sum_of_terms((basis, coeff) for basis, coeff in self)
 
         def underlying_element(self):

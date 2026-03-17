@@ -39,9 +39,7 @@ class Associative(CombinatorialFreeModule):
         self.rename(name)
         self._arity = int(n)
         self._symmetric_group = SymmetricGroup(n)
-        self.boundary = self.module_morphism(
-            on_basis=lambda x: self.zero(), codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=lambda x: self.zero(), codomain=self)
         self.planarize = self.module_morphism(
             on_basis=self._planarize_on_basis,
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
@@ -62,9 +60,7 @@ class Associative(CombinatorialFreeModule):
         clean = tuple(int(i) for i in basis_key)
         n = self.arity()
         if len(clean) != n:
-            raise ValueError(
-                f"Basis key in arity {n} must have length {n}. Got {len(clean)}."
-            )
+            raise ValueError(f"Basis key in arity {n} must have length {n}. Got {len(clean)}.")
         if set(clean) != set(range(1, n + 1)):
             raise ValueError(f"Basis key must be a permutation of 1..{n}. Got {clean}.")
         return clean
@@ -86,9 +82,7 @@ class Associative(CombinatorialFreeModule):
                 return self.zero()
             return self.term(clean_key)
 
-        raise TypeError(
-            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
-        )
+        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def arity(self) -> int:
         """Return the fixed arity of this operad component."""
@@ -168,22 +162,20 @@ class Associative(CombinatorialFreeModule):
 
         def arity(self) -> int:
             """Return the arity of this element."""
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self):
             """Apply the differential."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma):
             """Permute labels in each supported basis permutation."""
-            parent = self._parent()
+            parent = self.parent()
 
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
