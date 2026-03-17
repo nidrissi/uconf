@@ -36,7 +36,7 @@ from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
     decoration,
-    enumerate_shuffle_trees_free_in_degree,
+    enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
     relabel_leaves,
     tree_arity,
@@ -111,19 +111,32 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     name: ClassVar[str] = "Free"
 
-    def __init__(self, operad_cls: OperadLike, inner_module, base_ring):
+    def __init__(
+        self,
+        operad_cls: OperadLike,
+        inner_module,
+        base_ring,
+        *,
+        vertex_degree_shift: int = 0,
+        name: str | None = None,
+    ):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
             operad_cls: Operad provider P (class or wrapper instance).
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
+            vertex_degree_shift: Per-vertex degree offset (0 = standard free,
+                +1 = bar/suspension convention, -1 = cobar/desuspension).
+            name: Display name override.  Defaults to ``P ∘ M``.
 
         """
         self._operad_cls = operad_cls
         self._inner_module = inner_module
+        self._vertex_degree_shift = vertex_degree_shift
 
-        name = f"{operad_cls.name} ∘ {inner_module}"
+        if name is None:
+            name = f"{operad_cls.name} ∘ {inner_module}"
         super().__init__(
             base_ring,
             tuple,
@@ -202,17 +215,20 @@ class FreeAlgebraModule(CombinatorialFreeModule):
     # -----------------------------------------------------------------------
 
     def degree_on_basis(self, key) -> int:
-        """Degree = Σ_{v internal} deg_P(dec(v)) + Σ_i deg_M(m_i).
+        """Degree = Σ_{v internal} (deg_P(dec(v)) + shift) + Σ_i deg_M(m_i).
 
-        No suspension: vertices contribute their P-degree directly, not
-        deg_P + 1 as in the bar construction.
+        When ``vertex_degree_shift`` is 0 (default), vertices contribute their
+        P-degree directly.  With shift +1 this gives the bar convention
+        ``Σ (deg_P + 1)``; with shift -1 the cobar convention ``Σ (deg_C - 1)``.
         """
         tree, m_tuple = key
+        shift = self._vertex_degree_shift
         v_deg = (
             0
             if is_leaf(tree)
             else sum(
                 self._operad_cls(vertex_arity(v), self.base_ring()).degree_on_basis(decoration(v))
+                + shift
                 for v in vertices_dfs(tree)
             )
         )
@@ -271,14 +287,22 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         if not m_keys_by_deg:
             return  # M has no basis elements in degrees 0..d
 
-        # Arity n ≥ 2: determine upper arity bound
+        # Arity n ≥ 2: determine upper arity bound.
+        # Any n≥2 tree has tree degree ≥ vertex_degree_shift + connectivity
+        # (a single corolla of arity 2 with minimum decoration degree).
         min_m_deg = min(m_keys_by_deg.keys())
         connectivity = getattr(P, "connectivity", 0)
+        min_tree_deg_n2 = self._vertex_degree_shift + connectivity
+
+        if d < min_tree_deg_n2:
+            # Total degree can't accommodate even a single vertex → only
+            # single-leaf elements exist (already yielded above).
+            return
 
         if min_m_deg > 0:
             max_n = d // min_m_deg
         elif connectivity > 0:
-            max_n = d // connectivity + 1
+            max_n = (d - self._vertex_degree_shift) // connectivity + 1
         else:
             raise ValueError(
                 "Cannot exhaustively enumerate basis_it(d): both the inner module "
@@ -295,7 +319,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
-                for tree in enumerate_shuffle_trees_free_in_degree(n, max_weight, P, R, d_tree):
+                for tree in enumerate_shuffle_trees_generic_in_degree(
+                    n, max_weight, P, R, d_tree, self._vertex_degree_shift
+                ):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
 
@@ -307,11 +333,13 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
             ``(-1)^{Σ_{l before this node in DFS all order} deg(x_l)}``
 
-        where ``deg(x_l) = deg_P(dec(v))`` for a vertex and ``deg_M(m)`` for a leaf.
+        where ``deg(x_l) = deg_P(dec(v)) + shift`` for a vertex and
+        ``deg_M(m)`` for a leaf.
         """
         tree, m_tuple = key
         result = self.zero()
         base_ring = self.base_ring()
+        shift = self._vertex_degree_shift
         cumulative = 0
 
         for node, leaf_0idx in _dfs_all_iter(tree):
@@ -335,7 +363,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_dec(tree, node, new_dec)
                     result += sign * coeff * self.term((new_tree, m_tuple))
-                cumulative += op_parent.degree_on_basis(dec)
+                cumulative += op_parent.degree_on_basis(dec) + shift
 
         return result
 

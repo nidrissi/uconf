@@ -1130,6 +1130,45 @@ def enumerate_shuffle_trees_cobar_in_degree(
     )
 
 
+def enumerate_shuffle_trees_generic_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+) -> Iterator[tuple]:
+    """Enumerate shuffle trees with an arbitrary per-vertex degree offset.
+
+    The three canonical choices for ``vertex_offset`` are:
+
+    - ``+1``: bar degree ``Σ (deg_P(v) + 1)``.
+    - ``0``: free degree ``Σ deg_P(v)`` (no suspension).
+    - ``-1``: cobar degree ``Σ (deg_C(v) - 1)``.
+
+    Args:
+        arity: Number of leaves.
+        weight_bound: Maximum number of internal vertices.
+        operad_cls: Operad or cooperad factory for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact tree degree to enumerate.
+        vertex_offset: Per-vertex degree offset.
+
+    Yields:
+        Decorated shuffle trees (nested tuples) as valid tree basis keys.
+    """
+    if arity < 2 or weight_bound < 1:
+        return
+    yield from _shuffle_subtrees_iter_generic(
+        tuple(range(1, arity + 1)),
+        weight_bound,
+        operad_cls,
+        base_ring,
+        target_degree,
+        vertex_offset,
+    )
+
+
 def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     """Normalize a tree to shuffle form for the cobar construction Ω(C).
 

@@ -173,9 +173,7 @@ class CobarConstruction(UniqueRepresentation):
                     return 1
                 return None
 
-            return validate_tree(
-                basis_key, self._arity, self._cooperad_cls, self.base_ring()
-            )
+            return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
 
         def _element_constructor_(self, x):
             """Build elements from tree basis keys or sparse dictionaries."""
@@ -301,9 +299,7 @@ class CobarConstruction(UniqueRepresentation):
                 bdry = cooperad_parent.boundary(dec_elem)
 
                 for new_dec, coeff in bdry:
-                    new_tree = self._replace_vertex_decoration_by_index(
-                        tree, verts, j, new_dec
-                    )
+                    new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
                     result += sign * coeff * self.term(new_tree)
 
                 cumulative_degree += vertex_sinv_degree
@@ -365,9 +361,7 @@ class CobarConstruction(UniqueRepresentation):
                             )
 
                             koszul_exp = right_sinv_deg * before_deg
-                            total_sign = sign_from_exponent(
-                                global_accum + left_degree + koszul_exp
-                            )
+                            total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
 
                             new_tree = expand_vertex(
                                 tree, curr_vertex, i, dec_left, dec_right, m, n
@@ -389,8 +383,7 @@ class CobarConstruction(UniqueRepresentation):
             if node is target:
                 return (new_decoration,) + children(node)
             new_children = tuple(
-                self._replace_decoration_rec(c, target, new_decoration)
-                for c in children(node)
+                self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
             return (decoration(node),) + new_children
 
@@ -417,7 +410,7 @@ class CobarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
-            parent = self._parent()
+            parent = self.parent()
             for basis, coeff in self:
                 term = parent._repr_term(basis)
                 if coeff == 1:
@@ -434,7 +427,7 @@ class CobarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
-            parent = self._parent()
+            parent = self.parent()
             for basis, coeff in self:
                 term = parent._latex_term(basis)
                 if coeff == 1:
@@ -454,26 +447,26 @@ class CobarConstruction(UniqueRepresentation):
             return self.pretty_latex()
 
         def arity(self) -> int:
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "CobarConstruction.Element":
             """Apply the cobar differential ``d = d_1 + d_2``."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def d1(self) -> "CobarConstruction.Element":
             """Internal differential: applies cooperad boundary to vertex decorations."""
-            parent = self._parent()
+            parent = self.parent()
             return parent._d1(self)
 
         def d2(self) -> "CobarConstruction.Element":
             """Structural differential: expands internal edges."""
-            parent = self._parent()
+            parent = self.parent()
             return parent._d2(self)
 
         def permute(self, sigma) -> "CobarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
-            parent = self._parent()
+            parent = self.parent()
             n = parent.arity()
 
             if isinstance(sigma, (list, tuple)):

@@ -360,9 +360,7 @@ class BarConstruction(UniqueRepresentation):
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
-            return validate_tree(
-                basis_key, self._arity, self._operad_cls, self.base_ring()
-            )
+            return validate_tree(basis_key, self._arity, self._operad_cls, self.base_ring())
 
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
@@ -399,9 +397,7 @@ class BarConstruction(UniqueRepresentation):
                         continue
                     # Normalize to shuffle form
                     shuffle_key, sign = self._normalize_to_shuffle(clean_key)
-                    clean_dict[shuffle_key] = (
-                        clean_dict.get(shuffle_key, 0) + coeff * sign
-                    )
+                    clean_dict[shuffle_key] = clean_dict.get(shuffle_key, 0) + coeff * sign
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, tuple):
@@ -495,9 +491,7 @@ class BarConstruction(UniqueRepresentation):
                 # For each term in the boundary, build a new tree
                 for new_dec, coeff in bdry:
                     # Replace decoration of this vertex
-                    new_tree = self._replace_vertex_decoration_by_index(
-                        tree, verts, j, new_dec
-                    )
+                    new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
                     result += sign * coeff * self.term(new_tree)
 
                 cumulative_degree += vertex_sp_degree
@@ -548,9 +542,7 @@ class BarConstruction(UniqueRepresentation):
                     if v is parent_vertex:
                         break
                     v_arity = vertex_arity(v)
-                    v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(
-                        decoration(v)
-                    )
+                    v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(decoration(v))
                     global_accum += v_deg - 1
 
                 # Koszul sign: sP̄-degree of child times bar-degree before position l
@@ -583,17 +575,14 @@ class BarConstruction(UniqueRepresentation):
             target_vertex = vertices[index]
             return self._replace_decoration_rec(tree, target_vertex, new_decoration)
 
-        def _replace_decoration_rec(
-            self, node, target: tuple, new_decoration: tuple
-        ) -> tuple:
+        def _replace_decoration_rec(self, node, target: tuple, new_decoration: tuple) -> tuple:
             """Recursively replace decoration of target vertex."""
             if is_leaf(node):
                 return node
             if node is target:
                 return (new_decoration,) + children(node)
             new_children = tuple(
-                self._replace_decoration_rec(c, target, new_decoration)
-                for c in children(node)
+                self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
             return (decoration(node),) + new_children
 
@@ -628,9 +617,7 @@ class BarConstruction(UniqueRepresentation):
                 return x
             return x - coeff * x.parent().term(1)
 
-        def infinitesimal_cocompose(
-            self, x: "BarConstruction.Element", i: int, m: int, n: int
-        ):
+        def infinitesimal_cocompose(self, x: "BarConstruction.Element", i: int, m: int, n: int):
             """Partial cocomposition dual to free operad composition.
 
             Splits trees at internal edges where the lower subtree has leaves
@@ -641,9 +628,7 @@ class BarConstruction(UniqueRepresentation):
             if not (1 <= i <= m):
                 raise ValueError(f"Index i must satisfy 1 <= i <= {m}. Got i={i}.")
             if x.arity() != m + n - 1:
-                raise ValueError(
-                    f"Expected element in arity {m + n - 1}, got arity {x.arity()}."
-                )
+                raise ValueError(f"Expected element in arity {m + n - 1}, got arity {x.arity()}.")
 
             left_parent = self.factory(m, self.base_ring())
             right_parent = self.factory(n, self.base_ring())
@@ -710,7 +695,7 @@ class BarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
-            parent = self._parent()
+            parent = self.parent()
             for basis, coeff in self:
                 term = parent._repr_term(basis)
                 if coeff == 1:
@@ -727,7 +712,7 @@ class BarConstruction(UniqueRepresentation):
                 return "0"
 
             pieces = []
-            parent = self._parent()
+            parent = self.parent()
             for basis, coeff in self:
                 term = parent._latex_term(basis)
                 if coeff == 1:
@@ -747,21 +732,21 @@ class BarConstruction(UniqueRepresentation):
             return self.pretty_latex()
 
         def arity(self) -> int:
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "BarConstruction.Element":
             """Apply the bar differential (d_1 + d_2) to this element."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def d1(self) -> "BarConstruction.Element":
             """Internal differential: applies operad boundary to vertex decorations."""
-            parent = self._parent()
+            parent = self.parent()
             return parent._d1(self)
 
         def d2(self) -> "BarConstruction.Element":
             """Structural differential: contracts internal edges."""
-            parent = self._parent()
+            parent = self.parent()
             return parent._d2(self)
 
         def planarize(self):
@@ -770,12 +755,12 @@ class BarConstruction(UniqueRepresentation):
             Returns an element of ``B(P)(n) ⊗ k[S_n]``.
             Requires the base operad to implement ``planarize``.
             """
-            parent = self._parent()
+            parent = self.parent()
             return parent.planarize(self)
 
         def permute(self, sigma) -> "BarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
-            parent = self._parent()
+            parent = self.parent()
             n = parent.arity()
 
             if isinstance(sigma, (list, tuple)):
@@ -805,7 +790,7 @@ class BarConstruction(UniqueRepresentation):
 
         def infinitesimal_cocompose(self, i: int, m: int, n: int):
             """Apply infinitesimal cocomposition ``Δ^{i;m,n}`` to this element."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.infinitesimal_cocompose(self, i, m, n)
 
 
