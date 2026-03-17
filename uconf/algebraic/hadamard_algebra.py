@@ -22,7 +22,7 @@ from typing import Iterator
 from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.algebraic.free_algebra import _module_basis_keys_in_degree
+from uconf.algebraic.tree_module import _module_basis_keys_in_degree
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -72,12 +72,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 raise TypeError("All algebra elements must lie in the tensor module.")
 
         arity = p_element.arity()
-        left_operad_parent = self.left_algebra.operad_cls(
-            arity, self.module.base_ring()
-        )
-        right_operad_parent = self.right_algebra.operad_cls(
-            arity, self.module.base_ring()
-        )
+        left_operad_parent = self.left_algebra.operad_cls(arity, self.module.base_ring())
+        right_operad_parent = self.right_algebra.operad_cls(arity, self.module.base_ring())
 
         result = self.module.zero()
         arg_expansions = [list(arg) for arg in tensor_args]
@@ -106,9 +102,9 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
                 for left_out_basis, left_out_coeff in left_value:
                     for right_out_basis, right_out_coeff in right_value:
-                        result += self.module.term(
-                            (left_out_basis, right_out_basis)
-                        ) * (scalar * left_out_coeff * right_out_coeff)
+                        result += self.module.term((left_out_basis, right_out_basis)) * (
+                            scalar * left_out_coeff * right_out_coeff
+                        )
 
         return result
 
@@ -164,9 +160,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
             right_boundary = self.right_algebra.boundary(right_term)
 
             for new_left_basis, left_coeff in left_boundary:
-                result += self.module.term((new_left_basis, right_basis)) * (
-                    coeff * left_coeff
-                )
+                result += self.module.term((new_left_basis, right_basis)) * (coeff * left_coeff)
             for new_right_basis, right_coeff in right_boundary:
                 result += self.module.term((left_basis, new_right_basis)) * (
                     coeff * sign * right_coeff

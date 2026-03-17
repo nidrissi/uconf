@@ -6,7 +6,6 @@ from sage.all import QQ
 
 from uconf import (
     Associative,
-    BarConstruction,
     CoAssociative,
     CobarConstruction,
     Commutative,
