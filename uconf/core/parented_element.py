@@ -9,7 +9,7 @@ ParentT = TypeVar("ParentT")
 
 
 class ParentedElementMixin(Generic[ParentT]):
-    """Mixin providing typed ``parent()`` and ``_parent()`` helpers.
+    """Mixin providing typed ``parent()`` helpers.
 
     Sage element classes expose ``parent()`` dynamically. This mixin centralizes
     the static typing bridge so subclasses can avoid repeating local casts.
@@ -17,6 +17,3 @@ class ParentedElementMixin(Generic[ParentT]):
 
     def parent(self) -> ParentT:
         return cast(ParentT, cast(Any, super()).parent())
-
-    def _parent(self) -> ParentT:
-        return self.parent()

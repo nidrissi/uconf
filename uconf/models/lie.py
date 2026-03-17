@@ -47,9 +47,7 @@ class Lie(CombinatorialFreeModule):
         self.rename(name)
         self._arity = n
         self._symmetric_group = SymmetricGroup(n)
-        self.boundary = self.module_morphism(
-            on_basis=lambda basis: self.zero(), codomain=self
-        )
+        self.boundary = self.module_morphism(on_basis=lambda basis: self.zero(), codomain=self)
 
     @cached_method
     def _basis_keys(self) -> list[tuple[int, ...]]:
@@ -82,14 +80,10 @@ class Lie(CombinatorialFreeModule):
             return clean
 
         if len(clean) != n - 1:
-            raise ValueError(
-                f"Basis key in arity {n} must have length {n - 1}. Got {len(clean)}."
-            )
+            raise ValueError(f"Basis key in arity {n} must have length {n - 1}. Got {len(clean)}.")
 
         if set(clean) != set(range(1, n)):
-            raise ValueError(
-                f"Basis key must be a permutation of 1..{n - 1}. Got {clean}."
-            )
+            raise ValueError(f"Basis key must be a permutation of 1..{n - 1}. Got {clean}.")
 
         return clean
 
@@ -110,13 +104,9 @@ class Lie(CombinatorialFreeModule):
                 return self.zero()
             return self.term(clean_key)
 
-        raise TypeError(
-            f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}."
-        )
+        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
-    def _bracket(
-        self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]
-    ):
+    def _bracket(self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]):
         """Compute commutator ``[left, right]`` on associative expansions."""
         out: dict[tuple[int, ...], Any] = {}
         for wl, cl in left.items():
@@ -133,9 +123,7 @@ class Lie(CombinatorialFreeModule):
         return {w: c for w, c in out.items() if c != 0}
 
     @cached_method
-    def _assoc_from_basis_key(
-        self, basis_key: tuple[int, ...]
-    ) -> dict[tuple[int, ...], Any]:
+    def _assoc_from_basis_key(self, basis_key: tuple[int, ...]) -> dict[tuple[int, ...], Any]:
         """Expand one Lie basis element into the associative word basis.
 
         Results are cached via :func:`~sage.misc.cachefunc.cached_method`.
@@ -174,9 +162,7 @@ class Lie(CombinatorialFreeModule):
         data = []
         for w in words:
             for key in keys:
-                data.append(
-                    self._assoc_from_basis_key(key).get(w, self.base_ring().zero())
-                )
+                data.append(self._assoc_from_basis_key(key).get(w, self.base_ring().zero()))
         return matrix(self.base_ring(), len(words), len(keys), data)
 
     @cached_method
@@ -212,9 +198,7 @@ class Lie(CombinatorialFreeModule):
             return self.zero()
 
         words = self._word_basis()
-        vec = vector(
-            self.base_ring(), [assoc.get(w, self.base_ring().zero()) for w in words]
-        )
+        vec = vector(self.base_ring(), [assoc.get(w, self.base_ring().zero()) for w in words])
 
         if self.arity() == 1:
             return vec[0] * self.term(())
@@ -222,9 +206,7 @@ class Lie(CombinatorialFreeModule):
         left_inv = self._pbw_left_inverse()
         coords = left_inv * vec
         keys = self._basis_keys()
-        return self.sum_of_terms(
-            (keys[i], coords[i]) for i in range(len(keys)) if coords[i] != 0
-        )
+        return self.sum_of_terms((keys[i], coords[i]) for i in range(len(keys)) if coords[i] != 0)
 
     def arity(self) -> int:
         """Return the arity of this Lie operad component."""
@@ -317,9 +299,7 @@ class Lie(CombinatorialFreeModule):
             for word, coeff in y_parent._assoc_from_basis_key(y_key).items():
                 shifted = tuple(k + i - 1 for k in word)
                 c = y_coeff * coeff
-                y_assoc_shifted[shifted] = (
-                    y_assoc_shifted.get(shifted, base_ring.zero()) + c
-                )
+                y_assoc_shifted[shifted] = y_assoc_shifted.get(shifted, base_ring.zero()) + c
         y_assoc_shifted = {w: c for w, c in y_assoc_shifted.items() if c != 0}
 
         # --- Step 3: substitute position i in each outer word with each inner --
@@ -327,16 +307,12 @@ class Lie(CombinatorialFreeModule):
         for outer_word, outer_coeff in x_assoc.items():
             pos = outer_word.index(i)
             shifted_left = tuple(j if j < i else j + n - 1 for j in outer_word[:pos])
-            shifted_right = tuple(
-                j if j < i else j + n - 1 for j in outer_word[pos + 1 :]
-            )
+            shifted_right = tuple(j if j < i else j + n - 1 for j in outer_word[pos + 1 :])
 
             for shifted_inner, inner_coeff in y_assoc_shifted.items():
                 new_word = shifted_left + shifted_inner + shifted_right
                 c = outer_coeff * inner_coeff
-                result_assoc[new_word] = (
-                    result_assoc.get(new_word, base_ring.zero()) + c
-                )
+                result_assoc[new_word] = result_assoc.get(new_word, base_ring.zero()) + c
 
         result_assoc = {w: c for w, c in result_assoc.items() if c != 0}
         return target._element_from_assoc(result_assoc)
@@ -346,22 +322,20 @@ class Lie(CombinatorialFreeModule):
 
         def arity(self) -> int:
             """Return the element arity."""
-            return self._parent().arity()
+            return self.parent().arity()
 
         def boundary(self) -> "Lie.Element":
             """Apply the differential (trivial in this model)."""
-            parent = self._parent()
+            parent = self.parent()
             return parent.boundary(self)
 
         def permute(self, sigma: Permutation | list | tuple) -> "Lie.Element":
             """Apply the right action of a permutation on generators."""
-            parent = self._parent()
+            parent = self.parent()
 
             if isinstance(sigma, (list, tuple)):
                 sigma_perm: Permutation = parent._symmetric_group(sigma)
-            elif not (
-                hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group
-            ):
+            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
                 raise TypeError(
                     f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
                     f"got {type(sigma).__name__}: {sigma!r}."
@@ -375,8 +349,7 @@ class Lie(CombinatorialFreeModule):
                 for word, word_coeff in key_assoc.items():
                     permuted_word = tuple(sigma_perm(i) for i in word)
                     assoc[permuted_word] = (
-                        assoc.get(permuted_word, self.base_ring().zero())
-                        + coeff * word_coeff
+                        assoc.get(permuted_word, self.base_ring().zero()) + coeff * word_coeff
                     )
 
             assoc = {w: c for w, c in assoc.items() if c != 0}
