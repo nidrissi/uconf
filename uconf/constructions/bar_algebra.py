@@ -142,8 +142,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         result = self.zero()
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
-        # Raw operad P is stored as cooperad_cls by the base class
-        raw_P = cast(OperadLike, self._cooperad_cls)
+        raw_P = cast(OperadLike, self._symmetric_sequence_cls)
 
         for parent_vertex, child_pos, child_vertex in edges:
             p_arity = vertex_arity(parent_vertex)
@@ -206,8 +205,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
         cumulative = 0
-        # Raw operad P is stored as cooperad_cls by the base class
-        raw_P = cast(OperadLike, self._cooperad_cls)
+        raw_P = cast(OperadLike, self._symmetric_sequence_cls)
 
         for v in verts:
             v_arity = vertex_arity(v)

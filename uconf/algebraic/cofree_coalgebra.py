@@ -92,8 +92,6 @@ class CofreeCoalgebraModule(TreeModule):
             vertex_degree_shift=vertex_degree_shift,
             name=name,
         )
-        # Backward-compatible alias expected by subclasses and callers.
-        self._cooperad_cls = cooperad_cls
 
 
 class CofreeConilpotentCoalgebra(CooperadCoalgebra):

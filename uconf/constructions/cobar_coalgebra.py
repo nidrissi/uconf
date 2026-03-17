@@ -140,8 +140,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         result = self.zero()
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
-        # Raw cooperad C is stored as operad_cls by the base class
-        raw_C = cast(CooperadLike, self._operad_cls)
+        raw_C = cast(CooperadLike, self._symmetric_sequence_clsT)
 
         for curr_vertex in verts:
             curr_arity = vertex_arity(curr_vertex)
@@ -198,8 +197,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         """
         tree, v_tuple = key
         n = len(v_tuple)
-        # Raw cooperad C is stored as operad_cls by the base class
-        raw_C = cast(CooperadLike, self._operad_cls)
+        raw_C = cast(CooperadLike, self._symmetric_sequence_cls)
 
         deg_cobar = 0 if is_leaf(tree) else subtree_degree_cobar(tree, raw_C, self.base_ring())
 
