@@ -10,11 +10,27 @@ from uconf.algebraic.simplicial import (
 from uconf.constructions.bar_algebra import BarComplexAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.morphism import OperadMorphism
+from uconf.models.barratt_eccles import BarrattEccles
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
+
+
+def _table_reduction_morphism() -> OperadMorphism:
+    """Build the operad morphism ``E → S`` given by table reduction.
+
+    The table reduction maps Barratt–Eccles elements to surjections and is
+    a quasi-isomorphism of E∞-operads.  It is monkey-patched onto
+    ``BarrattEccles.Element`` in :mod:`uconf.__init__`.
+    """
+    return OperadMorphism(
+        BarrattEccles,
+        Surjection,
+        lambda elem: elem.table_reduction(),
+    )
 
 
 def labelled_configuration_model(
@@ -33,7 +49,14 @@ def labelled_configuration_model(
     OBXsLie = CobarConstruction(BXsLie)
     free_alg = FreeOperadAlgebra(OBXsLie, coefficients, base_ring)
 
-    tensor_alg = HadamardTensorAlgebra(free_alg, manifold_model)
+    # The e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) lands in the Hadamard
+    # product with E = BarrattEccles on the left.  To match this target, the
+    # tensor algebra must also be over (E ⊙ Ω(C)).  We achieve this by pulling
+    # back the Surjection-algebra (manifold_model) along table_reduction to
+    # obtain a BarrattEccles-algebra, then forming the Hadamard tensor product
+    # with E on the left.
+    be_manifold_model = PullbackAlgebra(_table_reduction_morphism(), manifold_model)
+    tensor_alg = HadamardTensorAlgebra(be_manifold_model, free_alg)
 
     comodule_morphism = make_e_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
@@ -48,6 +71,7 @@ def unordered_configuration_model(manifold_model: OperadAlgebra, dimension: int)
     trivial_module = CombinatorialFreeModule(R, ["*"], category=GradedModulesWithBasis(R))
     trivial_module.degree_on_basis = lambda _: dimension
     trivial_module.boundary = lambda _: trivial_module.zero()
+    trivial_module.connectivity = dimension
     return labelled_configuration_model(manifold_model, trivial_module)
 
 
