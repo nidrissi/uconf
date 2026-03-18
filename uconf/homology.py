@@ -123,24 +123,20 @@ def chain_complex(module: Any, degrees: range, *, max_arity: int | None = None) 
 
     # Apply max_arity truncation to tree-based modules
     _prev_max_arity = None
-    if max_arity is not None and hasattr(module, "set_max_arity"):
+    _needs_restore = max_arity is not None and hasattr(module, "set_max_arity")
+    if _needs_restore:
         _prev_max_arity = getattr(module, "_max_arity", None)
         module.set_max_arity(max_arity)
 
     try:
         return _build_chain_complex(module, degrees)
     finally:
-        if _prev_max_arity is not None and hasattr(module, "set_max_arity"):
+        if _needs_restore:
             module.set_max_arity(_prev_max_arity)
-        elif max_arity is not None and hasattr(module, "set_max_arity") and _prev_max_arity is None:
-            module.set_max_arity(None)
 
 
 def _build_chain_complex(module: Any, degrees: range) -> Any:
     """Internal: build the chain complex without max_arity handling."""
-    if not degrees:
-        return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
-
     base_ring = module.base_ring()
 
     # Extend by one degree above the requested range so that the differential
