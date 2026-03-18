@@ -11,13 +11,15 @@ with:
   full operad substitution on the P-decorations and concatenation of
   M-tuples.
 
+**Quasi-planar requirement**: P must be a quasi-planar operad, i.e. each
+component ``P(n)`` satisfies ``P(n) ≅ P_pl(n) ⊗ k[S_n]`` and exposes a
+``planarize`` linear map.  The basis uses only planar P-keys, so two corollas
+``(p·σ, m_tuple)`` and ``(p, σ·m_tuple)`` are identified as the same element.
+
 The basis keys are pairs ``(p_key, m_tuple)`` where:
 
-- ``p_key`` is a basis key of ``P(n)`` for ``n = len(m_tuple) ≥ 1``.
-- ``m_tuple`` is a tuple of ``n`` basis keys of the inner module M.
-
-The arity ``n`` is determined implicitly as ``len(m_tuple)``.  For ``n = 1``
-the unique P(1)-basis key is the identity (connected operad convention).
+- ``p_key`` is a **planar** basis key of ``P(n)`` for ``n = len(m_tuple) ≥ 1``.
+- ``m_tuple`` is a tuple of ``n`` values, one per input.
 
 The inclusion η: M → Free_P(M) sends a basis key m to (id_key, (m,)) where
 ``id_key`` is the unique basis key of P(1).
@@ -30,21 +32,31 @@ from __future__ import annotations
 import itertools
 from typing import Any, ClassVar, Iterator
 
-from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, cached_method
+from sage.all import (
+    CombinatorialFreeModule,
+    Family,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    cached_method,
+)
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
-from uconf.core.operad import OperadLike
 from uconf.core.signs import sign_from_exponent
+from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
 class FreeAlgebraModule(CombinatorialFreeModule):
     """Underlying dg-module of the free P-algebra ``P ∘ M``.
 
-    Basis keys are ``(p_key, m_tuple)`` pairs, where ``p_key`` is a basis
-    key of ``P(n)`` and ``m_tuple`` is an ``n``-tuple of M-basis keys with
-    ``n = len(m_tuple)``.  The differential is the Leibniz rule
-    ``d = d_P + d_M`` with Koszul signs.
+    Basis keys are ``(p_key, m_tuple)`` pairs where ``p_key`` is a **planar**
+    basis key of ``P(n)`` and ``m_tuple`` has length ``n``.  The differential
+    is the Leibniz rule ``d = d_P + d_M`` with Koszul signs.  Non-planar keys
+    are automatically normalised via ``planarize`` (permuting the m_tuple).
+
+    The operad ``P`` must be quasi-planar: each component ``P(n)`` must expose
+    a ``planarize`` linear map decomposing elements into planar representative
+    ⊗ symmetric group element.
 
     This class is normally not instantiated directly; use
     :class:`FreeOperadAlgebra` instead.
@@ -54,7 +66,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        operad_cls: OperadLike,
+        operad_cls: QuasiPlanarLike,
         inner_module: CombinatorialFreeModule,
         base_ring,
         *,
@@ -63,16 +75,32 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
-            operad_cls: Arity-indexed operad (or operad-like) provider.
+            operad_cls: Arity-indexed **quasi-planar** operad provider.  Each
+                component ``operad_cls(n, base_ring)`` must expose ``planarize``.
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             base_ring: Coefficient ring.
             name: Display name override.  Defaults to ``P ∘ M``.
+
+        Raises:
+            TypeError: If the operad is not quasi-planar (no ``planarize``).
 
         """
         if name is None:
             name = f"{operad_cls.name} ∘ {inner_module}"
         self._operad_cls = operad_cls
         self._inner_module = inner_module
+        # Runtime check: operad must be quasi-planar (free S_n-action)
+        try:
+            _comp2 = operad_cls(2, base_ring)
+        except (TypeError, ValueError, AttributeError):
+            _comp2 = None  # arity-2 may not exist for trivial operads; skip check
+        if _comp2 is not None and not callable(getattr(_comp2, "planarize", None)):
+            raise TypeError(
+                f"Operad {operad_cls.name!r} is not quasi-planar: "
+                f"its arity-2 component does not expose 'planarize'.  "
+                "Only quasi-planar operads (Associative, Surjection, BarrattEccles, "
+                "and their wrappers) are accepted."
+            )
         super().__init__(
             base_ring,
             tuple,
@@ -83,13 +111,51 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
 
     # ------------------------------------------------------------------
+    # Normalisation helper
+    # ------------------------------------------------------------------
+
+    def _normalized_corolla_sum(self, p_elem, m_tuple) -> "FreeAlgebraModule.Element":
+        """Return the sum of canonical corollas for ``p_elem ⊗ m_tuple``.
+
+        For each basis term ``(p_key, coeff)`` of ``p_elem ∈ P(n)``, applies
+        ``planarize`` to obtain ``Σ (p_planar_key ⊗ σ) * c`` and returns::
+
+            Σ coeff * c * self.term((p_planar_key, σ · m_tuple))
+
+        where ``σ · m_tuple = (m_tuple[σ⁻¹(1)−1], ..., m_tuple[σ⁻¹(n)−1])``.
+
+        This ensures all stored P-keys are in the planar basis.
+
+        Args:
+            p_elem: An element of ``P(n)`` (any arity, may be non-planar).
+            m_tuple: A tuple of ``n`` objects (basis keys or module elements).
+
+        Returns:
+            An element of ``self`` with planar P-keys.
+
+        """
+        n = len(m_tuple)
+        comp = p_elem.parent()
+        S_n = SymmetricGroup(n)
+        result = self.zero()
+        for p_key, p_coeff in p_elem:
+            planarized = comp.planarize(comp.term(p_key))
+            for (p_planar_key, sigma_key), pl_coeff in planarized:
+                sigma = S_n(sigma_key)
+                sigma_inv = sigma.inverse()
+                permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
+                result += p_coeff * pl_coeff * self.term((p_planar_key, permuted_m))
+        return result
+
+    # ------------------------------------------------------------------
     # Basis key validation
     # ------------------------------------------------------------------
 
     def _validate_basis_key(self, key) -> tuple | None:
-        """Validate and normalise a ``(p_key, m_tuple)`` basis key.
+        """Validate a ``(p_key, m_tuple)`` basis key (structural check only).
 
-        Returns the normalised key, or ``None`` if invalid.
+        Returns the normalised key, or ``None`` if structurally invalid.
+        Does **not** planarize; use :meth:`_normalized_corolla_sum` for that.
         """
         if not isinstance(key, (tuple, list)) or len(key) != 2:
             return None
@@ -112,33 +178,30 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         except (TypeError, ValueError, AttributeError):
             return None
 
-        # Validate each m-key
-        new_m = []
-        for mk in m_tuple_raw:
-            if hasattr(self._inner_module, "_validate_basis_key"):
-                vk = self._inner_module._validate_basis_key(mk)
-                if vk is None:
-                    return None
-                new_m.append(vk)
-            else:
-                new_m.append(mk)
-
-        return (p_key, tuple(new_m))
+        return (p_key, tuple(m_tuple_raw))
 
     def _element_constructor_(self, x):
         if isinstance(x, dict):
-            clean: dict = {}
+            result = self.zero()
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    clean[k] = clean.get(k, 0) + coeff
-            return self.sum_of_terms(clean.items())
+                    p_key_raw, m_tuple_raw = k
+                    n = len(m_tuple_raw)
+                    comp = self._operad_cls(n, self.base_ring())
+                    result += coeff * self._normalized_corolla_sum(
+                        comp.term(p_key_raw), m_tuple_raw
+                    )
+            return result
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             k = self._validate_basis_key(x)
             if k is None:
                 return self.zero()
-            return self.term(k)
+            p_key_raw, m_tuple_raw = k
+            n = len(m_tuple_raw)
+            comp = self._operad_cls(n, self.base_ring())
+            return self._normalized_corolla_sum(comp.term(p_key_raw), m_tuple_raw)
 
         return super()._element_constructor_(x)
 
@@ -163,16 +226,17 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Leibniz rule: d(p ⊗ m_1 ⊗…⊗ m_n) = d_P(p) ⊗ m_… + Σ_i (−1)^{…} p ⊗…⊗ d_M(m_i) ⊗….
 
         Koszul sign at leaf i: ``(−1)^{deg_P(p_key) + Σ_{j<i} deg_M(m_j)}``.
+        Non-planar keys produced by ``d_P`` are normalised via planarize.
         """
         p_key, m_tuple = key
         n = len(m_tuple)
         comp = self._operad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_P term
-        p_elem = comp.term(p_key)
-        for new_p_key, coeff in comp.boundary(p_elem):
-            result += coeff * self.term((new_p_key, m_tuple))
+        # d_P term: normalise via planarize since boundary may produce non-planar keys
+        dp_elem = comp.boundary(comp.term(p_key))
+        if dp_elem:
+            result += self._normalized_corolla_sum(dp_elem, m_tuple)
 
         # d_M terms with Koszul signs
         p_deg = comp.degree_on_basis(p_key)
@@ -194,13 +258,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
     def basis_it(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
-        For a quasi-planar operad P, uses the isomorphism
-        ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` and enumerates only
-        planar P(n)-decorations for ``n ≥ 2``.
+        Uses the isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}``
+        and enumerates only planar P(n)-decorations.
 
         Raises:
-            NotImplementedError: when P does not expose ``planar_basis_it``
-                (e.g. ``Commutative``, ``Lie``).
             ValueError: when arity is unbounded (P and M both admit degree-0
                 generators).
         """
@@ -224,12 +285,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         min_m_deg = min(m_keys_by_deg.keys())
         connectivity = getattr(P, "connectivity", 0)
-        min_corolla_deg = connectivity  # minimum deg of a P(2)-element
+        min_corolla_deg = connectivity
 
         if d < min_corolla_deg:
             return
 
-        # Determine maximum arity
         if min_m_deg > 0:
             max_n = d // min_m_deg
         elif connectivity > 0:
@@ -241,22 +301,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 "unbounded in fixed degree."
             )
 
-        # Require quasi-planar support for n ≥ 2
-        try:
-            _use_planar = hasattr(P(2, R), "planar_basis_it")
-        except (TypeError, ValueError, NotImplementedError, AttributeError):
-            _use_planar = False
-
-        if not _use_planar:
-            raise NotImplementedError(
-                f"basis_it() requires the operad {P.name!r} to support "
-                "planar_basis_it() on its arity-2 component.  "
-                "Supported quasi-planar operads include Associative, Surjection, "
-                "BarrattEccles, and ShiftedOperad wrapping any of these.  "
-                "For non-quasi-planar operads (e.g. Commutative, Lie) the basis "
-                "of the composite product P ∘ M cannot be enumerated this way."
-            )
-
         for n in range(2, max_n + 1):
             try:
                 comp_n = P(n, R)
@@ -266,14 +310,12 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_p
                 if d_m_needed < 0:
                     continue
-                # Enumerate planar P(n)-keys in degree d_p
                 try:
                     p_elems = list(comp_n.planar_basis_it(d_p))
                 except (TypeError, ValueError, NotImplementedError, AttributeError):
                     continue
                 if not p_elems:
                     continue
-                # M^n tuples in total degree d_m_needed
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
                 if not m_tuples:
                     continue
@@ -301,14 +343,21 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 class FreeOperadAlgebra(OperadAlgebra):
     """Free P-algebra on a dg-module M.
 
-    Constructs the composite product ``P ∘ M`` as a
-    :class:`FreeAlgebraModule` and equips it with the canonical P-algebra
-    structure.  The action ``γ(q; a_1, ..., a_k)`` for ``a_i = (p_i_key,
-    x_i_tuple)`` applies the full operad substitution ``q(p_1, ..., p_k)``
-    and concatenates the M-tuples.
+    Constructs the composite product ``P ∘ M`` as a :class:`FreeAlgebraModule`
+    and equips it with the canonical P-algebra structure.
+
+    The action ``γ(q; a_1, ..., a_k)`` applies the full operad substitution
+    ``q(p_1, ..., p_k) ∈ P(Σn_i)`` and concatenates the M-tuples.  The result
+    is normalised via ``planarize``: if the composed P-element has a non-planar
+    key ``r·σ``, the output carries ``r`` (planar) and ``σ · m_concat``
+    (permuted M-entries).
+
+    **Quasi-planar requirement**: P must be quasi-planar (expose ``planarize``
+    on each component).  Non-quasi-planar operads such as Commutative or Lie
+    are **not** accepted.
 
     Args:
-        operad_cls: Operad provider P (class or wrapper instance).
+        operad_cls: Quasi-planar operad provider P (class or factory instance).
         inner_module: The generating dg-module M.
         base_ring: Coefficient ring.
 
@@ -320,15 +369,23 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     Examples::
 
-        free_lie = FreeOperadAlgebra(Lie, module_M, R)
-        # Apply the Lie bracket to two generators:
-        x = free_lie.include('x')
-        y = free_lie.include('y')
-        bracket = free_lie.act(Lie(2, R).term((1,)), [x, y])
+        from uconf import Associative
+        from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
+
+        M = CombinatorialFreeModule(QQ, ['a', 'b'],
+                                    category=GradedModulesWithBasis(QQ))
+        M.degree_on_basis = lambda _: 1
+        M.boundary_on_basis = lambda _: M.zero()
+        F = FreeOperadAlgebra(Associative, M, QQ)
+        a = F.include('a')
+        b = F.include('b')
+        # Non-planar Ass(2) key: result is normalised to planar key with swapped M-tuple
+        result = F.act(Associative(2, QQ)((2, 1)), [a, b])
+        # → corolla ((1,2), (B['b'], B['a']))
 
     """
 
-    def __init__(self, operad_cls: OperadLike, inner_module: CombinatorialFreeModule, base_ring):
+    def __init__(self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule, base_ring):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module
@@ -339,15 +396,15 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         For each input ``a_i = (p_i_key, x_i_tuple)`` (a corolla in
         ``Free_P(M)``), computes the full operad substitution
-        ``q(p_1, ..., p_k) ∈ P(n_1 + ... + n_k)`` and returns the
-        corresponding corolla ``(result_key, x_1_tuple + ... + x_k_tuple)``.
+        ``q(p_1, ..., p_k) ∈ P(n_1 + ... + n_k)`` and normalises the result
+        via ``planarize``, permuting the concatenated M-tuple accordingly.
 
         Args:
             p_element: An element of ``operad_cls(k)`` for some arity ``k``.
             algebra_elements: A list of ``k`` elements of ``free_module``.
 
         Returns:
-            An element of ``free_module``.
+            An element of ``free_module`` with planar P-keys.
 
         """
         k = p_element.arity()
@@ -368,11 +425,7 @@ class FreeOperadAlgebra(OperadAlgebra):
                     coeff = coeff * c
 
                 # Full substitution: compose q with each p_i from right to left
-                # q(p_1,...,p_k) = (...((q ∘_k p_k) ∘_{k-1} p_{k-1}) ...) ∘_1 p_1
                 n_list = [len(ik[1]) for ik in input_keys]
-                # Build the composed P-element iteratively
-                # Start with q_elem in P(k)
-                composed_arity = k
                 composed_elem = P(k, R).term(q_key)
 
                 for j in range(k - 1, -1, -1):
@@ -380,25 +433,22 @@ class FreeOperadAlgebra(OperadAlgebra):
                     n_j = n_list[j]
                     p_j_elem = P(n_j, R).term(p_j_key)
                     pos = j + 1  # 1-indexed position
-                    # Before composing at pos j+1, the composed element has
-                    # arity = k - (k-1-j) + Σ_{l>j} (n_l - 1)
-                    # = j+1 + Σ_{l>j} (n_l - 1) -- this is auto-tracked by P.compose
                     composed_elem = P.compose(composed_elem, pos, p_j_elem)
 
-                # composed_elem is now in P(n_1 + ... + n_k)
                 # Concatenate the M-tuples
                 m_concat = tuple(mk for ik in input_keys for mk in ik[1])
 
-                for res_key, res_coeff in composed_elem:
-                    result += coeff * res_coeff * self.module.term((res_key, m_concat))
+                # Normalise: planarize composed_elem and permute m_concat
+                result += coeff * self.module._normalized_corolla_sum(composed_elem, m_concat)
 
         return result
 
     def include(self, m_key):
-        """Return the image of basis key ``m_key`` under the inclusion η: M → P ∘ M.
+        """Return the image of ``m_key`` under the inclusion η: M → P ∘ M.
 
         Args:
-            m_key: A basis key of the inner module M.
+            m_key: A basis key of the inner module M (or any object stored as
+                an M-label in the free algebra).
 
         Returns:
             The element ``module.term((id_key, (m_key,)))`` where ``id_key``

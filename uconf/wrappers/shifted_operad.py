@@ -145,6 +145,45 @@ class ShiftedOperad(UniqueRepresentation):
 
                 self.planar_basis_it = _planar_basis_it
 
+            # Expose planarize when the base operad has planarize.
+            # The S_n-action on ShiftedOperad(P, d)(n) is twisted by sgn(σ)^d,
+            # so the normalisation identity becomes:
+            #   (p ·_base σ, m_tuple) = sgn(σ)^d · (p_planar, σ · m_tuple)
+            # in the coinvariant quotient ShiftedP(n) ⊗_{S_n} M^n.
+            if callable(getattr(self._base_parent, "planarize", None)):
+                from sage.all import SymmetricGroupAlgebra, tensor as sage_tensor
+
+                _sga = SymmetricGroupAlgebra(base_ring, n)
+                _codomain = sage_tensor([self, _sga])
+                _shift = factory.shift_degree
+                _self_ref = self
+                _base_ref = self._base_parent
+                _S_n_ref = self._symmetric_group
+
+                def _planarize_on_basis(
+                    p_key,
+                    _sga=_sga,
+                    _shift=_shift,
+                    _self_ref=_self_ref,
+                    _base_ref=_base_ref,
+                    _S_n_ref=_S_n_ref,
+                    _codomain=_codomain,
+                ):
+                    base_pz = _base_ref.planarize(_base_ref.term(p_key))
+                    result = _codomain.zero()
+                    for (p_pl_key, sigma_key), coeff in base_pz:
+                        sigma = _S_n_ref(sigma_key)
+                        sign_twist = int(sigma.sign()) ** _shift
+                        result += (
+                            sign_twist * coeff
+                        ) * _self_ref.term(p_pl_key).tensor(_sga(sigma))
+                    return result
+
+                self.planarize = self.module_morphism(
+                    on_basis=_planarize_on_basis,
+                    codomain=_codomain,
+                )
+
         def _validate_basis_key(self, basis_key):
             if hasattr(self._base_parent, "_validate_basis_key"):
                 return self._base_parent._validate_basis_key(basis_key)
