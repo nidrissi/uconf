@@ -37,6 +37,9 @@ from uconf.algebraic import (
     SurjectionSphereCochainAlgebra,
     surjection_chain_action,
     surjection_cochain_action,
+    labelled_configuration_model,
+    unordered_configuration_model,
+    euclidean_unordered_configuration_model,
 )
 from uconf.constructions import (
     BarComplexAlgebra,
@@ -101,6 +104,9 @@ __all__ = [
     "ass_to_com",
     "lie_to_ass",
     "make_e_comodule_morphism",
+    "labelled_configuration_model",
+    "unordered_configuration_model",
+    "euclidean_unordered_configuration_model",
 ]
 
 

@@ -19,6 +19,11 @@ from uconf.algebraic.spherical import (
     SurjectionSphereCochainAlgebra,
 )
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
+from uconf.algebraic.conf import (
+    labelled_configuration_model,
+    unordered_configuration_model,
+    euclidean_unordered_configuration_model,
+)
 
 __all__ = [
     "OperadAlgebra",
@@ -35,4 +40,7 @@ __all__ = [
     "ReducedSphereCochains",
     "SurjectionSphereCochainAlgebra",
     "PullbackAlgebra",
+    "labelled_configuration_model",
+    "unordered_configuration_model",
+    "euclidean_unordered_configuration_model",
 ]
