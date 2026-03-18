@@ -33,33 +33,9 @@ from typing import Any, ClassVar, Iterator
 from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, cached_method
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
 from uconf.core.operad import OperadLike
 from uconf.core.signs import sign_from_exponent
-
-
-def _module_basis_keys_in_degree(module, d: int) -> Iterator:
-    """Yield all basis keys of ``module`` in degree ``d``."""
-    basis_it_fn = getattr(module, "basis_it", None)
-    if basis_it_fn is not None:
-        for elem in basis_it_fn(d):
-            yield from elem.support()
-        return
-    for key in module.basis():
-        if module.degree_on_basis(key) == d:
-            yield key
-
-
-def _tuples_in_degree(keys_by_deg: dict, n: int, d: int) -> Iterator[tuple]:
-    """Yield all ``n``-tuples of keys whose total degree is ``d``."""
-    if n == 0:
-        if d == 0:
-            yield ()
-        return
-    for d_first in range(d + 1):
-        first_keys = keys_by_deg.get(d_first, [])
-        for first_key in first_keys:
-            for rest in _tuples_in_degree(keys_by_deg, n - 1, d - d_first):
-                yield (first_key,) + rest
 
 
 class FreeAlgebraModule(CombinatorialFreeModule):
@@ -79,7 +55,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
     def __init__(
         self,
         operad_cls: OperadLike,
-        inner_module:CombinatorialFreeModule,
+        inner_module: CombinatorialFreeModule,
         base_ring,
         *,
         name: str | None = None,
@@ -240,7 +216,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         # n = 1: exactly one P(1)-key (identity); yields M-generators in degree d
         unit_key = P.unit(R).support()[0]
-        for mk in m_keys_by_deg.get(d , []):
+        for mk in m_keys_by_deg.get(d, []):
             yield self.term((unit_key, (mk,)))
 
         if not m_keys_by_deg:
@@ -411,16 +387,10 @@ class FreeOperadAlgebra(OperadAlgebra):
 
                 # composed_elem is now in P(n_1 + ... + n_k)
                 # Concatenate the M-tuples
-                m_concat = tuple(
-                    mk for ik in input_keys for mk in ik[1]
-                )
+                m_concat = tuple(mk for ik in input_keys for mk in ik[1])
 
                 for res_key, res_coeff in composed_elem:
-                    result += (
-                        coeff
-                        * res_coeff
-                        * self.module.term((res_key, m_concat))
-                    )
+                    result += coeff * res_coeff * self.module.term((res_key, m_concat))
 
         return result
 
