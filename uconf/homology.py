@@ -65,7 +65,10 @@ def _deduplicated_basis(module: Any, d: int) -> tuple[list, list]:
     elems: list = []
     keys: list = []
     for b in module.graded_basis(d):
-        key = list(b.support())[0]
+        support = list(b.support())
+        if not support:
+            continue
+        key = support[0]
         if key not in seen:
             seen.add(key)
             elems.append(b)
@@ -152,8 +155,9 @@ def homology_basis(module: Any, degree: int, *, degrees: range | None = None) ->
         chain complex.  Must include at least ``degree - 1``, ``degree``,
         and ``degree + 1`` so that both the incoming and outgoing
         differentials are available.  If ``None``, a minimal range
-        ``range(degree - 1, degree + 2)`` is used.  Pass a wider range
-        if the module has non-trivial basis below ``degree - 1``.
+        ``range(max(degree - 1, 0), degree + 2)`` is used (negative
+        degrees are clamped to 0).  Pass a wider range if the module
+        has non-trivial basis below ``degree - 1``.
 
     Returns
     -------
