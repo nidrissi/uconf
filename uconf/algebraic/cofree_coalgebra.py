@@ -33,7 +33,6 @@ from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, ca
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
-from uconf.core.vertex_decoration import VertexDecorationLike
 
 
 def _module_basis_keys_in_degree(module, d: int) -> Iterator:
@@ -77,7 +76,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        cooperad_cls: VertexDecorationLike,
+        cooperad_cls: CooperadLike,
         inner_module: CombinatorialFreeModule,
         base_ring,
         *,
@@ -236,14 +235,13 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 m_keys_by_deg[d_m] = keys
 
         # n = 1
-        try:
-            comp_1 = C(1, R)
-            for c_key_1 in comp_1.basis():
-                d_c = comp_1.degree_on_basis(c_key_1)
-                for mk in m_keys_by_deg.get(d - d_c, []):
-                    yield self.term((c_key_1, (mk,)))
-        except (TypeError, ValueError, AttributeError):
-            pass
+
+        comp_1 = C(1, R)
+        comp_1_list = list(comp_1.basis_it(0))
+        assert len(comp_1_list) == 1, f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
+        c_key_1 = comp_1_list[0].support()[0]
+        for mk in m_keys_by_deg.get(d, []):
+            yield self.term((c_key_1, (mk,)))
 
         if not m_keys_by_deg:
             return
@@ -367,8 +365,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         # Get identity key of C(1)
         comp_1 = self.cooperad_cls(1, base_ring)
-        id_keys = list(comp_1.basis())
-        id_key = id_keys[0]  # C(1) has exactly one basis element
+        id_keys = list(comp_1.basis_it(0))
+        # C(1) has exactly one basis element
+        id_key = id_keys[0].support()[0]
 
         right_factors = [cofree_mod] * n
         target = tensor([coop_parent] + right_factors)
@@ -470,17 +469,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         """
         inner = self._inner_module
-        base_ring = self._base_ring
         result = inner.zero()
 
-        # Identify all valid C(1) keys
-        try:
-            comp_1 = self.cooperad_cls(1, base_ring)
-            id_keys = set(comp_1.basis())
-        except Exception:
-            id_keys = set()
-
         for (c_key, m_tuple), coeff in x:
-            if len(m_tuple) == 1 and c_key in id_keys:
+            if len(m_tuple) == 1:
                 result += coeff * inner.term(m_tuple[0])
         return result
