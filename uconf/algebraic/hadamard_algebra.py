@@ -63,10 +63,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
             int(getattr(self.left_module, "connectivity", 0)),
             int(getattr(self.right_module, "connectivity", 0)),
         )
-        left_mod = self.left_module
-        right_mod = self.right_module
-        self.module.degree_on_basis = (
-            lambda key: left_mod.degree_on_basis(key[0]) + right_mod.degree_on_basis(key[1])
+        self.module.degree_on_basis = lambda key: (
+            self.left_module.degree_on_basis(key[0]) + self.right_module.degree_on_basis(key[1])
         )
 
     def _act_impl(self, p_element, algebra_elements):
