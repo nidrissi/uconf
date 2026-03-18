@@ -117,7 +117,8 @@ class Surjection(CombinatorialFreeModule):
 
     def basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over basis elements in degree ``d``."""
-        assert d >= 0, "d must be a non-negative integer, got d={d}."
+        if d < 0:
+            return
         r = self.arity()
         for values in itertools.product(range(1, r + 1), repeat=r + d):
             # Check if the surjection is valid (no consecutive repeats and hits all values)
