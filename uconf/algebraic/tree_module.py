@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Iterator
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, cached_method
 
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -243,11 +243,20 @@ class TreeModule(CombinatorialFreeModule):
                 if not m_tuples:
                     continue
                 for tree in enumerate_shuffle_trees_generic_in_degree(
-                    n, max_weight, S, R, d_tree, self._vertex_degree_shift,
+                    n,
+                    max_weight,
+                    S,
+                    R,
+                    d_tree,
+                    self._vertex_degree_shift,
                     use_planar_decs=True,
                 ):
                     for m_tuple in m_tuples:
                         yield self.term((tree, m_tuple))
+
+    @cached_method
+    def graded_basis(self, d: int):
+        return Family(self.basis_it(d))
 
     def _boundary_on_basis(self, key) -> Any:
         """Differential using interleaved DFS Koszul sign rule."""
