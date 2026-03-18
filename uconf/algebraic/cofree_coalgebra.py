@@ -2,57 +2,59 @@
 
 The cofree conilpotent C-coalgebra on a dg-module M is
 
-    T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}
+    T^c_C(M) = \u2295_{n\u22651} C(n) \u2297_{S_n} M^{\u2297n}
 
 with:
-- Degree: deg(tree, m_tuple) = Σ_{v internal} deg_C(dec(v)) + Σ_i deg_M(m_i)
-  (no desuspension; compare with the cobar construction which uses deg_C - 1).
-- Differential d = d_C + d_M from the Koszul sign rule on the interleaved
-  DFS pre-order of vertices and leaves.
-- C-coalgebra costructure: the infinitesimal cocomposition Δ^{i;m,n} splits
-  a tree at the unique internal vertex whose subtree leaves are {i,...,i+n-1},
-  mirroring the BarConstruction infinitesimal cocomposition but also splitting
-  the M-label tuple accordingly.
+- Degree: deg(c_key, m_tuple) = deg_C(c_key) + \u03a3_i deg_M(m_i).
+- Differential d = d_C + d_M from the Koszul sign rule (Leibniz rule).
+- C-coalgebra costructure: the infinitesimal cocomposition \u0394^{i;m,n} applies
+  the cooperad\'s cocomposition to the C-decoration and splits the M-labels.
 
-The basis keys are pairs ``(tree, m_tuple)`` where:
+**Quasi-planar requirement**: C must be a quasi-planar cooperad, i.e. each
+component ``C(n)`` exposes a ``planarize`` linear map.  Non-planar C-keys are
+normalised by permuting m_tuple accordingly.
 
-- ``tree`` is an integer leaf (= 1 in arity 1) or a tuple representing a
-  decorated rooted tree with leaves labeled ``1, ..., n``.
-- ``m_tuple`` is a tuple of ``n`` basis keys of the inner module M.
+The basis keys are pairs ``(c_key, m_tuple)`` where:
 
-The coprojection π: T^c_C(M) → M kills all elements of weight ≥ 2 and sends
-(1, (m,)) ↦ m.
+- ``c_key`` is a **planar** basis key of ``C(n)`` for ``n = len(m_tuple) >= 1``.
+- ``m_tuple`` is a tuple of ``n`` values.
+
+The coprojection pi: T^c_C(M) -> M kills all elements with n >= 2 and maps
+``(id_key, (m,)) |-> m``.
 
 Reference: Loday-Vallette "Algebraic Operads", Section 5.8.
 """
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar, Iterator
 
-from sage.all import CombinatorialFreeModule, tensor
-
-from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.algebraic.tree_module import TreeModule
-from uconf.core.cooperad import CooperadLike
-from uconf.core.vertex_decoration import VertexDecorationLike
-from uconf.core.trees import (
-    children,
-    decoration,
-    is_leaf,
-    leaves,
-    relabel_leaves,
-    split_at_vertex,
-    vertex_arity,
-    vertices_dfs,
+from sage.all import (
+    CombinatorialFreeModule,
+    Family,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    cached_method,
+    tensor,
 )
 
+from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
+from uconf.core.cooperad import CooperadLike
+from uconf.core.signs import sign_from_exponent
+from uconf.core.vertex_decoration import QuasiPlanarLike
 
-class CofreeCoalgebraModule(TreeModule):
+
+class CofreeCoalgebraModule(CombinatorialFreeModule):
     """Underlying dg-module of the cofree conilpotent C-coalgebra ``T^c_C(M)``.
 
-    Basis keys are ``(tree, m_tuple)`` pairs.  The differential is
-    ``d = d_C + d_M`` using the DFS-interleaved Koszul sign rule.
+    Basis keys are ``(c_key, m_tuple)`` pairs where ``c_key`` is a **planar**
+    basis key of ``C(n)`` and ``m_tuple`` has length ``n``.  The differential
+    is the Leibniz rule ``d = d_C + d_M`` with Koszul signs.  Non-planar keys
+    are automatically normalised via ``planarize`` (permuting the m_tuple).
+
+    The cooperad ``C`` must be quasi-planar: each component ``C(n)`` must
+    expose a ``planarize`` linear map.
 
     This class is normally not instantiated directly; use
     :class:`CofreeConilpotentCoalgebra` instead.
@@ -62,153 +64,371 @@ class CofreeCoalgebraModule(TreeModule):
 
     def __init__(
         self,
-        cooperad_cls: VertexDecorationLike,
+        cooperad_cls: QuasiPlanarLike,
         inner_module: CombinatorialFreeModule,
         base_ring,
         *,
-        vertex_degree_shift: int = 0,
         name: str | None = None,
     ):
         """Initialize the cofree conilpotent C-coalgebra module ``T^c_C(M)``.
 
-
         Args:
-            cooperad_cls: Arity-indexed vertex-decoration provider used on
-                internal vertices (typically a cooperad, but may be any object
-                matching the shared structural protocol).
-            inner_module: Cogenerating dg-module M (a ``CombinatorialFreeModule``).
+            cooperad_cls: Arity-indexed **quasi-planar** cooperad provider.
+            inner_module: Cogenerating dg-module M.
             base_ring: Coefficient ring.
-            vertex_degree_shift: Per-vertex degree offset (0 = standard cofree,
-                +1 = bar/suspension convention, -1 = cobar/desuspension).
             name: Display name override.  Defaults to ``T^c_C(M)``.
+
+        Raises:
+            TypeError: If the cooperad is not quasi-planar (no ``planarize``).
 
         """
         if name is None:
             name = f"T^c_{cooperad_cls.name}({inner_module})"
+        self._cooperad_cls = cooperad_cls
+        self._inner_module = inner_module
+        # Runtime check: cooperad must be quasi-planar (free S_n-action)
+        try:
+            _comp2 = cooperad_cls(2, base_ring)
+        except (TypeError, ValueError, AttributeError):
+            _comp2 = None  # arity-2 may not exist; skip check
+        if _comp2 is not None and not callable(getattr(_comp2, "planarize", None)):
+            raise TypeError(
+                f"Cooperad {cooperad_cls.name!r} is not quasi-planar: "
+                f"its arity-2 component does not expose 'planarize'.  "
+                "Only quasi-planar cooperads (CoAssociative, SurjectionDual, "
+                "and their wrappers) are accepted."
+            )
         super().__init__(
-            symmetric_sequence_cls=cooperad_cls,
-            inner_module=inner_module,
-            base_ring=base_ring,
-            vertex_degree_shift=vertex_degree_shift,
-            name=name,
+            base_ring,
+            tuple,
+            prefix=name,
+            category=GradedModulesWithBasis(base_ring),
         )
+        self.rename(name)
+        self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
+
+    # ------------------------------------------------------------------
+    # Normalisation helper
+    # ------------------------------------------------------------------
+
+    def _normalized_corolla_sum(self, c_elem, m_tuple) -> "CofreeCoalgebraModule.Element":
+        """Return the sum of canonical corollas for ``c_elem x m_tuple``.
+
+        For each basis term ``(c_key, coeff)`` of ``c_elem in C(n)``, applies
+        ``planarize`` to obtain ``(c_planar_key x sigma) * cf`` and returns::
+
+            sum coeff * cf * self.term((c_planar_key, sigma . m_tuple))
+
+        where ``sigma . m_tuple = (m_tuple[sigma^{-1}(1)-1], ..., m_tuple[sigma^{-1}(n)-1])``.
+
+        Args:
+            c_elem: An element of ``C(n)`` (any arity, may be non-planar).
+            m_tuple: A tuple of ``n`` objects.
+
+        Returns:
+            An element of ``self`` with planar C-keys.
+
+        """
+        n = len(m_tuple)
+        comp = c_elem.parent()
+        S_n = SymmetricGroup(n)
+        result = self.zero()
+        for c_key, c_coeff in c_elem:
+            planarized = comp.planarize(comp.term(c_key))
+            for (c_planar_key, sigma_key), pl_coeff in planarized:
+                sigma = S_n(sigma_key)
+                sigma_inv = sigma.inverse()
+                permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
+                result += c_coeff * pl_coeff * self.term((c_planar_key, permuted_m))
+        return result
+
+    # ------------------------------------------------------------------
+    # Basis key validation
+    # ------------------------------------------------------------------
+
+    def _validate_basis_key(self, key) -> tuple | None:
+        """Validate a ``(c_key, m_tuple)`` basis key (structural check only).
+
+        Returns the normalised key, or ``None`` if structurally invalid.
+        Does **not** planarize; use :meth:`_normalized_corolla_sum` for that.
+        """
+        if not isinstance(key, (tuple, list)) or len(key) != 2:
+            return None
+        c_key_raw, m_tuple_raw = key[0], key[1]
+        if not isinstance(m_tuple_raw, (tuple, list)):
+            return None
+        n = len(m_tuple_raw)
+        if n == 0:
+            return None
+
+        # Validate c_key against C(n)
+        try:
+            comp = self._cooperad_cls(n, self.base_ring())
+            if hasattr(comp, "_validate_basis_key"):
+                c_key = comp._validate_basis_key(c_key_raw)
+                if c_key is None:
+                    return None
+            else:
+                c_key = c_key_raw
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+        return (c_key, tuple(m_tuple_raw))
+
+    def _element_constructor_(self, x):
+        if isinstance(x, dict):
+            result = self.zero()
+            for key, coeff in x.items():
+                k = self._validate_basis_key(key)
+                if k is not None:
+                    c_key_raw, m_tuple_raw = k
+                    n = len(m_tuple_raw)
+                    comp = self._cooperad_cls(n, self.base_ring())
+                    result += coeff * self._normalized_corolla_sum(
+                        comp.term(c_key_raw), m_tuple_raw
+                    )
+            return result
+
+        if isinstance(x, (tuple, list)) and len(x) == 2:
+            k = self._validate_basis_key(x)
+            if k is None:
+                return self.zero()
+            c_key_raw, m_tuple_raw = k
+            n = len(m_tuple_raw)
+            comp = self._cooperad_cls(n, self.base_ring())
+            return self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
+
+        return super()._element_constructor_(x)
+
+    # ------------------------------------------------------------------
+    # Degree
+    # ------------------------------------------------------------------
+
+    def degree_on_basis(self, key) -> int:
+        """Degree = deg_C(c_key) + sum_i deg_M(m_i)."""
+        c_key, m_tuple = key
+        n = len(m_tuple)
+        comp = self._cooperad_cls(n, self.base_ring())
+        c_deg = comp.degree_on_basis(c_key)
+        m_deg = sum(self._inner_module.degree_on_basis(mk) for mk in m_tuple)
+        return c_deg + m_deg
+
+    # ------------------------------------------------------------------
+    # Differential
+    # ------------------------------------------------------------------
+
+    def _boundary_on_basis(self, key) -> Any:
+        """Leibniz rule: d(c x m_1 x...x m_n) = d_C(c) x m_... + sum_i (-1)^{...} c x...x d_M(m_i) x....
+
+        Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
+        Non-planar keys produced by ``d_C`` are normalised via planarize.
+        """
+        c_key, m_tuple = key
+        n = len(m_tuple)
+        comp = self._cooperad_cls(n, self.base_ring())
+        result = self.zero()
+
+        # d_C term: normalise via planarize since boundary may produce non-planar keys
+        dc_elem = comp.boundary(comp.term(c_key))
+        if dc_elem:
+            result += self._normalized_corolla_sum(dc_elem, m_tuple)
+
+        # d_M terms with Koszul signs
+        c_deg = comp.degree_on_basis(c_key)
+        cumulative = c_deg
+        for i, mk in enumerate(m_tuple):
+            sign = sign_from_exponent(cumulative)
+            m_elem = self._inner_module.term(mk)
+            for new_mk, m_coeff in self._inner_module.boundary(m_elem):
+                new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
+                result += sign * m_coeff * self.term((c_key, new_m))
+            cumulative += self._inner_module.degree_on_basis(mk)
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Basis iteration
+    # ------------------------------------------------------------------
+
+    def basis_it(self, d: int) -> Iterator[Any]:
+        """Iterate over basis elements of total degree ``d``.
+
+        Uses the isomorphism ``C(n) x_{S_n} M^{xn} ~= C_pl(n) x M^{xn}``
+        and enumerates only planar C(n)-decorations.
+
+        Raises:
+            ValueError: when arity is unbounded.
+        """
+        M = self._inner_module
+        C = self._cooperad_cls
+        R = self.base_ring()
+
+        m_keys_by_deg: dict[int, list] = {}
+        for d_m in range(d + 1):
+            keys = list(_module_basis_keys_in_degree(M, d_m))
+            if keys:
+                m_keys_by_deg[d_m] = keys
+
+        # n = 1
+        comp_1 = C(1, R)
+        comp_1_list = list(comp_1.basis_it(0))
+        assert len(comp_1_list) == 1, (
+            f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
+        )
+        c_key_1 = comp_1_list[0].support()[0]
+        for mk in m_keys_by_deg.get(d, []):
+            yield self.term((c_key_1, (mk,)))
+
+        if not m_keys_by_deg:
+            return
+
+        min_m_deg = min(m_keys_by_deg.keys())
+        connectivity = getattr(C, "connectivity", 0)
+
+        if d < connectivity:
+            return
+
+        if min_m_deg > 0:
+            max_n = d // min_m_deg
+        elif connectivity > 0:
+            max_n = d // connectivity + 1
+        else:
+            raise ValueError(
+                "Cannot exhaustively enumerate basis_it(d): both C and M admit "
+                "degree-0 generators (connectivity=0, min_m_deg=0)."
+            )
+
+        for n in range(2, max_n + 1):
+            try:
+                comp_n = C(n, R)
+            except (TypeError, ValueError, AttributeError):
+                continue
+            for d_c in range(d + 1):
+                d_m_needed = d - d_c
+                if d_m_needed < 0:
+                    continue
+                try:
+                    c_elems = list(comp_n.planar_basis_it(d_c))
+                except (TypeError, ValueError, NotImplementedError, AttributeError):
+                    continue
+                if not c_elems:
+                    continue
+                m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
+                if not m_tuples:
+                    continue
+                for c_elem in c_elems:
+                    for c_key in c_elem.support():
+                        for m_tuple in m_tuples:
+                            yield self.term((c_key, m_tuple))
+
+    @cached_method
+    def graded_basis(self, d: int):
+        return Family(self.basis_it(d))
+
+    # ------------------------------------------------------------------
+    # Element class
+    # ------------------------------------------------------------------
+
+    class Element(CombinatorialFreeModule.Element):
+        """An element of the cofree C-coalgebra module ``T^c_C(M)``."""
+
+        def boundary(self) -> "CofreeCoalgebraModule.Element":
+            """Apply the differential d = d_C + d_M."""
+            return self.parent().boundary(self)
 
 
 class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     """Cofree conilpotent C-coalgebra on a dg-module M.
 
-    Constructs ``T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`` as a
+    Constructs ``T^c_C(M) = sum_{n>=1} C(n) x_{S_n} M^{xn}`` as a
     :class:`CofreeCoalgebraModule` and equips it with the canonical
-    C-coalgebra infinitesimal cocomposition given by tree-splitting.
+    C-coalgebra coaction.
+
+    **Quasi-planar requirement**: C must be quasi-planar.
 
     Args:
-        cooperad_cls: Cooperad provider C (class or wrapper instance).
+        cooperad_cls: Quasi-planar cooperad provider C.
         inner_module: The cogenerating dg-module M.
-        base_ring: Coefficient ring
+        base_ring: Coefficient ring.
 
-    The coprojection ``π: T^c_C(M) → M`` is given by ``project()``.
-
-    The coaction ``δ_k`` is implemented via ``coact(v_elem, k)`` which returns
-    an element of ``C(k) ⊗ T^c_C(M)^{⊗k}``.  The infinitesimal cocomposition
-    ``Δ^{i;m,n}`` is accessible via ``infinitesimal_cocompose(x, i, m, n)``.
+    The coprojection ``pi: T^c_C(M) -> M`` is given by ``project()``.
 
     Examples::
 
-        cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M)
-        # Coaction on a binary-tree element:
-        elem = cofree_coass.module.term(((1,2), 1, 2), (m1, m2))
-        cofree_coass.coact(elem, 2)   # splits at root
+        cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M, QQ)
+        elem = cofree_coass.module.term(((1, 2), (m1, m2)))
+        cofree_coass.coact(elem, 2)
 
     """
 
-    def __init__(self, cooperad_cls: CooperadLike, inner_module, base_ring):
+    def __init__(self, cooperad_cls: QuasiPlanarLike, inner_module, base_ring):
         cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
         super().__init__(cofree_module, cooperad_cls, self._coact_impl)
         self._inner_module = inner_module
+        self._base_ring = base_ring
 
     def _coact_impl(self, v_element, n: int):
-        """C-coalgebra coaction δ_n: split each tree at its root when root arity = n.
+        """C-coalgebra coaction delta_n on ``T^c_C(M)``.
 
-        For each basis element ``(tree, m_tuple)`` with ``vertex_arity(root) == n``:
+        For each basis element ``(c_key, (m_1, ..., m_k))`` with ``k == n``:
 
-            δ_n((tree, m_tuple)) = root_dec ⊗ (subtree_1, m_1) ⊗ … ⊗ (subtree_n, m_n)
+            delta_n((c_key, (m_1, ..., m_n))) =
+                c_key x (id_key, (m_1,)) x ... x (id_key, (m_n,))
 
-        where ``root_dec ∈ C(n)`` is the root decoration, ``subtree_j`` are the n
-        root children (relabeled to leaves ``{1, …, n_j}``), and ``m_j`` is the
-        sub-tuple of M-labels for the leaves of ``subtree_j``.
+        where ``id_key`` is the unique basis key of ``C(1)`` (the counit).
+        For ``k != n``: delta_n = 0.
 
-        For a single leaf ``(1, (m,))``: δ_n = 0 for all n (no root arity to split).
-
-        Returns an element of ``C(n) ⊗ T^c_C(M)^{⊗n}`` (a Sage tensor module element).
-        The basis keys are ``(c_key, cofree_key_1, ..., cofree_key_n)`` as required by
-        :meth:`uconf.coalgebra_cobar.CobarComplexCoalgebra._dcoact_on_basis`.
+        Returns an element of ``C(n) x T^c_C(M)^{xn}``.
         """
-        base_ring = self.module.base_ring()
+        base_ring = self._base_ring
         coop_parent = self.cooperad_cls(n, base_ring)
-        cofree_mod = self.module  # CofreeCoalgebraModule
+        cofree_mod = self.module
+
+        # Get identity key of C(1)
+        comp_1 = self.cooperad_cls(1, base_ring)
+        comp_1_list = list(comp_1.basis_it(0))
+        assert len(comp_1_list) == 1, f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
+        id_key = comp_1_list[0].support()[0]
 
         right_factors = [cofree_mod] * n
         target = tensor([coop_parent] + right_factors)
         result = target.zero()
 
-        for (tree, m_tuple), v_coeff in v_element:
-            if is_leaf(tree):
-                continue  # no root vertex, δ_n = 0
-            if vertex_arity(tree) != n:
-                continue  # root arity doesn't match
+        for (c_key, m_tuple), v_coeff in v_element:
+            k = len(m_tuple)
+            if k != n:
+                continue  # arity mismatch
 
-            root_dec = decoration(tree)
-            root_children = children(tree)
-
-            # Split m_tuple among the n children according to leaf membership
-            child_leaf_lists = []
-            for child in root_children:
-                child_leaves = sorted(leaves(child) if not is_leaf(child) else {child})
-                child_leaf_lists.append(child_leaves)
-
-            # Relabel each child to have leaves {1, ..., n_j}
-            relabeled_children = []
-            child_m_tuples = []
-            for j, (child, child_leaves) in enumerate(zip(root_children, child_leaf_lists)):
-                relabel = {old: new for new, old in enumerate(child_leaves, start=1)}
-                if is_leaf(child):
-                    relabeled_children.append(1)
-                else:
-                    relabeled_children.append(relabel_leaves(child, relabel))
-                # m-labels for this child (by original leaf order)
-                child_m_tuples.append(tuple(m_tuple[l - 1] for l in child_leaves))
-
-            # Build tensor product term: c_key ⊗ (sub_1, m_1) ⊗ ... ⊗ (sub_n, m_n)
-            coop_elem = coop_parent.term(root_dec)
-            term = coop_elem
-            for j in range(n):
-                sub_key = (relabeled_children[j], child_m_tuples[j])
-                term = tensor([term, cofree_mod.term(sub_key)])
-
+            # Build flat tensor: c_key x (id_key,(m_1,)) x ... x (id_key,(m_n,))
+            coop_elem = coop_parent.term(c_key)
+            leaf_elems = [cofree_mod.term((id_key, (mk,))) for mk in m_tuple]
+            term = tensor([coop_elem] + leaf_elems)
             result += v_coeff * term
 
         return result
 
     def infinitesimal_cocompose(self, x, i: int, m: int, n: int):
-        """Δ^{i;m,n}: T^c_C(M)(m+n-1) → T^c_C(M)(m) ⊗ T^c_C(M)(n).
+        """Delta^{i;m,n}: T^c_C(M)(m+n-1) -> T^c_C(M)(m) x T^c_C(M)(n).
 
-        Splits each tree at every internal vertex whose subtree leaves are
-        exactly ``{i, i+1, ..., i+n-1}``, then relabels the two resulting
-        subtrees to have leaves ``{1,...,m}`` and ``{1,...,n}`` respectively.
-        The M-label tuple is split accordingly.
+        For each basis element ``(c_key, (mu_1, ..., mu_{m+n-1}))``,
+        applies the cooperad's infinitesimal cocomposition and distributes
+        M-labels:
 
-        This mirrors the cocomposition in
-        :class:`uconf.bar_construction.BarConstruction.Component`, extended to
-        carry the M-label tuple.
+        - Left factor (arity m):  ``(c_L_key, (mu_1,...,mu_{i-1}, mu_{i+n-1},...,mu_{m+n-1}))``
+          with mu_i replaced by a placeholder at position i, corresponding to the
+          right subtree occupying positions i..i+n-1.
+        - Right factor (arity n): ``(c_R_key, (mu_i,...,mu_{i+n-1}))``
+
+        Both factors are normalised via planarize.
 
         Args:
             x: An element of the cofree module.
-            i: Starting position of the right factor's leaves (1-indexed).
+            i: Starting position of the right factor (1-indexed).
             m: Arity of the left factor.
             n: Arity of the right factor.
 
         Returns:
-            An element of ``T^c_C(M)(m) ⊗ T^c_C(M)(n)``.
+            An element of ``T^c_C(M)(m) x T^c_C(M)(n)``.
 
         """
         if m <= 0 or n <= 0:
@@ -217,62 +437,44 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
             raise ValueError(f"Index i must satisfy 1 <= i <= {m}. Got i={i}.")
 
         cofree_mod = self.module
-        left_parent = cofree_mod
-        right_parent = cofree_mod
-        target = tensor([left_parent, right_parent])
+        target = tensor([cofree_mod, cofree_mod])
         result = target.zero()
+        base_ring = self._base_ring
 
-        target_leaves = set(range(i, i + n))
+        for (c_key, m_tuple), coeff in x:
+            k = len(m_tuple)
+            if k != m + n - 1:
+                continue
 
-        for (tree, m_tuple), coeff in x:
-            for vertex in vertices_dfs(tree):
-                if leaves(vertex) != target_leaves:
-                    continue
-                split = split_at_vertex(tree, vertex)
-                if split is None:
-                    continue
+            comp = self.cooperad_cls(k, base_ring)
+            c_elem = comp.term(c_key)
+            cocomp = comp.infinitesimal_cocompose(c_elem, i, m, n)
 
-                tree_top, placeholder, tree_bot = split
+            # Split M-labels (1-indexed positions):
+            # Left (arity m): mu_1..mu_i, mu_{i+n}..mu_{m+n-1}
+            left_m = m_tuple[:i] + m_tuple[i + n - 1 :]
+            # Right (arity n): mu_i..mu_{i+n-1}
+            right_m = m_tuple[i - 1 : i + n - 1]
 
-                # Build top relabeling: {original leaves} → {1,...,m}
-                top_relabel: dict[int, int] = {}
-                for leaf in leaves(tree_top):
-                    if leaf < i:
-                        top_relabel[leaf] = leaf
-                    elif leaf == placeholder:
-                        top_relabel[leaf] = i
-                    else:
-                        top_relabel[leaf] = leaf - n + 1
-
-                # Build bot relabeling: {i,...,i+n-1} → {1,...,n}
-                bot_relabel = {leaf: leaf - i + 1 for leaf in target_leaves}
-
-                relabeled_top = relabel_leaves(tree_top, top_relabel)
-                relabeled_bot = relabel_leaves(tree_bot, bot_relabel)
-
-                # Split m_tuple: top gets all leaves except target, bot gets target
-                top_relabel_inv = {new: old for old, new in top_relabel.items()}
-                bot_relabel_inv = {new: old for old, new in bot_relabel.items()}
-                top_m = tuple(m_tuple[top_relabel_inv[j] - 1] for j in range(1, m + 1))
-                bot_m = tuple(m_tuple[bot_relabel_inv[j] - 1] for j in range(1, n + 1))
-
-                # Validate both parts
-                top_key = (relabeled_top, top_m)
-                bot_key = (relabeled_bot, bot_m)
-                if cofree_mod._validate_basis_key(top_key) is None:
-                    continue
-                if cofree_mod._validate_basis_key(bot_key) is None:
-                    continue
-
-                result += coeff * cofree_mod.term(top_key).tensor(cofree_mod.term(bot_key))
+            for (c_L_key, c_R_key), tensor_coeff in cocomp:
+                # Normalise each factor via planarize
+                left_comp = self.cooperad_cls(m, base_ring)
+                right_comp = self.cooperad_cls(n, base_ring)
+                left_elem = cofree_mod._normalized_corolla_sum(
+                    left_comp.term(c_L_key), left_m
+                )
+                right_elem = cofree_mod._normalized_corolla_sum(
+                    right_comp.term(c_R_key), right_m
+                )
+                result += coeff * tensor_coeff * left_elem.tensor(right_elem)
 
         return result
 
     def project(self, x):
-        """Coprojection π: T^c_C(M) → M, projecting onto weight-1 generators.
+        """Coprojection pi: T^c_C(M) -> M, projecting onto arity-1 generators.
 
         Returns the image in the inner module M.  Non-zero only for elements
-        of the form ``(1, (m_key,))`` (single leaf, weight 0).
+        of the form ``(id_key, (m_key,))`` where ``id_key in C(1)``.
 
         Args:
             x: An element of the cofree module.
@@ -282,8 +484,20 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         """
         inner = self._inner_module
+        base_ring = self._base_ring
         result = inner.zero()
-        for (tree, m_tuple), coeff in x:
-            if is_leaf(tree) and len(m_tuple) == 1:
+
+        # Get the unique C(1) identity key
+        try:
+            comp_1 = self.cooperad_cls(1, base_ring)
+            comp_1_list = list(comp_1.basis_it(0))
+            if not comp_1_list:
+                return result
+            id_key = comp_1_list[0].support()[0]
+        except Exception:
+            return result
+
+        for (c_key, m_tuple), coeff in x:
+            if len(m_tuple) == 1 and c_key == id_key:
                 result += coeff * inner.term(m_tuple[0])
         return result

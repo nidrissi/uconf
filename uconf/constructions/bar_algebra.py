@@ -39,7 +39,7 @@ from typing import ClassVar, cast
 from sage.all import CombinatorialFreeModule
 
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
+from uconf.algebraic.tree_module import TreeModule
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
@@ -56,13 +56,13 @@ from uconf.core.trees import (
 )
 
 
-class BarComplexAlgebra(CofreeCoalgebraModule):
+class BarComplexAlgebra(TreeModule):
     """Bar complex B_P(A) of a P-algebra A.
 
-    Subclasses :class:`~uconf.algebraic.cofree_coalgebra.CofreeCoalgebraModule`
+    Subclasses :class:`~uconf.algebraic.tree_module.TreeModule`
     with ``vertex_degree_shift = +1`` (suspension convention).  Inherits basis
     key validation, degree computation, basis iteration, and the internal
-    differential (d_1 + d_A) from the cofree module.  Only the structural
+    differential (d_1 + d_A) from TreeModule.  Only the structural
     differential ``d_2`` and algebra action ``d_act`` are implemented here.
 
     Args:
@@ -86,7 +86,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         self._module = algebra.module
 
         super().__init__(
-            cooperad_cls=algebra.operad_cls,
+            symmetric_sequence_cls=algebra.operad_cls,
             inner_module=algebra.module,
             base_ring=base_ring,
             vertex_degree_shift=1,
@@ -96,7 +96,7 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         # Override the inherited boundary with the bar-specific differential
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self._d_internal = self.module_morphism(
-            on_basis=lambda key: CofreeCoalgebraModule._boundary_on_basis(self, key),
+            on_basis=lambda key: TreeModule._boundary_on_basis(self, key),
             codomain=self,
         )
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
@@ -110,9 +110,9 @@ class BarComplexAlgebra(CofreeCoalgebraModule):
         """Total differential d = d_internal + d_2 + d_act.
 
         ``d_internal`` is the interleaved DFS differential inherited from
-        :class:`~uconf.algebraic.cofree_coalgebra.CofreeCoalgebraModule`,
-        applying ``∂_P`` to vertex decorations and ``∂_A`` to leaf
-        decorations with the Koszul sign rule.
+        :class:`~uconf.algebraic.tree_module.TreeModule`, applying ``∂_P``
+        to vertex decorations and ``∂_A`` to leaf decorations with the
+        Koszul sign rule.
         """
         return super()._boundary_on_basis(key) + self._d2_on_basis(key) + self._dact_on_basis(key)
 

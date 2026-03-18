@@ -30,8 +30,10 @@ from sage.all import (
     Family,
     GradedModulesWithBasis,
     SymmetricGroup,
+    SymmetricGroupAlgebra,
     UniqueRepresentation,
     cached_method,
+    tensor,
 )
 
 from uconf.core.cooperad import CooperadLike
@@ -41,6 +43,7 @@ from uconf.core.trees import (
     children,
     decoration,
     enumerate_shuffle_trees_cobar_in_degree,
+    enumerate_shuffle_trees_generic_in_degree,
     expand_vertex,
     graft,
     is_leaf,
@@ -160,6 +163,133 @@ class CobarConstruction(UniqueRepresentation):
                 on_basis=self._d2_on_basis,
                 codomain=self,
             )
+
+            # Set up planarize if the base cooperad supports it.
+            # Ω(C) is quasi-planar when C is quasi-planar: the S_n-action on
+            # cobar trees is free (by permuting leaf labels), so the global
+            # permutation can always be extracted from the tree structure.
+            if self._arity > 0 and self._cooperad_has_planarize():
+                self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
+                self.planarize = self.module_morphism(
+                    on_basis=self._planarize_on_basis,
+                    codomain=tensor([self, self._symmetric_group_algebra]),
+                )
+
+        def _cooperad_has_planarize(self) -> bool:
+            """Check if the base cooperad components have ``planarize``."""
+            try:
+                test = self._cooperad_cls(2, self.base_ring())
+                return callable(getattr(test, "planarize", None))
+            except Exception:
+                return False
+
+        def _planarize_on_basis(self, tree):
+            """Decompose a cobar tree into planar part ⊗ global permutation.
+
+            Mirrors ``BarConstruction.Component._planarize_on_basis``: for each
+            internal vertex ``v`` the base cooperad's ``planarize`` gives a
+            planar decoration ``dec_pl`` and a vertex permutation ``σ_v ∈ S_{k_v}``.
+            The planarized tree is assembled by:
+
+            1. Replacing each vertex decoration with its planar form.
+            2. Reordering the children of ``v``: new child at position ``j``
+               is old child at position ``σ_v(j)`` (1-indexed).
+            3. Relabeling the leaves of the resulting tree so they run
+               ``1, …, n`` in the new left-to-right order.
+
+            The global permutation ``σ ∈ S_n`` satisfies ``σ(j)`` = the
+            original leaf label at canonical position ``j``.
+
+            Returns an element of ``self ⊗ k[S_n]``.
+            """
+            sym_alg = self._symmetric_group_algebra
+            base_ring = self.base_ring()
+
+            if is_leaf(tree):
+                identity = self._symmetric_group.identity()
+                return self.term(tree).tensor(sym_alg.term(identity))
+
+            def _planarize_subtree(node):
+                """Return ``(coeff, planar_node, leaf_order)``."""
+                if is_leaf(node):
+                    return 1, node, [node]
+
+                k = vertex_arity(node)
+                dec = decoration(node)
+                coop_parent = self._cooperad_cls(k, base_ring)
+
+                dec_elem = coop_parent.term(dec)
+                planarized = coop_parent.planarize(dec_elem)
+
+                planar_dec = dec
+                sigma_v_tuple = tuple(range(1, k + 1))
+                dec_coeff = 1
+                for (planar_dec_key, sigma_key), c in planarized:
+                    planar_dec = planar_dec_key
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    dec_coeff = c
+                    break  # single term expected
+
+                old_ch = children(node)
+                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+
+                new_ch_planarized = []
+                leaf_order = []
+                total_child_coeff = 1
+                for ch in new_ch:
+                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
+                    total_child_coeff *= ch_coeff
+                    new_ch_planarized.append(p_ch)
+                    leaf_order.extend(lo_ch)
+
+                total_coeff = dec_coeff * total_child_coeff
+                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
+
+            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
+
+            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+
+            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+
+            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
+
+        def planar_basis_it(self, d: int) -> "Iterator[CobarConstruction.Element]":
+            """Iterate over planar cobar basis elements of degree ``d``.
+
+            A tree is *planar* when every vertex decoration is a planar element
+            of the base cooperad and the global leaf permutation is the identity
+            (children occupy consecutive leaf ranges).
+
+            Requires the base cooperad to implement ``planarize`` and
+            ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
+            Use :meth:`basis_it` for the full shuffle-tree basis instead.
+            """
+            if not self._cooperad_has_planarize():
+                raise NotImplementedError(
+                    f"planar_basis_it requires {self._cooperad_cls.name!r} to implement "
+                    "planarize and planar_basis_it (quasi-planar cooperad). "
+                    "Use basis_it() for the full shuffle-tree basis instead."
+                )
+
+            n = self._arity
+            base_ring = self.base_ring()
+
+            if n < 2:
+                if n == 1 and d == 0:
+                    yield self.term(1)
+                return
+
+            for tree in enumerate_shuffle_trees_generic_in_degree(
+                n, self._max_weight, self._cooperad_cls, base_ring, d,
+                vertex_offset=-1, use_planar_decs=True
+            ):
+                yield self.term(tree)
+
+        @cached_method
+        def graded_planar_basis(self, d: int) -> Family:
+            """Return the ``Family`` of planar basis elements in degree ``d``."""
+            return Family(self.planar_basis_it(d))
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key.

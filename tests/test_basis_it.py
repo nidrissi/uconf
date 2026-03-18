@@ -69,8 +69,9 @@ class TestFreeAlgebraModuleBasisIt:
     def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
         """Raise when both P and M allow unbounded arity in fixed degree."""
         M = Commutative(1, base_ring=QQ)
-        mod = FreeAlgebraModule(Commutative, M, QQ)
-        # Commutative operad with connectivity=0 and M in degree 0.
+        # Associative (connectivity=0) with M concentrated in degree 0:
+        # arity is unbounded in any fixed degree.
+        mod = FreeAlgebraModule(Associative, M, QQ)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
             list(mod.basis_it(0))
 
@@ -118,24 +119,23 @@ class TestFreeAlgebraModuleBasisIt:
             for key, _ in elem:
                 assert mod.degree_on_basis(key) == 3
 
-    def test_non_planar_operad_raises_not_implemented(self) -> None:
-        """Lie and Commutative (non-quasi-planar) raise NotImplementedError.
+    def test_non_planar_operad_raises_type_error(self) -> None:
+        """Lie and Commutative (non-quasi-planar) raise TypeError at construction.
 
-        For these operads the tensor-over-S_n quotient P(n) ⊗_{S_n} M^{⊗n}
-        cannot be represented by a naive product of full bases, so basis_it()
-        raises NotImplementedError instead of silently overcounting.
+        Both operads have non-free S_n-actions: Commutative has the trivial
+        action (rank 1 per arity) and Lie has a non-free action.  Neither
+        satisfies P(n) ≅ P_pl(n) ⊗ k[S_n], so FreeAlgebraModule rejects them
+        with TypeError at construction time.
         """
         from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
-        # Positive-degree inner module forces basis_it to reach the planar check.
         mod_M = CombinatorialFreeModule(QQ, ["x"], category=GradedModulesWithBasis(QQ))
         mod_M.degree_on_basis = lambda _k: 2
         mod_M.boundary = lambda _e: mod_M.zero()
 
         for P in (Lie, Commutative):
-            mod = FreeAlgebraModule(P, mod_M, QQ)
-            with pytest.raises(NotImplementedError, match="planar_basis_it"):
-                list(mod.basis_it(4))
+            with pytest.raises(TypeError, match="not quasi-planar"):
+                FreeAlgebraModule(P, mod_M, QQ)
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,10 @@ class ComponentProtocol(Protocol):
         """Returns the basis element corresponding to basis key ``input``."""
         ...
 
+    def _validate_basis_key(self, x: object) -> Any:
+        """Validates and normalizes a basis key (implementation detail)."""
+        ...
+
     def arity(self) -> int:
         """Returns the arity of this operad component."""
         ...
