@@ -78,7 +78,7 @@ def _deduplicated_basis(module: Any, d: int) -> tuple[list, list]:
 # TODO To properly truncate the chain complex, we should:
 # * In the bottom degree: take the kernel of the differential;
 # * In the top degree: take the cokernel of the differential from the degree just above.
-def chain_complex(module: Any, degrees: range) -> Any:
+def chain_complex(module: Any, degrees: range, *, max_arity: int | None = None) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
     Parameters
@@ -95,6 +95,14 @@ def chain_complex(module: Any, degrees: range) -> Any:
         so that the differential into ``max(degrees)`` is fully accounted for.
         Homology is correct for every degree in *degrees*; the Betti number
         at ``max(degrees)+1`` may be inflated by the truncation.
+    max_arity:
+        Optional upper bound on the number of leaves (arity) in tree-based
+        modules (bar complexes, free algebras, etc.).  When the tree degree
+        and inner-module connectivity both admit degree-0 generators, the
+        arity is mathematically unbounded in each fixed degree.  Pass a
+        finite ``max_arity`` to truncate the basis enumeration and obtain
+        an approximate chain complex.  Ignored for modules that already
+        have a finite arity bound.
 
     Returns
     -------
@@ -110,6 +118,26 @@ def chain_complex(module: Any, degrees: range) -> Any:
     >>> C = chain_complex(S2, degrees=range(4))
     >>> C.homology()  # doctest: +SKIP
     """
+    if not degrees:
+        return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
+
+    # Apply max_arity truncation to tree-based modules
+    _prev_max_arity = None
+    if max_arity is not None and hasattr(module, "set_max_arity"):
+        _prev_max_arity = getattr(module, "_max_arity", None)
+        module.set_max_arity(max_arity)
+
+    try:
+        return _build_chain_complex(module, degrees)
+    finally:
+        if _prev_max_arity is not None and hasattr(module, "set_max_arity"):
+            module.set_max_arity(_prev_max_arity)
+        elif max_arity is not None and hasattr(module, "set_max_arity") and _prev_max_arity is None:
+            module.set_max_arity(None)
+
+
+def _build_chain_complex(module: Any, degrees: range) -> Any:
+    """Internal: build the chain complex without max_arity handling."""
     if not degrees:
         return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
 
@@ -152,7 +180,9 @@ def chain_complex(module: Any, degrees: range) -> Any:
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1)
 
 
-def homology_basis(module: Any, degree: int, *, degrees: range | None = None) -> list:
+def homology_basis(
+    module: Any, degree: int, *, degrees: range | None = None, max_arity: int | None = None
+) -> list:
     """Return cycle representatives for a basis of the homology in *degree*.
 
     Parameters
@@ -169,6 +199,8 @@ def homology_basis(module: Any, degree: int, *, degrees: range | None = None) ->
         ``range(degree - 1, degree + 2)`` is used (negative
         degrees are clamped to 0).  Pass a wider range if the module
         has non-trivial basis below ``degree - 1``.
+    max_arity:
+        Passed through to :func:`chain_complex`.  See its documentation.
 
     Returns
     -------
@@ -189,7 +221,7 @@ def homology_basis(module: Any, degree: int, *, degrees: range | None = None) ->
         if degree not in degrees:
             raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
-    C = chain_complex(module, degrees)
+    C = chain_complex(module, degrees, max_arity=max_arity)
 
     # Retrieve the (deduplicated) basis elements in the requested degree
     basis_elems, _ = _deduplicated_basis(module, degree)

@@ -84,6 +84,11 @@ class CobarConstruction(UniqueRepresentation):
         self.cooperad_cls = cooperad_cls
         self.name = f"Ω({cooperad_cls.name})"
 
+    @property
+    def connectivity(self) -> int:
+        """Connectivity inherited from the underlying cooperad."""
+        return int(getattr(self.cooperad_cls, "connectivity", 0))
+
     def __call__(self, n: int, base_ring) -> "CobarConstruction.Component":
         return CobarConstruction.Component(self, n, base_ring)
 

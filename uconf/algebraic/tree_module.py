@@ -82,6 +82,7 @@ class TreeModule(CombinatorialFreeModule):
         self._symmetric_sequence_cls = symmetric_sequence_cls
         self._inner_module = inner_module
         self._vertex_degree_shift = vertex_degree_shift
+        self._max_arity: int | None = None
 
         super().__init__(
             base_ring,
@@ -141,6 +142,19 @@ class TreeModule(CombinatorialFreeModule):
             return self.term(k)
 
         return super()._element_constructor_(x)
+
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element.
+
+        Leaf-only elements (arity 1) have degree ``connectivity(M)``.
+        Tree elements (arity ≥ 2) have degree
+        ``≥ vertex_degree_shift + connectivity(S) + 2 · connectivity(M)``.
+        """
+        m_conn = int(getattr(self._inner_module, "connectivity", 0))
+        s_conn = int(getattr(self._symmetric_sequence_cls, "connectivity", 0))
+        tree_min = self._vertex_degree_shift + s_conn + 2 * m_conn
+        return min(m_conn, tree_min)
 
     def degree_on_basis(self, key) -> int:
         """Degree = vertex contribution plus leaf-module contribution."""
@@ -202,11 +216,15 @@ class TreeModule(CombinatorialFreeModule):
             max_n = d // min_m_deg
         elif connectivity > 0:
             max_n = (d - self._vertex_degree_shift) // connectivity + 1
+        elif self._max_arity is not None:
+            max_n = self._max_arity
         else:
             raise ValueError(
                 "Cannot exhaustively enumerate basis_it(d): both the inner module "
                 "and symmetric sequence admit degree-0 generators (min_deg=0, connectivity=0), "
-                "so arity is unbounded in fixed degree."
+                "so arity is unbounded in fixed degree.  "
+                "Set max_arity on this module (or pass max_arity to chain_complex) "
+                "to truncate the enumeration."
             )
 
         # Require quasi-planar support: basis_it() is only correct when the
@@ -257,6 +275,17 @@ class TreeModule(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int):
         return Family(self.basis_it(d))
+
+    def set_max_arity(self, max_arity: int | None) -> None:
+        """Set the maximum leaf-arity for basis enumeration.
+
+        When the tree degree and inner-module connectivity are both ≤ 0,
+        the arity is unbounded.  Setting a finite ``max_arity`` truncates
+        the enumeration so that only trees with at most ``max_arity`` leaves
+        are generated.  This also clears the cached ``graded_basis`` results.
+        """
+        self._max_arity = max_arity
+        self.graded_basis.clear_cache()
 
     def _boundary_on_basis(self, key) -> Any:
         """Differential using interleaved DFS Koszul sign rule."""

@@ -124,3 +124,77 @@ class TestHomologyBasis:
         for d in range(1, 3):
             gens = homology_basis(L3, d, degrees=range(3))
             assert len(gens) == 0
+
+
+# ---------------------------------------------------------------------------
+# connectivity
+# ---------------------------------------------------------------------------
+
+
+class TestConnectivity:
+    """Tests for connectivity properties on dg-modules."""
+
+    def test_simplicial_chains_connectivity(self) -> None:
+        """SimplicialChains has connectivity 0 (vertices have degree 0)."""
+        from uconf.models.simplicial import SimplicialChains
+        SC = SimplicialChains(QQ)
+        assert SC.connectivity == 0
+
+    def test_simplicial_cochains_connectivity(self) -> None:
+        """SimplicialCochains(N) has connectivity -N."""
+        from uconf.models.simplicial import SimplicialCochains
+        SC2 = SimplicialCochains(2, QQ)
+        assert SC2.connectivity == -2
+        SC5 = SimplicialCochains(5, QQ)
+        assert SC5.connectivity == -5
+
+    def test_simplicial_cochains_basis_it(self) -> None:
+        """SimplicialCochains(2) enumerates basis correctly per degree."""
+        from uconf.models.simplicial import SimplicialCochains
+        SC = SimplicialCochains(2, QQ)
+        # degree 0: 3 vertices (0), (1), (2)
+        assert len(list(SC.basis_it(0))) == 3
+        # degree -1: 3 edges (0,1), (0,2), (1,2)
+        assert len(list(SC.basis_it(-1))) == 3
+        # degree -2: 1 face (0,1,2)
+        assert len(list(SC.basis_it(-2))) == 1
+        # degree -3: empty
+        assert len(list(SC.basis_it(-3))) == 0
+        # degree 1: empty
+        assert len(list(SC.basis_it(1))) == 0
+
+    def test_simplicial_cochains_boundary(self) -> None:
+        """SimplicialCochains.boundary is an alias for coboundary."""
+        from uconf.models.simplicial import SimplicialCochains
+        SC = SimplicialCochains(2, QQ)
+        vertex = SC.term((0,))
+        assert SC.boundary(vertex) == SC.coboundary(vertex)
+
+    def test_free_algebra_connectivity(self) -> None:
+        """FreeAlgebraModule connectivity is that of the inner module."""
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+        from uconf.algebraic.free_algebra import FreeOperadAlgebra
+        from uconf.models.surjection import Surjection
+
+        M = CombinatorialFreeModule(QQ, ["a"], category=GradedModulesWithBasis(QQ))
+        M.degree_on_basis = lambda _: 3
+        M.connectivity = 3
+        M.boundary = lambda _: M.zero()
+
+        fa = FreeOperadAlgebra(Surjection, M, QQ)
+        assert fa.module.connectivity == 3
+
+    def test_tree_module_connectivity(self) -> None:
+        """TreeModule connectivity is the min of leaf and tree contributions."""
+        from uconf.constructions.bar_algebra import BarComplexAlgebra
+        from uconf.algebraic.free_algebra import FreeOperadAlgebra
+        from uconf.models.surjection import Surjection
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
+        M = CombinatorialFreeModule(QQ, ["x"], category=GradedModulesWithBasis(QQ))
+        M.degree_on_basis = lambda _: 2
+        M.connectivity = 2
+        M.boundary = lambda _: M.zero()
+        fa = FreeOperadAlgebra(Surjection, M, QQ)
+        # FreeAlgebraModule inherits connectivity from M
+        assert fa.module.connectivity == 2

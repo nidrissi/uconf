@@ -206,6 +206,19 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         return super()._element_constructor_(x)
 
     # ------------------------------------------------------------------
+    # Connectivity
+    # ------------------------------------------------------------------
+
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element.
+
+        The arity-1 term ``(id, (m,))`` has degree ``deg_M(m)``, so the
+        connectivity equals that of the inner module.
+        """
+        return int(getattr(self._inner_module, "connectivity", 0))
+
+    # ------------------------------------------------------------------
     # Degree
     # ------------------------------------------------------------------
 
