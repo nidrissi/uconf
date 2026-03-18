@@ -8,7 +8,7 @@ Covers:
 """
 
 import pytest
-from sage.all import QQ
+from sage.all import GradedModulesWithBasis, QQ
 
 from uconf import (
     Associative,
@@ -107,8 +107,80 @@ class TestFreeAlgebraModule:
 
 
 # ===========================================================================
-# FreeOperadAlgebra tests
+# Planar basis enumeration tests (S_n-orbit fix)
 # ===========================================================================
+
+
+def _graded_module_on_one_generator(degree: int, base_ring=QQ):
+    """Return a 1-dim graded module with one generator ``'x'`` in ``degree``."""
+    from sage.all import CombinatorialFreeModule
+
+    mod = CombinatorialFreeModule(base_ring, ["x"], category=GradedModulesWithBasis(base_ring))
+    mod.degree_on_basis = lambda _key: degree
+    mod.boundary = lambda _elem: mod.zero()
+    return mod
+
+
+class TestFreeAlgebraModulePlanarBasis:
+    """Regression tests for planar-basis enumeration in FreeAlgebraModule.basis_it.
+
+    The free P-algebra on M is the composite product
+    ``P ∘ M = ⊕_n P(n) ⊗_{S_n} M^{⊗n}``.  For a quasi-planar operad the
+    isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` implies that
+    basis_it should enumerate only the planar vertex decorations, yielding one
+    representative per ``S_n``-orbit.
+    """
+
+    def test_ass_one_generator_degree4_has_one_element(self):
+        """Free Ass-algebra on one generator x of degree 2: exactly one element in degree 4.
+
+        Ass(2) ⊗_{S_2} (kx)^{⊗2} ≅ kx^2 is 1-dimensional, so basis_it(4)
+        must yield exactly one element.  (Regression for the 'absurd.py' issue.)
+        """
+        M = _graded_module_on_one_generator(2)
+        mod = FreeAlgebraModule(Associative, M, QQ)
+        elems = list(mod.basis_it(4))
+        assert len(elems) == 1
+
+    def test_ass_one_generator_degree4_key_uses_planar_decoration(self):
+        """The unique degree-4 element has the planar decoration (1,2), not (2,1)."""
+        M = _graded_module_on_one_generator(2)
+        mod = FreeAlgebraModule(Associative, M, QQ)
+        elems = list(mod.basis_it(4))
+        assert len(elems) == 1
+        keys = [k for k, _ in elems[0]]
+        assert len(keys) == 1
+        tree, m_tuple = keys[0]
+        assert tree == ((1, 2), 1, 2), "Expected planar tree: corolla with decoration (1,2) and leaves 1,2"
+        assert len(m_tuple) == 2, "Expected two leaf entries"
+
+    def test_ass_one_generator_degree2_has_one_element(self):
+        """Free Ass-algebra on one generator x of degree 2: exactly one element in degree 2.
+
+        This is just the generator itself (the arity-1 leaf).
+        """
+        M = _graded_module_on_one_generator(2)
+        mod = FreeAlgebraModule(Associative, M, QQ)
+        elems = list(mod.basis_it(2))
+        assert len(elems) == 1
+
+    def test_ass_two_generators_degree4_has_four_elements(self):
+        """Free Ass-algebra on {x, y} of degree 2: four elements in degree 4.
+
+        Ass(2) ⊗_{S_2} (kx⊕ky)^{⊗2} ≅ (kx⊕ky)^{⊗2} has basis {xx, xy, yx, yy},
+        so basis_it(4) must yield exactly four elements.
+        """
+        from sage.all import CombinatorialFreeModule
+
+        mod_M = CombinatorialFreeModule(
+            QQ, ["x", "y"], category=GradedModulesWithBasis(QQ)
+        )
+        mod_M.degree_on_basis = lambda _key: 2
+        mod_M.boundary = lambda _elem: mod_M.zero()
+
+        mod = FreeAlgebraModule(Associative, mod_M, QQ)
+        elems = list(mod.basis_it(4))
+        assert len(elems) == 4
 
 
 class TestFreeOperadAlgebra:

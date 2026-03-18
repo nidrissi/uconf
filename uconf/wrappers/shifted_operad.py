@@ -127,6 +127,24 @@ class ShiftedOperad(UniqueRepresentation):
                 codomain=self,
             )
 
+            # Expose planar_basis_it when the base operad is quasi-planar.
+            # This makes ShiftedOperad wrapping a quasi-planar operad also
+            # quasi-planar, so that FreeAlgebraModule.basis_it() can correctly
+            # enumerate S_n-orbit representatives via the isomorphism
+            # P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}.
+            if hasattr(self._base_parent, "planar_basis_it"):
+                shift = factory.shift_degree
+                arity = int(n)
+                base_parent = self._base_parent
+                self_ref = self
+
+                def _planar_basis_it(d):
+                    unshifted = d - shift * (arity - 1)
+                    for elem in base_parent.planar_basis_it(unshifted):
+                        yield self_ref.sum_of_terms((k, c) for k, c in elem)
+
+                self.planar_basis_it = _planar_basis_it
+
         def _validate_basis_key(self, basis_key):
             if hasattr(self._base_parent, "_validate_basis_key"):
                 return self._base_parent._validate_basis_key(basis_key)
