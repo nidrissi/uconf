@@ -16,25 +16,29 @@ class TestChainComplex:
     """Tests for :func:`chain_complex`."""
 
     def test_surjection_arity2(self) -> None:
-        """Surjection(2, QQ) truncated to degrees 0..4."""
+        """Surjection(2, QQ) has H_0=1 and H_d=0 for 1<=d<=4.
+
+        H_{5} (one above the requested range) may be non-zero due to
+        truncation; only Betti numbers for degrees 0-4 are checked.
+        """
         S2 = Surjection(2, QQ)
         C = chain_complex(S2, degrees=range(5))
-        assert C.betti() == {0: 1, 1: 0, 2: 0, 3: 0, 4: 1}
+        for d in range(5):
+            assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_surjection_arity3(self) -> None:
-        """Surjection(3, QQ) truncated to degrees 0..3."""
+        """Surjection(3, QQ) has H_0=1 and H_d=0 for d in 1..3."""
         S3 = Surjection(3, QQ)
         C = chain_complex(S3, degrees=range(4))
-        # H_0 = QQ (path-connected), H_1 = H_2 = 0
-        assert C.betti()[0] == 1
-        assert C.betti()[1] == 0
-        assert C.betti()[2] == 0
+        for d in range(4):
+            assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_barratt_eccles_arity2(self) -> None:
-        """BarrattEccles(2, QQ) truncated to degrees 0..4."""
+        """BarrattEccles(2, QQ) has H_0=1 and H_d=0 for 1<=d<=4."""
         E2 = BarrattEccles(2, QQ)
         C = chain_complex(E2, degrees=range(5))
-        assert C.betti() == {0: 1, 1: 0, 2: 0, 3: 0, 4: 1}
+        for d in range(5):
+            assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_lie_arity2(self) -> None:
         """Lie is concentrated in degree 0; homology is the module itself."""
@@ -49,7 +53,8 @@ class TestChainComplex:
         checked by ChainComplex, but verify explicitly)."""
         S2 = Surjection(2, QQ)
         C = chain_complex(S2, degrees=range(5))
-        for d in range(1, 5):
+        # Complex now spans degrees 0-5 (extended internally by 1)
+        for d in range(1, 6):
             d_prev = C.differential(d - 1)
             d_curr = C.differential(d)
             assert (d_prev * d_curr).is_zero()
