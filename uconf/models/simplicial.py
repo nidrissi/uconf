@@ -19,10 +19,12 @@ from __future__ import annotations
 from itertools import combinations, combinations_with_replacement, pairwise
 
 from sage.all import (
+    Family,
     Integer,
     CombinatorialFreeModule,
     GradedModulesWithBasis,
     Rational,
+    cached_method,
     tensor,
 )
 from uconf.core.parented_element import ParentedElementMixin
@@ -118,6 +120,9 @@ class SimplicialChains(CombinatorialFreeModule):
         return s
 
     # -- grading ------------------------------------------------------------
+
+    connectivity = 0
+    """Minimum degree of any basis element (vertices have degree 0)."""
 
     def degree_on_basis(self, simplex: tuple) -> int:
         """Degree = dimension of the simplex = ``len(simplex) - 1``."""
@@ -294,6 +299,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         self.rename(name)
         self._N = N
         self.coboundary = self.module_morphism(on_basis=self._coboundary_on_basis, codomain=self)
+        self.boundary = self.coboundary  # alias: in negative-degree convention, δ lowers degree
 
     def simplex_dim(self) -> int:
         """Ambient simplex dimension N."""
@@ -333,9 +339,32 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- grading ------------------------------------------------------------
 
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element (the top cochain has degree ``-N``)."""
+        return -self._N
+
     def degree_on_basis(self, simplex: tuple) -> int:
         """Homological degree convention: ``-(len(simplex) - 1)``."""
         return -(len(simplex) - 1)
+
+    def basis_it(self, d: int):
+        """Iterate over basis cochains of degree ``d``.
+
+        Degree ``d`` corresponds to simplices of dimension ``-d``,
+        i.e. strictly increasing tuples of length ``1 - d`` over
+        ``{0, ..., N}``.
+        """
+        if d > 0 or d < -self._N:
+            return
+        k = 1 - d  # simplex length
+        for simplex in combinations(range(self._N + 1), k):
+            yield self.term(simplex)
+
+    @cached_method
+    def graded_basis(self, d: int):
+        """Return a :class:`Family` of basis cochains in degree ``d``."""
+        return Family(self.basis_it(d))
 
     # -- coboundary ---------------------------------------------------------
 
