@@ -63,6 +63,7 @@ from uconf.models import (
     SurjectionDual,
 )
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
+from uconf.homology import chain_complex, homology_basis
 from uconf.morphisms import ass_to_com, lie_to_ass, make_e_comodule_morphism
 
 __all__ = [
@@ -107,6 +108,8 @@ __all__ = [
     "labelled_configuration_model",
     "unordered_configuration_model",
     "euclidean_unordered_configuration_model",
+    "chain_complex",
+    "homology_basis",
 ]
 
 
