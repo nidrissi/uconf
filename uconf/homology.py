@@ -90,9 +90,11 @@ def chain_complex(module: Any, degrees: range) -> Any:
         algebras, cofree coalgebras, and similar objects from *uconf*
         satisfy this interface.
     degrees:
-        A :class:`range` of integer degrees to include.  The resulting chain
-        complex will have modules in each of these degrees (possibly
-        zero-dimensional) and differentials between consecutive degrees.
+        A :class:`range` of integer degrees.  The returned chain complex
+        covers *degrees* plus one additional degree above (``max(degrees)+1``)
+        so that the differential into ``max(degrees)`` is fully accounted for.
+        Homology is correct for every degree in *degrees*; the Betti number
+        at ``max(degrees)+1`` may be inflated by the truncation.
 
     Returns
     -------
@@ -108,14 +110,25 @@ def chain_complex(module: Any, degrees: range) -> Any:
     >>> C = chain_complex(S2, degrees=range(4))
     >>> C.homology()  # doctest: +SKIP
     """
+    if not degrees:
+        return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
+
     base_ring = module.base_ring()
+
+    # Extend by one degree above the requested range so that the differential
+    # d_{max+1}: C_{max+1} -> C_{max} is included.  Without it, every cycle
+    # in C_{max} appears as a homology generator even though it may be a
+    # boundary, yielding a spurious H_{max} = 1.  The homology of the
+    # returned complex is correct for all degrees in *degrees*; H_{max+1}
+    # may be inflated by the truncation.
+    extended_degrees = range(min(degrees), max(degrees) + 2)
 
     # Collect basis elements and keys for each degree (deduplicated)
     basis_by_degree: dict[int, list] = {}
     keys_by_degree: dict[int, list] = {}
     key_to_idx: dict[int, dict] = {}
 
-    for d in degrees:
+    for d in extended_degrees:
         basis_elems, basis_keys = _deduplicated_basis(module, d)
         basis_by_degree[d] = basis_elems
         keys_by_degree[d] = basis_keys
@@ -123,7 +136,7 @@ def chain_complex(module: Any, degrees: range) -> Any:
 
     # Build differential matrices: d_n : C_n -> C_{n-1}
     differentials: dict[int, Any] = {}
-    for d in degrees:
+    for d in extended_degrees:
         if d - 1 not in key_to_idx:
             # Target degree not in range; if there are source basis elements,
             # we still need a zero matrix so the complex knows the rank of C_d.
