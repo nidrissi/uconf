@@ -34,6 +34,8 @@ from sage.all import (
     UniqueRepresentation,
     cached_method,
     tensor,
+    Family,
+    cached_method,
 )
 
 from uconf.core.signs import (
@@ -359,6 +361,14 @@ class BarConstruction(UniqueRepresentation):
                 n, self._max_weight, self._operad_cls, base_ring, d
             ):
                 yield self.term(tree)
+
+        @cached_method
+        def graded_planar_basis(self, d: int):
+            return Family(self.planar_basis_it(d))
+
+        @cached_method
+        def graded_basis(self, d: int):
+            return Family(self.basis_it(d))
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
