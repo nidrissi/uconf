@@ -73,12 +73,10 @@ class TestFreeAlgebraModule:
         assert mod.degree_on_basis(full_key) == 0
 
     def test_weight1_lie_degree(self):
-        """Lie(2, QQ) has basis key (1,) in degree 0."""
+        """Non-quasi-planar operads (Lie) raise TypeError."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Lie, M, QQ)
-        # Lie(2) corolla key: ((1,), (m1, m2))
-        full_key = ((1,), ((), ()))
-        assert mod.degree_on_basis(full_key) == 0
+        with pytest.raises(TypeError, match="not quasi-planar"):
+            FreeAlgebraModule(Lie, M, QQ)
 
     def test_zero_differential_on_leaf(self):
         """Differential is zero on single-leaf elements when M has zero differential."""
@@ -230,15 +228,10 @@ class TestFreeOperadAlgebra:
         assert _as_dict(result) == {((1, 2), ((), ())): 1}
 
     def test_act_binary_comm_grafts(self):
-        """FreeOperadAlgebra also works with Commutative operad."""
+        """Non-quasi-planar operads (Commutative) raise TypeError."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Commutative, M, QQ)
-        m1 = F.include(())
-        m2 = F.include(())
-        com = Commutative(2, QQ)(())
-        result = F.act(com, [m1, m2])
-        # Comm(2) key is (), corolla: ((), ((), ()))
-        assert _as_dict(result) == {((), ((), ())): 1}
+        with pytest.raises(TypeError, match="not quasi-planar"):
+            FreeOperadAlgebra(Commutative, M, QQ)
 
     def test_act_arity_mismatch_raises(self):
         """act() raises ValueError when wrong number of inputs supplied."""
@@ -273,6 +266,30 @@ class TestFreeOperadAlgebra:
         # The P-decoration must be in Ass(3)
         assert len(p_key) == 3
 
+    def test_act_non_planar_normalised(self):
+        """γ(σ; η(a), η(b)) for non-planar σ=(2,1) gives planar key with swapped M-tuple.
+
+        The transposition σ = (2, 1) ∈ Ass(2) acting on (a, b) must produce the
+        canonical representative with planar key (1, 2) and m_tuple (b, a).
+        """
+        from sage.all import CombinatorialFreeModule
+        mod = CombinatorialFreeModule(QQ, ["a", "b"], category=GradedModulesWithBasis(QQ))
+        mod.degree_on_basis = lambda _: 1
+        mod.boundary_on_basis = lambda _: mod.zero()
+        F = FreeOperadAlgebra(Associative, mod, QQ)
+        a = F.include(mod.term("a"))
+        b = F.include(mod.term("b"))
+        sigma = Associative(2, QQ)((2, 1))
+        result = F.act(sigma, [a, b])
+        terms = list(result)
+        assert len(terms) == 1
+        (p_key, m_tuple), coeff = terms[0]
+        # Must carry planar key (1, 2) ...
+        assert p_key == (1, 2)
+        # ... with M-entries swapped: (b, a)
+        assert m_tuple == (mod.term("b"), mod.term("a"))
+        assert coeff == 1
+
     def test_boundary_zero_trivial(self):
         """Differential is 0 for trivial Ass operad (deg=0) and trivial M."""
         M = _zero_diff_module()
@@ -281,16 +298,10 @@ class TestFreeOperadAlgebra:
         assert F.boundary(elem) == F.module.zero()
 
     def test_act_lie(self):
-        """FreeOperadAlgebra works with the Lie operad."""
+        """Non-quasi-planar operads (Lie) raise TypeError for FreeOperadAlgebra."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Lie, M, QQ)
-        lie_dec = (1,)  # Lie(2, QQ) basis key
-        bracket = Lie(2, QQ)(lie_dec)
-        m1 = F.include(())
-        m2 = F.include(())
-        result = F.act(bracket, [m1, m2])
-        # Expected: corolla with Lie(2) key (1,) and m-tuple ((), ())
-        assert _as_dict(result) == {(lie_dec, ((), ())): 1}
+        with pytest.raises(TypeError, match="not quasi-planar"):
+            FreeOperadAlgebra(Lie, M, QQ)
 
 
 # ===========================================================================
@@ -421,19 +432,19 @@ class TestCofreeConilpotentCoalgebra:
 class TestFreeAlgebraBarComplex:
     """Bar complex of the free P-algebra."""
 
-    def test_bar_of_free_lie_d_squared_zero(self):
-        """d² = 0 on a weight-1 element of B(Lie; Free_Lie(M))."""
+    def test_bar_of_free_ass_d_squared_zero_2(self):
+        """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M)) (second variant)."""
         from uconf.constructions.bar_algebra import BarComplexAlgebra
 
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Lie, M, QQ)
+        F = FreeOperadAlgebra(Associative, M, QQ)
         B = BarComplexAlgebra(F, QQ)
 
-        lie_dec = (1,)
-        # Outer tree: weight-1 Lie binary tree with two single-leaf inner trees
-        outer_tree = (lie_dec, 1, 2)
-        # a_tuple: two Free_Lie(M) leaf basis keys; Lie(1) key is ()
-        a_tuple = (((), ((),)), ((), ((),)))
+        mu = (1, 2)
+        # Outer tree: weight-1 binary tree with two single-leaf inner trees
+        outer_tree = (mu, 1, 2)
+        # a_tuple: two Free_Ass(M) leaf basis keys; Ass(1) key is (1,)
+        a_tuple = (((1,), ((),)), ((1,), ((),)))
         elem = B((outer_tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
