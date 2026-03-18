@@ -358,11 +358,12 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 continue  # arity mismatch
 
             # Build tensor: c_key ⊗ (id_key,(m_1,)) ⊗ ... ⊗ (id_key,(m_n,))
-            coop_elem = coop_parent.term(c_key)
-            term = coop_elem
+            coop_elem = coop_parent(c_key)
+            terms = [coop_elem]
             for mk in m_tuple:
-                leaf_elem = cofree_mod.term((id_key, (mk,)))
-                term = tensor([term, leaf_elem])
+                leaf_elem = cofree_mod((id_key, (mk,)))
+                terms.append(leaf_elem)
+            term = tensor(terms)
 
             result += v_coeff * term
 
