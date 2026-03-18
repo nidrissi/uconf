@@ -9,7 +9,7 @@ where ``T_{s⁻¹C̄}(V)`` is the free algebra on V under the desuspended
 coaugmentation coideal ``s⁻¹C̄``, and:
 
 - d_internal : the interleaved DFS differential inherited from
-  :class:`~uconf.algebraic.free_algebra.FreeAlgebraModule`, applying ``∂_C``
+  :class:`~uconf.algebraic.tree_module.TreeModule`, applying ``∂_C``
   to vertex decorations and ``∂_V`` to leaf decorations with the Koszul sign
   rule.
 - d_2  : structural cobar differential (expand internal vertices via cooperad
@@ -38,7 +38,7 @@ from typing import ClassVar, cast
 from sage.all import CombinatorialFreeModule
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.algebraic.free_algebra import FreeAlgebraModule
+from uconf.algebraic.tree_module import TreeModule
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.cooperad import CooperadLike
 from uconf.core.parented_element import ParentedElementMixin
@@ -54,13 +54,13 @@ from uconf.core.trees import (
 )
 
 
-class CobarComplexCoalgebra(FreeAlgebraModule):
+class CobarComplexCoalgebra(TreeModule):
     """Cobar complex Ω_C(V) of a C-coalgebra V.
 
-    Subclasses :class:`~uconf.algebraic.free_algebra.FreeAlgebraModule`
+    Subclasses :class:`~uconf.algebraic.tree_module.TreeModule`
     with ``vertex_degree_shift = -1`` (desuspension convention).  Inherits basis
     key validation, degree computation, basis iteration, and the internal
-    differential (d_1 + d_V) from the free module.  Only the structural
+    differential (d_1 + d_V) from TreeModule.  Only the structural
     differential ``d_2`` and coalgebra coaction ``d_coact`` are implemented here.
 
     Args:
@@ -84,7 +84,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         self._module = coalgebra.module
 
         super().__init__(
-            operad_cls=coalgebra.cooperad_cls,
+            symmetric_sequence_cls=coalgebra.cooperad_cls,
             inner_module=coalgebra.module,
             base_ring=base_ring,
             vertex_degree_shift=-1,
@@ -94,7 +94,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         # Override the inherited boundary with the cobar-specific differential
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self._d_internal = self.module_morphism(
-            on_basis=lambda key: FreeAlgebraModule._boundary_on_basis(self, key),
+            on_basis=lambda key: TreeModule._boundary_on_basis(self, key),
             codomain=self,
         )
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
@@ -108,12 +108,12 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         """Total differential d = d_internal + d_2 + d_coact.
 
         ``d_internal`` is the interleaved DFS differential inherited from
-        :class:`~uconf.algebraic.free_algebra.FreeAlgebraModule`, applying
+        :class:`~uconf.algebraic.tree_module.TreeModule`, applying
         ``∂_C`` to vertex decorations and ``∂_V`` to leaf decorations with
         the Koszul sign rule.
         """
         return (
-            FreeAlgebraModule._boundary_on_basis(self, key)
+            TreeModule._boundary_on_basis(self, key)
             + self._d2_on_basis(key)
             + self._dcoact_on_basis(key)
         )
@@ -140,7 +140,7 @@ class CobarComplexCoalgebra(FreeAlgebraModule):
         result = self.zero()
         base_ring = self.base_ring()
         verts = vertices_dfs(tree)
-        raw_C = cast(CooperadLike, self._symmetric_sequence_clsT)
+        raw_C = cast(CooperadLike, self._symmetric_sequence_cls)
 
         for curr_vertex in verts:
             curr_arity = vertex_arity(curr_vertex)
