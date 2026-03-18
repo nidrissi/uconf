@@ -193,8 +193,18 @@ class TreeModule(CombinatorialFreeModule):
         S = self._symmetric_sequence_cls
         R = self.base_ring()
 
+        connectivity = int(getattr(S, "connectivity", 0))
+
+        # When the symmetric sequence has negative-degree elements, the tree
+        # contribution can be negative.  A corolla at arity n has minimum tree
+        # degree = connectivity*(n-1) + vertex_degree_shift.  The inner-module
+        # keys must therefore be collected up to degree d − min_tree_deg, which
+        # can exceed d.
+        min_tree_deg = min(self._vertex_degree_shift + connectivity, 0)
+        max_m_deg = d - min_tree_deg  # could exceed d
+
         m_keys_by_deg: dict[int, list] = {}
-        for d_m in range(d + 1):
+        for d_m in range(max_m_deg + 1):
             keys = list(_module_basis_keys_in_degree(M, d_m))
             if keys:
                 m_keys_by_deg[d_m] = keys
@@ -206,7 +216,6 @@ class TreeModule(CombinatorialFreeModule):
             return
 
         min_m_deg = min(m_keys_by_deg.keys())
-        connectivity = getattr(S, "connectivity", 0)
         min_tree_deg_n2 = self._vertex_degree_shift + connectivity
 
         if d < min_tree_deg_n2:
@@ -253,10 +262,8 @@ class TreeModule(CombinatorialFreeModule):
 
         for n in range(2, max_n + 1):
             max_weight = n - 1
-            for d_M in range(d + 1):
+            for d_M in range(max_m_deg + 1):
                 d_tree = d - d_M
-                if d_tree < 0:
-                    continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue

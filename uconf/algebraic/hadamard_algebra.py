@@ -59,9 +59,11 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         self.module.basis_it = self.basis_it
         self.module.boundary = self._tensor_boundary_morphism()
-        self.module.connectivity = min(
-            int(getattr(self.left_module, "connectivity", 0)),
-            int(getattr(self.right_module, "connectivity", 0)),
+        # Connectivity is additive for tensor products: deg(a⊗b) = deg(a) + deg(b),
+        # so min(deg(a⊗b)) = min(deg(a)) + min(deg(b)).
+        self.module.connectivity = (
+            int(getattr(self.left_module, "connectivity", 0))
+            + int(getattr(self.right_module, "connectivity", 0))
         )
         self.module.degree_on_basis = lambda key: (
             self.left_module.degree_on_basis(key[0]) + self.right_module.degree_on_basis(key[1])

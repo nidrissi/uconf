@@ -18,9 +18,45 @@ Typical usage::
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 from sage.all import ChainComplex, Family, matrix
+
+
+# ---------------------------------------------------------------------------
+# Default max-arity inference
+# ---------------------------------------------------------------------------
+
+_DEFAULT_MAX_ARITY = 2
+"""Fallback arity bound used when basis enumeration is unbounded.
+
+Weight-1 truncation (max_arity=2) is the smallest non-trivial
+approximation and keeps the chain-complex sizes manageable.
+"""
+
+
+def _infer_max_arity(module: Any, degrees: range) -> int:
+    """Return a suitable default ``max_arity`` for *module* over *degrees*.
+
+    The bar complex of a configuration model has infinitely many basis
+    elements in each non-negative degree (the weight filtration is unbounded).
+    When no explicit ``max_arity`` is supplied, this function chooses a
+    default truncation and emits a warning so the caller is aware of the
+    approximation.
+    """
+    warnings.warn(
+        f"Basis enumeration is unbounded for this module; "
+        f"truncating to max_arity={_DEFAULT_MAX_ARITY}.  "
+        f"Pass max_arity=N to chain_complex() for a different truncation.",
+        stacklevel=4,
+    )
+    return _DEFAULT_MAX_ARITY
+
+
+# ---------------------------------------------------------------------------
+# Boundary matrix
+# ---------------------------------------------------------------------------
 
 
 def _boundary_matrix(
@@ -121,12 +157,36 @@ def chain_complex(module: Any, degrees: range, *, max_arity: int | None = None) 
     if not degrees:
         return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
 
-    # Apply max_arity truncation to tree-based modules
+    # Apply max_arity truncation to tree-based modules.
+    # When the module has unbounded arity (each degree contains infinitely many
+    # basis elements), basis enumeration cannot terminate without a finite bound.
+    # If no explicit max_arity is given but the module supports set_max_arity,
+    # attempt the computation and fall back to a default truncation.
+    _needs_restore = False
     _prev_max_arity = None
-    _needs_restore = max_arity is not None and hasattr(module, "set_max_arity")
-    if _needs_restore:
-        _prev_max_arity = getattr(module, "_max_arity", None)
-        module.set_max_arity(max_arity)
+
+    if hasattr(module, "set_max_arity"):
+        if max_arity is not None:
+            _prev_max_arity = getattr(module, "_max_arity", None)
+            module.set_max_arity(max_arity)
+            _needs_restore = True
+        elif getattr(module, "_max_arity", None) is None:
+            # No explicit max_arity; try building and fall back if unbounded
+            try:
+                return _build_chain_complex(module, degrees)
+            except ValueError as exc:
+                if "arity is unbounded" not in str(exc):
+                    raise
+                _prev_max_arity = None
+                _default_max_arity = _infer_max_arity(module, degrees)
+                module.set_max_arity(_default_max_arity)
+                _needs_restore = True
+    elif max_arity is not None:
+        warnings.warn(
+            f"max_arity={max_arity} ignored: module {type(module).__name__} "
+            "does not support set_max_arity",
+            stacklevel=2,
+        )
 
     try:
         return _build_chain_complex(module, degrees)
@@ -173,7 +233,7 @@ def _build_chain_complex(module: Any, degrees: range) -> Any:
             continue
         differentials[d] = _boundary_matrix(module, source, key_to_idx[d - 1], n_target)
 
-    return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1)
+    return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=False)
 
 
 def homology_basis(
