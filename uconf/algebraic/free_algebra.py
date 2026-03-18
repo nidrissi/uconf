@@ -35,7 +35,6 @@ from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, ca
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.operad import OperadLike
 from uconf.core.signs import sign_from_exponent
-from uconf.core.vertex_decoration import VertexDecorationLike
 
 
 def _module_basis_keys_in_degree(module, d: int) -> Iterator:
@@ -79,8 +78,8 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        operad_cls: VertexDecorationLike,
-        inner_module,
+        operad_cls: OperadLike,
+        inner_module:CombinatorialFreeModule,
         base_ring,
         *,
         name: str | None = None,
@@ -240,14 +239,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_keys_by_deg[d_m] = keys
 
         # n = 1: exactly one P(1)-key (identity); yields M-generators in degree d
-        try:
-            comp_1 = P(1, R)
-            for p_key_1 in comp_1.basis():
-                d_p = comp_1.degree_on_basis(p_key_1)
-                for mk in m_keys_by_deg.get(d - d_p, []):
-                    yield self.term((p_key_1, (mk,)))
-        except (TypeError, ValueError, AttributeError):
-            pass
+        unit_key = P.unit(R).support()[0]
+        for mk in m_keys_by_deg.get(d , []):
+            yield self.term((unit_key, (mk,)))
 
         if not m_keys_by_deg:
             return
@@ -442,12 +436,5 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         """
         R = self._base_ring
-        comp_1 = self.operad_cls(1, R)
-        id_keys = list(comp_1.basis())
-        if len(id_keys) != 1:
-            raise ValueError(
-                f"P(1) must have exactly one basis element (connected operad). "
-                f"Got {len(id_keys)} keys."
-            )
-        id_key = id_keys[0]
+        id_key = self.operad_cls.unit(R).support()[0]
         return self.module.term((id_key, (m_key,)))
