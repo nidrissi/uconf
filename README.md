@@ -152,6 +152,34 @@ attribute on concrete models, property on wrappers) representing the constant
   - `enumerate_shuffle_trees_cobar_in_degree(arity, weight_bound, C, R, d)` — cobar degree `Σ(deg_C-1)`.
     Used by `CobarConstruction.Component.basis_it` and `CobarComplexCoalgebra.basis_it`.
 
+### Chain complexes and homology (`homology.py`)
+
+- `chain_complex(module, degrees)` — builds a SageMath `ChainComplex` from
+  any dg-module that exposes `graded_basis(d)`, `boundary`, and `base_ring()`.
+  This includes all operad/cooperad components, bar/cobar constructions, free
+  algebras, cofree coalgebras, and similar objects.
+
+- `homology_basis(module, degree, *, degrees=None)` — returns a list of
+  elements of *module* that are cycles and whose homology classes form a basis
+  of `H_degree(module)`.  When *degrees* is not given, a minimal range
+  `[degree-1, degree+1]` is used.
+
+```python
+from sage.all import QQ
+from uconf import Surjection
+from uconf.homology import chain_complex, homology_basis
+
+S2 = Surjection(2, QQ)
+C = chain_complex(S2, degrees=range(5))
+C.homology()
+# {0: Vector space of dimension 1 over Rational Field,
+#  1: …dimension 0…, 2: …dimension 0…, 3: …dimension 0…,
+#  4: Vector space of dimension 1 over Rational Field}
+
+homology_basis(S2, 0, degrees=range(5))
+# [S2[(2, 1)]]
+```
+
 ### Simplicial models
 
 - `models/simplicial.py`
@@ -475,6 +503,12 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
   - `lie_to_ass`: unit preservation, bracket-to-commutator, equivariance, composition compatibility.
   - `PullbackAlgebra`: pullback of Com-algebra along `Ass → Com`, unit axiom, boundary delegation.
   - `make_e_comodule_morphism`: unit preservation, output type, generator agreement with `e_comodule_on_generator`.
+
+### Chain complexes and homology
+
+- `test_homology.py`:
+  - `chain_complex`: Surjection/BarrattEccles/Lie Betti numbers, `d²=0` check, empty degrees.
+  - `homology_basis`: cycle verification, dimension checks, default/invalid degree ranges.
 
 ### Simplicial and external compatibility
 
