@@ -11,9 +11,11 @@ from typing import ClassVar, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     SymmetricGroupAlgebra,
+    cached_method,
     tensor,
 )
 from uconf.core.parented_element import ParentedElementMixin
@@ -103,6 +105,16 @@ class Associative(CombinatorialFreeModule):
         """Iterate over planar basis elements in this arity and the given degree."""
         if d == 0:
             yield self(tuple(range(1, self.arity() + 1)))
+
+    @cached_method
+    def graded_basis(self, d: int) -> Family:
+        """Return the ``Family`` of all basis elements in degree ``d``."""
+        return Family(self.basis_it(d))
+
+    @cached_method
+    def graded_planar_basis(self, d: int) -> Family:
+        """Return the ``Family`` of planar basis elements in degree ``d``."""
+        return Family(self.planar_basis_it(d))
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""

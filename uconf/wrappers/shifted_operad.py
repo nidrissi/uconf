@@ -12,9 +12,11 @@ from typing import Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     UniqueRepresentation,
+    cached_method,
 )
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.operad import OperadLike
@@ -196,6 +198,11 @@ class ShiftedOperad(UniqueRepresentation):
                 for key in base_parent.basis():
                     if base_parent.degree_on_basis(key) == unshifted_degree:
                         yield self.term(key)
+
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_it(d))
 
         def from_base(self, element) -> "ShiftedOperad.Element":
             if element.parent() is self._base_parent:

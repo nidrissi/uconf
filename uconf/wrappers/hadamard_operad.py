@@ -16,10 +16,12 @@ from typing import Any, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     UniqueRepresentation,
+    cached_method,
     tensor,
 )
 
@@ -357,6 +359,16 @@ class HadamardProduct(UniqueRepresentation):
                 for left_elem in left_elems:
                     for right_elem in right_elems:
                         yield self.from_factors(left_elem, right_elem)
+
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_it(d))
+
+        @cached_method
+        def graded_planar_basis(self, d: int) -> Family:
+            """Return the ``Family`` of planar basis elements in degree ``d``."""
+            return Family(self.planar_basis_it(d))
 
         def from_factors(self, left_element, right_element) -> "HadamardProduct.Element":
             left_parent = left_element.parent()
