@@ -19,3 +19,21 @@ from uconf.core.operad import OperadLike
 
 VertexDecorationLike: TypeAlias = OperadLike | CooperadLike
 """Accepted decoration providers for shared tree-decorated base modules."""
+
+# TODO Find a way to actually enforce that the provider is quasi-planar, e.g. by requiring a planarize method or something. Otherwise we might get runtime errors when we try to enumerate the basis of the composite module and find that the provider doesn't have enough basis elements to match the planar part.
+QuasiPlanarLike: TypeAlias = OperadLike | CooperadLike
+"""Accepted decoration providers for free/cofree algebra composite modules.
+
+A quasi-planar operad/cooperad is one whose arity-n component ``P(n)``
+satisfies ``P(n) ≅ P_pl(n) ⊗ k[S_n]`` and exposes a ``planarize`` linear
+map decomposing each element into its planar representative and symmetric-group
+factor.
+
+Supported examples: :class:`~uconf.models.associative.Associative`,
+:class:`~uconf.models.surjection.Surjection`,
+:class:`~uconf.models.barratt_eccles.BarrattEccles`, and wrappers thereof.
+
+Non-quasi-planar operads (e.g. :class:`~uconf.models.commutative.Commutative`,
+:class:`~uconf.models.lie.Lie`) are **not** accepted; they have non-trivial
+coinvariants and cannot be enumerated as ``P_pl(n) ⊗ M^{⊗n}``.
+"""

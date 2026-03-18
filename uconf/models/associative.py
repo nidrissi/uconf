@@ -121,7 +121,7 @@ class Associative(CombinatorialFreeModule):
         n = self.arity()
         sigma = self._symmetric_group(tuple(basis_element))
         planar = tuple(range(1, n + 1))
-        return self(planar), SymmetricGroupAlgebra(self.base_ring(), n)(sigma)
+        return self.term(planar).tensor(SymmetricGroupAlgebra(self.base_ring(), n)(sigma))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis element."""
