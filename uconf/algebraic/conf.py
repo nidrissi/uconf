@@ -36,7 +36,7 @@ def labelled_configuration_model(
     tensor_alg = HadamardTensorAlgebra(free_alg, manifold_model)
 
     comodule_morphism = make_e_comodule_morphism(BXsLie)
-    pulled_back = PullbackAlgebra(tensor_alg, comodule_morphism)
+    pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     bar = BarComplexAlgebra(pulled_back, base_ring)
 
     return bar
