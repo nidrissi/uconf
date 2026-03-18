@@ -126,17 +126,13 @@ def chain_complex(module: Any, degrees: range) -> Any:
             # Target degree not in range; if there are source basis elements,
             # we still need a zero matrix so the complex knows the rank of C_d.
             if basis_by_degree[d]:
-                differentials[d] = matrix(
-                    base_ring, 0, len(basis_by_degree[d])
-                )
+                differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]))
             continue
         n_target = len(keys_by_degree[d - 1])
         source = basis_by_degree[d]
         if not source and n_target == 0:
             continue
-        differentials[d] = _boundary_matrix(
-            module, source, key_to_idx[d - 1], n_target
-        )
+        differentials[d] = _boundary_matrix(module, source, key_to_idx[d - 1], n_target)
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1)
 
@@ -155,7 +151,7 @@ def homology_basis(module: Any, degree: int, *, degrees: range | None = None) ->
         chain complex.  Must include at least ``degree - 1``, ``degree``,
         and ``degree + 1`` so that both the incoming and outgoing
         differentials are available.  If ``None``, a minimal range
-        ``range(max(degree - 1, 0), degree + 2)`` is used (negative
+        ``range(degree - 1, degree + 2)`` is used (negative
         degrees are clamped to 0).  Pass a wider range if the module
         has non-trivial basis below ``degree - 1``.
 
@@ -173,13 +169,10 @@ def homology_basis(module: Any, degree: int, *, degrees: range | None = None) ->
     >>> homology_basis(S2, 0)  # doctest: +SKIP
     """
     if degrees is None:
-        lo = max(degree - 1, 0)
-        degrees = range(lo, degree + 2)
+        degrees = range(degree - 1, degree + 2)
     else:
         if degree not in degrees:
-            raise ValueError(
-                f"degree {degree} must be contained in the supplied range {degrees}"
-            )
+            raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
     C = chain_complex(module, degrees)
 
