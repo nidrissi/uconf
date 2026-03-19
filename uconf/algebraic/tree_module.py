@@ -13,14 +13,16 @@ from __future__ import annotations
 
 from typing import Any, Iterator
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, cached_method
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, SymmetricGroup, cached_method
 
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
+    _koszul_sign_of_permutation,
     children,
     decoration,
     enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
+    relabel_leaves,
     tree_arity,
     vertex_arity,
     vertices_dfs,
@@ -36,6 +38,16 @@ def _dfs_all_iter(tree):
     yield (tree, None)
     for child in children(tree):
         yield from _dfs_all_iter(child)
+
+
+def _leaves_dfs(tree) -> list[int]:
+    """Return leaf labels in DFS pre-order."""
+    if is_leaf(tree):
+        return [tree]
+    result: list[int] = []
+    for child in children(tree):
+        result.extend(_leaves_dfs(child))
+    return result
 
 
 def _module_basis_keys_in_degree(module, d: int) -> Iterator:
@@ -82,6 +94,7 @@ class TreeModule(CombinatorialFreeModule):
         self._symmetric_sequence_cls = symmetric_sequence_cls
         self._inner_module = inner_module
         self._vertex_degree_shift = vertex_degree_shift
+        self._max_arity: int | None = None
 
         super().__init__(
             base_ring,
@@ -142,6 +155,19 @@ class TreeModule(CombinatorialFreeModule):
 
         return super()._element_constructor_(x)
 
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element.
+
+        Leaf-only elements (arity 1) have degree ``connectivity(M)``.
+        Tree elements (arity ≥ 2) have degree
+        ``≥ vertex_degree_shift + connectivity(S) + 2 · connectivity(M)``.
+        """
+        m_conn = int(getattr(self._inner_module, "connectivity", 0))
+        s_conn = int(getattr(self._symmetric_sequence_cls, "connectivity", 0))
+        tree_min = self._vertex_degree_shift + s_conn + 2 * m_conn
+        return min(m_conn, tree_min)
+
     def degree_on_basis(self, key) -> int:
         """Degree = vertex contribution plus leaf-module contribution."""
         tree, m_tuple = key
@@ -179,8 +205,18 @@ class TreeModule(CombinatorialFreeModule):
         S = self._symmetric_sequence_cls
         R = self.base_ring()
 
+        connectivity = int(getattr(S, "connectivity", 0))
+
+        # When the symmetric sequence has negative-degree elements, the tree
+        # contribution can be negative.  A corolla at arity n has minimum tree
+        # degree = connectivity*(n-1) + vertex_degree_shift.  The inner-module
+        # keys must therefore be collected up to degree d − min_tree_deg, which
+        # can exceed d.
+        min_tree_deg = min(self._vertex_degree_shift + connectivity, 0)
+        max_m_deg = d - min_tree_deg  # could exceed d
+
         m_keys_by_deg: dict[int, list] = {}
-        for d_m in range(d + 1):
+        for d_m in range(max_m_deg + 1):
             keys = list(_module_basis_keys_in_degree(M, d_m))
             if keys:
                 m_keys_by_deg[d_m] = keys
@@ -192,7 +228,6 @@ class TreeModule(CombinatorialFreeModule):
             return
 
         min_m_deg = min(m_keys_by_deg.keys())
-        connectivity = getattr(S, "connectivity", 0)
         min_tree_deg_n2 = self._vertex_degree_shift + connectivity
 
         if d < min_tree_deg_n2:
@@ -202,11 +237,15 @@ class TreeModule(CombinatorialFreeModule):
             max_n = d // min_m_deg
         elif connectivity > 0:
             max_n = (d - self._vertex_degree_shift) // connectivity + 1
+        elif self._max_arity is not None:
+            max_n = self._max_arity
         else:
             raise ValueError(
                 "Cannot exhaustively enumerate basis_it(d): both the inner module "
                 "and symmetric sequence admit degree-0 generators (min_deg=0, connectivity=0), "
-                "so arity is unbounded in fixed degree."
+                "so arity is unbounded in fixed degree.  "
+                "Pass n_factors to chain_complex() to restrict to a finite subcomplex, "
+                "or call set_max_arity() on this module directly."
             )
 
         # Require quasi-planar support: basis_it() is only correct when the
@@ -235,10 +274,8 @@ class TreeModule(CombinatorialFreeModule):
 
         for n in range(2, max_n + 1):
             max_weight = n - 1
-            for d_M in range(d + 1):
+            for d_M in range(max_m_deg + 1):
                 d_tree = d - d_M
-                if d_tree < 0:
-                    continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
@@ -257,6 +294,17 @@ class TreeModule(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int):
         return Family(self.basis_it(d))
+
+    def set_max_arity(self, max_arity: int | None) -> None:
+        """Set the maximum leaf-arity for basis enumeration.
+
+        When the tree degree and inner-module connectivity are both ≤ 0,
+        the arity is unbounded.  Setting a finite ``max_arity`` truncates
+        the enumeration so that only trees with at most ``max_arity`` leaves
+        are generated.  This also clears the cached ``graded_basis`` results.
+        """
+        self._max_arity = max_arity
+        self.graded_basis.clear_cache()
 
     def _boundary_on_basis(self, key) -> Any:
         """Differential using interleaved DFS Koszul sign rule."""
@@ -297,6 +345,115 @@ class TreeModule(CombinatorialFreeModule):
         if tree is target_vertex:
             return (new_dec,) + children(tree)
         new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
+        return (decoration(tree),) + new_children
+
+    # ------------------------------------------------------------------
+    # Planar normalisation
+    # ------------------------------------------------------------------
+
+    def normalize_to_planar(self, elem: "TreeModule.Element") -> "TreeModule.Element":
+        """Rewrite *elem* so every vertex decoration is planar.
+
+        For each basis key ``(tree, m_tuple)`` whose tree contains a non-planar
+        vertex decoration, ``planarize`` is applied to obtain a planar
+        representative ``(planar_dec, σ)``.  The children of the vertex are
+        permuted by ``σ⁻¹`` (matching the graded ``S_n``-coinvariant relation),
+        leaves are relabeled to canonical DFS order, ``m_tuple`` is permuted to
+        match, and a Koszul sign ``ε(σ⁻¹; degrees)`` is included to account
+        for the permutation of graded leaf-module elements.
+        """
+        result = self.zero()
+        for key, coeff in elem:
+            for norm_coeff, norm_key in self._normalize_key(key):
+                result += coeff * norm_coeff * self.term(norm_key)
+        return result
+
+    def _normalize_key(self, key):
+        """Normalize a single ``(tree, m_tuple)`` key to use planar decorations.
+
+        Returns a list of ``(coeff, key)`` pairs.  Includes the Koszul sign
+        for permuting graded leaf-module elements when children are reordered.
+        """
+        tree, m_tuple = key
+        if is_leaf(tree):
+            return [(self.base_ring().one(), key)]
+
+        base_ring = self.base_ring()
+
+        for v in vertices_dfs(tree):
+            k = vertex_arity(v)
+            dec = decoration(v)
+            seq_parent = self._symmetric_sequence_cls(k, base_ring)
+
+            if not hasattr(seq_parent, "planarize"):
+                continue
+
+            planarized = seq_parent.planarize(seq_parent.term(dec))
+            terms = list(planarized)
+
+            # Check if already planar: single term with identity permutation
+            S_k = SymmetricGroup(k)
+            identity = S_k.identity()
+            if len(terms) == 1:
+                (pl_key, sigma_key), pl_coeff = terms[0]
+                if S_k(sigma_key) == identity and pl_key == dec:
+                    continue
+
+            # This vertex needs normalisation
+            result: list[tuple] = []
+            for (pl_dec, sigma_key), pl_coeff in terms:
+                sigma = S_k(sigma_key)
+                sigma_inv = sigma.inverse()
+
+                # Permute children of v by σ⁻¹
+                old_kids = children(v)
+                new_kids = tuple(old_kids[sigma_inv(j) - 1] for j in range(1, k + 1))
+                new_v = (pl_dec,) + new_kids
+
+                # Replace v in the tree
+                new_tree = self._replace_subtree(tree, v, new_v)
+
+                # Compute DFS leaf order, relabel to canonical 1..n, permute m_tuple
+                new_leaf_order = _leaves_dfs(new_tree)
+                relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
+                canonical_tree = relabel_leaves(new_tree, relabel_map)
+                new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
+
+                # Koszul sign: the permutation from old leaf order (1..n) to
+                # new_leaf_order induces a sign from permuting graded elements.
+                # perm[i] = new_leaf_order[i] - 1 gives the 0-indexed source
+                # position for each new position.
+                n_leaves = len(m_tuple)
+                if n_leaves > 1:
+                    degrees = [self._inner_module.degree_on_basis(m_tuple[i])
+                               for i in range(n_leaves)]
+                    # new_leaf_order[i] is the old 1-indexed leaf at new position i
+                    perm_0idx = [old - 1 for old in new_leaf_order]
+                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                else:
+                    koszul = 1
+
+                new_key = (canonical_tree, new_m)
+
+                # Recursively normalise remaining vertices
+                for sub_coeff, sub_key in self._normalize_key(new_key):
+                    result.append((pl_coeff * koszul * sub_coeff, sub_key))
+
+            return result
+
+        # All decorations already planar
+        return [(self.base_ring().one(), key)]
+
+    @staticmethod
+    def _replace_subtree(tree, target, replacement):
+        """Replace *target* (by identity) with *replacement* in *tree*."""
+        if is_leaf(tree):
+            return tree
+        if tree is target:
+            return replacement
+        new_children = tuple(
+            TreeModule._replace_subtree(c, target, replacement) for c in children(tree)
+        )
         return (decoration(tree),) + new_children
 
     class Element(CombinatorialFreeModule.Element):

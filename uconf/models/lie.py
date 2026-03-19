@@ -172,10 +172,16 @@ class Lie(CombinatorialFreeModule):
 
         ``L`` satisfies ``L * M = I`` where ``M`` is the PBW matrix
         (shape ``n! × (n-1)!``).  It is computed once via
-        :func:`~sage.misc.cachefunc.cached_method` as ``L = (M^T M)^{-1} M^T``
-        and applying ``L`` as a matrix–vector product replaces the per-call
-        ``solve_right`` (fresh Gaussian elimination) in
-        :meth:`_element_from_assoc`.
+        :func:`~sage.misc.cachefunc.cached_method` and applying ``L`` as a
+        matrix–vector product replaces the per-call ``solve_right``
+        (fresh Gaussian elimination) in :meth:`_element_from_assoc`.
+
+        Over fields where the Gram matrix ``M^T M`` is invertible (e.g. ``QQ``),
+        the formula ``L = (M^T M)^{-1} M^T`` is used.  Over fields of small
+        characteristic (e.g. ``GF(2)``), ``M^T M`` may be singular even though
+        ``M`` has full column rank.  In that case, a set of linearly independent
+        rows is found via rank tests and the left-inverse is built from the
+        resulting square invertible sub-matrix.
         """
         pbw = self._pbw_matrix()
 
@@ -184,7 +190,47 @@ class Lie(CombinatorialFreeModule):
             return pbw
 
         pbw_T = pbw.transpose()
-        return (pbw_T * pbw).inverse() * pbw_T
+        try:
+            return (pbw_T * pbw).inverse() * pbw_T
+        except (ZeroDivisionError, ArithmeticError):
+            return self._pbw_left_inverse_via_pivots(pbw)
+
+    def _pbw_left_inverse_via_pivots(self, pbw):
+        """Compute a left-inverse of *pbw* by selecting pivot rows.
+
+        Finds a maximal set of linearly independent rows of *pbw* to form a
+        square invertible sub-matrix, then constructs the left-inverse as
+        ``sub^{-1} * selector`` where *selector* picks out the pivot rows.
+        """
+        n_cols = pbw.ncols()
+        n_rows = pbw.nrows()
+        R = self.base_ring()
+
+        selected: list[int] = []
+        for i in range(n_rows):
+            candidate = selected + [i]
+            sub = pbw.matrix_from_rows(candidate)
+            if sub.rank() == len(candidate):
+                selected.append(i)
+                if len(selected) == n_cols:
+                    break
+
+        if len(selected) < n_cols:
+            raise ArithmeticError(
+                f"PBW matrix does not have full column rank over {R} "
+                f"(arity {self.arity()})"
+            )
+
+        sub = pbw.matrix_from_rows(selected)
+        sub_inv = sub.inverse()
+
+        # Build the left-inverse: sub_inv * selector,
+        # where selector is an n_cols × n_rows matrix picking the pivot rows.
+        selector = matrix(R, n_cols, n_rows, sparse=True)
+        for i, row_idx in enumerate(selected):
+            selector[i, row_idx] = R.one()
+
+        return sub_inv * selector
 
     def _element_from_assoc(self, assoc: dict[tuple[int, ...], Any]) -> "Lie.Element":
         """Reconstruct a Lie element from associative coefficients.

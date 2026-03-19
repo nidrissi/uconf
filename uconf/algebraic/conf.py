@@ -10,11 +10,46 @@ from uconf.algebraic.simplicial import (
 from uconf.constructions.bar_algebra import BarComplexAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.morphism import OperadMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
+
+
+def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
+    """Build the operad morphism Ω(C) → S ⊙ Ω(C).
+
+    Composes the e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) (where
+    E = BarrattEccles) with table reduction on the left factor, yielding
+    a morphism into S ⊙ Ω(C) (where S = Surjection).
+    """
+    be_comodule = make_e_comodule_morphism(cooperad_cls)
+    cobar = CobarConstruction(cooperad_cls)
+    surj_target = HadamardProduct(Surjection, cobar)
+
+    def _on_element(element):
+        # Apply the BE-valued e-comodule morphism
+        be_had_elem = be_comodule(element)
+
+        # Apply table_reduction to the left (BarrattEccles) factor
+        source_parent = be_had_elem.parent()
+        n = source_parent.arity()
+        base_ring = source_parent.base_ring()
+        target_n = surj_target(n, base_ring)
+
+        result = target_n.zero()
+        be_parent = source_parent.left_parent()
+        for (be_key, cobar_key), coeff in be_had_elem:
+            surj_elem = be_parent.term(be_key).table_reduction()
+
+            for surj_key, surj_coeff in surj_elem:
+                result += coeff * surj_coeff * target_n.term((surj_key, cobar_key))
+
+        return result
+
+    return OperadMorphism(cobar, surj_target, _on_element)
 
 
 def labelled_configuration_model(
@@ -33,9 +68,13 @@ def labelled_configuration_model(
     OBXsLie = CobarConstruction(BXsLie)
     free_alg = FreeOperadAlgebra(OBXsLie, coefficients, base_ring)
 
-    tensor_alg = HadamardTensorAlgebra(free_alg, manifold_model)
+    # The e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) is postcomposed with
+    # table reduction on the left factor to obtain Δ': Ω(C) → S ⊙ Ω(C).
+    # This way the tensor algebra is built over (S ⊙ Ω(C)) and the
+    # manifold_model (a Surjection-algebra) is used directly.
+    tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
 
-    comodule_morphism = make_e_comodule_morphism(BXsLie)
+    comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     bar = BarComplexAlgebra(pulled_back, base_ring)
 
@@ -48,6 +87,7 @@ def unordered_configuration_model(manifold_model: OperadAlgebra, dimension: int)
     trivial_module = CombinatorialFreeModule(R, ["*"], category=GradedModulesWithBasis(R))
     trivial_module.degree_on_basis = lambda _: dimension
     trivial_module.boundary = lambda _: trivial_module.zero()
+    trivial_module.connectivity = dimension
     return labelled_configuration_model(manifold_model, trivial_module)
 
 

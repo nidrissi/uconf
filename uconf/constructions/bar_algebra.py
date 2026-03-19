@@ -34,9 +34,9 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import ClassVar, Iterator, cast
 
-from sage.all import CombinatorialFreeModule
+from sage.all import CombinatorialFreeModule, Family, cached_method
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import TreeModule
@@ -84,6 +84,7 @@ class BarComplexAlgebra(TreeModule):
         self._algebra = algebra
         self._operad_cls = BarConstruction(algebra.operad_cls)
         self._module = algebra.module
+        self._n_factors: int | None = None
 
         super().__init__(
             symmetric_sequence_cls=algebra.operad_cls,
@@ -101,6 +102,181 @@ class BarComplexAlgebra(TreeModule):
         )
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
         self._dact = self.module_morphism(on_basis=self._dact_on_basis, codomain=self)
+
+    # -----------------------------------------------------------------------
+    # n_factors filtering
+    # -----------------------------------------------------------------------
+
+    def set_n_factors(self, n_factors: int | None) -> None:
+        """Restrict basis enumeration to elements with exactly *n_factors*
+        occurrences of the coefficient module.
+
+        When the inner module of the underlying algebra is a tensor product
+        ``A ⊗ Free_P(M)`` (as produced by :func:`~uconf.algebraic.conf.labelled_configuration_model`),
+        each leaf of the bar tree carries a tensor key ``(a_key, (p_key, m_tuple))``
+        where ``m_tuple`` is a tuple of coefficient-module basis keys.
+        The *total* number of coefficient-module keys across all leaves is
+        ``Σ_i len(m_tuple_i)``.  Setting ``n_factors`` restricts the basis
+        enumeration to exactly that total.
+
+        This also implies a finite arity bound on the bar tree (at most
+        ``n_factors`` leaves) and enables automatic connectivity computation.
+
+        Passing ``None`` removes the restriction.
+
+        Clears cached ``graded_basis`` results.
+        """
+        self._n_factors = n_factors
+        if n_factors is not None:
+            self.set_max_arity(n_factors)
+        else:
+            self.set_max_arity(None)
+        self.graded_basis.clear_cache()
+
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element.
+
+        When ``_n_factors`` is set, computes a lower bound on the degree of
+        elements with exactly that many coefficient-module keys.  The bound
+        accounts for the minimum contributions from:
+
+        - Coefficient factors: ``n_factors * coeff_conn``
+        - Manifold/left factors: ``k * left_conn`` (for ``k`` bar-tree leaves)
+        - Free-algebra operad factors at various arities
+        - Bar-tree vertex decorations with degree shift +1
+
+        The analytical bound is conservative; the true connectivity may be
+        higher.
+
+        TODO: The formula below is a rough lower bound.  For specific models
+        (e.g. the sphere algebra in dimension N with F coefficient factors),
+        a tighter bound may be computable.  The bound assumes that all
+        non-coefficient degree contributions can be simultaneously minimised,
+        which may not always be achievable.
+        """
+        if self._n_factors is None:
+            return super().connectivity
+
+        F = self._n_factors
+
+        # Try to extract coefficient-module connectivity and left-module
+        # connectivity from the tensor product structure.
+        inner = self._inner_module
+        coeff_conn = 0
+        left_conn = 0
+        operad_conn = 0
+
+        # The inner module is typically a Sage tensor product A ⊗ B where
+        # A = manifold model module, B = free algebra module.
+        # HadamardTensorAlgebra sets module = tensor([left_module, right_module])
+        if hasattr(inner, '_sets') and len(inner._sets) == 2:
+            left_mod, right_mod = inner._sets
+            left_conn = int(getattr(left_mod, "connectivity", 0))
+            # The right module is a FreeAlgebraModule; its connectivity comes
+            # from the coefficient module it wraps.
+            if hasattr(right_mod, "_inner_module"):
+                coeff_conn = int(getattr(right_mod._inner_module, "connectivity", 0))
+            if hasattr(right_mod, "_operad_cls"):
+                operad_conn = int(getattr(right_mod._operad_cls, "connectivity", 0))
+        else:
+            left_conn = int(getattr(inner, "connectivity", 0))
+
+        # Operad connectivity for the bar tree vertices
+        bar_operad_conn = int(getattr(self._symmetric_sequence_cls, "connectivity", 0))
+
+        # Lower bound on degree for F coefficient factors distributed across
+        # k bar-tree leaves (1 ≤ k ≤ F):
+        #
+        # degree ≥ bar_vertex_contrib + k * left_conn + free_alg_operad_contrib + F * coeff_conn
+        #
+        # bar_vertex_contrib ≥ 0 for a single vertex at minimum arity (bar_operad_conn + 1 ≥ 0
+        # when bar_operad_conn ≥ -1); for a leaf (k=1) it's 0.
+        #
+        # free_alg_operad_contrib depends on how F factors are distributed:
+        # - If 1 leaf with F factors: operad at arity F, contrib ≥ operad_conn * (F-1)
+        # - If F leaves with 1 factor each: operad at arity 1, contrib = 0 for each
+        #
+        # We take the minimum over all valid k.
+        min_deg = None
+        for k in range(1, F + 1):
+            # Bar tree with k leaves: minimum vertex contribution
+            # A tree with k leaves needs (k-1) compositions; at minimum a single
+            # arity-k corolla.  Its vertex degree = bar_operad_conn * (min vertex weight)
+            # but the shift is +1.  For a corolla: deg = bar_operad_conn + 1
+            # For k=1 (leaf only): no vertex, contrib = 0
+            if k == 1:
+                bar_contrib = 0
+            else:
+                # Corolla at arity k: deg ≥ bar_operad_conn + 1
+                # More complex trees have more vertices, each contributing ≥ bar_operad_conn + 1
+                bar_contrib = bar_operad_conn + 1
+
+            # Left (manifold) contribution: k leaves × min_left_deg
+            left_contrib = k * left_conn
+
+            # Free-algebra operad contribution: distribute F factors across k leaves.
+            # Each leaf i gets f_i factors (f_i ≥ 1, Σf_i = F).
+            # The operad at arity f_i contributes ≥ operad_conn * (f_i - 1) if f_i ≥ 2, else 0.
+            # Total: operad_conn * Σ(f_i - 1) = operad_conn * (F - k)
+            operad_contrib = operad_conn * (F - k)
+
+            # Coefficient contribution: F factors × coeff_conn
+            coeff_contrib = F * coeff_conn
+
+            total = bar_contrib + left_contrib + operad_contrib + coeff_contrib
+            if min_deg is None or total < min_deg:
+                min_deg = total
+
+        return min_deg if min_deg is not None else 0
+
+    def count_factors(self, key) -> int:
+        """Count the total number of coefficient-module keys in a basis key.
+
+        For a basis key ``(tree, a_tuple)`` where each ``a_tuple[i]`` is a
+        tensor key ``(left_key, right_key)``, and ``right_key = (p_key, m_tuple)``
+        is a free-algebra key, returns ``Σ_i len(m_tuple_i)``.
+
+        If the inner module is not a tensor product with a free algebra
+        right factor, falls back to counting one factor per leaf.
+        """
+        _tree, a_tuple = key
+        total = 0
+        for a_entry in a_tuple:
+            if isinstance(a_entry, (tuple, list)) and len(a_entry) == 2:
+                _left_key, right_key = a_entry
+                if isinstance(right_key, (tuple, list)) and len(right_key) == 2:
+                    _p_key, m_tuple = right_key
+                    if isinstance(m_tuple, (tuple, list)):
+                        total += len(m_tuple)
+                        continue
+            # Fallback: each leaf counts as 1 factor
+            total += 1
+        return total
+
+    def basis_it(self, d: int) -> Iterator:
+        """Iterate over basis elements of total degree ``d``.
+
+        When ``_n_factors`` is set, only yields elements whose total number
+        of coefficient-module keys equals ``_n_factors``.  Otherwise delegates
+        to the parent :class:`TreeModule` implementation.
+
+        Each element yielded by the parent ``basis_it`` is a single basis
+        term (one key with coefficient 1), so checking its unique key is
+        sufficient.
+        """
+        for elem in super().basis_it(d):
+            if self._n_factors is None:
+                yield elem
+                continue
+            # Each elem from super().basis_it is a single basis term.
+            key = next(iter(elem.support()))
+            if self.count_factors(key) == self._n_factors:
+                yield elem
+
+    @cached_method
+    def graded_basis(self, d: int):
+        return Family(self.basis_it(d))
 
     # -----------------------------------------------------------------------
     # Differential

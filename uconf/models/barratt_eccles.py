@@ -168,7 +168,7 @@ class BarrattEccles(CombinatorialFreeModule):
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_it(d)):
-            yield x.permute(sigma)
+            yield x.permute(list(sigma))
 
     @cached_method
     def graded_basis(self, d: int) -> Family:
