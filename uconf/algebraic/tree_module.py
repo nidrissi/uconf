@@ -255,12 +255,7 @@ class TreeModule(CombinatorialFreeModule):
         # operads (e.g. Commutative, Lie) the tensor-over-S_n quotient cannot
         # be represented by a naive product of full bases, and falling back to
         # the full basis would silently produce an overcomplete set.
-        # Common failure modes during S(2, R) construction: TypeError,
-        # ValueError, NotImplementedError, AttributeError.
-        try:
-            _use_planar = hasattr(S(2, R), "planar_basis_it")
-        except (TypeError, ValueError, NotImplementedError, AttributeError):
-            _use_planar = False
+        _use_planar = hasattr(S(2, R), "planar_basis_it")
 
         if not _use_planar:
             raise NotImplementedError(

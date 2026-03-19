@@ -90,11 +90,8 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         self._operad_cls = operad_cls
         self._inner_module = inner_module
         # Runtime check: operad must be quasi-planar (free S_n-action)
-        try:
-            _comp2 = operad_cls(2, base_ring)
-        except (TypeError, ValueError, AttributeError):
-            _comp2 = None  # arity-2 may not exist for trivial operads; skip check
-        if _comp2 is not None and not callable(getattr(_comp2, "planarize", None)):
+        _comp2 = operad_cls(2, base_ring)
+        if not callable(getattr(_comp2, "planarize", None)):
             raise TypeError(
                 f"Operad {operad_cls.name!r} is not quasi-planar: "
                 f"its arity-2 component does not expose 'planarize'.  "
@@ -167,16 +164,21 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             return None
 
         # Validate p_key against P(n)
-        try:
-            comp = self._operad_cls(n, self.base_ring())
-            if hasattr(comp, "_validate_basis_key"):
+        # NOTE: Component construction P(n, R) must never fail—all operads
+        # support every non-negative arity.  Any exception here is a real bug
+        # and should propagate, not be silently ignored.
+        comp = self._operad_cls(n, self.base_ring())
+        if hasattr(comp, "_validate_basis_key"):
+            try:
                 p_key = comp._validate_basis_key(p_key_raw)
-                if p_key is None:
-                    return None
-            else:
-                p_key = p_key_raw
-        except (TypeError, ValueError, AttributeError):
-            return None
+            except (TypeError, ValueError):
+                # The p_key is invalid for arity n (wrong type, wrong length,
+                # out-of-range values, etc.); treat the composite key as invalid.
+                return None
+            if p_key is None:
+                return None
+        else:
+            p_key = p_key_raw
 
         return (p_key, tuple(m_tuple_raw))
 
@@ -335,10 +337,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             )
 
         for n in range(2, max_n + 1):
-            try:
-                comp_n = P(n, R)
-            except (TypeError, ValueError, AttributeError):
-                continue
+            comp_n = P(n, R)
             # The operad degree can be negative (connectivity < 0), so
             # d_p ranges from min(connectivity*(n-1), 0) up to d - n*min_m_deg.
             min_d_p = min(connectivity * (n - 1), 0)
@@ -347,10 +346,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_p
                 if d_m_needed < 0:
                     continue
-                try:
-                    p_elems = list(comp_n.planar_basis_it(d_p))
-                except (TypeError, ValueError, NotImplementedError, AttributeError):
-                    continue
+                p_elems = list(comp_n.planar_basis_it(d_p))
                 if not p_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))

@@ -182,11 +182,8 @@ class CobarConstruction(UniqueRepresentation):
 
         def _cooperad_has_planarize(self) -> bool:
             """Check if the base cooperad components have ``planarize``."""
-            try:
-                test = self._cooperad_cls(2, self.base_ring())
-                return callable(getattr(test, "planarize", None))
-            except Exception:
-                return False
+            test = self._cooperad_cls(2, self.base_ring())
+            return callable(getattr(test, "planarize", None))
 
         def _planarize_on_basis(self, tree):
             """Decompose a cobar tree into planar part ⊗ global permutation.
