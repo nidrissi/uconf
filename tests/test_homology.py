@@ -1,7 +1,7 @@
 """Tests for chain complex construction and homology helpers."""
 
 import pytest
-from sage.all import QQ
+from sage.all import GF, QQ
 
 from uconf import BarrattEccles, Lie, Surjection
 from uconf.homology import chain_complex, homology_basis
@@ -64,6 +64,20 @@ class TestChainComplex:
         S2 = Surjection(2, QQ)
         C = chain_complex(S2, degrees=range(0))
         assert C.betti() == {}
+
+    def test_configuration_model_gf2(self) -> None:
+        """chain_complex for euclidean configuration model over GF(2) succeeds.
+
+        Regression test for ZeroDivisionError in Lie._pbw_left_inverse
+        that occurred because (M^T M) is singular over GF(2).
+        """
+        from uconf import euclidean_unordered_configuration_model
+
+        model = euclidean_unordered_configuration_model(GF(2), 2)
+        C = chain_complex(model, degrees=range(2))
+        # Just verify it computes without errors; the Betti numbers
+        # are approximate due to max_arity truncation and d²≠0 at degree ≥3.
+        assert C is not None
 
 
 # ---------------------------------------------------------------------------
