@@ -74,9 +74,9 @@ class TestChainComplex:
         from uconf import euclidean_unordered_configuration_model
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = chain_complex(model, degrees=range(2))
+        C = chain_complex(model, degrees=range(2), n_factors=1)
         # Just verify it computes without errors; the Betti numbers
-        # are approximate due to max_arity truncation and d²≠0 at degree ≥3.
+        # are approximate due to n_factors truncation and d²≠0 at degree ≥3.
         assert C is not None
 
 

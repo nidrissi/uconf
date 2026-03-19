@@ -154,15 +154,20 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Chain complexes and homology (`homology.py`)
 
-- `chain_complex(module, degrees)` — builds a SageMath `ChainComplex` from
-  any dg-module that exposes `graded_basis(d)`, `boundary`, and `base_ring()`.
-  This includes all operad/cooperad components, bar/cobar constructions, free
-  algebras, cofree coalgebras, and similar objects.
+- `chain_complex(module, degrees, *, n_factors=None)` — builds a SageMath
+  `ChainComplex` from any dg-module that exposes `graded_basis(d)`,
+  `boundary`, and `base_ring()`.  This includes all operad/cooperad
+  components, bar/cobar constructions, free algebras, cofree coalgebras,
+  and similar objects.
 
-- `homology_basis(module, degree, *, degrees=None)` — returns a list of
-  elements of *module* that are cycles and whose homology classes form a basis
-  of `H_degree(module)`.  When *degrees* is not given, a minimal range
-  `[degree-1, degree+1]` is used.
+  When *module* is the bar complex of a labelled configuration model, the
+  `n_factors` parameter restricts to elements with exactly that many
+  coefficient-module keys, giving a well-defined finite subcomplex.
+
+- `homology_basis(module, degree, *, degrees=None, n_factors=None)` — returns
+  a list of elements of *module* that are cycles and whose homology classes
+  form a basis of `H_degree(module)`.  When *degrees* is not given, a
+  minimal range `[degree-1, degree+1]` is used.
 
 ```python
 from sage.all import QQ
@@ -178,6 +183,19 @@ C.homology()
 
 homology_basis(S2, 0, degrees=range(5))
 # [S2[(2, 1)]]
+```
+
+For the configuration model, use `n_factors` to compute a specific subcomplex:
+
+```python
+from sage.all import QQ
+from uconf import euclidean_unordered_configuration_model
+from uconf.homology import chain_complex
+
+model = euclidean_unordered_configuration_model(QQ, 2)
+C = chain_complex(model, degrees=range(4), n_factors=1)
+C.betti()
+# {0: 0, 1: 0, 2: 1}
 ```
 
 ### Simplicial models
