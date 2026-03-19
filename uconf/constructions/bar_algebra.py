@@ -34,7 +34,7 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import ClassVar, Iterator, cast
 
 from sage.all import CombinatorialFreeModule, Family, cached_method
 
@@ -254,21 +254,24 @@ class BarComplexAlgebra(TreeModule):
             total += 1
         return total
 
-    def basis_it(self, d: int):
+    def basis_it(self, d: int) -> Iterator:
         """Iterate over basis elements of total degree ``d``.
 
         When ``_n_factors`` is set, only yields elements whose total number
         of coefficient-module keys equals ``_n_factors``.  Otherwise delegates
         to the parent :class:`TreeModule` implementation.
+
+        Each element yielded by the parent ``basis_it`` is a single basis
+        term (one key with coefficient 1), so checking its unique key is
+        sufficient.
         """
         for elem in super().basis_it(d):
-            if self._n_factors is not None:
-                for key, _coeff in elem:
-                    if self.count_factors(key) != self._n_factors:
-                        break
-                else:
-                    yield elem
-            else:
+            if self._n_factors is None:
+                yield elem
+                continue
+            # Each elem from super().basis_it is a single basis term.
+            key = next(iter(elem.support()))
+            if self.count_factors(key) == self._n_factors:
                 yield elem
 
     @cached_method
