@@ -13,14 +13,16 @@ from __future__ import annotations
 
 from typing import Any, Iterator
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, cached_method
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, SymmetricGroup, cached_method
 
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
+    _koszul_sign_of_permutation,
     children,
     decoration,
     enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
+    relabel_leaves,
     tree_arity,
     vertex_arity,
     vertices_dfs,
@@ -36,6 +38,16 @@ def _dfs_all_iter(tree):
     yield (tree, None)
     for child in children(tree):
         yield from _dfs_all_iter(child)
+
+
+def _leaves_dfs(tree) -> list[int]:
+    """Return leaf labels in DFS pre-order."""
+    if is_leaf(tree):
+        return [tree]
+    result: list[int] = []
+    for child in children(tree):
+        result.extend(_leaves_dfs(child))
+    return result
 
 
 def _module_basis_keys_in_degree(module, d: int) -> Iterator:
@@ -333,6 +345,115 @@ class TreeModule(CombinatorialFreeModule):
         if tree is target_vertex:
             return (new_dec,) + children(tree)
         new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
+        return (decoration(tree),) + new_children
+
+    # ------------------------------------------------------------------
+    # Planar normalisation
+    # ------------------------------------------------------------------
+
+    def normalize_to_planar(self, elem: "TreeModule.Element") -> "TreeModule.Element":
+        """Rewrite *elem* so every vertex decoration is planar.
+
+        For each basis key ``(tree, m_tuple)`` whose tree contains a non-planar
+        vertex decoration, ``planarize`` is applied to obtain a planar
+        representative ``(planar_dec, σ)``.  The children of the vertex are
+        permuted by ``σ⁻¹`` (matching the graded ``S_n``-coinvariant relation),
+        leaves are relabeled to canonical DFS order, ``m_tuple`` is permuted to
+        match, and a Koszul sign ``ε(σ⁻¹; degrees)`` is included to account
+        for the permutation of graded leaf-module elements.
+        """
+        result = self.zero()
+        for key, coeff in elem:
+            for norm_coeff, norm_key in self._normalize_key(key):
+                result += coeff * norm_coeff * self.term(norm_key)
+        return result
+
+    def _normalize_key(self, key):
+        """Normalize a single ``(tree, m_tuple)`` key to use planar decorations.
+
+        Returns a list of ``(coeff, key)`` pairs.  Includes the Koszul sign
+        for permuting graded leaf-module elements when children are reordered.
+        """
+        tree, m_tuple = key
+        if is_leaf(tree):
+            return [(self.base_ring().one(), key)]
+
+        base_ring = self.base_ring()
+
+        for v in vertices_dfs(tree):
+            k = vertex_arity(v)
+            dec = decoration(v)
+            seq_parent = self._symmetric_sequence_cls(k, base_ring)
+
+            if not hasattr(seq_parent, "planarize"):
+                continue
+
+            planarized = seq_parent.planarize(seq_parent.term(dec))
+            terms = list(planarized)
+
+            # Check if already planar: single term with identity permutation
+            S_k = SymmetricGroup(k)
+            identity = S_k.identity()
+            if len(terms) == 1:
+                (pl_key, sigma_key), pl_coeff = terms[0]
+                if S_k(sigma_key) == identity and pl_key == dec:
+                    continue
+
+            # This vertex needs normalisation
+            result: list[tuple] = []
+            for (pl_dec, sigma_key), pl_coeff in terms:
+                sigma = S_k(sigma_key)
+                sigma_inv = sigma.inverse()
+
+                # Permute children of v by σ⁻¹
+                old_kids = children(v)
+                new_kids = tuple(old_kids[sigma_inv(j) - 1] for j in range(1, k + 1))
+                new_v = (pl_dec,) + new_kids
+
+                # Replace v in the tree
+                new_tree = self._replace_subtree(tree, v, new_v)
+
+                # Compute DFS leaf order, relabel to canonical 1..n, permute m_tuple
+                new_leaf_order = _leaves_dfs(new_tree)
+                relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
+                canonical_tree = relabel_leaves(new_tree, relabel_map)
+                new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
+
+                # Koszul sign: the permutation from old leaf order (1..n) to
+                # new_leaf_order induces a sign from permuting graded elements.
+                # perm[i] = new_leaf_order[i] - 1 gives the 0-indexed source
+                # position for each new position.
+                n_leaves = len(m_tuple)
+                if n_leaves > 1:
+                    degrees = [self._inner_module.degree_on_basis(m_tuple[i])
+                               for i in range(n_leaves)]
+                    # new_leaf_order[i] is the old 1-indexed leaf at new position i
+                    perm_0idx = [old - 1 for old in new_leaf_order]
+                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                else:
+                    koszul = 1
+
+                new_key = (canonical_tree, new_m)
+
+                # Recursively normalise remaining vertices
+                for sub_coeff, sub_key in self._normalize_key(new_key):
+                    result.append((pl_coeff * koszul * sub_coeff, sub_key))
+
+            return result
+
+        # All decorations already planar
+        return [(self.base_ring().one(), key)]
+
+    @staticmethod
+    def _replace_subtree(tree, target, replacement):
+        """Replace *target* (by identity) with *replacement* in *tree*."""
+        if is_leaf(tree):
+            return tree
+        if tree is target:
+            return replacement
+        new_children = tuple(
+            TreeModule._replace_subtree(c, target, replacement) for c in children(tree)
+        )
         return (decoration(tree),) + new_children
 
     class Element(CombinatorialFreeModule.Element):
