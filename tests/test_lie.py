@@ -299,3 +299,35 @@ def test_lie_differential_squared_zero(n: int) -> None:
     zero = l.zero()
     for elem in l.basis_it(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n}, QQ)"
+
+
+# ===========================================================================
+# Finite field support: Lie over GF(2) and GF(3)
+# ===========================================================================
+
+
+@pytest.mark.parametrize("n", range(2, 5))
+def test_lie_pbw_left_inverse_gf2(n: int) -> None:
+    """PBW left-inverse is correct over GF(2): L * M = I."""
+    from sage.all import GF, identity_matrix
+
+    R = GF(2)
+    l = Lie(n, R)
+    pbw = l._pbw_matrix()
+    left_inv = l._pbw_left_inverse()
+    assert left_inv * pbw == identity_matrix(R, pbw.ncols())
+
+
+@pytest.mark.parametrize("n", range(2, 5))
+def test_lie_permute_gf2(n: int) -> None:
+    """Lie elements can be permuted over GF(2) without errors."""
+    from sage.all import GF, SymmetricGroup
+
+    R = GF(2)
+    l = Lie(n, R)
+    S = SymmetricGroup(n)
+    sigma = S([2, 1] + list(range(3, n + 1)))
+    for elem in l.basis_it(0):
+        perm = elem.permute(sigma)
+        # Permuted element lives in same parent
+        assert perm.parent() is l
