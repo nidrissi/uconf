@@ -34,29 +34,16 @@ def _component_basis_in_degree(component, d: int) -> list:
     """Return a list of degree-*d* basis elements from an operad/cooperad component.
 
     Tries ``component.basis_it(d)`` first; falls back to ``basis()`` filtered by
-    ``degree_on_basis``.  Handles the edge case where ``basis_it`` requires no
-    degree argument (e.g. old-style ``Lie``).
+    ``degree_on_basis``.
     """
     basis_it_fn = getattr(component, "basis_it", None)
     if basis_it_fn is not None:
-        try:
-            return list(basis_it_fn(d))
-        except TypeError:
-            # Degree-free basis_it: collect keys, then build elements
-            result = []
-            for elem in basis_it_fn():
-                for key, _ in elem:
-                    if component.degree_on_basis(key) == d:
-                        result.append(component.term(key))
-            return result
+        return list(basis_it_fn(d))
     # Fallback: iterate basis() and filter by degree
     result = []
-    try:
-        for key in component.basis():
-            if component.degree_on_basis(key) == d:
-                result.append(component.term(key))
-    except (AttributeError, NotImplementedError):
-        pass
+    for key in component.basis():
+        if component.degree_on_basis(key) == d:
+            result.append(component.term(key))
     return result
 
 
