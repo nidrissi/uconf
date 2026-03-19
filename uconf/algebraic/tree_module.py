@@ -244,8 +244,8 @@ class TreeModule(CombinatorialFreeModule):
                 "Cannot exhaustively enumerate basis_it(d): both the inner module "
                 "and symmetric sequence admit degree-0 generators (min_deg=0, connectivity=0), "
                 "so arity is unbounded in fixed degree.  "
-                "Set max_arity on this module (or pass max_arity to chain_complex) "
-                "to truncate the enumeration."
+                "Pass n_factors to chain_complex() to restrict to a finite subcomplex, "
+                "or call set_max_arity() on this module directly."
             )
 
         # Require quasi-planar support: basis_it() is only correct when the
