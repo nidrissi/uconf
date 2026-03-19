@@ -58,6 +58,16 @@ class HadamardTensorAlgebra(OperadAlgebra):
         )
 
         self.module.basis_it = self.basis_it
+        self.module.boundary = self._tensor_boundary_morphism()
+        # Connectivity is additive for tensor products: deg(a⊗b) = deg(a) + deg(b),
+        # so min(deg(a⊗b)) = min(deg(a)) + min(deg(b)).
+        self.module.connectivity = (
+            int(getattr(self.left_module, "connectivity", 0))
+            + int(getattr(self.right_module, "connectivity", 0))
+        )
+        self.module.degree_on_basis = lambda key: (
+            self.left_module.degree_on_basis(key[0]) + self.right_module.degree_on_basis(key[1])
+        )
 
     def _act_impl(self, p_element, algebra_elements):
         if p_element.parent().factory is not self.operad_cls:
@@ -142,6 +152,34 @@ class HadamardTensorAlgebra(OperadAlgebra):
             for left_key in left_keys:
                 for right_key in right_keys:
                     yield tensor((self.left_module(left_key), self.right_module(right_key)))
+
+    def _tensor_boundary_morphism(self):
+        """Build a module morphism for the tensor differential on the module.
+
+        This allows the tensor module's ``boundary`` to work as a proper Sage
+        module morphism when called by external code (e.g.
+        :class:`~uconf.algebraic.tree_module.TreeModule`).
+        """
+        return self.module.module_morphism(
+            on_basis=self._boundary_on_tensor_basis, codomain=self.module
+        )
+
+    def _boundary_on_tensor_basis(self, basis_key):
+        """Tensor differential on a single basis key ``(left_key, right_key)``."""
+        left_basis, right_basis = basis_key
+
+        left_degree = self.left_module.degree_on_basis(left_basis)
+        sign = -1 if left_degree % 2 else 1
+
+        left_boundary = self.left_algebra.boundary(self.left_module.term(left_basis))
+        right_boundary = self.right_algebra.boundary(self.right_module.term(right_basis))
+
+        result = self.module.zero()
+        for new_left_basis, left_coeff in left_boundary:
+            result += left_coeff * self.module.term((new_left_basis, right_basis))
+        for new_right_basis, right_coeff in right_boundary:
+            result += sign * right_coeff * self.module.term((left_basis, new_right_basis))
+        return result
 
     def boundary(self, a):
         """Tensor differential induced from the two dg-module differentials."""

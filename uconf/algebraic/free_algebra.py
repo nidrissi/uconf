@@ -206,6 +206,19 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         return super()._element_constructor_(x)
 
     # ------------------------------------------------------------------
+    # Connectivity
+    # ------------------------------------------------------------------
+
+    @property
+    def connectivity(self) -> int:
+        """Minimum degree of any basis element.
+
+        The arity-1 term ``(id, (m,))`` has degree ``deg_M(m)``, so the
+        connectivity equals that of the inner module.
+        """
+        return int(getattr(self._inner_module, "connectivity", 0))
+
+    # ------------------------------------------------------------------
     # Degree
     # ------------------------------------------------------------------
 
@@ -269,8 +282,15 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         P = self._operad_cls
         R = self.base_ring()
 
+        # Collect inner-module keys by degree.  The operad may contribute
+        # negative degrees, so the inner module may need to compensate with
+        # degrees higher than d.  The maximum needed m_tuple degree is
+        # d - min_operad_deg_at_arity_2; use connectivity as a lower bound.
+        connectivity = int(getattr(P, "connectivity", 0))
+        max_m_total = d - min(connectivity, 0)  # could exceed d
+
         m_keys_by_deg: dict[int, list] = {}
-        for d_m in range(d + 1):
+        for d_m in range(max_m_total + 1):
             keys = list(_module_basis_keys_in_degree(M, d_m))
             if keys:
                 m_keys_by_deg[d_m] = keys
@@ -284,21 +304,34 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             return
 
         min_m_deg = min(m_keys_by_deg.keys())
-        connectivity = getattr(P, "connectivity", 0)
         min_corolla_deg = connectivity
 
         if d < min_corolla_deg:
             return
 
-        if min_m_deg > 0:
-            max_n = d // min_m_deg
-        elif connectivity > 0:
-            max_n = (d - 0) // connectivity + 1
+        # Compute the maximum arity n for which degree-d elements can exist.
+        # At arity n the minimum total degree is:
+        #   connectivity*(n−1) + n*min_m_deg = n*(connectivity + min_m_deg) − connectivity
+        # Solving n*(connectivity + min_m_deg) ≤ d + connectivity:
+        step = connectivity + min_m_deg
+        if step > 0:
+            max_n = (d + connectivity) // step
+        elif step == 0:
+            if d + connectivity >= 0:
+                # Unbounded arity: every n is feasible
+                raise ValueError(
+                    "Cannot exhaustively enumerate basis_it(d): both P and M admit "
+                    "degree-0 generators (connectivity + min_m_deg = 0), so arity is "
+                    "unbounded in fixed degree."
+                )
+            else:
+                max_n = 1  # no n >= 2 is feasible
         else:
+            # step < 0: higher arity gives lower minimum degree; all n are feasible.
+            # This shouldn't happen for well-behaved operads.
             raise ValueError(
-                "Cannot exhaustively enumerate basis_it(d): both P and M admit "
-                "degree-0 generators (connectivity=0, min_m_deg=0), so arity is "
-                "unbounded in fixed degree."
+                "Cannot exhaustively enumerate basis_it(d): "
+                "connectivity + min_m_deg < 0, so arity is unbounded in fixed degree."
             )
 
         for n in range(2, max_n + 1):
@@ -306,7 +339,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 comp_n = P(n, R)
             except (TypeError, ValueError, AttributeError):
                 continue
-            for d_p in range(d + 1):
+            # The operad degree can be negative (connectivity < 0), so
+            # d_p ranges from min(connectivity*(n-1), 0) up to d - n*min_m_deg.
+            min_d_p = min(connectivity * (n - 1), 0)
+            max_d_p = d - n * min_m_deg if min_m_deg >= 0 else d
+            for d_p in range(min_d_p, max_d_p + 1):
                 d_m_needed = d - d_p
                 if d_m_needed < 0:
                     continue
