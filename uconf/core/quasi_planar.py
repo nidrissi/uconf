@@ -20,6 +20,7 @@ This module provides:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
+from sage.all import Family
 
 from uconf.core.component import ComponentProtocol
 
@@ -31,6 +32,14 @@ class QuasiPlanarProtocol(ComponentProtocol, Protocol):
     A class satisfies this protocol when it exposes ``planarize`` and
     ``boundary`` (both linear maps) and ``arity()``.
     """
+
+    def planar_basis_it(self, d: int) -> Iterable:
+        """Returns an iterator over the planar basis keys of this component."""
+        ...
+
+    def graded_planar_basis(self, d: int) -> Family:
+        """Returns the planar basis of this component in degree d."""
+        ...
 
     def planarize(self, x: QuasiPlanarProtocol.Element) -> Any: ...
 
