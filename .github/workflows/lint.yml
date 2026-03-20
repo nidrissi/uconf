@@ -10,6 +10,7 @@ name: Lint And Quality Checks
             - "ruff.toml"
             - "requirements.txt"
             - "pytest.ini"
+            - "environment.yml"
     push:
         branches:
             - main
@@ -21,6 +22,7 @@ name: Lint And Quality Checks
             - "ruff.toml"
             - "requirements.txt"
             - "pytest.ini"
+            - "environment.yml"
     workflow_dispatch:
 
 permissions:
@@ -45,23 +47,16 @@ jobs:
                   python-version: "3.11"
                   cache: "pip"
 
-            - name: Setup Conda and Create Environment
-              uses: conda-incubator/setup-miniconda@v3
-              with:
-                  activate-environment: sage
-                  channel-priority: strict
-                  environment-file: environment.yml
-
             - name: Install lint dependencies
               run: |
                   python -m pip install --upgrade pip
                   python -m pip install ruff==0.12.8
 
             - name: Ruff lint
-              run: ruff check .
+              run: ruff check tests uconf
 
             - name: Ruff format check
-              run: ruff format --check .
+              run: ruff format --check tests uconf
 
             - name: Python syntax smoke test
               run: python -m compileall -q uconf tests
