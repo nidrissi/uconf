@@ -5,9 +5,11 @@ on:
     push:
         paths:
             - .github/workflows/copilot-setup-steps.yml
+            - environment.yml
     pull_request:
         paths:
             - .github/workflows/copilot-setup-steps.yml
+            - environment.yml
 
 jobs:
     copilot-setup-steps:
