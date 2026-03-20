@@ -290,7 +290,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         assert len(comp_1_list) == 1, (
             f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
         )
-        c_key_1 = comp_1_list[0].support()[0]
+        c_key_1 = C.unit_key()
         for mk in m_keys_by_deg.get(d, []):
             yield self.term((c_key_1, (mk,)))
 
@@ -397,7 +397,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         comp_1 = self.cooperad_cls(1, base_ring)
         comp_1_list = list(comp_1.basis_it(0))
         assert len(comp_1_list) == 1, f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
-        id_key = comp_1_list[0].support()[0]
+        id_key = self.cooperad_cls.unit_key()
 
         right_factors = [cofree_mod] * n
         target = tensor([coop_parent] + right_factors)
@@ -497,11 +497,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         result = inner.zero()
 
         # Get the unique C(1) identity key
-        comp_1 = self.cooperad_cls(1, base_ring)
-        comp_1_list = list(comp_1.basis_it(0))
-        if not comp_1_list:
-            return result
-        id_key = comp_1_list[0].support()[0]
+        id_key = self.cooperad_cls.unit_key()
 
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:

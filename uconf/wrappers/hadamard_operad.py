@@ -91,6 +91,10 @@ class HadamardProduct(UniqueRepresentation):
             self.right_operad_cls.unit(base_ring),
         )
 
+    def unit_key(self) -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (self.left_operad_cls.unit_key(), self.right_operad_cls.unit_key())
+
     def compose(
         self,
         x: "HadamardProduct.Element",
@@ -393,6 +397,10 @@ class HadamardProduct(UniqueRepresentation):
 
         def unit(self) -> "HadamardProduct.Element":
             return self.factory.unit(self.base_ring())
+
+        def unit_key(self) -> tuple:
+            """Return the basis key of the unit element in arity ``1``."""
+            return self.factory.unit_key()
 
     class Element(
         ParentedElementMixin["HadamardProduct.Component"],

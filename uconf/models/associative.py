@@ -95,6 +95,11 @@ class Associative(CombinatorialFreeModule):
         """Return the operadic unit in arity ``1``."""
         return Associative(1, base_ring)((1,))
 
+    @staticmethod
+    def unit_key() -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (1,)
+
     def basis_it(self, d: int) -> Iterator[Element]:
         """Iterate over basis elements in this arity and the given degree."""
         if d == 0:
