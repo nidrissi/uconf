@@ -291,8 +291,13 @@ class CobarConstruction(UniqueRepresentation):
                 return
 
             for tree in enumerate_shuffle_trees_generic_in_degree(
-                n, self._max_weight, self._cooperad_cls, base_ring, d,
-                vertex_offset=-1, use_planar_decs=True
+                n,
+                self._max_weight,
+                self._cooperad_cls,
+                base_ring,
+                d,
+                vertex_offset=-1,
+                use_planar_decs=True,
             ):
                 yield self.term(tree)
 

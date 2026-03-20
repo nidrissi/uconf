@@ -217,8 +217,7 @@ class Lie(CombinatorialFreeModule):
 
         if len(selected) < n_cols:
             raise ArithmeticError(
-                f"PBW matrix does not have full column rank over {R} "
-                f"(arity {self.arity()})"
+                f"PBW matrix does not have full column rank over {R} (arity {self.arity()})"
             )
 
         sub = pbw.matrix_from_rows(selected)

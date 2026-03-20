@@ -59,9 +59,7 @@ def test_composition_sign_shift_surjection_nonzero_degree() -> None:
     y = shifted(2, QQ)((1, 2, 1))
 
     composed = shifted.compose(x, 1, y)
-    base_composed = Surjection.compose(
-        Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2, 1))
-    )
+    base_composed = Surjection.compose(Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2, 1)))
 
     assert _as_dict(composed.base_element()) == _as_dict(-base_composed)
 

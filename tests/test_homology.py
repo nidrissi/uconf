@@ -114,9 +114,7 @@ class TestHomologyBasis:
         for d in range(3):
             gens = homology_basis(S3, d, degrees=range(4))
             for g in gens:
-                assert S3.boundary(g) == S3.zero(), (
-                    f"Generator in H_{d} is not a cycle: {g}"
-                )
+                assert S3.boundary(g) == S3.zero(), f"Generator in H_{d} is not a cycle: {g}"
 
     def test_default_degrees(self) -> None:
         """Calling without explicit degrees uses a minimal range."""
@@ -151,12 +149,14 @@ class TestConnectivity:
     def test_simplicial_chains_connectivity(self) -> None:
         """SimplicialChains has connectivity 0 (vertices have degree 0)."""
         from uconf.models.simplicial import SimplicialChains
+
         SC = SimplicialChains(QQ)
         assert SC.connectivity == 0
 
     def test_simplicial_cochains_connectivity(self) -> None:
         """SimplicialCochains(N) has connectivity -N."""
         from uconf.models.simplicial import SimplicialCochains
+
         SC2 = SimplicialCochains(2, QQ)
         assert SC2.connectivity == -2
         SC5 = SimplicialCochains(5, QQ)
@@ -165,6 +165,7 @@ class TestConnectivity:
     def test_simplicial_cochains_basis_it(self) -> None:
         """SimplicialCochains(2) enumerates basis correctly per degree."""
         from uconf.models.simplicial import SimplicialCochains
+
         SC = SimplicialCochains(2, QQ)
         # degree 0: 3 vertices (0), (1), (2)
         assert len(list(SC.basis_it(0))) == 3
@@ -180,6 +181,7 @@ class TestConnectivity:
     def test_simplicial_cochains_boundary(self) -> None:
         """SimplicialCochains.boundary is an alias for coboundary."""
         from uconf.models.simplicial import SimplicialCochains
+
         SC = SimplicialCochains(2, QQ)
         vertex = SC.term((0,))
         assert SC.boundary(vertex) == SC.coboundary(vertex)

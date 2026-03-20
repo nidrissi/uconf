@@ -37,9 +37,7 @@ CoalgebraElementInputType = TypeVar(
 class CoactionMap(Protocol[CoalgebraElementInputType, CoactionValueType]):
     """Type contract for cooperad coaction callables."""
 
-    def __call__(
-        self, v_element: CoalgebraElementInputType, n: int, /
-    ) -> CoactionValueType: ...
+    def __call__(self, v_element: CoalgebraElementInputType, n: int, /) -> CoactionValueType: ...
 
 
 class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
@@ -97,9 +95,7 @@ class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
         try:
             iter(value)
         except TypeError as exc:
-            raise TypeError(
-                "coaction_map must return an iterable coaction value."
-            ) from exc
+            raise TypeError("coaction_map must return an iterable coaction value.") from exc
         return value
 
     def boundary(self, v):

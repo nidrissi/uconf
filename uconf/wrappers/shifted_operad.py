@@ -178,9 +178,9 @@ class ShiftedOperad(UniqueRepresentation):
                     for (p_pl_key, sigma_key), coeff in base_pz:
                         sigma = _S_n_ref(sigma_key)
                         sign_twist = int(sigma.sign()) ** _shift
-                        result += (
-                            sign_twist * coeff
-                        ) * _self_ref.term(p_pl_key).tensor(_sga(sigma))
+                        result += (sign_twist * coeff) * _self_ref.term(p_pl_key).tensor(
+                            _sga(sigma)
+                        )
                     return result
 
                 self.planarize = self.module_morphism(

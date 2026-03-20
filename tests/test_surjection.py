@@ -138,14 +138,10 @@ def test_surjection_basis(r: int, d: int) -> None:
     basis = list(Surjection(r, QQ).basis_it(d))
     assert len(basis) == len(set(basis)), "Duplicate elements found in basis_it"
     for el in basis:
-        assert isinstance(el, Surjection.Element), (
-            "Non-Surjection element found in basis_it"
-        )
+        assert isinstance(el, Surjection.Element), "Non-Surjection element found in basis_it"
         assert el != el.parent().zero(), "Zero element found in basis_it"
         assert el.arity() == r, "Element with incorrect arity in basis_it"
-        assert _degree_matches(el, d), (
-            "Element with incorrect degree in Surjection basis_it"
-        )
+        assert _degree_matches(el, d), "Element with incorrect degree in Surjection basis_it"
 
 
 @pytest.mark.parametrize("r", range(2, 5))
@@ -153,9 +149,7 @@ def test_surjection_basis(r: int, d: int) -> None:
 def test_planar_surjection_basis(r: int, d: int) -> None:
     planar_basis = list(Surjection(r, QQ).planar_basis_it(d))
     basis = list(Surjection(r, QQ).basis_it(d))
-    assert set(planar_basis).issubset(basis), (
-        "Planar basis should be a subset of the full basis."
-    )
+    assert set(planar_basis).issubset(basis), "Planar basis should be a subset of the full basis."
     assert len(planar_basis) * math.factorial(r) == len(basis), (
         "Planar basis size should be full basis size divided by r!."
     )
@@ -171,9 +165,7 @@ def test_planar_preserved_under_composition_last_input(
 ) -> None:
     pos = s1.arity()
     composed = Surjection.compose(s1, pos, s2)
-    assert composed.is_planar(), (
-        f"Composition of {s1} and {s2} at position {pos} is not planar."
-    )
+    assert composed.is_planar(), f"Composition of {s1} and {s2} at position {pos} is not planar."
 
 
 @pytest.mark.parametrize("s", PLANAR_LARGE)
@@ -271,8 +263,7 @@ def test_surjection_sequential_composition_axiom(
             lhs = Surjection.compose(Surjection.compose(x, i, y), i + j - 1, z)
             rhs = Surjection.compose(x, i, Surjection.compose(y, j, z))
             assert lhs == rhs, (
-                f"Sequential axiom failed for x={x_tuple}, y={y_tuple}, "
-                f"z={z_tuple}, i={i}, j={j}"
+                f"Sequential axiom failed for x={x_tuple}, y={y_tuple}, z={z_tuple}, i={i}, j={j}"
             )
 
 
@@ -338,8 +329,7 @@ def test_surjection_equivariance(
         block = _block_permutation(sigma, i, tau)
         rhs = Surjection.compose(x, sigma_inv[i - 1], y).permute(block)
         assert lhs == rhs, (
-            f"Equivariance failed for x={x_tuple}, σ={sigma}, "
-            f"y={y_tuple}, τ={tau}, i={i}"
+            f"Equivariance failed for x={x_tuple}, σ={sigma}, y={y_tuple}, τ={tau}, i={i}"
         )
 
 
@@ -354,9 +344,7 @@ def test_surjection_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S(n)."""
     zero = Surjection(n, QQ).zero()
     for elem in Surjection(n, QQ).basis_it(d):
-        assert elem.boundary().boundary() == zero, (
-            f"d²({elem}) ≠ 0 in S({n}) degree {d}"
-        )
+        assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in S({n}) degree {d}"
 
 
 # ===========================================================================

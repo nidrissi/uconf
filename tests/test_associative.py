@@ -12,9 +12,7 @@ def _as_dict(x):
     return {basis: coeff for basis, coeff in x}
 
 
-def _block_permutation(
-    sigma: tuple[int, ...], i: int, tau: tuple[int, ...]
-) -> tuple[int, ...]:
+def _block_permutation(sigma: tuple[int, ...], i: int, tau: tuple[int, ...]) -> tuple[int, ...]:
     """Return the block permutation ``sigma ∘_i tau`` in one-line notation."""
     shift = len(tau) - 1
     result = []

@@ -162,9 +162,7 @@ class TestGradedBasisMethods:
         for d in range(3):
             for elem in S2.graded_planar_basis(d):
                 for key in elem.support():
-                    assert S2(key).is_planar(), (
-                        f"Non-planar element in graded_planar_basis({d})"
-                    )
+                    assert S2(key).is_planar(), f"Non-planar element in graded_planar_basis({d})"
 
     def test_barratt_eccles_graded_basis(self):
         """BarrattEccles(2, QQ).graded_basis(d) has the right size."""
@@ -192,9 +190,7 @@ class TestGradedBasisMethods:
             for elem in HLE2.planar_basis_it(d):
                 for (l_key, r_key), coeff in elem:
                     # Right factor should be planar (starts with identity)
-                    assert (
-                        r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity()
-                    ), (
+                    assert r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity(), (
                         f"Non-planar right key {r_key} in HadamardProduct planar_basis_it({d})"
                     )
 
@@ -312,9 +308,7 @@ class TestEComoduleMap:
         id_be_key = (BE2._symmetric_group.identity(),)
         cobar_key = (tree_key, 1, 2)
 
-        found = any(
-            be_key == id_be_key and ck == cobar_key for (be_key, ck), _coeff in result
-        )
+        found = any(be_key == id_be_key and ck == cobar_key for (be_key, ck), _coeff in result)
         assert found, "k=0 term missing for B(Surj)(2) degree-1 planar element"
 
     def test_comodule_result_in_tensor(self):
@@ -547,9 +541,7 @@ class TestComoduleAxioms:
             for ck, coeff in d_omega_x:
                 delta_d_omega += coeff * _delta_equiv(ck, BH2, OBH2, BE2)
 
-            assert norm_d_delta == delta_d_omega, (
-                f"Chain-map failed for generator {dec_key}"
-            )
+            assert norm_d_delta == delta_d_omega, f"Chain-map failed for generator {dec_key}"
 
     def test_coassociativity_degree0_generator(self):
         """Coassociativity holds for the degree-0 planar generator.
@@ -632,9 +624,7 @@ class TestComoduleAxioms:
                     lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(cobar_elem)
 
                 for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, OBH2, BE2):
-                    rhs += (
-                        coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(OBH2(ck2))
-                    )
+                    rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(OBH2(ck2))
 
             assert lhs == rhs, f"Coassociativity failed for generator {dec_key}"
 

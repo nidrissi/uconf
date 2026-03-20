@@ -61,9 +61,7 @@ class CoAssociative(Associative):
         if not (1 <= i <= m):
             raise ValueError(f"Index i must satisfy 1 <= i <= {m}. Got i={i}.")
         if x.arity() != m + n - 1:
-            raise ValueError(
-                f"Expected element in arity {m + n - 1}, got arity {x.arity()}."
-            )
+            raise ValueError(f"Expected element in arity {m + n - 1}, got arity {x.arity()}.")
 
         base_ring = x.parent().base_ring()
         left_parent = CoAssociative(m, base_ring=base_ring)

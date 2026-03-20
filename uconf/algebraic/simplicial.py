@@ -161,9 +161,7 @@ def surjection_chain_action(
             If the lengths of surj_tuple and simplex_factors do not match.
 
         """
-        assert len(surj_tuple) == len(simplex_factors), (
-            "Length mismatch in BF sign computation."
-        )
+        assert len(surj_tuple) == len(simplex_factors), "Length mismatch in BF sign computation."
 
         # Find the indices of "final" intervals, i.e., the values i such that u_i is the last
         # occurrence of that value in surj_tuple. The other intervals are called "inner" intervals.
@@ -251,9 +249,7 @@ def surjection_chain_action(
                 zero_term = False
                 for i in range(1, r + 1):
                     to_join = [
-                        diag_key[idx]
-                        for idx in range(len(surj_tuple))
-                        if surj_tuple[idx] == i
+                        diag_key[idx] for idx in range(len(surj_tuple)) if surj_tuple[idx] == i
                     ]
                     joined = _join_simplices(to_join)
                     if joined is None:
@@ -265,9 +261,7 @@ def surjection_chain_action(
                     continue
 
                 # --- Step 3: Berger–Fresse sign ---
-                curr_vertices: list[int] = sorted(
-                    set(v for simplex in diag_key for v in simplex)
-                )
+                curr_vertices: list[int] = sorted(set(v for simplex in diag_key for v in simplex))
                 vertex_to_index = {v: idx for idx, v in enumerate(curr_vertices)}
                 sign = _compute_bf_sign(surj_tuple, diag_key, vertex_to_index)
                 coeff = sign * surj_coeff * diag_coeff
@@ -487,9 +481,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
         if not v_element:
             return target.zero()
 
-        min_v_degree = min(
-            v_element.parent().degree_on_basis(key) for key in v_element.support()
-        )
+        min_v_degree = min(v_element.parent().degree_on_basis(key) for key in v_element.support())
         max_v_dim = max(len(key) - 1 for key in v_element.support())
         surj_parent = Surjection(n, base_ring=base_ring)
 

@@ -87,6 +87,7 @@ def _deduplicated_basis(module: Any, d: int) -> tuple[list, list]:
             keys.append(key)
     return elems, keys
 
+
 # TODO To properly truncate the chain complex, we should:
 # * In the bottom degree: take the kernel of the differential;
 # * In the top degree: take the cokernel of the differential from the degree just above.

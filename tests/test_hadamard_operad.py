@@ -50,12 +50,8 @@ def test_compose_is_diagonal_on_factors() -> None:
 
     composed = had.compose(x, 1, y)
 
-    left_composed = Surjection.compose(
-        Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2, 1))
-    )
-    right_composed = Surjection.compose(
-        Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2))
-    )
+    left_composed = Surjection.compose(Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2, 1)))
+    right_composed = Surjection.compose(Surjection(2, QQ)((1, 2)), 1, Surjection(2, QQ)((1, 2)))
 
     expected = had(3, QQ).from_factors(left_composed, right_composed)
     assert _as_dict(composed) == _as_dict(expected)

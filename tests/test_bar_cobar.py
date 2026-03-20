@@ -1197,9 +1197,7 @@ class TestBasisIt:
         for d in range(1, 4):
             for elem in B3.basis_it(d):
                 for key, _ in elem:
-                    assert is_shuffle_tree(key), (
-                        f"Not a shuffle tree: {key} in degree {d}"
-                    )
+                    assert is_shuffle_tree(key), f"Not a shuffle tree: {key} in degree {d}"
 
     def test_basis_it_lie_consistent_with_planar_for_surjection(self):
         """For Surjection, basis_it and planar_basis_it correspond element-by-element."""
@@ -1270,9 +1268,7 @@ class TestBarConstructionNegativeDegree:
         for d in range(-1, 2):
             for elem in B3.basis_it(d):
                 for key, _ in elem:
-                    assert is_shuffle_tree(key), (
-                        f"Not a shuffle tree: {key} in degree {d}"
-                    )
+                    assert is_shuffle_tree(key), f"Not a shuffle tree: {key} in degree {d}"
 
     def test_boundary_squared_zero_shifted_lie(self):
         """Boundary squares to zero on B(sLie) basis elements."""
@@ -1284,9 +1280,7 @@ class TestBarConstructionNegativeDegree:
                 for elem in B.basis_it(d):
                     d1 = B.boundary(elem)
                     d2 = B.boundary(d1)
-                    assert d2 == B.zero(), (
-                        f"boundary^2 != 0 on {elem} in B(sLie)({n}) degree {d}"
-                    )
+                    assert d2 == B.zero(), f"boundary^2 != 0 on {elem} in B(sLie)({n}) degree {d}"
 
 
 if __name__ == "__main__":

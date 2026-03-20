@@ -43,9 +43,7 @@ def _evaluate_tensor_cochains_on_chain(cochains, chain):
             factor_keys = basis_key
         contribution = coeff
         for idx in range(r):
-            contribution *= SimplicialCochains.evaluate(
-                cochains[idx], SC(factor_keys[idx])
-            )
+            contribution *= SimplicialCochains.evaluate(cochains[idx], SC(factor_keys[idx]))
             if contribution == 0:
                 break
         value += contribution
@@ -279,8 +277,7 @@ class TestSurjectionAction:
             u = rng.choice(list(basis))
             n = rng.randint(d, d + 3)
             cochains = [
-                SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n]))
-                for _ in range(r)
+                SimplicialCochains(n, QQ)(rng.choice(possible_simplices[n])) for _ in range(r)
             ]
 
             lhs = _surjection_cochain_action(u, cochains).coboundary()
@@ -293,9 +290,7 @@ class TestSurjectionAction:
                 rhs = rhs + sign * _surjection_cochain_action(u, modified)
                 cum_deg += cochains[k].degree()
 
-            assert _as_dict(lhs) == _as_dict(rhs), (
-                f"Chain map failed: u={list(u.support())}, n={n}"
-            )
+            assert _as_dict(lhs) == _as_dict(rhs), f"Chain map failed: u={list(u.support())}, n={n}"
 
 
 class TestSimplicialCochains:
