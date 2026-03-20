@@ -74,6 +74,11 @@ class Commutative(CombinatorialFreeModule):
         """Return the operadic unit in arity ``1``."""
         return Commutative(1, base_ring)(())
 
+    @staticmethod
+    def unit_key() -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return ()
+
     def basis_it(self, d: int) -> Iterator[Commutative.Element]:
         """Iterate over basis elements in this arity and the given degree."""
         if self.arity() >= 1 and d == 0:

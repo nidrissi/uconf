@@ -50,6 +50,10 @@ class ShiftedCooperad(UniqueRepresentation):
     def __call__(self, n: int, base_ring) -> "ShiftedCooperad.Component":
         return ShiftedCooperad.Component(self, n, base_ring)
 
+    def unit_key(self) -> object:
+        """Return the basis key of the counit generator in arity ``1``."""
+        return self.cooperad_cls.unit_key()
+
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of a shifted cooperad."""
 
@@ -158,6 +162,10 @@ class ShiftedCooperad(UniqueRepresentation):
         def counit(self, x: "ShiftedCooperad.Element"):
             base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
             return self.factory.cooperad_cls.counit(base_x)
+
+        def unit_key(self) -> object:
+            """Return the basis key of the counit generator in arity ``1``."""
+            return self.factory.unit_key()
 
         def reduced(self, x: "ShiftedCooperad.Element") -> "ShiftedCooperad.Element":
             base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)

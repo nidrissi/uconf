@@ -151,6 +151,11 @@ class BarrattEccles(CombinatorialFreeModule):
         """Return the operadic unit in arity ``1``."""
         return BarrattEccles(1, base_ring)(((1,),))
 
+    @staticmethod
+    def unit_key() -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (SymmetricGroup(1).identity(),)
+
     def planar_basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
         """Iterate over planar basis elements in degree ``d``."""
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."

@@ -101,6 +101,14 @@ class CobarConstruction(UniqueRepresentation):
         # Unit is the single leaf "1" (a trivial tree with no internal vertices)
         return component.term(1)
 
+    def unit_key(self) -> int:
+        """Return the basis key of the unit element in arity ``1``.
+
+        In the cobar construction, the arity-1 unit is the single-leaf tree,
+        whose basis key is the integer ``1``.
+        """
+        return 1
+
     def compose(
         self, x: "CobarConstruction.Element", i: int, y: "CobarConstruction.Element"
     ) -> "CobarConstruction.Element":
@@ -530,6 +538,15 @@ class CobarConstruction(UniqueRepresentation):
         def unit() -> "CobarConstruction.Element":
             """The operadic unit is handled by the factory."""
             raise NotImplementedError("Use factory.unit() instead")
+
+        @staticmethod
+        def unit_key() -> int:
+            """Return the basis key of the unit element in arity ``1``.
+
+            In the cobar construction, the arity-1 unit is the single-leaf
+            tree, whose basis key is the integer ``1``.
+            """
+            return 1
 
         def compose(
             self, x: "CobarConstruction.Element", i: int, y: "CobarConstruction.Element"
