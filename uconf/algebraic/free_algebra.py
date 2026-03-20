@@ -418,7 +418,9 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     """
 
-    def __init__(self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule, base_ring):
+    def __init__(
+        self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule, base_ring
+    ):
         free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module
@@ -488,6 +490,5 @@ class FreeOperadAlgebra(OperadAlgebra):
             is the unique basis key of ``P(1)``.
 
         """
-        R = self._base_ring
         id_key = self.operad_cls.unit_key()
         return self.module.term((id_key, (m_key,)))
