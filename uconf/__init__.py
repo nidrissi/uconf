@@ -47,9 +47,11 @@ from uconf.constructions import (
     CobarComplexCoalgebra,
     CobarConstruction,
     TwistedBarComplexAlgebra,
+    TwistedBarComplex,
+    TwistedCobarComplex,
     e_comodule_on_generator,
 )
-from uconf.core import CooperadComponent, OperadComponent, OperadMorphism
+from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, TwistingMorphism
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.models import (
     Associative,
@@ -65,11 +67,12 @@ from uconf.models import (
 )
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
 from uconf.homology import chain_complex, homology_basis
-from uconf.morphisms import ass_to_com, lie_to_ass, make_e_comodule_morphism
+from uconf.morphisms import ass_to_com, lie_to_ass, make_e_comodule_morphism, canonical_projection, canonical_inclusion
 
 __all__ = [
     "OperadComponent",
     "OperadMorphism",
+    "TwistingMorphism",
     "PullbackAlgebra",
     "CooperadComponent",
     "Surjection",
@@ -97,6 +100,8 @@ __all__ = [
     "BarComplexAlgebra",
     "CobarComplexCoalgebra",
     "TwistedBarComplexAlgebra",
+    "TwistedBarComplex",
+    "TwistedCobarComplex",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSimplicialChainCoalgebra",
     "ReducedSphereCochains",
@@ -107,6 +112,8 @@ __all__ = [
     "ass_to_com",
     "lie_to_ass",
     "make_e_comodule_morphism",
+    "canonical_projection",
+    "canonical_inclusion",
     "labelled_configuration_model",
     "unordered_configuration_model",
     "euclidean_unordered_configuration_model",
