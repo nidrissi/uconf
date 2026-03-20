@@ -275,6 +275,11 @@ class Lie(CombinatorialFreeModule):
         """Return the operadic unit in arity ``1``."""
         return Lie(1, base_ring)(())
 
+    @staticmethod
+    def unit_key() -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return ()
+
     def degree_on_basis(self, element) -> int:
         """Return homological degree on basis elements (always ``0`` here)."""
         return 0

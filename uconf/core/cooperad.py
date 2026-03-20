@@ -29,6 +29,11 @@ class CooperadComponent(ComponentProtocol, Protocol):
         ...
 
     @staticmethod
+    def unit_key() -> Any:
+        """Returns the basis key of the counit generator in arity ``1``."""
+        ...
+
+    @staticmethod
     def reduced(x: CooperadComponent.Element) -> CooperadComponent.Element:
         """Projects ``x`` to the reduced part (kills counit in arity 1)."""
         ...
@@ -53,6 +58,10 @@ class CooperadFactory(Protocol):
 
     def counit(self, x: Any) -> object:
         """Returns the counit evaluation on ``x``."""
+        ...
+
+    def unit_key(self) -> Any:
+        """Returns the basis key of the counit generator in arity ``1``."""
         ...
 
     def reduced(self, x: Any) -> Any:

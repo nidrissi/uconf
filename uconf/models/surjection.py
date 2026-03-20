@@ -115,6 +115,11 @@ class Surjection(CombinatorialFreeModule):
         """Return the operadic unit in arity ``1``."""
         return Surjection(1, base_ring)((1,))
 
+    @staticmethod
+    def unit_key() -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (1,)
+
     def basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over basis elements in degree ``d``."""
         if d < 0:
