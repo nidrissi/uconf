@@ -40,7 +40,6 @@ from sage.all import (
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
-from uconf.core.cooperad import CooperadLike
 from uconf.core.signs import sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
@@ -396,7 +395,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         # Get identity key of C(1)
         comp_1 = self.cooperad_cls(1, base_ring)
         comp_1_list = list(comp_1.basis_it(0))
-        assert len(comp_1_list) == 1, f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
+        assert len(comp_1_list) == 1, (
+            f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
+        )
         id_key = self.cooperad_cls.unit_key()
 
         right_factors = [cofree_mod] * n
@@ -469,12 +470,8 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 # Normalise each factor via planarize
                 left_comp = self.cooperad_cls(m, base_ring)
                 right_comp = self.cooperad_cls(n, base_ring)
-                left_elem = cofree_mod._normalized_corolla_sum(
-                    left_comp.term(c_L_key), left_m
-                )
-                right_elem = cofree_mod._normalized_corolla_sum(
-                    right_comp.term(c_R_key), right_m
-                )
+                left_elem = cofree_mod._normalized_corolla_sum(left_comp.term(c_L_key), left_m)
+                right_elem = cofree_mod._normalized_corolla_sum(right_comp.term(c_R_key), right_m)
                 result += coeff * tensor_coeff * left_elem.tensor(right_elem)
 
         return result
@@ -493,7 +490,6 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         """
         inner = self._inner_module
-        base_ring = self._base_ring
         result = inner.zero()
 
         # Get the unique C(1) identity key

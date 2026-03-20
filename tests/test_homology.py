@@ -200,7 +200,6 @@ class TestConnectivity:
 
     def test_tree_module_connectivity(self) -> None:
         """TreeModule connectivity is the min of leaf and tree contributions."""
-        from uconf.constructions.bar_algebra import BarComplexAlgebra
         from uconf.algebraic.free_algebra import FreeOperadAlgebra
         from uconf.models.surjection import Surjection
         from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
