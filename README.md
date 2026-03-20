@@ -100,16 +100,13 @@ attribute on concrete models, property on wrappers) representing the constant
   - Bar complex `B_P(A)` of a P-algebra `A`.
   - `basis_it(d)` — iterates over all `(tree, a_tuple)` basis pairs of total degree `d`.
     Arity is bounded by `d + 1` for connected P with non-negatively graded A.
+  - Equivalent to `TwistedBarComplex(canonical_projection(P), alg, base_ring)`.
 
 - `constructions/twisted_bar_algebra.py` — `TwistedBarComplexAlgebra(alg, base_ring)`
   - Twisted bar complex `B_ι(A)` of an `ΩB(P)`-algebra `A`, where `ι: B(P) → ΩB(P)` is the
     universal twisting morphism (the left adjoint of the bar-cobar adjunction).
   - `alg.operad_cls` must be `CobarConstruction(BarConstruction(P))` for some operad `P`.
-  - The underlying module is `T^c_{B(P)}(A)` (same as the standard bar complex), but the
-    differential uses `ι` to apply the `ΩB(P)`-algebra action at corolla vertices:
-    at a vertex with `P(n)`-decoration `dec`, applies `γ(ι([dec]); a_1,…,a_n)` where
-    `ι([dec]) ∈ ΩB(P)(n)` is the single-vertex cobar tree with decoration `[dec] ∈ B(P)(n)`.
-  - Result is a dg-`B(P)`-coalgebra.
+  - Equivalent to `TwistedBarComplex(canonical_inclusion(BarConstruction(P)), alg, base_ring)`.
 
 - `constructions/cobar_coalgebra.py` — `CobarComplexCoalgebra(coalg, base_ring)`
   - Cobar complex `Ω_C(V)` of a C-coalgebra `V`.
@@ -117,6 +114,17 @@ attribute on concrete models, property on wrappers) representing the constant
     Gives complete results when the cooperad has `connectivity ≥ 1`; for
     `connectivity = 0` it raises `ValueError` instead of returning a partial
     enumeration.
+  - Equivalent to `TwistedCobarComplex(canonical_inclusion(C), coalg, base_ring)`.
+
+- `constructions/twisted_complex.py` — `TwistedBarComplex(alpha, alg, base_ring)` and
+  `TwistedCobarComplex(alpha, coalg, base_ring)`
+  - General twisted bar/cobar constructions for an operadic twisting morphism `α: C → P`.
+  - `TwistedBarComplex(α, A, k)`: Given `α: C → P` and a P-algebra `A`, produces the
+    twisted bar complex `B_α(A) = (T^c_C(A), d_internal + d_2 + d_α)`, a dg-C-coalgebra.
+  - `TwistedCobarComplex(α, V, k)`: Given `α: C → P` and a C-coalgebra `V`, produces the
+    twisted cobar complex `Ω_α(V) = (T_P(V), d_internal + d_2 + d_α)`, a dg-P-algebra.
+  - Subsumes `BarComplexAlgebra`, `CobarComplexCoalgebra`, and `TwistedBarComplexAlgebra`
+    as special cases of canonical twisting morphisms.
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
@@ -152,6 +160,26 @@ attribute on concrete models, property on wrappers) representing the constant
 - `core/pullback_algebra.py` — `PullbackAlgebra'
   - `PullbackAlgebra(morphism, algebra)`: given a `Q`-algebra and a morphism `f: P → Q`,
     produces a `P`-algebra whose structure map is `γ^P(p; a_1,…,a_n) = γ^Q(f(p); a_1,…,a_n)`.
+
+### Operadic twisting morphisms
+
+- `core/twisting.py` — `TwistingMorphism(cooperad, operad, morphism_fn)`
+  - A degree -1 map `α: C̄ → P` satisfying the Maurer-Cartan equation `∂α + α ⋆ α = 0`.
+  - `alpha(c_elem)`: apply the morphism to a cooperad element.
+  - `alpha.star(beta, c_elem)`: compute the pre-Lie convolution product `(α ⋆ β)(c)`.
+  - `alpha.partial_alpha(c_elem)`: compute `∂α(c) = ∂_P(α(c)) + α(∂_C(c))`.
+  - `alpha.maurer_cartan(c_elem)`: evaluate `∂α + α ⋆ α` on a single element.
+  - `alpha.check_maurer_cartan(max_arity, base_ring)`: verify MC via d² = 0 on the twisted
+    bar complex.
+
+- `morphisms/canonical_twisting.py`
+  - `canonical_projection(P)`: the canonical projection `π: B(P) → P`, which sends a bar
+    corolla to its P-decoration and zero on multi-vertex trees.
+  - `canonical_inclusion(C)`: the canonical inclusion `ι: C → Ω(C)`, which sends `c ∈ C(n)`
+    to the single-vertex cobar tree `(c, 1, …, n)`.
+  - These induce the standard adjunctions:
+    - `π`: B_π ⊣ Ω_π between P-algebras and B(P)-coalgebras
+    - `ι`: B_ι ⊣ Ω_ι between Ω(C)-algebras and C-coalgebras
 
 - `core/trees.py`
   - Shared rooted-tree combinatorics used by bar/cobar modules.
