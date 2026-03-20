@@ -18,6 +18,7 @@ from uconf import (
     SurjectionDual,
     CobarConstruction,
 )
+from uconf.core.quasi_planar import QuasiPlanarProtocol
 
 
 @pytest.mark.parametrize("r", range(1, 5))
@@ -29,6 +30,18 @@ def test_operad_protocol(operad_cls: type, r: int) -> None:
     """Check that arity components satisfy the component-level protocol."""
     assert isinstance(operad_cls(r, QQ), OperadComponent), (
         f"{operad_cls.__name__} should satisfy OperadComponent."
+    )
+
+
+@pytest.mark.parametrize("r", range(1, 5))
+@pytest.mark.parametrize(
+    "operad_cls",
+    [Surjection, BarrattEccles, Associative],
+)
+def test_planar_operad_protocol(operad_cls: type, r: int) -> None:
+    """Check that arity components satisfy the component-level protocol."""
+    assert isinstance(operad_cls(r, QQ), QuasiPlanarProtocol), (
+        f"{operad_cls.__name__} should satisfy QuasiPlanarProtocol."
     )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, Protocol, Self, runtime_checkable, Iterator
+from sage.all import Family
 
 
 @runtime_checkable
@@ -50,6 +51,14 @@ class ComponentProtocol(Protocol):
 
     def zero(self) -> Element:
         """Returns the zero element of this component."""
+        ...
+
+    def basis_it(self, d: int) -> Iterator:
+        """Returns an iterator over the basis keys of this component."""
+        ...
+
+    def graded_basis(self, d: int) -> Family:
+        """Returns the basis of this component in degree ``d``."""
         ...
 
     class Element(Protocol):
