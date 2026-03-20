@@ -16,22 +16,28 @@ jobs:
             contents: read
         steps:
             - name: Checkout code
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
+
+            - name: Cache conda
+              uses: actions/cache@v4
+              env:
+                  # Increase this value to reset cache if etc/example-environment.yml has not changed
+                  CACHE_NUMBER: 0
+              with:
+                  path: ~/conda_pkgs_dir
+                  key:
+                      ${{ runner.os }}-${{ runner.arch
+                      }}-conda-${{env.CACHE_NUMBER}}-${{
+                      hashFiles('environment.yml') }}
 
             - name: Setup Conda and Create Environment
               uses: conda-incubator/setup-miniconda@v3
               with:
-                  miniforge-version: latest
                   activate-environment: sage
-                  python-version: "3.11"
-                  channels: conda-forge,nodefaults
-
-            # The `bash -el {0}` shell is strictly required for Conda commands
-            # to execute properly inside GitHub Actions/Copilot environments!
-            - name: Install SageMath
-              shell: bash -el {0}
-              run: |
-                  conda install sage
+                  channel-priority: strict
+                  environment-file: environment.yml
+                  # IMPORTANT: This needs to be set for caching to work properly!
+                  use-only-tar-bz2: true
 
             - name: Verify SageMath Installation
               shell: bash -el {0}
