@@ -46,6 +46,7 @@ from uconf.constructions import (
     BarConstruction,
     CobarComplexCoalgebra,
     CobarConstruction,
+    TwistedBarComplexAlgebra,
     e_comodule_on_generator,
 )
 from uconf.core import CooperadComponent, OperadComponent, OperadMorphism
@@ -95,6 +96,7 @@ __all__ = [
     "CobarConstruction",
     "BarComplexAlgebra",
     "CobarComplexCoalgebra",
+    "TwistedBarComplexAlgebra",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSimplicialChainCoalgebra",
     "ReducedSphereCochains",

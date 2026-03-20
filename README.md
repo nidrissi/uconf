@@ -101,6 +101,16 @@ attribute on concrete models, property on wrappers) representing the constant
   - `basis_it(d)` — iterates over all `(tree, a_tuple)` basis pairs of total degree `d`.
     Arity is bounded by `d + 1` for connected P with non-negatively graded A.
 
+- `constructions/twisted_bar_algebra.py` — `TwistedBarComplexAlgebra(alg, base_ring)`
+  - Twisted bar complex `B_ι(A)` of an `ΩB(P)`-algebra `A`, where `ι: B(P) → ΩB(P)` is the
+    universal twisting morphism (the left adjoint of the bar-cobar adjunction).
+  - `alg.operad_cls` must be `CobarConstruction(BarConstruction(P))` for some operad `P`.
+  - The underlying module is `T^c_{B(P)}(A)` (same as the standard bar complex), but the
+    differential uses `ι` to apply the `ΩB(P)`-algebra action at corolla vertices:
+    at a vertex with `P(n)`-decoration `dec`, applies `γ(ι([dec]); a_1,…,a_n)` where
+    `ι([dec]) ∈ ΩB(P)(n)` is the single-vertex cobar tree with decoration `[dec] ∈ B(P)(n)`.
+  - Result is a dg-`B(P)`-coalgebra.
+
 - `constructions/cobar_coalgebra.py` — `CobarComplexCoalgebra(coalg, base_ring)`
   - Cobar complex `Ω_C(V)` of a C-coalgebra `V`.
   - `basis_it(d)` — iterates over all `(tree, v_tuple)` basis pairs of total degree `d`.
