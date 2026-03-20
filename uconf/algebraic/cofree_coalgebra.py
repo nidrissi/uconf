@@ -87,11 +87,8 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         self._cooperad_cls = cooperad_cls
         self._inner_module = inner_module
         # Runtime check: cooperad must be quasi-planar (free S_n-action)
-        try:
-            _comp2 = cooperad_cls(2, base_ring)
-        except (TypeError, ValueError, AttributeError):
-            _comp2 = None  # arity-2 may not exist; skip check
-        if _comp2 is not None and not callable(getattr(_comp2, "planarize", None)):
+        _comp2 = cooperad_cls(2, base_ring)
+        if not callable(getattr(_comp2, "planarize", None)):
             raise TypeError(
                 f"Cooperad {cooperad_cls.name!r} is not quasi-planar: "
                 f"its arity-2 component does not expose 'planarize'.  "
@@ -162,16 +159,21 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             return None
 
         # Validate c_key against C(n)
-        try:
-            comp = self._cooperad_cls(n, self.base_ring())
-            if hasattr(comp, "_validate_basis_key"):
+        # NOTE: Component construction C(n, R) must never fail—all cooperads
+        # support every non-negative arity.  Any exception here is a real bug
+        # and should propagate, not be silently ignored.
+        comp = self._cooperad_cls(n, self.base_ring())
+        if hasattr(comp, "_validate_basis_key"):
+            try:
                 c_key = comp._validate_basis_key(c_key_raw)
-                if c_key is None:
-                    return None
-            else:
-                c_key = c_key_raw
-        except (TypeError, ValueError, AttributeError):
-            return None
+            except (TypeError, ValueError):
+                # The c_key is invalid for arity n (wrong type, wrong length,
+                # out-of-range values, etc.); treat the composite key as invalid.
+                return None
+            if c_key is None:
+                return None
+        else:
+            c_key = c_key_raw
 
         return (c_key, tuple(m_tuple_raw))
 
@@ -312,18 +314,12 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             )
 
         for n in range(2, max_n + 1):
-            try:
-                comp_n = C(n, R)
-            except (TypeError, ValueError, AttributeError):
-                continue
+            comp_n = C(n, R)
             for d_c in range(d + 1):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                try:
-                    c_elems = list(comp_n.planar_basis_it(d_c))
-                except (TypeError, ValueError, NotImplementedError, AttributeError):
-                    continue
+                c_elems = list(comp_n.planar_basis_it(d_c))
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
@@ -501,14 +497,11 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         result = inner.zero()
 
         # Get the unique C(1) identity key
-        try:
-            comp_1 = self.cooperad_cls(1, base_ring)
-            comp_1_list = list(comp_1.basis_it(0))
-            if not comp_1_list:
-                return result
-            id_key = comp_1_list[0].support()[0]
-        except Exception:
+        comp_1 = self.cooperad_cls(1, base_ring)
+        comp_1_list = list(comp_1.basis_it(0))
+        if not comp_1_list:
             return result
+        id_key = comp_1_list[0].support()[0]
 
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:

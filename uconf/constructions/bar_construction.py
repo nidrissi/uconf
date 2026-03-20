@@ -178,11 +178,8 @@ class BarConstruction(UniqueRepresentation):
 
         def _operad_has_planarize(self) -> bool:
             """Check if the base operad components have ``planarize``."""
-            try:
-                test = self._operad_cls(2, self.base_ring())
-                return hasattr(test, "planarize")
-            except Exception:
-                return False
+            test = self._operad_cls(2, self.base_ring())
+            return hasattr(test, "planarize")
 
         def _planarize_on_basis(self, tree) -> Any:
             """Decompose a bar tree into planar part ⊗ global permutation.
