@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from typing import ClassVar, Iterator
 
-from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, SymmetricGroup, cached_method
+from sage.all import (
+    CombinatorialFreeModule,
+    Family,
+    GradedModulesWithBasis,
+    SymmetricGroup,
+    cached_method,
+)
 from uconf.core.parented_element import ParentedElementMixin
 
 

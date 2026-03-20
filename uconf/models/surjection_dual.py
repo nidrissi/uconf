@@ -41,9 +41,7 @@ class SurjectionDual(Surjection):
         return self.arity() - len(basis_element)
 
     @cached_method
-    def _boundary_rows_for_degree(
-        self, primal_degree: int
-    ) -> dict[tuple[int, ...], dict]:
+    def _boundary_rows_for_degree(self, primal_degree: int) -> dict[tuple[int, ...], dict]:
         """Return the transposed boundary "matrix" for a fixed primal degree.
 
         For each ``source_basis`` of primal degree ``primal_degree + 1``,
@@ -61,8 +59,7 @@ class SurjectionDual(Surjection):
                 if target_basis not in rows:
                     rows[target_basis] = {}
                 rows[target_basis][source_basis] = (
-                    rows[target_basis].get(source_basis, self.base_ring().zero())
-                    + coeff
+                    rows[target_basis].get(source_basis, self.base_ring().zero()) + coeff
                 )
         return rows
 
@@ -99,8 +96,7 @@ class SurjectionDual(Surjection):
                         if u_basis not in rows:
                             rows[u_basis] = {}
                         rows[u_basis][pair_basis] = (
-                            rows[u_basis].get(pair_basis, self.base_ring().zero())
-                            + coeff
+                            rows[u_basis].get(pair_basis, self.base_ring().zero()) + coeff
                         )
 
         return rows
@@ -131,9 +127,7 @@ class SurjectionDual(Surjection):
         if not (1 <= i <= m):
             raise ValueError(f"Index i must satisfy 1 <= i <= {m}. Got i={i}.")
         if x.arity() != m + n - 1:
-            raise ValueError(
-                f"Expected element in arity {m + n - 1}, got arity {x.arity()}."
-            )
+            raise ValueError(f"Expected element in arity {m + n - 1}, got arity {x.arity()}.")
 
         base_ring = x.parent().base_ring()
         left_parent = SurjectionDual(m, base_ring=base_ring)

@@ -13,7 +13,13 @@ from __future__ import annotations
 
 from typing import Any, Iterator
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, Family, SymmetricGroup, cached_method
+from sage.all import (
+    CombinatorialFreeModule,
+    GradedModulesWithBasis,
+    Family,
+    SymmetricGroup,
+    cached_method,
+)
 
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -420,8 +426,9 @@ class TreeModule(CombinatorialFreeModule):
                 # position for each new position.
                 n_leaves = len(m_tuple)
                 if n_leaves > 1:
-                    degrees = [self._inner_module.degree_on_basis(m_tuple[i])
-                               for i in range(n_leaves)]
+                    degrees = [
+                        self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)
+                    ]
                     # new_leaf_order[i] is the old 1-indexed leaf at new position i
                     perm_0idx = [old - 1 for old in new_leaf_order]
                     koszul = _koszul_sign_of_permutation(perm_0idx, degrees)

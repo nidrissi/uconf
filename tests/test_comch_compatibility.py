@@ -24,11 +24,7 @@ def _canonical_be_key(key) -> tuple[tuple[int, ...], ...]:
 
 
 def _uconf_surjection_dict(element) -> dict[tuple[int, ...], int]:
-    return {
-        _canonical_surjection_key(key): int(coeff)
-        for key, coeff in element
-        if int(coeff) != 0
-    }
+    return {_canonical_surjection_key(key): int(coeff) for key, coeff in element if int(coeff) != 0}
 
 
 def _comch_surjection_dict(element) -> dict[tuple[int, ...], int]:
@@ -40,17 +36,11 @@ def _comch_surjection_dict(element) -> dict[tuple[int, ...], int]:
 
 
 def _uconf_be_dict(element) -> dict[tuple[tuple[int, ...], ...], int]:
-    return {
-        _canonical_be_key(key): int(coeff) for key, coeff in element if int(coeff) != 0
-    }
+    return {_canonical_be_key(key): int(coeff) for key, coeff in element if int(coeff) != 0}
 
 
 def _comch_be_dict(element) -> dict[tuple[tuple[int, ...], ...], int]:
-    return {
-        _canonical_be_key(key): int(coeff)
-        for key, coeff in element.items()
-        if int(coeff) != 0
-    }
+    return {_canonical_be_key(key): int(coeff) for key, coeff in element.items() if int(coeff) != 0}
 
 
 def _uconf_surjection_to_comch(element) -> SurjectionElement:
@@ -87,9 +77,7 @@ def test_surjection_boundary_matches_comch(r: int, d: int) -> None:
     for basis_element in Surjection(r, QQ).basis_it(d):
         uconf_boundary = basis_element.boundary()
         comch_boundary = _uconf_surjection_to_comch(basis_element).boundary()
-        assert _uconf_surjection_dict(uconf_boundary) == _comch_surjection_dict(
-            comch_boundary
-        )
+        assert _uconf_surjection_dict(uconf_boundary) == _comch_surjection_dict(comch_boundary)
 
 
 @pytest.mark.parametrize(
@@ -112,9 +100,7 @@ def test_surjection_compose_matches_comch(
 
     uconf_composed = Surjection.compose(uconf_x, input_pos, uconf_y)
     comch_composed = comch_x.compose(comch_y, input_pos)
-    assert _uconf_surjection_dict(uconf_composed) == _comch_surjection_dict(
-        comch_composed
-    )
+    assert _uconf_surjection_dict(uconf_composed) == _comch_surjection_dict(comch_composed)
 
 
 @pytest.mark.parametrize(

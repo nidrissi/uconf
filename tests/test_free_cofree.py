@@ -178,9 +178,7 @@ class TestFreeAlgebraModulePlanarBasis:
         """
         from sage.all import CombinatorialFreeModule
 
-        mod_M = CombinatorialFreeModule(
-            QQ, ["x", "y"], category=GradedModulesWithBasis(QQ)
-        )
+        mod_M = CombinatorialFreeModule(QQ, ["x", "y"], category=GradedModulesWithBasis(QQ))
         mod_M.degree_on_basis = lambda _key: 2
         mod_M.boundary = lambda _elem: mod_M.zero()
 
@@ -273,6 +271,7 @@ class TestFreeOperadAlgebra:
         canonical representative with planar key (1, 2) and m_tuple (b, a).
         """
         from sage.all import CombinatorialFreeModule
+
         mod = CombinatorialFreeModule(QQ, ["a", "b"], category=GradedModulesWithBasis(QQ))
         mod.degree_on_basis = lambda _: 1
         mod.boundary_on_basis = lambda _: mod.zero()

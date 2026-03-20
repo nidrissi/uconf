@@ -46,9 +46,7 @@ def test_basic_composition() -> None:
     composed = Lie.compose(bracket, 1, bracket)
     target = composed.parent()
     expected = target((1, 2)) - target((2, 1))
-    assert _as_dict(composed) == _as_dict(expected), (
-        "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
-    )
+    assert _as_dict(composed) == _as_dict(expected), "[x1,[x2,x3]] - [x2,[x1,x3]] expected."
 
 
 def test_compose_requires_same_base_ring() -> None:
@@ -80,9 +78,7 @@ def test_jacobi_identity() -> None:
 
     jacobi_generator = Lie.compose(bracket, 1, bracket)
     jacobi = (
-        jacobi_generator
-        + jacobi_generator.permute([2, 3, 1])
-        + jacobi_generator.permute([3, 1, 2])
+        jacobi_generator + jacobi_generator.permute([2, 3, 1]) + jacobi_generator.permute([3, 1, 2])
     )
     assert _as_dict(jacobi) == {}, "Jacobi identity failed in arity 4."
 
@@ -151,9 +147,7 @@ def test_compose_full_basis_arity5() -> None:
     result = Lie.compose(x, 1, x)
     elapsed = time.perf_counter() - t0
 
-    assert result.parent().arity() == 5, (
-        "Compose of Lie(3, QQ)⊗Lie(3, QQ) must land in Lie(5, QQ)."
-    )
+    assert result.parent().arity() == 5, "Compose of Lie(3, QQ)⊗Lie(3, QQ) must land in Lie(5, QQ)."
     assert elapsed < 10, f"compose took {elapsed:.2f} s at arity 5 warm (limit: 10 s)."
 
 
@@ -174,9 +168,7 @@ def test_compose_full_basis_arity6() -> None:
     result = Lie.compose(x, 1, y)
     elapsed = time.perf_counter() - t0
 
-    assert result.parent().arity() == 6, (
-        "Compose of Lie(3, QQ)⊗Lie(4, QQ) must land in Lie(6, QQ)."
-    )
+    assert result.parent().arity() == 6, "Compose of Lie(3, QQ)⊗Lie(4, QQ) must land in Lie(6, QQ)."
     assert elapsed < 30, f"compose took {elapsed:.2f} s at arity 6 warm (limit: 30 s)."
 
 

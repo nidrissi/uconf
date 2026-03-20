@@ -170,7 +170,7 @@ class BarComplexAlgebra(TreeModule):
         # The inner module is typically a Sage tensor product A ⊗ B where
         # A = manifold model module, B = free algebra module.
         # HadamardTensorAlgebra sets module = tensor([left_module, right_module])
-        if hasattr(inner, '_sets') and len(inner._sets) == 2:
+        if hasattr(inner, "_sets") and len(inner._sets) == 2:
             left_mod, right_mod = inner._sets
             left_conn = int(getattr(left_mod, "connectivity", 0))
             # The right module is a FreeAlgebraModule; its connectivity comes

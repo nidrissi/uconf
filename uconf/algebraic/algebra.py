@@ -42,9 +42,7 @@ class StructureMap(Protocol[OperadElementInputType, AlgebraElementType]):
     ) -> AlgebraElementType: ...
 
 
-class OperadAlgebra(
-    Generic[OperadElementType, AlgebraElementType], UniqueRepresentation
-):
+class OperadAlgebra(Generic[OperadElementType, AlgebraElementType], UniqueRepresentation):
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an
@@ -105,8 +103,7 @@ class OperadAlgebra(
         n = p_element.arity()
         if len(algebra_elements) != n:
             raise ValueError(
-                f"Expected {n} algebra elements for P({n}) action, "
-                f"got {len(algebra_elements)}."
+                f"Expected {n} algebra elements for P({n}) action, got {len(algebra_elements)}."
             )
         return self._structure_map(p_element, algebra_elements)
 

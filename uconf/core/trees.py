@@ -1017,7 +1017,12 @@ def _shuffle_children_iter_generic(
             for d_first in range(min_deg_this, max_d + 1):
                 first_trees = list(
                     _shuffle_subtrees_iter_generic(
-                        part, max_weight, operad_cls, base_ring, d_first, vertex_offset,
+                        part,
+                        max_weight,
+                        operad_cls,
+                        base_ring,
+                        d_first,
+                        vertex_offset,
                         use_planar_decs,
                     )
                 )
@@ -1065,7 +1070,9 @@ def _shuffle_subtrees_iter_generic(
 
     connectivity = getattr(operad_cls, "connectivity", 0)
     sorted_ls = tuple(sorted(leaf_set))
-    _dec_iter = _planar_operad_basis_keys_in_degree if use_planar_decs else _operad_basis_keys_in_degree
+    _dec_iter = (
+        _planar_operad_basis_keys_in_degree if use_planar_decs else _operad_basis_keys_in_degree
+    )
 
     for v_arity in range(2, n + 1):
         root_parent = operad_cls(v_arity, base_ring)
