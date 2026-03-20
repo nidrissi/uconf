@@ -298,7 +298,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 m_keys_by_deg[d_m] = keys
 
         # n = 1: exactly one P(1)-key (identity); yields M-generators in degree d
-        unit_key = P.unit(R).support()[0]
+        unit_key = P.unit_key()
         for mk in m_keys_by_deg.get(d, []):
             yield self.term((unit_key, (mk,)))
 
@@ -489,5 +489,5 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         """
         R = self._base_ring
-        id_key = self.operad_cls.unit(R).support()[0]
+        id_key = self.operad_cls.unit_key()
         return self.module.term((id_key, (m_key,)))

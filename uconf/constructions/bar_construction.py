@@ -130,6 +130,14 @@ class BarConstruction(UniqueRepresentation):
         # The single-leaf tree "1" (no internal vertices)
         return component.term(1)
 
+    def unit_key(self) -> int:
+        """Return the basis key of the counit generator in arity ``1``.
+
+        In the bar construction, arity-1 elements are the single-leaf tree,
+        whose basis key is the integer ``1``.
+        """
+        return 1
+
     class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of the bar construction cooperad."""
 
@@ -635,6 +643,15 @@ class BarConstruction(UniqueRepresentation):
             if coeff == 0:
                 return x
             return x - coeff * x.parent().term(1)
+
+        @staticmethod
+        def unit_key() -> int:
+            """Return the basis key of the counit generator in arity ``1``.
+
+            In the bar construction, the arity-1 generator is the single-leaf
+            tree, whose basis key is the integer ``1``.
+            """
+            return 1
 
         def infinitesimal_cocompose(self, x: "BarConstruction.Element", i: int, m: int, n: int):
             """Partial cocomposition dual to free operad composition.

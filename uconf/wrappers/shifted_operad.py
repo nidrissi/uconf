@@ -66,6 +66,10 @@ class ShiftedOperad(UniqueRepresentation):
         component = self(1, base_ring)
         return component.from_base(self.operad_cls.unit(base_ring))
 
+    def unit_key(self) -> object:
+        """Return the basis key of the unit element in arity ``1``."""
+        return self.operad_cls.unit_key()
+
     def compose(
         self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
     ) -> "ShiftedOperad.Element":
@@ -286,6 +290,10 @@ class ShiftedOperad(UniqueRepresentation):
 
         def unit(self) -> "ShiftedOperad.Element":
             return self.factory.unit(self.base_ring())
+
+        def unit_key(self) -> object:
+            """Return the basis key of the unit element in arity ``1``."""
+            return self.factory.unit_key()
 
     class Element(ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element):
         """Element wrapper carrying shifted operad structure maps."""

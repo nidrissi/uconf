@@ -31,6 +31,11 @@ class OperadComponent(ComponentProtocol, Protocol):
         """Returns the unit element of the operad."""
         ...
 
+    @staticmethod
+    def unit_key() -> Any:
+        """Returns the basis key of the unit element in arity ``1``."""
+        ...
+
 
 @runtime_checkable
 class OperadFactory(Protocol):
@@ -48,6 +53,10 @@ class OperadFactory(Protocol):
 
     def unit(self, base_ring) -> Any:
         """Returns the unit element of the operad."""
+        ...
+
+    def unit_key(self) -> Any:
+        """Returns the basis key of the unit element in arity ``1``."""
         ...
 
     def compose(
