@@ -94,7 +94,9 @@ def _deduplicated_basis(module: Any, d: int, weight: int | None = None) -> tuple
 # TODO To properly truncate the chain complex, we should:
 # * In the bottom degree: take the kernel of the differential;
 # * In the top degree: take the cokernel of the differential from the degree just above.
-def chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> Any:
+def chain_complex(
+    module: Any, degrees: range, *, weight: int | None = None, check: bool = False
+) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
     Parameters
@@ -134,8 +136,10 @@ def chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> 
     >>> C = chain_complex(S2, degrees=range(4))
     >>> C.homology()  # doctest: +SKIP
     """
+    base_ring = module.base_ring()
+
     if not degrees:
-        return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
+        return ChainComplex({}, base_ring=base_ring, degree_of_differential=-1)
 
     if weight is not None and not hasattr(module, "graded_basis_by_weight"):
         raise ValueError(
@@ -144,13 +148,6 @@ def chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> 
             "Implement _weight_on_basis(key), basis_weight_iter(d, w), and "
             "graded_basis_by_weight(d, w) on the module first."
         )
-
-    return _build_chain_complex(module, degrees, weight=weight)
-
-
-def _build_chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> Any:
-    """Internal: build the chain complex."""
-    base_ring = module.base_ring()
 
     # Extend by one degree above the requested range so that the differential
     # d_{max+1}: C_{max+1} -> C_{max} is included.  Without it, every cycle
@@ -186,7 +183,7 @@ def _build_chain_complex(module: Any, degrees: range, *, weight: int | None = No
             continue
         differentials[d] = _boundary_matrix(module, source, key_to_idx[d - 1], n_target)
 
-    return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=False)
+    return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
 
 def homology_basis(
