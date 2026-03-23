@@ -1,4 +1,4 @@
-"""Regression tests for basis_it on free/cofree modules, bar/cobar complexes,
+"""Regression tests for basis_iter on free/cofree modules, bar/cobar complexes,
 Hadamard products, and Hadamard tensor algebras."""
 
 import pytest
@@ -59,12 +59,12 @@ class TrivialAlgebra(OperadAlgebra):
 
 
 # ---------------------------------------------------------------------------
-# 1. FreeAlgebraModule.basis_it
+# 1. FreeAlgebraModule.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestFreeAlgebraModuleBasisIt:
-    """Tests for FreeAlgebraModule.basis_it."""
+class TestFreeAlgebraModuleBasisIter:
+    """Tests for FreeAlgebraModule.basis_iter."""
 
     def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
         """Raise when both P and M allow unbounded arity in fixed degree."""
@@ -73,14 +73,14 @@ class TestFreeAlgebraModuleBasisIt:
         # arity is unbounded in any fixed degree.
         mod = FreeAlgebraModule(Associative, M)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(mod.basis_it(0))
+            list(mod.basis_iter(0))
 
     def test_shifted_ass_degree0_single_leaf(self) -> None:
         """ShiftedOperad(Ass,1) has connectivity=1; degree-0 = arity-1 leaf only."""
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
         mod = FreeAlgebraModule(P, M)
-        elems_d0 = list(mod.basis_it(0))
+        elems_d0 = list(mod.basis_iter(0))
         assert len(elems_d0) == 1, "Only the arity-1 leaf in degree 0"
 
     def test_shifted_ass_degree1_arity2(self) -> None:
@@ -90,12 +90,12 @@ class TestFreeAlgebraModuleBasisIt:
         is by sign, and Comm(1)^{⊗2} = k{((),())} carries the trivial action.
         The coinvariant quotient is 1-dimensional.  Equivalently, ShiftedAss is
         quasi-planar with one-dimensional planar part at each arity, so
-        basis_it uses only the planar decoration (1,2).
+        basis_iter uses only the planar decoration (1,2).
         """
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
         mod = FreeAlgebraModule(P, M)
-        elems_d1 = list(mod.basis_it(1))
+        elems_d1 = list(mod.basis_iter(1))
         assert len(elems_d1) == 1
 
     def test_correct_degrees(self) -> None:
@@ -104,7 +104,7 @@ class TestFreeAlgebraModuleBasisIt:
         M = Commutative(1, base_ring=QQ)
         mod = FreeAlgebraModule(P, M)
         for d in range(3):
-            for elem in mod.basis_it(d):
+            for elem in mod.basis_iter(d):
                 for key, _ in elem:
                     assert mod.degree_on_basis(key) == d
 
@@ -115,7 +115,7 @@ class TestFreeAlgebraModuleBasisIt:
         mod = FreeAlgebraModule(P, M)
         # The degree-3 elements are arity-4 (P degree = 3): many elements.
         # We just check the count is positive and every element has the right degree.
-        for elem in mod.basis_it(3):
+        for elem in mod.basis_iter(3):
             for key, _ in elem:
                 assert mod.degree_on_basis(key) == 3
 
@@ -139,67 +139,67 @@ class TestFreeAlgebraModuleBasisIt:
 
 
 # ---------------------------------------------------------------------------
-# 2. CofreeCoalgebraModule.basis_it
+# 2. CofreeCoalgebraModule.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestCofreeCoalgebraModuleBasisIt:
-    """Tests for CofreeCoalgebraModule.basis_it."""
+class TestCofreeCoalgebraModuleBasisIter:
+    """Tests for CofreeCoalgebraModule.basis_iter."""
 
     def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
         """Raise when both C and M allow unbounded arity in fixed degree."""
         M = Commutative(1, base_ring=QQ)
         mod = CofreeCoalgebraModule(CoAssociative, M)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(mod.basis_it(0))
+            list(mod.basis_iter(0))
 
     def test_correct_degrees(self) -> None:
         """All yielded elements have the requested degree."""
         M = Commutative(1, base_ring=QQ)
         mod = CofreeCoalgebraModule(ShiftedOperad(Associative, 1), M)
         for d in range(3):
-            for elem in mod.basis_it(d):
+            for elem in mod.basis_iter(d):
                 for key, _ in elem:
                     assert mod.degree_on_basis(key) == d
 
 
 # ---------------------------------------------------------------------------
-# 3. CobarConstruction.Component.basis_it
+# 3. CobarConstruction.Component.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestCobarConstructionBasisIt:
-    """Tests for CobarConstruction.Component.basis_it."""
+class TestCobarConstructionBasisIter:
+    """Tests for CobarConstruction.Component.basis_iter."""
 
     def test_arity1_degree0(self) -> None:
         """Arity 1, degree 0: only the unit element."""
         C1 = CobarConstruction(CoAssociative)(1, QQ)
-        elems = list(C1.basis_it(0))
+        elems = list(C1.basis_iter(0))
         assert len(elems) == 1
         assert elems[0] == C1.term(1)
 
     def test_arity1_nonzero_degree_empty(self) -> None:
         """Arity 1, non-zero degree: empty (unit has degree 0)."""
         C1 = CobarConstruction(CoAssociative)(1, QQ)
-        assert list(C1.basis_it(1)) == []
-        assert list(C1.basis_it(-1)) == []
+        assert list(C1.basis_iter(1)) == []
+        assert list(C1.basis_iter(-1)) == []
 
     def test_arity2_degree_neg1(self) -> None:
         """CoAss in arity 2: cobar degree -1 (one vertex of degree-0, offset -1)."""
         C2 = CobarConstruction(CoAssociative)(2, QQ)
-        elems = list(C2.basis_it(-1))
+        elems = list(C2.basis_iter(-1))
         # CoAss(2) has 2 basis keys: (1,2) and (2,1).  One vertex → cobar deg = -1.
         assert len(elems) == 2
 
     def test_arity2_degree0_empty_for_coass(self) -> None:
         """CoAss in arity 2: cobar degree 0 is empty (all vertices contribute -1)."""
         C2 = CobarConstruction(CoAssociative)(2, QQ)
-        assert list(C2.basis_it(0)) == []
+        assert list(C2.basis_iter(0)) == []
 
     def test_arity3_degree_neg2(self) -> None:
         """CoAss in arity 3: cobar degree -2 has trees of weight 2."""
         C3 = CobarConstruction(CoAssociative)(3, QQ)
-        elems = list(C3.basis_it(-2))
+        elems = list(C3.basis_iter(-2))
         # Weight-2 trees with CoAss(2) at each vertex.
         # Two shuffle tree shapes for arity 3, weight 2; each CoAss vertex has
         # 2 basis keys → 12 total.
@@ -209,18 +209,18 @@ class TestCobarConstructionBasisIt:
         """All yielded elements have the requested cobar degree."""
         C3 = CobarConstruction(CoAssociative)(3, QQ)
         for d in [-2, -1]:
-            for elem in C3.basis_it(d):
+            for elem in C3.basis_iter(d):
                 for key, _ in elem:
                     assert C3.degree_on_basis(key) == d
 
 
 # ---------------------------------------------------------------------------
-# 4. TwistedBarComplex.basis_it
+# 4. TwistedBarComplex.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedBarComplexBasisIt:
-    """Tests for TwistedBarComplex.basis_it."""
+class TestTwistedBarComplexBasisIter:
+    """Tests for TwistedBarComplex.basis_iter."""
 
     @pytest.fixture
     def trivial_bar(self):
@@ -229,7 +229,7 @@ class TestTwistedBarComplexBasisIt:
 
     def test_degree0_single_leaf(self, trivial_bar) -> None:
         """Degree 0 = single arity-1 leaf with the unique A-generator."""
-        elems = list(trivial_bar.basis_it(0))
+        elems = list(trivial_bar.basis_iter(0))
         assert len(elems) == 1
         key, _ = next(iter(elems[0]))
         assert key == (1, ((),))
@@ -237,11 +237,11 @@ class TestTwistedBarComplexBasisIt:
     def test_degree1_non_exhaustive(self, trivial_bar) -> None:
         """Degree ≥ 1 is non-exhaustive (connectivity=0 with bar shift)."""
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(trivial_bar.basis_it(1))
+            list(trivial_bar.basis_iter(1))
 
     def test_correct_degree0(self, trivial_bar) -> None:
         """All yielded elements at degree 0 have the requested total degree."""
-        for elem in trivial_bar.basis_it(0):
+        for elem in trivial_bar.basis_iter(0):
             for key, _ in elem:
                 assert trivial_bar.degree_on_basis(key) == 0
 
@@ -250,16 +250,16 @@ class TestTwistedBarComplexBasisIt:
         alg = TrivialAlgebra(Lie)
         B = TwistedBarComplex(canonical_projection(Lie), alg)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(B.basis_it(1))
+            list(B.basis_iter(1))
 
 
 # ---------------------------------------------------------------------------
-# 5. TwistedCobarComplex.basis_it
+# 5. TwistedCobarComplex.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedCobarComplexBasisIt:
-    """Tests for TwistedCobarComplex.basis_it."""
+class TestTwistedCobarComplexBasisIter:
+    """Tests for TwistedCobarComplex.basis_iter."""
 
     @pytest.fixture
     def trivial_cobar(self):
@@ -279,29 +279,29 @@ class TestTwistedCobarComplexBasisIt:
     def test_degree0_single_leaf(self, trivial_cobar) -> None:
         """Raise when cooperad connectivity is 0 (non-exhaustive regime)."""
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(trivial_cobar.basis_it(0))
+            list(trivial_cobar.basis_iter(0))
 
     def test_correct_degrees(self, trivial_cobar) -> None:
         """The same non-exhaustive regime raises for every queried degree."""
         for d in range(3):
             with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-                list(trivial_cobar.basis_it(d))
+                list(trivial_cobar.basis_iter(d))
 
 
 # ---------------------------------------------------------------------------
-# 6. HadamardProduct.Component.basis_it
+# 6. HadamardProduct.Component.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestHadamardProductComponentBasisIt:
-    """Tests for HadamardProduct.Component.basis_it."""
+class TestHadamardProductComponentBasisIter:
+    """Tests for HadamardProduct.Component.basis_iter."""
 
     def test_degree0_surjection_surjection(self) -> None:
         """Degree 0: all (left_key, right_key) pairs both in degree 0."""
         had = HadamardProduct(Surjection, Surjection)
         h2 = had(2, QQ)
         # Surjection(2) degree-0: (1,2) and (2,1) → 2×2 = 4 pairs.
-        elems = list(h2.basis_it(0))
+        elems = list(h2.basis_iter(0))
         assert len(elems) == 4
 
     def test_degree1_surjection_surjection(self) -> None:
@@ -310,7 +310,7 @@ class TestHadamardProductComponentBasisIt:
         h2 = had(2, QQ)
         # Surjection(2) has 2 basis elements in every degree (shuffle form).
         # Pairs: (deg0)×(deg1) + (deg1)×(deg0) = 2*2 + 2*2 = 8.
-        elems = list(h2.basis_it(1))
+        elems = list(h2.basis_iter(1))
         assert len(elems) == 8
 
     def test_correct_degrees(self) -> None:
@@ -318,44 +318,44 @@ class TestHadamardProductComponentBasisIt:
         had = HadamardProduct(Lie, Surjection)
         h2 = had(2, QQ)
         for d in range(3):
-            for elem in h2.basis_it(d):
+            for elem in h2.basis_iter(d):
                 for key, _ in elem:
                     assert h2.degree_on_basis(key) == d
 
     def test_basis_it_vs_planar_basis_it_surjection(self) -> None:
-        """basis_it should contain all elements from planar_basis_it."""
+        """basis_iter should contain all elements from planar_basis_it."""
         had = HadamardProduct(Surjection, Surjection)
         h2 = had(2, QQ)
         for d in range(3):
             planar = set(_keys(h2.planar_basis_it(d)))
-            all_keys = set(_keys(h2.basis_it(d)))
+            all_keys = set(_keys(h2.basis_iter(d)))
             assert planar <= all_keys, f"planar basis not subset of full basis at d={d}"
 
     def test_degree0_lie_lie(self) -> None:
         """Lie(2) has 1 degree-0 element → 1×1 = 1 pair."""
         had = HadamardProduct(Lie, Lie)
         h2 = had(2, QQ)
-        elems = list(h2.basis_it(0))
+        elems = list(h2.basis_iter(0))
         assert len(elems) == 1
 
     def test_hadamard_arity3_degree0(self) -> None:
         """Arity 3: Lie(3) × Lie(3) in degree 0."""
         had = HadamardProduct(Lie, Lie)
         h3 = had(3, QQ)
-        d0 = list(h3.basis_it(0))
+        d0 = list(h3.basis_iter(0))
         # Lie(3) degree-0: basis elements from Hall basis.
         lie3 = Lie(3, QQ)
-        n_lie3 = _count(lie3.basis_it(0))
+        n_lie3 = _count(lie3.basis_iter(0))
         assert len(d0) == n_lie3 * n_lie3
 
 
 # ---------------------------------------------------------------------------
-# 7. HadamardTensorAlgebra.basis_it
+# 7. HadamardTensorAlgebra.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestHadamardTensorAlgebraBasisIt:
-    """Tests for HadamardTensorAlgebra.basis_it."""
+class TestHadamardTensorAlgebraBasisIter:
+    """Tests for HadamardTensorAlgebra.basis_iter."""
 
     @pytest.fixture
     def had_alg(self):
@@ -365,18 +365,18 @@ class TestHadamardTensorAlgebraBasisIt:
 
     def test_degree0_one_element(self, had_alg) -> None:
         """Degree 0 = one tensor element ((),()) since both modules are 1-dim in degree 0."""
-        elems = list(had_alg.basis_it(0))
+        elems = list(had_alg.basis_iter(0))
         assert len(elems) == 1
 
     def test_degree1_empty(self, had_alg) -> None:
         """Degree 1 is empty since both modules are concentrated in degree 0."""
-        elems = list(had_alg.basis_it(1))
+        elems = list(had_alg.basis_iter(1))
         assert len(elems) == 0
 
     def test_correct_degrees(self, had_alg) -> None:
         """All yielded elements have the requested degree."""
         for d in range(3):
-            for elem in had_alg.basis_it(d):
+            for elem in had_alg.basis_iter(d):
                 for (left_key, right_key), _ in elem:
                     deg = had_alg.left_module.degree_on_basis(
                         left_key
@@ -385,7 +385,7 @@ class TestHadamardTensorAlgebraBasisIt:
 
     def test_basis_it_tensor_module_keys(self, had_alg) -> None:
         """Yielded elements are elements of the tensor module with (left_key, right_key) pairs."""
-        elems = list(had_alg.basis_it(0))
+        elems = list(had_alg.basis_iter(0))
         key, coeff = next(iter(elems[0]))
         left_key, right_key = key
         # Both sides are Comm(1) with sole key ().
@@ -394,18 +394,18 @@ class TestHadamardTensorAlgebraBasisIt:
 
 
 # ---------------------------------------------------------------------------
-# 8. Cross-check: degree counts agree with BarConstruction.basis_it
+# 8. Cross-check: degree counts agree with BarConstruction.basis_iter
 # ---------------------------------------------------------------------------
 
 
 class TestBasisItConsistencyWithBarConstruction:
-    """Sanity-check that TwistedBarComplex.basis_it counts match the expected tree × module count."""
+    """Sanity-check that TwistedBarComplex.basis_iter counts match the expected tree × module count."""
 
     def test_bar_degree0_count_surjection(self) -> None:
         """B(Sur; Comm(1)) degree 0 has exactly the single-leaf element."""
         alg = TrivialAlgebra(Surjection)
         B = TwistedBarComplex(canonical_projection(Surjection), alg)
-        actual = _count(B.basis_it(0))
+        actual = _count(B.basis_iter(0))
         assert actual == 1  # single leaf with a_key = ()
 
     def test_bar_degree_ge1_non_exhaustive(self) -> None:
@@ -414,4 +414,4 @@ class TestBasisItConsistencyWithBarConstruction:
         B = TwistedBarComplex(canonical_projection(Surjection), alg)
         for d in range(1, 4):
             with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-                list(B.basis_it(d))
+                list(B.basis_iter(d))

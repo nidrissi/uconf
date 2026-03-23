@@ -712,12 +712,12 @@ def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
 
     Handles three calling conventions:
 
-    - ``basis_it(degree)`` — degree-aware (e.g. ``Surjection``, ``BarrattEccles``).
+    - ``basis_iter(degree)`` — degree-aware (e.g. ``Surjection``, ``BarrattEccles``).
     - Fallback via Sage's ``basis()`` family, filtered by ``degree_on_basis``.
     """
-    basis_it = getattr(operad_parent, "basis_it", None)
-    if basis_it is not None:
-        for elem in basis_it(degree):
+    basis_iter = getattr(operad_parent, "basis_iter", None)
+    if basis_iter is not None:
+        for elem in basis_iter(degree):
             yield from elem.support()
         return
     for key in operad_parent.basis():
@@ -934,7 +934,7 @@ def enumerate_shuffle_trees_in_degree(
 
     Unlike :func:`enumerate_planar_trees_in_degree`, this function does **not**
     require the base operad to implement ``planarize`` or ``planar_basis_it``.
-    It relies only on ``operad_cls(k, base_ring)`` having a ``basis_it``
+    It relies only on ``operad_cls(k, base_ring)`` having a ``basis_iter``
     method (degree-aware or not) or Sage's ``basis()`` family.
 
     Args:

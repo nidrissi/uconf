@@ -25,7 +25,7 @@ class SurjectionDual(Surjection):
         super().__init__(n, base_ring=base_ring)
         self._primal_parent = Surjection(n, base_ring=self.base_ring())
 
-    def basis_it(self, d: int):
+    def basis_iter(self, d: int):
         """Iterate over basis elements in dual degree ``d`` (non-positive)."""
 
         if d > 0:
@@ -52,7 +52,7 @@ class SurjectionDual(Surjection):
         """
         source_degree = primal_degree + 1
         rows: dict[tuple[int, ...], dict] = {}
-        for source_term in self._primal_parent.basis_it(source_degree):
+        for source_term in self._primal_parent.basis_iter(source_degree):
             source_basis = next(iter(source_term.support()))
             source_boundary = self._primal_parent._boundary_on_basis(source_basis)
             for target_basis, coeff in source_boundary:
@@ -81,11 +81,11 @@ class SurjectionDual(Surjection):
 
             left_basis_terms = [
                 (next(iter(left_term.support())), left_term)
-                for left_term in left_parent.basis_it(-left_degree)
+                for left_term in left_parent.basis_iter(-left_degree)
             ]
             right_basis_terms = [
                 (next(iter(right_term.support())), right_term)
-                for right_term in right_parent.basis_it(-right_degree)
+                for right_term in right_parent.basis_iter(-right_degree)
             ]
 
             for left_basis, left_term in left_basis_terms:

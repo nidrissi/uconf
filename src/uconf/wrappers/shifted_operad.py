@@ -133,7 +133,7 @@ class ShiftedOperad(UniqueRepresentation):
 
             # Expose planar_basis_it when the base operad is quasi-planar.
             # This makes ShiftedOperad wrapping a quasi-planar operad also
-            # quasi-planar, so that FreeAlgebraModule.basis_it() can correctly
+            # quasi-planar, so that FreeAlgebraModule.basis_iter() can correctly
             # enumerate S_n-orbit representatives via the isomorphism
             # P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}.
             if hasattr(self._base_parent, "planar_basis_it"):
@@ -242,7 +242,7 @@ class ShiftedOperad(UniqueRepresentation):
             """Return the underlying base-operad Sage parent in this arity."""
             return self._base_parent
 
-        def basis_it(self, d: int) -> "Iterator[ShiftedOperad.Element]":
+        def basis_iter(self, d: int) -> "Iterator[ShiftedOperad.Element]":
             """Iterate over basis elements of this shifted-operad component in degree ``d``.
 
             The arity-``n`` component of ``ShiftedOperad(P, s)`` has its degrees
@@ -251,7 +251,7 @@ class ShiftedOperad(UniqueRepresentation):
             """
             unshifted_degree = d - self.factory.shift_degree * (self._arity - 1)
             base_parent = self._base_parent
-            base_basis_it = getattr(base_parent, "basis_it", None)
+            base_basis_it = getattr(base_parent, "basis_iter", None)
             if base_basis_it is not None:
                 for elem in base_basis_it(unshifted_degree):
                     yield self.sum_of_terms((key, coeff) for key, coeff in elem)
@@ -263,7 +263,7 @@ class ShiftedOperad(UniqueRepresentation):
         @cached_method
         def graded_basis(self, d: int) -> Family:
             """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_it(d))
+            return Family(self.basis_iter(d))
 
         def from_base(self, element) -> "ShiftedOperad.Element":
             if element.parent() is self._base_parent:

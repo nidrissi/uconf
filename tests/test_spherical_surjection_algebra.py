@@ -44,8 +44,8 @@ def test_sphere_surjection_associativity_on_generator(k1: int, k2: int, d1: int,
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
 
-    basis1 = list(Surjection(k1, QQ).basis_it(d1))
-    basis2 = list(Surjection(k2, QQ).basis_it(d2))
+    basis1 = list(Surjection(k1, QQ).basis_iter(d1))
+    basis2 = list(Surjection(k2, QQ).basis_iter(d2))
 
     for p in basis1:
         for q in basis2:
@@ -65,7 +65,7 @@ def test_sphere_surjection_equivariance(k: int, d: int) -> None:
     alg = SurjectionSphereCochainAlgebra(d=2, base_ring=QQ)
     g = alg.module.generator()
 
-    for u in Surjection(k, QQ).basis_it(d):
+    for u in Surjection(k, QQ).basis_iter(d):
         for sigma in permutations(range(1, k + 1)):
             lhs = alg.act(u.permute(list(sigma)), [g] * k)
             rhs = alg.act(u, [g] * k)
@@ -80,7 +80,7 @@ def test_sphere_surjection_matches_top_cochain_action() -> None:
         d = rng.randint(1, 3)
         k = rng.randint(2, 4)
         e = rng.randint(0, 5)
-        basis = list(Surjection(k, QQ).basis_it(e))
+        basis = list(Surjection(k, QQ).basis_iter(e))
         if not basis:
             continue
         u = rng.choice(basis)

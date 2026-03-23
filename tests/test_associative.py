@@ -64,9 +64,9 @@ def test_associative_requires_same_base_ring() -> None:
 @pytest.mark.parametrize("m,n,p", [(3, 2, 2), (3, 2, 3)])
 def test_associative_sequential_associativity_axiom(m: int, n: int, p: int) -> None:
     """Check ``(x∘_i y)∘_{i+j-1} z = x∘_i(y∘_j z)`` on a non-trivial basis sample."""
-    xs = list(Associative(m, QQ).basis_it(0))
-    ys = list(Associative(n, QQ).basis_it(0))
-    zs = list(Associative(p, QQ).basis_it(0))
+    xs = list(Associative(m, QQ).basis_iter(0))
+    ys = list(Associative(n, QQ).basis_iter(0))
+    zs = list(Associative(p, QQ).basis_iter(0))
 
     sample_x = xs[: min(4, len(xs))]
     sample_y = ys[: min(3, len(ys))]
@@ -83,9 +83,9 @@ def test_associative_sequential_associativity_axiom(m: int, n: int, p: int) -> N
 def test_associative_parallel_associativity_axiom() -> None:
     """Check ``(x∘_i y)∘_{k+n-1} z = (x∘_k z)∘_i y`` for ``i < k``."""
     m, n, p = 4, 2, 3
-    xs = list(Associative(m, QQ).basis_it(0))[:3]
-    ys = list(Associative(n, QQ).basis_it(0))[:2]
-    zs = list(Associative(p, QQ).basis_it(0))[:2]
+    xs = list(Associative(m, QQ).basis_iter(0))[:3]
+    ys = list(Associative(n, QQ).basis_iter(0))[:2]
+    zs = list(Associative(p, QQ).basis_iter(0))[:2]
 
     for x, y, z in itertools.product(xs, ys, zs):
         for i in range(1, m):
@@ -98,8 +98,8 @@ def test_associative_parallel_associativity_axiom() -> None:
 def test_associative_compose_equivariant_under_block_permutations() -> None:
     """Check ``(σx)∘_i(τy) = (x∘_{σ^{-1}(i)}y)^{σ∘_iτ}``."""
     m, n = 3, 2
-    xs = list(Associative(m, QQ).basis_it(0))[:3]
-    ys = list(Associative(n, QQ).basis_it(0))[:2]
+    xs = list(Associative(m, QQ).basis_iter(0))[:3]
+    ys = list(Associative(n, QQ).basis_iter(0))[:2]
     sigmas = list(itertools.permutations(range(1, m + 1), m))[:4]
     taus = list(itertools.permutations(range(1, n + 1), n))
 
@@ -132,5 +132,5 @@ def test_associative_equivariance_on_linear_combinations() -> None:
 def test_associative_differential_squared_zero(n: int) -> None:
     """d²(x) = 0 for every basis element of Ass(n) (boundary is identically 0)."""
     zero = Associative(n, QQ).zero()
-    for elem in Associative(n, QQ).basis_it(0):
+    for elem in Associative(n, QQ).basis_iter(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Ass({n})"

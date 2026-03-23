@@ -128,31 +128,31 @@ def _graded_module_on_one_generator(degree: int, base_ring=QQ):
 
 
 class TestFreeAlgebraModulePlanarBasis:
-    """Regression tests for planar-basis enumeration in FreeAlgebraModule.basis_it.
+    """Regression tests for planar-basis enumeration in FreeAlgebraModule.basis_iter.
 
     The free P-algebra on M is the composite product
     ``P ∘ M = ⊕_n P(n) ⊗_{S_n} M^{⊗n}``.  For a quasi-planar operad the
     isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` implies that
-    basis_it should enumerate only the planar vertex decorations, yielding one
+    basis_iter should enumerate only the planar vertex decorations, yielding one
     representative per ``S_n``-orbit.
     """
 
     def test_ass_one_generator_degree4_has_one_element(self):
         """Free Ass-algebra on one generator x of degree 2: exactly one element in degree 4.
 
-        Ass(2) ⊗_{S_2} (kx)^{⊗2} ≅ kx^2 is 1-dimensional, so basis_it(4)
+        Ass(2) ⊗_{S_2} (kx)^{⊗2} ≅ kx^2 is 1-dimensional, so basis_iter(4)
         must yield exactly one element.  (Regression for the 'absurd.py' issue.)
         """
         M = _graded_module_on_one_generator(2)
         mod = FreeAlgebraModule(Associative, M)
-        elems = list(mod.basis_it(4))
+        elems = list(mod.basis_iter(4))
         assert len(elems) == 1
 
     def test_ass_one_generator_degree4_key_uses_planar_decoration(self):
         """The unique degree-4 element has the planar decoration (1,2), not (2,1)."""
         M = _graded_module_on_one_generator(2)
         mod = FreeAlgebraModule(Associative, M)
-        elems = list(mod.basis_it(4))
+        elems = list(mod.basis_iter(4))
         assert len(elems) == 1
         keys = [k for k, _ in elems[0]]
         assert len(keys) == 1
@@ -167,14 +167,14 @@ class TestFreeAlgebraModulePlanarBasis:
         """
         M = _graded_module_on_one_generator(2)
         mod = FreeAlgebraModule(Associative, M)
-        elems = list(mod.basis_it(2))
+        elems = list(mod.basis_iter(2))
         assert len(elems) == 1
 
     def test_ass_two_generators_degree4_has_four_elements(self):
         """Free Ass-algebra on {x, y} of degree 2: four elements in degree 4.
 
         Ass(2) ⊗_{S_2} (kx⊕ky)^{⊗2} ≅ (kx⊕ky)^{⊗2} has basis {xx, xy, yx, yy},
-        so basis_it(4) must yield exactly four elements.
+        so basis_iter(4) must yield exactly four elements.
         """
         from sage.all import CombinatorialFreeModule
 
@@ -183,7 +183,7 @@ class TestFreeAlgebraModulePlanarBasis:
         mod_M.boundary = lambda _elem: mod_M.zero()
 
         mod = FreeAlgebraModule(Associative, mod_M)
-        elems = list(mod.basis_it(4))
+        elems = list(mod.basis_iter(4))
         assert len(elems) == 4
 
 

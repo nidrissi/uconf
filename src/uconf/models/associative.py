@@ -100,7 +100,7 @@ class Associative(CombinatorialFreeModule):
         """Return the basis key of the unit element in arity ``1``."""
         return (1,)
 
-    def basis_it(self, d: int) -> Iterator[Element]:
+    def basis_iter(self, d: int) -> Iterator[Element]:
         """Iterate over basis elements in this arity and the given degree."""
         if d == 0:
             for key in self._basis_keys():
@@ -114,7 +114,7 @@ class Associative(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:

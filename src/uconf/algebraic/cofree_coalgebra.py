@@ -263,7 +263,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # Basis iteration
     # ------------------------------------------------------------------
 
-    def basis_it(self, d: int) -> Iterator[Any]:
+    def basis_iter(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
         Uses the isomorphism ``C(n) x_{S_n} M^{xn} ~= C_pl(n) x M^{xn}``
@@ -284,7 +284,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         # n = 1
         comp_1 = C(1, R)
-        comp_1_list = list(comp_1.basis_it(0))
+        comp_1_list = list(comp_1.basis_iter(0))
         assert len(comp_1_list) == 1, (
             f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
         )
@@ -307,7 +307,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             max_n = d // connectivity + 1
         else:
             raise ValueError(
-                "Cannot exhaustively enumerate basis_it(d): both C and M admit "
+                "Cannot exhaustively enumerate basis_iter(d): both C and M admit "
                 "degree-0 generators (connectivity=0, min_m_deg=0)."
             )
 
@@ -330,7 +330,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     @cached_method
     def graded_basis(self, d: int):
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     # ------------------------------------------------------------------
     # Element class
@@ -392,7 +392,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         # Get identity key of C(1)
         comp_1 = self.cooperad_cls(1, base_ring)
-        comp_1_list = list(comp_1.basis_it(0))
+        comp_1_list = list(comp_1.basis_iter(0))
         assert len(comp_1_list) == 1, (
             f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
         )

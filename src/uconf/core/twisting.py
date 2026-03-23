@@ -248,7 +248,7 @@ class TwistingMorphism:
         conn = B.connectivity
         for d in range(conn, conn + 2 * max_arity + 4):
             try:
-                basis = list(B.basis_it(d))
+                basis = list(B.basis_iter(d))
             except (ValueError, TypeError):
                 continue
             for elem in basis:

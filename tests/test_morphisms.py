@@ -132,7 +132,7 @@ class TestLieToAssMorphism:
     def test_equivariance(self, n):
         """f(x·σ) = f(x)·σ for Lie → Ass."""
         L = Lie(n, QQ)
-        basis = list(L.basis_it(0))
+        basis = list(L.basis_iter(0))
         if not basis:
             return
         x = basis[0]
@@ -197,7 +197,7 @@ class TestComposedMorphism:
     def test_composed_arity3(self):
         """All Lie basis elements in arity 3 map to zero in Com."""
         L3 = Lie(3, QQ)
-        for elem in L3.basis_it(0):
+        for elem in L3.basis_iter(0):
             result = ass_to_com(lie_to_ass(elem))
             assert not result
 

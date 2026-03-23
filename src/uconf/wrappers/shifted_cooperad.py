@@ -127,7 +127,7 @@ class ShiftedCooperad(UniqueRepresentation):
             )
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
-        def basis_it(self, d: int) -> "Iterator[ShiftedCooperad.Element]":
+        def basis_iter(self, d: int) -> "Iterator[ShiftedCooperad.Element]":
             """Iterate over basis elements of this shifted-cooperad component in degree ``d``.
 
             The arity-``n`` component of ``ShiftedCooperad(C, s)`` has its degrees
@@ -136,7 +136,7 @@ class ShiftedCooperad(UniqueRepresentation):
             """
             unshifted_degree = d - self.factory.shift_degree * (self._arity - 1)
             base_parent = self._base_parent
-            base_basis_it = getattr(base_parent, "basis_it", None)
+            base_basis_it = getattr(base_parent, "basis_iter", None)
             if base_basis_it is not None:
                 for elem in base_basis_it(unshifted_degree):
                     yield self.sum_of_terms((key, coeff) for key, coeff in elem)
@@ -148,7 +148,7 @@ class ShiftedCooperad(UniqueRepresentation):
         @cached_method
         def graded_basis(self, d: int) -> Family:
             """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_it(d))
+            return Family(self.basis_iter(d))
 
         def degree_on_basis(self, basis_element) -> int:
             if isinstance(basis_element, ShiftedCooperad.Element):

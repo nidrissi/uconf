@@ -258,7 +258,7 @@ class Lie(CombinatorialFreeModule):
         """Return the arity of this Lie operad component."""
         return self._arity
 
-    def basis_it(self, d: int) -> Iterator["Lie.Element"]:
+    def basis_iter(self, d: int) -> Iterator["Lie.Element"]:
         """Iterate over the canonical Lie basis in this fixed arity and the given degree."""
         if d == 0:
             for key in self._basis_keys():
@@ -267,7 +267,7 @@ class Lie(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     @staticmethod
     def unit(base_ring):
