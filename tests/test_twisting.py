@@ -274,7 +274,7 @@ class TestTwistedBarComplex:
         assert elem.degree() == 1
 
     def test_dalpha_matches_dact(self):
-        """d_α with π: B(Ass) → Ass matches d_act from BarComplexAlgebra."""
+        """d_α with π: B(Ass) → Ass produces correct action on corolla."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
         B = TwistedBarComplex(pi, alg, QQ)
@@ -305,27 +305,18 @@ class TestTwistedBarComplex:
         assert elem.boundary().boundary() == B.zero()
 
     def test_replaces_bar_complex_algebra(self):
-        """B_π(A) with canonical_projection is equivalent to BarComplexAlgebra."""
-        from uconf.constructions.bar_algebra import BarComplexAlgebra
-
+        """B_π(A) with canonical_projection produces correct d_α on a corolla."""
         alg = _trivial_ass_algebra()
-        # Standard bar complex
-        B_old = BarComplexAlgebra(alg, QQ)
-        # New twisted bar complex
         pi = canonical_projection(Associative)
-        B_new = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg, QQ)
 
         mu = (1, 2)
         tree = (mu, 1, 2)
         a_tuple = ((), ())
-        # Both should have the same degree
-        assert B_old.degree_on_basis((tree, a_tuple)) == B_new.degree_on_basis((tree, a_tuple))
-        # Both d_act/d_alpha should give the same result
-        elem_old = B_old((tree, a_tuple))
-        elem_new = B_new((tree, a_tuple))
-        # d_act and d_alpha should both map corolla to single leaf
-        assert elem_old.dact() == B_old((1, ((),)))
-        assert elem_new.dalpha() == B_new((1, ((),)))
+        assert B.degree_on_basis((tree, a_tuple)) == 1
+        elem = B((tree, a_tuple))
+        # d_alpha should map corolla to single leaf
+        assert elem.dalpha() == B((1, ((),)))
 
 
 class TestTwistedBarComplexIota:
@@ -452,21 +443,15 @@ class TestTwistedCobarComplex:
         assert result != OmC.zero()
 
     def test_replaces_cobar_complex_coalgebra(self):
-        """Ω_ι(V) with canonical_inclusion is equivalent to CobarComplexCoalgebra."""
-        from uconf.constructions.cobar_coalgebra import CobarComplexCoalgebra
-
+        """Ω_ι(V) with canonical_inclusion produces correct degree."""
         coalg = _trivial_coass_coalgebra()
-        # Standard cobar complex
-        Om_old = CobarComplexCoalgebra(coalg, QQ)
-        # New twisted cobar complex
         iota = canonical_inclusion(CoAssociative)
-        Om_new = TwistedCobarComplex(iota, coalg, QQ)
+        OmC = TwistedCobarComplex(iota, coalg, QQ)
 
-        # Both should have the same degree
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)
         v_tuple = ((), ())
-        assert Om_old.degree_on_basis((tree, v_tuple)) == Om_new.degree_on_basis((tree, v_tuple))
+        assert OmC.degree_on_basis((tree, v_tuple)) == -1
 
 
 # ===========================================================================

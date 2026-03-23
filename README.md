@@ -96,35 +96,20 @@ attribute on concrete models, property on wrappers) representing the constant
     Works for any connected cooperad, including those with negative-degree elements (e.g.
     `CoAssociative`).
 
-- `constructions/bar_algebra.py` — `BarComplexAlgebra(alg, base_ring)`
-  - Bar complex `B_P(A)` of a P-algebra `A`.
-  - `basis_it(d)` — iterates over all `(tree, a_tuple)` basis pairs of total degree `d`.
-    Arity is bounded by `d + 1` for connected P with non-negatively graded A.
-  - Equivalent to `TwistedBarComplex(canonical_projection(P), alg, base_ring)`.
-
-- `constructions/twisted_bar_algebra.py` — `TwistedBarComplexAlgebra(alg, base_ring)`
-  - Twisted bar complex `B_ι(A)` of an `ΩB(P)`-algebra `A`, where `ι: B(P) → ΩB(P)` is the
-    universal twisting morphism (the left adjoint of the bar-cobar adjunction).
-  - `alg.operad_cls` must be `CobarConstruction(BarConstruction(P))` for some operad `P`.
-  - Equivalent to `TwistedBarComplex(canonical_inclusion(BarConstruction(P)), alg, base_ring)`.
-
-- `constructions/cobar_coalgebra.py` — `CobarComplexCoalgebra(coalg, base_ring)`
-  - Cobar complex `Ω_C(V)` of a C-coalgebra `V`.
-  - `basis_it(d)` — iterates over all `(tree, v_tuple)` basis pairs of total degree `d`.
-    Gives complete results when the cooperad has `connectivity ≥ 1`; for
-    `connectivity = 0` it raises `ValueError` instead of returning a partial
-    enumeration.
-  - Equivalent to `TwistedCobarComplex(canonical_inclusion(C), coalg, base_ring)`.
-
 - `constructions/twisted_complex.py` — `TwistedBarComplex(alpha, alg, base_ring)` and
   `TwistedCobarComplex(alpha, coalg, base_ring)`
   - General twisted bar/cobar constructions for an operadic twisting morphism `α: C → P`.
   - `TwistedBarComplex(α, A, k)`: Given `α: C → P` and a P-algebra `A`, produces the
     twisted bar complex `B_α(A) = (T^c_C(A), d_internal + d_2 + d_α)`, a dg-C-coalgebra.
+    Exposes `cooperad_cls` and `module` for use as a coalgebra.
   - `TwistedCobarComplex(α, V, k)`: Given `α: C → P` and a C-coalgebra `V`, produces the
     twisted cobar complex `Ω_α(V) = (T_P(V), d_internal + d_2 + d_α)`, a dg-P-algebra.
-  - Subsumes `BarComplexAlgebra`, `CobarComplexCoalgebra`, and `TwistedBarComplexAlgebra`
-    as special cases of canonical twisting morphisms.
+    Exposes `operad_cls` and `module` for use as an algebra.
+  - Standard bar complex: `TwistedBarComplex(canonical_projection(P), alg, base_ring)`
+  - Standard cobar complex: `TwistedCobarComplex(canonical_inclusion(C), coalg, base_ring)`
+  - Twisted bar complex B_ι(A): `TwistedBarComplex(canonical_inclusion(B(P)), alg, base_ring)`
+  - `set_n_factors(F)` on `TwistedBarComplex` restricts basis enumeration to elements
+    with exactly `F` coefficient-module keys (for configuration models).
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
@@ -188,7 +173,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - `enumerate_shuffle_trees_free_in_degree(arity, weight_bound, P, R, d)` — free degree `Σ deg_P`.
     Used by `FreeAlgebraModule.basis_it` and `CofreeCoalgebraModule.basis_it`.
   - `enumerate_shuffle_trees_cobar_in_degree(arity, weight_bound, C, R, d)` — cobar degree `Σ(deg_C-1)`.
-    Used by `CobarConstruction.Component.basis_it` and `CobarComplexCoalgebra.basis_it`.
+    Used by `CobarConstruction.Component.basis_it` and `TwistedCobarComplex.basis_it`.
 
 ### Chain complexes and homology (`homology.py`)
 
