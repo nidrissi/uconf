@@ -443,7 +443,9 @@ def _make_pullback_omega_bar_ass_algebra(base_ring=QQ):
 def _make_twisted_bar(base_ring=QQ):
     """Build B_ι(k) -- twisted bar complex of the trivial 1-dim ΩB(Ass)-algebra."""
     alg = _make_trivial_omega_bar_ass_algebra(base_ring=base_ring)
-    return TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, base_ring=base_ring)
+    return TwistedBarComplex(
+        canonical_inclusion(BarConstruction(Associative)), alg, base_ring=base_ring
+    )
 
 
 class TestTwistedBarComplexIota:
