@@ -6,10 +6,12 @@ on:
         paths:
             - .github/workflows/copilot-setup-steps.yml
             - environment.yml
+            - pyproject.toml
     pull_request:
         paths:
             - .github/workflows/copilot-setup-steps.yml
             - environment.yml
+            - pyproject.toml
 
 jobs:
     copilot-setup-steps:
@@ -29,4 +31,10 @@ jobs:
 
             - name: Verify SageMath Installation
               shell: bash -el {0}
-              run: sage --version
+              run: |
+                  sage --version
+
+            - name: Install package and dev dependencies
+              shell: bash -el {0}
+              run: |
+                  pip install -e ".[dev]"
