@@ -1257,6 +1257,235 @@ def _shuffle_subtrees_iter_generic(
                         )
 
 
+def _consecutive_parts_iter(leaf_range: tuple, k: int) -> Iterator[list[tuple]]:
+    """Yield all partitions of a consecutive leaf range into *k* consecutive sub-ranges.
+
+    Unlike :func:`_shuffle_partitions`, which partitions into parts sorted only
+    by their minimum element, this function insists that each part is a
+    *consecutive* block ``(leaf_range[a], ..., leaf_range[b])`` for some
+    ``a ≤ b``.  This is the correct partition type for *planar* (DFS-canonical)
+    trees, where each subtree occupies a contiguous interval of leaf labels.
+
+    Args:
+        leaf_range: A tuple of consecutive leaf labels, e.g. ``(1, 2, 3, 4)``.
+        k: Number of parts.
+
+    Yields:
+        Lists of *k* consecutive sub-tuples that together cover *leaf_range*.
+    """
+    from itertools import combinations
+
+    n = len(leaf_range)
+    if k <= 0 or k > n:
+        return
+    if k == 1:
+        yield [leaf_range]
+        return
+    # Choose k-1 split points from positions 1..n-1 (exclusive start/end)
+    for split_positions in combinations(range(1, n), k - 1):
+        parts = []
+        prev = 0
+        for s in split_positions:
+            parts.append(leaf_range[prev:s])
+            prev = s
+        parts.append(leaf_range[prev:])
+        yield parts
+
+
+def _planar_children_iter_generic(
+    parts: list,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    total_deg: int,
+    root_dec: tuple,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator[tuple]:
+    """Yield complete planar-decorated trees ``(root_dec, t_1, …, t_k)`` for consecutive parts."""
+    connectivity = getattr(operad_cls, "connectivity", 0)
+
+    min_from = [0] * (len(parts) + 1)
+    for i in range(len(parts) - 1, -1, -1):
+        min_from[i] = (
+            _min_subtree_degree_generic(len(parts[i]), connectivity, vertex_offset)
+            + min_from[i + 1]
+        )
+
+    def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
+        if idx == len(parts):
+            if remaining == 0:
+                yield []
+            return
+        if remaining < min_from[idx]:
+            return
+        part = parts[idx]
+        n_part = len(part)
+        if n_part == 1:
+            first = part[0]
+            for rest in _children_combinations(idx + 1, remaining):
+                yield [first] + rest
+        else:
+            min_deg_this = _min_subtree_degree_generic(n_part, connectivity, vertex_offset)
+            max_d = remaining - min_from[idx + 1]
+            if max_d < min_deg_this:
+                return
+            for d_first in range(min_deg_this, max_d + 1):
+                first_trees = list(
+                    _planar_subtrees_iter_generic(
+                        part,
+                        max_weight,
+                        operad_cls,
+                        base_ring,
+                        d_first,
+                        vertex_offset,
+                        use_planar_decs,
+                    )
+                )
+                if not first_trees:
+                    continue
+                for rest in _children_combinations(idx + 1, remaining - d_first):
+                    for ft in first_trees:
+                        yield [ft] + rest
+
+    for ch in _children_combinations(0, total_deg):
+        yield (root_dec,) + tuple(ch)
+
+
+def _planar_subtrees_iter_generic(
+    leaf_range: tuple,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator:
+    """Enumerate planar trees over *leaf_range* (a consecutive block) with generic offset.
+
+    A *planar tree* (in the DFS-canonical sense) has children at every vertex
+    occupying *consecutive* sub-ranges of its leaf range.  This guarantees that
+    the DFS leaf order equals ``1, 2, …, n`` and that
+    ``planarize(T) = T ⊗ id`` (sigma_global = identity) when all vertex
+    decorations are already in planar form.
+
+    Compared to :func:`_shuffle_subtrees_iter_generic`, this function replaces
+    :func:`_shuffle_partitions` with :func:`_consecutive_parts_iter`, excluding
+    shuffle-tree configurations where subtrees carry non-consecutive leaf sets.
+
+    Args:
+        leaf_range: Tuple of consecutive leaf labels (e.g. ``(1, 2, 3)``).
+        max_weight: Maximum number of internal vertices.
+        operad_cls: Operad/cooperad factory for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact total degree to enumerate.
+        vertex_offset: Per-vertex degree contribution (+1 bar, 0 free, −1 cobar).
+        use_planar_decs: When True, restrict each vertex decoration to planar
+            basis elements via ``planar_basis_it``.
+    """
+    n = len(leaf_range)
+    if n == 0:
+        return
+    if n == 1:
+        if target_degree == 0:
+            yield leaf_range[0]
+        return
+    if max_weight < 1:
+        return
+
+    connectivity = getattr(operad_cls, "connectivity", 0)
+    _dec_iter = (
+        _planar_operad_basis_keys_in_degree if use_planar_decs else _operad_basis_keys_in_degree
+    )
+
+    for v_arity in range(2, n + 1):
+        root_parent = operad_cls(v_arity, base_ring)
+        min_root_dec_deg = connectivity * (v_arity - 1)
+        if v_arity == n:
+            # Corolla: all leaves are direct children
+            root_dec_deg = target_degree - vertex_offset
+            if root_dec_deg >= min_root_dec_deg:
+                for root_dec in _dec_iter(root_parent, root_dec_deg):
+                    yield (root_dec,) + leaf_range
+        else:
+            # Split leaf_range into v_arity consecutive sub-ranges
+            for parts in _consecutive_parts_iter(leaf_range, v_arity):
+                min_child_total = sum(
+                    _min_subtree_degree_generic(len(p), connectivity, vertex_offset)
+                    for p in parts
+                    if len(p) >= 2
+                )
+                max_root_dec_deg = target_degree - vertex_offset - min_child_total
+                for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
+                    child_total = target_degree - root_dec_deg - vertex_offset
+                    for root_dec in _dec_iter(root_parent, root_dec_deg):
+                        yield from _planar_children_iter_generic(
+                            parts,
+                            max_weight - 1,
+                            operad_cls,
+                            base_ring,
+                            child_total,
+                            root_dec,
+                            vertex_offset,
+                            use_planar_decs,
+                        )
+
+
+def enumerate_planar_trees_generic_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator[tuple]:
+    """Enumerate DFS-canonical planar trees with an arbitrary per-vertex degree offset.
+
+    A *planar tree* in the DFS-canonical sense has leaves ``1, …, n`` in strict
+    left-to-right order and every child subtree occupies a contiguous block of
+    leaf labels.  Together with planar vertex decorations (one per ``S_k``-orbit),
+    these trees form a basis for the *planar part* ``P_pl(n)`` of a quasi-planar
+    symmetric sequence ``P``.
+
+    Unlike :func:`enumerate_shuffle_trees_generic_in_degree`, which generates
+    *all* shuffle trees (and thus over-counts orbits when the canonical form of
+    ``P(n)`` under ``planarize`` is DFS-canonical rather than shuffle), this
+    function yields exactly one representative per ``S_n``-orbit, matching the
+    output of ``P.Component.planarize(T)`` when ``sigma_global == id``.
+
+    The three canonical choices for ``vertex_offset`` are:
+
+    - ``+1``: bar degree ``Σ (deg_P(v) + 1)``.
+    - ``0``:  free degree ``Σ deg_P(v)`` (no suspension).
+    - ``-1``: cobar degree ``Σ (deg_C(v) − 1)``.
+
+    Args:
+        arity: Number of leaves.
+        weight_bound: Maximum number of internal vertices.
+        operad_cls: Operad or cooperad factory for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact total degree to enumerate.
+        vertex_offset: Per-vertex degree contribution.
+        use_planar_decs: When ``True`` (default), restrict vertex decorations
+            to the planar basis via ``planar_basis_it``.
+
+    Yields:
+        Decorated planar trees (nested tuples) as valid tree basis keys.
+    """
+    if arity < 2 or weight_bound < 1:
+        return
+    yield from _planar_subtrees_iter_generic(
+        tuple(range(1, arity + 1)),
+        weight_bound,
+        operad_cls,
+        base_ring,
+        target_degree,
+        vertex_offset,
+        use_planar_decs,
+    )
+
+
 def enumerate_shuffle_trees_free_in_degree(
     arity: int,
     weight_bound: int,
