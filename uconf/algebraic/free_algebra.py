@@ -68,7 +68,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         self,
         operad_cls: QuasiPlanarLike,
         inner_module: CombinatorialFreeModule,
-        base_ring,
         *,
         name: str | None = None,
     ):
@@ -78,7 +77,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             operad_cls: Arity-indexed **quasi-planar** operad provider.  Each
                 component ``operad_cls(n, base_ring)`` must expose ``planarize``.
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
-            base_ring: Coefficient ring.
             name: Display name override.  Defaults to ``P ∘ M``.
 
         Raises:
@@ -89,6 +87,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             name = f"{operad_cls.name} ∘ {inner_module}"
         self._operad_cls = operad_cls
         self._inner_module = inner_module
+        base_ring = inner_module.base_ring()
         # Runtime check: operad must be quasi-planar (free S_n-action)
         _comp2 = operad_cls(2, base_ring)
         if not callable(getattr(_comp2, "planarize", None)):
@@ -392,7 +391,6 @@ class FreeOperadAlgebra(OperadAlgebra):
     Args:
         operad_cls: Quasi-planar operad provider P (class or factory instance).
         inner_module: The generating dg-module M.
-        base_ring: Coefficient ring.
 
     The inclusion ``η: M → Free_P(M)`` is::
 
@@ -409,7 +407,7 @@ class FreeOperadAlgebra(OperadAlgebra):
                                     category=GradedModulesWithBasis(QQ))
         M.degree_on_basis = lambda _: 1
         M.boundary_on_basis = lambda _: M.zero()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         a = F.include('a')
         b = F.include('b')
         # Non-planar Ass(2) key: result is normalised to planar key with swapped M-tuple
@@ -418,13 +416,11 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     """
 
-    def __init__(
-        self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule, base_ring
-    ):
-        free_module = FreeAlgebraModule(operad_cls, inner_module, base_ring)
+    def __init__(self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule):
+        free_module = FreeAlgebraModule(operad_cls, inner_module)
         super().__init__(free_module, operad_cls, self._act_impl)
         self._inner_module = inner_module
-        self._base_ring = base_ring
+        self._base_ring = inner_module.base_ring()
 
     def _act_impl(self, p_element, algebra_elements):
         """P-algebra action γ(q; a_1, ..., a_k) via full operad substitution.

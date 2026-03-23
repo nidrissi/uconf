@@ -197,7 +197,7 @@ class TestConnectivity:
         M.connectivity = 3
         M.boundary = lambda _: M.zero()
 
-        fa = FreeOperadAlgebra(Surjection, M, QQ)
+        fa = FreeOperadAlgebra(Surjection, M)
         assert fa.module.connectivity == 3
 
     def test_tree_module_connectivity(self) -> None:
@@ -210,6 +210,6 @@ class TestConnectivity:
         M.degree_on_basis = lambda _: 2
         M.connectivity = 2
         M.boundary = lambda _: M.zero()
-        fa = FreeOperadAlgebra(Surjection, M, QQ)
+        fa = FreeOperadAlgebra(Surjection, M)
         # FreeAlgebraModule inherits connectivity from M
         assert fa.module.connectivity == 2

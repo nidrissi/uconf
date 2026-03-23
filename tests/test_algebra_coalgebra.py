@@ -172,7 +172,7 @@ class TestCooperadCoalgebra:
 def _make_bar_complex(base_ring=QQ):
     """Build B_Ass(k) -- bar complex of the trivial 1-dim Ass-algebra."""
     alg = TrivialAssAlgebra(base_ring=base_ring)
-    return TwistedBarComplex(canonical_projection(Associative), alg, base_ring=base_ring)
+    return TwistedBarComplex(canonical_projection(Associative), alg)
 
 
 class TestTwistedBarComplex:
@@ -276,7 +276,7 @@ class TestTwistedBarComplex:
             return result
 
         alg = OperadAlgebra(module, Commutative, comm_structure_map)
-        B = TwistedBarComplex(canonical_projection(Commutative), alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Commutative), alg)
         # Weight-1 arity-2 tree: Commutative(2, QQ) has basis {()}
         tree = ((), 1, 2)
         elem = B((tree, ((), ())))
@@ -291,7 +291,7 @@ class TestTwistedBarComplex:
 def _make_cobar_complex(base_ring=QQ):
     """Build Ω_CoAss(k) -- cobar complex of the trivial 1-dim CoAss-coalgebra."""
     coalg = TrivialCoassCoalgebra(base_ring=base_ring)
-    return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg, base_ring=base_ring)
+    return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
 
 
 class TestTwistedCobarComplex:
@@ -350,7 +350,7 @@ class TestBarComplexLie:
     def test_d_squared_zero_weight1(self):
         """d² = 0 on a weight-1 Lie tree for the trivial Lie algebra."""
         alg = self._make_trivial_lie_algebra()
-        B = TwistedBarComplex(canonical_projection(Lie), alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Lie), alg)
         # Lie(2, QQ) has basis key (1,) in degree 0
         lie_dec = (1,)
         tree = (lie_dec, 1, 2)
@@ -443,9 +443,7 @@ def _make_pullback_omega_bar_ass_algebra(base_ring=QQ):
 def _make_twisted_bar(base_ring=QQ):
     """Build B_ι(k) -- twisted bar complex of the trivial 1-dim ΩB(Ass)-algebra."""
     alg = _make_trivial_omega_bar_ass_algebra(base_ring=base_ring)
-    return TwistedBarComplex(
-        canonical_inclusion(BarConstruction(Associative)), alg, base_ring=base_ring
-    )
+    return TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
 
 
 class TestTwistedBarComplexIota:
@@ -454,7 +452,7 @@ class TestTwistedBarComplexIota:
     def test_construction(self):
         """TwistedBarComplex can be constructed from an ΩB(P)-algebra."""
         alg = _make_trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
         assert B is not None
 
     def test_single_leaf_degree(self):
@@ -490,7 +488,7 @@ class TestTwistedBarComplexIota:
     def test_dalpha_pullback_algebra_nonempty(self):
         """d_alpha is non-zero for the pullback ΩB(Ass)-algebra (ε-pullback)."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
         # Weight-1 binary tree: (μ; 1, 2) with leaves decorated by () ∈ k
         mu = (1, 2)
         tree = (mu, 1, 2)
@@ -538,14 +536,14 @@ class TestTwistedBarComplexIota:
     def test_d_squared_zero_pullback(self, tree: tuple, a_tuple: tuple):
         """d² = 0 on tree elements of B_ι(A) for the ε-pullback ΩB(Ass)-algebra."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
         elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
     def test_linear_combination_d_squared_zero(self):
         """d² = 0 on a linear combination of elements for the pullback algebra."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
         mu = (1, 2)
         t1 = B(((mu, 1, (mu, 2, 3)), ((), (), ())))
         t2 = B(((mu, (mu, 1, 2), 3), ((), (), ())))

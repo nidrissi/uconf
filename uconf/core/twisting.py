@@ -241,7 +241,7 @@ class TwistingMorphism:
         # Build twisted bar complex
         from uconf.constructions.twisted_complex import TwistedBarComplex
 
-        B = TwistedBarComplex(self, trivial_alg, base_ring)
+        B = TwistedBarComplex(self, trivial_alg)
         B.set_max_arity(max_arity)
 
         # Check d² = 0 on all basis elements
