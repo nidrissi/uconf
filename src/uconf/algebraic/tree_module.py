@@ -578,10 +578,29 @@ class TreeModule(CombinatorialFreeModule):
         return result
 
     def _normalize_key(self, key):
-        """Normalize a single ``(tree, m_tuple)`` key to use planar decorations.
+        """Normalize a single ``(tree, m_tuple)`` key to canonical form.
 
-        Returns a list of ``(coeff, key)`` pairs.  Includes the Koszul sign
-        for permuting graded leaf-module elements when children are reordered.
+        The canonical form has planar vertex decorations with leaves labeled
+        ``1, …, n`` in DFS pre-order (consecutive-interval tree shape).
+
+        The normalization uses a **bottom-up, all-at-once** strategy
+        (Loday–Vallette, *Algebraic Operads*, §6.1 / §8.2):
+
+        1. **Phase 1** – planarize every vertex decoration in a single
+           bottom-up (post-order) pass.  At each internal vertex *v*,
+           ``planarize(dec_v)`` yields ``(dec_pl, σ_v)`` and the children of
+           *v* are reordered by ``σ_v⁻¹``.  Because ``planarize`` depends
+           only on the abstract element ``dec_v ∈ S(k)`` and not on leaf
+           labels, each vertex's planarization is independent of every
+           other vertex's, so the order among siblings does not matter and
+           no intermediate relabeling is needed.
+
+        2. **Phase 2** – read the DFS leaf order of the fully-planarized
+           tree, relabel leaves to ``1, …, n``, permute ``m_tuple`` to
+           match, and include a single Koszul sign for the graded
+           permutation of leaf-module elements.
+
+        Returns a list of ``(coeff, key)`` pairs.
         """
         tree, m_tuple = key
         if is_leaf(tree):
@@ -589,92 +608,106 @@ class TreeModule(CombinatorialFreeModule):
 
         base_ring = self.base_ring()
 
-        for v in vertices_dfs(tree):
-            k = vertex_arity(v)
-            dec = decoration(v)
-            seq_parent = self._symmetric_sequence_cls(k, base_ring)
+        # Phase 1: bottom-up planarization of all vertices.
+        planarized_trees = self._planarize_tree_bottom_up(tree, base_ring)
 
+        # Phase 2: DFS relabeling + m_tuple permutation + Koszul sign.
+        n_leaves = len(m_tuple)
+        result: list[tuple] = []
+        for tree_coeff, p_tree in planarized_trees:
+            new_leaf_order = _leaves_dfs(p_tree)
+
+            if new_leaf_order == list(range(1, n_leaves + 1)):
+                result.append((tree_coeff, (p_tree, m_tuple)))
+                continue
+
+            relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
+            canonical_tree = relabel_leaves(p_tree, relabel_map)
+            new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
+
+            if n_leaves > 1:
+                degrees = [
+                    self._inner_module.degree_on_basis(m_tuple[i])
+                    for i in range(n_leaves)
+                ]
+                perm_0idx = [old - 1 for old in new_leaf_order]
+                koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+            else:
+                koszul = 1
+
+            result.append((tree_coeff * koszul, (canonical_tree, new_m)))
+
+        return result
+
+    def _planarize_tree_bottom_up(self, tree, base_ring):
+        """Planarize all vertex decorations bottom-up (post-order).
+
+        Returns a list of ``(coeff, new_tree)`` pairs where every vertex
+        decoration is planar.  Leaf labels are **not** relabeled – that
+        is left to the caller.
+
+        The bottom-up traversal guarantees that each vertex is processed
+        exactly once, and the planarization at each vertex is independent
+        of all others (it depends only on the decoration, which is an
+        abstract element of the symmetric sequence component and is
+        unaffected by leaf labels or sibling order).
+        """
+        if is_leaf(tree):
+            return [(1, tree)]
+
+        k = vertex_arity(tree)
+        dec = decoration(tree)
+        kids = children(tree)
+
+        # Step 1: recursively planarize all children (bottom-up).
+        child_options: list[list[tuple]] = []
+        for ch in kids:
+            if is_leaf(ch):
+                child_options.append([(1, ch)])
+            else:
+                child_options.append(self._planarize_tree_bottom_up(ch, base_ring))
+
+        # Step 2: form all combinations of planarized children.
+        # For quasi-planar sequences each child yields a single term,
+        # but we handle the general case for correctness.
+        from itertools import product as iter_product
+
+        results: list[tuple] = []
+        for combo in iter_product(*child_options):
+            child_coeff = 1
+            new_kids: list = []
+            for c, t in combo:
+                child_coeff *= c
+                new_kids.append(t)
+
+            # Step 3: planarize the current vertex's decoration.
+            seq_parent = self._symmetric_sequence_cls(k, base_ring)
             if not hasattr(seq_parent, "planarize"):
+                results.append((child_coeff, (dec,) + tuple(new_kids)))
                 continue
 
             planarized = seq_parent.planarize(seq_parent.term(dec))
             terms = list(planarized)
 
-            # Check if already planar: single term with identity permutation
             S_k = SymmetricGroup(k)
             identity = S_k.identity()
-            if len(terms) == 1:
-                (pl_key, sigma_key), pl_coeff = terms[0]
-                if S_k(sigma_key) == identity and pl_key == dec:
-                    continue
 
-            # This vertex needs normalisation
-            result: list[tuple] = []
             for (pl_dec, sigma_key), pl_coeff in terms:
                 sigma = S_k(sigma_key)
-                sigma_inv = sigma.inverse()
-
-                # Permute children of v by σ⁻¹
-                old_kids = children(v)
-                new_kids = tuple(old_kids[sigma_inv(j) - 1] for j in range(1, k + 1))
-                new_v = (pl_dec,) + new_kids
-
-                # Replace v in the tree
-                new_tree = self._replace_subtree(tree, v, new_v)
-
-                # Compute DFS leaf order, relabel to canonical 1..n, permute m_tuple
-                new_leaf_order = _leaves_dfs(new_tree)
-                relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
-                canonical_tree = relabel_leaves(new_tree, relabel_map)
-                new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
-
-                # Koszul sign: the permutation from old leaf order (1..n) to
-                # new_leaf_order induces a sign from permuting graded elements.
-                # perm[i] = new_leaf_order[i] - 1 gives the 0-indexed source
-                # position for each new position.
-                n_leaves = len(m_tuple)
-                if n_leaves > 1:
-                    degrees = [
-                        self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)
-                    ]
-                    # new_leaf_order[i] is the old 1-indexed leaf at new position i
-                    perm_0idx = [old - 1 for old in new_leaf_order]
-                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                if sigma == identity:
+                    results.append(
+                        (child_coeff * pl_coeff, (pl_dec,) + tuple(new_kids))
+                    )
                 else:
-                    koszul = 1
+                    sigma_inv = sigma.inverse()
+                    reordered = tuple(
+                        new_kids[sigma_inv(j) - 1] for j in range(1, k + 1)
+                    )
+                    results.append(
+                        (child_coeff * pl_coeff, (pl_dec,) + reordered)
+                    )
 
-                new_key = (canonical_tree, new_m)
-
-                # Recursively normalise remaining vertices
-                for sub_coeff, sub_key in self._normalize_key(new_key):
-                    result.append((pl_coeff * koszul * sub_coeff, sub_key))
-
-            return result
-
-        # All vertex decorations are already planar (σ = id for every vertex).
-        # The outer tree structure may still have a non-canonical DFS leaf order
-        # (e.g. a shuffle tree whose subtrees do not occupy consecutive intervals).
-        # Apply DFS relabeling so the resulting key is always in canonical form.
-        new_leaf_order = _leaves_dfs(tree)
-        n_leaves = len(m_tuple)
-        if new_leaf_order == list(range(1, n_leaves + 1)):
-            # Already canonical – nothing to do.
-            return [(self.base_ring().one(), key)]
-
-        relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
-        canonical_tree = relabel_leaves(tree, relabel_map)
-        new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
-
-        if n_leaves > 1:
-            degrees = [
-                self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)
-            ]
-            perm_0idx = [old - 1 for old in new_leaf_order]
-            koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
-        else:
-            koszul = 1
-
-        return [(koszul, (canonical_tree, new_m))]
+        return results
 
     @staticmethod
     def _replace_subtree(tree, target, replacement):
