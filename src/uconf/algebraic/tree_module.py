@@ -98,9 +98,7 @@ def _module_basis_keys_in_weight_and_degree(module, d: int, w: int) -> Iterator:
         yield from _module_basis_keys_in_degree(module, d)
 
 
-def _tuples_in_degree_and_weight(
-    keys_by_dw: dict, n: int, d: int, w: int
-) -> Iterator[tuple]:
+def _tuples_in_degree_and_weight(keys_by_dw: dict, n: int, d: int, w: int) -> Iterator[tuple]:
     """Yield all ``n``-tuples of keys with total degree ``d`` and total weight ``w``."""
     if n == 0:
         if d == 0 and w == 0:
@@ -340,22 +338,6 @@ class TreeModule(CombinatorialFreeModule):
     def graded_basis(self, d: int):
         return Family(self.basis_iter(d))
 
-    def set_max_arity(self, max_arity: int | None) -> None:
-        """Set the maximum leaf-arity for basis enumeration.
-
-        .. deprecated::
-            Use :meth:`basis_weight_iter` instead.  Setting a finite weight
-            ``w`` enumerates only elements whose total leaf-module weight is
-            exactly ``w``, which provides a finite subcomplex without the
-            need for global state.  This method is kept for backward
-            compatibility with callers that cannot yet use
-            ``basis_weight_iter``.
-        """
-        raise AttributeError(
-            "set_max_arity() has been removed.  "
-            "Use basis_weight_iter(d, w) to enumerate elements of a fixed weight."
-        )
-
     # ------------------------------------------------------------------
     # Weight
     # ------------------------------------------------------------------
@@ -381,7 +363,7 @@ class TreeModule(CombinatorialFreeModule):
         default to weight 1 per key.
 
         Unlike :meth:`basis_iter`, this method is always finite (``w``
-        bounds the arity) and never requires :meth:`set_max_arity`.
+        bounds the arity).
 
         Raises:
             NotImplementedError: when the symmetric sequence does not expose

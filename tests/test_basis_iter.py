@@ -576,12 +576,16 @@ class TestHadamardTensorAlgebraBasisWeightIter:
             for d in range(3):
                 for elem in had_alg.basis_weight_iter(d, w):
                     for (lk, rk), _ in elem:
-                        lw = had_alg.left_module._weight_on_basis(lk) if hasattr(
-                            had_alg.left_module, "_weight_on_basis"
-                        ) else 1
-                        rw = had_alg.right_module._weight_on_basis(rk) if hasattr(
-                            had_alg.right_module, "_weight_on_basis"
-                        ) else 1
+                        lw = (
+                            had_alg.left_module._weight_on_basis(lk)
+                            if hasattr(had_alg.left_module, "_weight_on_basis")
+                            else 1
+                        )
+                        rw = (
+                            had_alg.right_module._weight_on_basis(rk)
+                            if hasattr(had_alg.right_module, "_weight_on_basis")
+                            else 1
+                        )
                         assert lw + rw == w
 
     def test_module_weight_iter_patched(self, had_alg) -> None:
@@ -589,21 +593,3 @@ class TestHadamardTensorAlgebraBasisWeightIter:
         assert hasattr(had_alg.module, "basis_weight_iter")
         assert hasattr(had_alg.module, "graded_basis_by_weight")
         assert hasattr(had_alg.module, "_weight_on_basis")
-
-
-# ---------------------------------------------------------------------------
-# 12. set_max_arity removed
-# ---------------------------------------------------------------------------
-
-
-class TestSetMaxArityRemoved:
-    """Verify that the removed set_max_arity API raises AttributeError."""
-
-    def test_set_max_arity_raises(self) -> None:
-        """set_max_arity() is removed and raises AttributeError."""
-        from uconf.constructions.twisted_complex import TwistedBarComplex
-
-        alg = TrivialAlgebra(Associative)
-        B = TwistedBarComplex(canonical_projection(Associative), alg)
-        with pytest.raises(AttributeError, match="set_max_arity"):
-            B.set_max_arity(3)
