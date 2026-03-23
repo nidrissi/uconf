@@ -4,9 +4,7 @@ from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
-from uconf.algebraic.simplicial import (
-    SurjectionSimplicialCochainAlgebra,
-)
+from uconf.algebraic.spherical import SurjectionSphereCochainAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.twisted_complex import TwistedBarComplex
@@ -83,17 +81,25 @@ def labelled_configuration_model(
     return bar
 
 
+class TrivialModule(CombinatorialFreeModule):
+    def __init__(self, dimension: int, base_ring):
+        super().__init__(base_ring, ["*"], category=GradedModulesWithBasis(base_ring))
+        self._dimension = dimension
+        self.boundary = lambda _: self.zero()
+        self.connectivity = 0
+        self.rename(f"K[{dimension}]")
+
+    def degree_on_basis(self, key):
+        return self._dimension
+
+
 def unordered_configuration_model(manifold_model: OperadAlgebra, dimension: int):
     assert dimension >= 0, "Dimension must be non-negative."
     R = manifold_model.module.base_ring()
-    trivial_module = CombinatorialFreeModule(R, ["*"], category=GradedModulesWithBasis(R))
-    trivial_module.degree_on_basis = lambda _: dimension
-    trivial_module.boundary = lambda _: trivial_module.zero()
-    trivial_module.connectivity = dimension
-    return labelled_configuration_model(manifold_model, trivial_module)
+    return labelled_configuration_model(manifold_model, TrivialModule(dimension, R))
 
 
 def euclidean_unordered_configuration_model(base_ring, dimension: int):
     assert dimension >= 0, "Dimension must be non-negative."
-    alg = SurjectionSimplicialCochainAlgebra(dimension, base_ring)
+    alg = SurjectionSphereCochainAlgebra(dimension, base_ring)
     return unordered_configuration_model(alg, dimension)
