@@ -221,6 +221,7 @@ class TwistingMorphism:
         # Build a trivial P-algebra on the 1-dimensional module k
         # Use the Commutative(1) module as the trivial module
         from uconf.models.commutative import Commutative
+
         module = Commutative(1, base_ring=base_ring)
 
         def _trivial_structure_map(p_elem, a_list):
@@ -239,6 +240,7 @@ class TwistingMorphism:
 
         # Build twisted bar complex
         from uconf.constructions.twisted_complex import TwistedBarComplex
+
         B = TwistedBarComplex(self, trivial_alg, base_ring)
         B.set_max_arity(max_arity)
 
