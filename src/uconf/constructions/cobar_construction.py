@@ -45,7 +45,6 @@ from uconf.core.trees import (
     decoration,
     enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_cobar_in_degree,
-    enumerate_shuffle_trees_generic_in_degree,
     expand_vertex,
     graft,
     is_leaf,
@@ -208,8 +207,8 @@ class CobarConstruction(UniqueRepresentation):
 
             Mirrors ``BarConstruction.Component._planarize_on_basis``: for each
             internal vertex ``v`` the base cooperad's ``planarize`` gives a
-            planar decoration ``dec_pl`` and a vertex permutation ``σ_v ∈ S_{k_v}``.
-            The planarized tree is assembled by:
+            (possibly multi-term) decomposition into planar decorations and
+            vertex permutations.  The planarized tree is assembled by:
 
             1. Replacing each vertex decoration with its planar form.
             2. Reordering the children of ``v``: new child at position ``j``
@@ -230,9 +229,9 @@ class CobarConstruction(UniqueRepresentation):
                 return self.term(tree).tensor(sym_alg.term(identity))
 
             def _planarize_subtree(node):
-                """Return ``(coeff, planar_node, leaf_order)``."""
+                """Return list of ``(coeff, planar_node, leaf_order)`` triples."""
                 if is_leaf(node):
-                    return 1, node, [node]
+                    return [(1, node, [node])]
 
                 k = vertex_arity(node)
                 dec = decoration(node)
@@ -241,38 +240,41 @@ class CobarConstruction(UniqueRepresentation):
                 dec_elem = coop_parent.term(dec)
                 planarized = coop_parent.planarize(dec_elem)
 
-                planar_dec = dec
-                sigma_v_tuple = tuple(range(1, k + 1))
-                dec_coeff = 1
-                for (planar_dec_key, sigma_key), c in planarized:
-                    planar_dec = planar_dec_key
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
-                    dec_coeff = c
-                    break  # single term expected
-
                 old_ch = children(node)
-                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+                results = []
+                for (planar_dec_key, sigma_key), dec_coeff in planarized:
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
-                new_ch_planarized = []
-                leaf_order = []
-                total_child_coeff = 1
-                for ch in new_ch:
-                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
-                    total_child_coeff *= ch_coeff
-                    new_ch_planarized.append(p_ch)
-                    leaf_order.extend(lo_ch)
+                    child_term_lists = []
+                    for ch in new_ch:
+                        child_term_lists.append(_planarize_subtree(ch))
 
-                total_coeff = dec_coeff * total_child_coeff
-                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
+                    from itertools import product as iter_product
+                    for combo in iter_product(*child_term_lists):
+                        total_child_coeff = 1
+                        new_ch_planarized = []
+                        leaf_order = []
+                        for ch_coeff, p_ch, lo_ch in combo:
+                            total_child_coeff *= ch_coeff
+                            new_ch_planarized.append(p_ch)
+                            leaf_order.extend(lo_ch)
 
-            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
+                        total_coeff = dec_coeff * total_child_coeff
+                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        results.append((total_coeff, node_result, leaf_order))
 
-            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
-            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                return results
 
-            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+            target = tensor([self, sym_alg])
+            result = target.zero()
+            for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
+                sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+                canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
 
-            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
+            return result
 
         def planar_basis_it(self, d: int) -> "Iterator[CobarConstruction.Element]":
             """Iterate over planar cobar basis elements of degree ``d``.

@@ -28,7 +28,6 @@ from uconf.core.trees import (
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
-    enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
     relabel_leaves,
     tree_to_latex,
@@ -708,18 +707,6 @@ class TreeModule(CombinatorialFreeModule):
                     )
 
         return results
-
-    @staticmethod
-    def _replace_subtree(tree, target, replacement):
-        """Replace *target* (by identity) with *replacement* in *tree*."""
-        if is_leaf(tree):
-            return tree
-        if tree is target:
-            return replacement
-        new_children = tuple(
-            TreeModule._replace_subtree(c, target, replacement) for c in children(tree)
-        )
-        return (decoration(tree),) + new_children
 
     class Element(CombinatorialFreeModule.Element):
         """An element of the free S-algebra module ``P ∘ M``."""
