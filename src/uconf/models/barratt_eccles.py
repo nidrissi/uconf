@@ -168,7 +168,7 @@ class BarrattEccles(CombinatorialFreeModule):
             ):
                 yield self((u,) + tuple(list(v) for v in values))
 
-    def basis_it(self, d: int) -> Iterator[BarrattEccles.Element]:
+    def basis_iter(self, d: int) -> Iterator[BarrattEccles.Element]:
         """Iterate over all basis elements in degree ``d``."""
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
@@ -178,7 +178,7 @@ class BarrattEccles(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:

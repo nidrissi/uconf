@@ -53,7 +53,7 @@ class ComponentProtocol(Protocol):
         """Returns the zero element of this component."""
         ...
 
-    def basis_it(self, d: int) -> Iterator:
+    def basis_iter(self, d: int) -> Iterator:
         """Returns an iterator over the basis keys of this component."""
         ...
 

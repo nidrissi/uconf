@@ -33,10 +33,10 @@ from uconf.core.quasi_planar import QuasiPlanarMixin
 def _component_basis_in_degree(component, d: int) -> list:
     """Return a list of degree-*d* basis elements from an operad/cooperad component.
 
-    Tries ``component.basis_it(d)`` first; falls back to ``basis()`` filtered by
+    Tries ``component.basis_iter(d)`` first; falls back to ``basis()`` filtered by
     ``degree_on_basis``.
     """
-    basis_it_fn = getattr(component, "basis_it", None)
+    basis_it_fn = getattr(component, "basis_iter", None)
     if basis_it_fn is not None:
         return list(basis_it_fn(d))
     # Fallback: iterate basis() and filter by degree
@@ -284,12 +284,12 @@ class HadamardProduct(UniqueRepresentation):
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
-        def basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
+        def basis_iter(self, d: int) -> Iterator["HadamardProduct.Element"]:
             """Iterate over all basis elements of degree ``d``.
 
             Yields all pairs ``(left_key, right_key)`` with
             ``deg_P(left_key) + deg_Q(right_key) = d``.  Both factors are
-            enumerated via ``basis_it(d_left)`` (if available) or by
+            enumerated via ``basis_iter(d_left)`` (if available) or by
             filtering ``basis()``.
 
             Args:
@@ -325,7 +325,7 @@ class HadamardProduct(UniqueRepresentation):
             A pair ``(left_key, right_key)`` is *planar* when ``right_key``
             is a planar element of the right factor.  Requires the right
             factor to implement ``planar_basis_it``.  The left factor is
-            iterated with ``basis_it(d_left)`` (degree-indexed).
+            iterated with ``basis_iter(d_left)`` (degree-indexed).
             """
             left_parent = self._left_parent
             right_parent = self._right_parent
@@ -354,7 +354,7 @@ class HadamardProduct(UniqueRepresentation):
         @cached_method
         def graded_basis(self, d: int) -> Family:
             """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_it(d))
+            return Family(self.basis_iter(d))
 
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:

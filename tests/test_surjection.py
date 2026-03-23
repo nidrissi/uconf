@@ -135,20 +135,20 @@ def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
 @pytest.mark.parametrize("r", range(1, 5))
 @pytest.mark.parametrize("d", range(0, 5))
 def test_surjection_basis(r: int, d: int) -> None:
-    basis = list(Surjection(r, QQ).basis_it(d))
-    assert len(basis) == len(set(basis)), "Duplicate elements found in basis_it"
+    basis = list(Surjection(r, QQ).basis_iter(d))
+    assert len(basis) == len(set(basis)), "Duplicate elements found in basis_iter"
     for el in basis:
-        assert isinstance(el, Surjection.Element), "Non-Surjection element found in basis_it"
-        assert el != el.parent().zero(), "Zero element found in basis_it"
-        assert el.arity() == r, "Element with incorrect arity in basis_it"
-        assert _degree_matches(el, d), "Element with incorrect degree in Surjection basis_it"
+        assert isinstance(el, Surjection.Element), "Non-Surjection element found in basis_iter"
+        assert el != el.parent().zero(), "Zero element found in basis_iter"
+        assert el.arity() == r, "Element with incorrect arity in basis_iter"
+        assert _degree_matches(el, d), "Element with incorrect degree in Surjection basis_iter"
 
 
 @pytest.mark.parametrize("r", range(2, 5))
 @pytest.mark.parametrize("d", range(1, 4))
 def test_planar_surjection_basis(r: int, d: int) -> None:
     planar_basis = list(Surjection(r, QQ).planar_basis_it(d))
-    basis = list(Surjection(r, QQ).basis_it(d))
+    basis = list(Surjection(r, QQ).basis_iter(d))
     assert set(planar_basis).issubset(basis), "Planar basis should be a subset of the full basis."
     assert len(planar_basis) * math.factorial(r) == len(basis), (
         "Planar basis size should be full basis size divided by r!."
@@ -343,7 +343,7 @@ def test_surjection_equivariance(
 def test_surjection_differential_squared_zero(n: int, d: int) -> None:
     """d²(x) = 0 for every degree-d basis element of S(n)."""
     zero = Surjection(n, QQ).zero()
-    for elem in Surjection(n, QQ).basis_it(d):
+    for elem in Surjection(n, QQ).basis_iter(d):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in S({n}) degree {d}"
 
 
@@ -359,8 +359,8 @@ def test_surjection_differential_squared_zero(n: int, d: int) -> None:
 def test_surjection_derivation_property(n1: int, d1: int, n2: int, d2: int) -> None:
     """d(x∘_i y) = d(x)∘_i y + (-1)^|x| x∘_i d(y) for all valid i."""
     rng = Random(20260311)
-    basis1 = list(Surjection(n1, QQ).basis_it(d1))
-    basis2 = list(Surjection(n2, QQ).basis_it(d2))
+    basis1 = list(Surjection(n1, QQ).basis_iter(d1))
+    basis2 = list(Surjection(n2, QQ).basis_iter(d2))
     for _ in range(10):
         x = rng.choice(basis1)
         y = rng.choice(basis2)

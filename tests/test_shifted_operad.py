@@ -90,14 +90,14 @@ def test_basis_it_negative_shift() -> None:
 
     # arity 2: degree = 0 + (-1)*(2-1) = -1
     sLie2 = sLie(2, QQ)
-    assert list(sLie2.basis_it(-1)) != []
-    assert list(sLie2.basis_it(0)) == []
+    assert list(sLie2.basis_iter(-1)) != []
+    assert list(sLie2.basis_iter(0)) == []
 
     # arity 3: degree = 0 + (-1)*(3-1) = -2
     sLie3 = sLie(3, QQ)
-    assert list(sLie3.basis_it(-2)) != []
-    assert list(sLie3.basis_it(-1)) == []
-    assert list(sLie3.basis_it(0)) == []
+    assert list(sLie3.basis_iter(-2)) != []
+    assert list(sLie3.basis_iter(-1)) == []
+    assert list(sLie3.basis_iter(0)) == []
 
 
 def test_basis_it_positive_shift() -> None:
@@ -106,21 +106,21 @@ def test_basis_it_positive_shift() -> None:
 
     # arity 2: degree = 0 + 1*(2-1) = 1
     sLie2 = sLie(2, QQ)
-    assert list(sLie2.basis_it(1)) != []
-    assert list(sLie2.basis_it(0)) == []
+    assert list(sLie2.basis_iter(1)) != []
+    assert list(sLie2.basis_iter(0)) == []
 
     # arity 3: degree = 0 + 1*(3-1) = 2
     sLie3 = sLie(3, QQ)
-    assert list(sLie3.basis_it(2)) != []
-    assert list(sLie3.basis_it(1)) == []
+    assert list(sLie3.basis_iter(2)) != []
+    assert list(sLie3.basis_iter(1)) == []
 
 
 def test_basis_it_keys_match_degree_on_basis() -> None:
-    """Every key yielded by basis_it(d) satisfies degree_on_basis == d."""
+    """Every key yielded by basis_iter(d) satisfies degree_on_basis == d."""
     sLie = ShiftedOperad(Lie, -1)
     for n in (2, 3):
         comp = sLie(n, QQ)
         d = -(n - 1)
-        for elem in comp.basis_it(d):
+        for elem in comp.basis_iter(d):
             for key, _ in elem:
                 assert comp.degree_on_basis(key) == d

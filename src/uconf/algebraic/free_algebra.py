@@ -269,7 +269,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
     # Basis iteration
     # ------------------------------------------------------------------
 
-    def basis_it(self, d: int) -> Iterator[Any]:
+    def basis_iter(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
         Uses the isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}``
@@ -321,7 +321,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             if d + connectivity >= 0:
                 # Unbounded arity: every n is feasible
                 raise ValueError(
-                    "Cannot exhaustively enumerate basis_it(d): both P and M admit "
+                    "Cannot exhaustively enumerate basis_iter(d): both P and M admit "
                     "degree-0 generators (connectivity + min_m_deg = 0), so arity is "
                     "unbounded in fixed degree."
                 )
@@ -331,7 +331,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             # step < 0: higher arity gives lower minimum degree; all n are feasible.
             # This shouldn't happen for well-behaved operads.
             raise ValueError(
-                "Cannot exhaustively enumerate basis_it(d): "
+                "Cannot exhaustively enumerate basis_iter(d): "
                 "connectivity + min_m_deg < 0, so arity is unbounded in fixed degree."
             )
 
@@ -358,7 +358,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     @cached_method
     def graded_basis(self, d: int):
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     # ------------------------------------------------------------------
     # Element class

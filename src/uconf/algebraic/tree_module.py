@@ -58,7 +58,7 @@ def _leaves_dfs(tree) -> list[int]:
 
 def _module_basis_keys_in_degree(module, d: int) -> Iterator:
     """Yield all basis keys of ``module`` in degree ``d``."""
-    basis_it_fn = getattr(module, "basis_it", None)
+    basis_it_fn = getattr(module, "basis_iter", None)
     if basis_it_fn is not None:
         for elem in basis_it_fn(d):
             yield from elem.support()
@@ -192,7 +192,7 @@ class TreeModule(CombinatorialFreeModule):
         m_deg = sum(self._inner_module.degree_on_basis(m) for m in m_tuple)
         return v_deg + m_deg
 
-    def basis_it(self, d: int) -> Iterator[Any]:
+    def basis_iter(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
         Requires the symmetric sequence to support ``planar_basis_it`` on its
@@ -247,14 +247,14 @@ class TreeModule(CombinatorialFreeModule):
             max_n = self._max_arity
         else:
             raise ValueError(
-                "Cannot exhaustively enumerate basis_it(d): both the inner module "
+                "Cannot exhaustively enumerate basis_iter(d): both the inner module "
                 "and symmetric sequence admit degree-0 generators (min_deg=0, connectivity=0), "
                 "so arity is unbounded in fixed degree.  "
                 "Pass n_factors to chain_complex() to restrict to a finite subcomplex, "
                 "or call set_max_arity() on this module directly."
             )
 
-        # Require quasi-planar support: basis_it() is only correct when the
+        # Require quasi-planar support: basis_iter() is only correct when the
         # symmetric sequence exposes planar_basis_it on its components, so that
         # we can pick one representative per S_n-orbit (matching the isomorphism
         # P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}).  For non-quasi-planar
@@ -265,7 +265,7 @@ class TreeModule(CombinatorialFreeModule):
 
         if not _use_planar:
             raise NotImplementedError(
-                f"basis_it() requires the symmetric sequence {S.name!r} to support "
+                f"basis_iter() requires the symmetric sequence {S.name!r} to support "
                 "planar_basis_it() on its arity-2 component.  "
                 "Supported quasi-planar sequences include Associative, Surjection, "
                 "BarrattEccles, and ShiftedOperad wrapping any of these.  "
@@ -294,7 +294,7 @@ class TreeModule(CombinatorialFreeModule):
 
     @cached_method
     def graded_basis(self, d: int):
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     def set_max_arity(self, max_arity: int | None) -> None:
         """Set the maximum leaf-arity for basis enumeration.
