@@ -57,7 +57,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
             structure_map=self._act_impl,
         )
 
-        self.module.basis_it = self.basis_it
+        self.module.basis_iter = self.basis_iter
         self.module.boundary = self._tensor_boundary_morphism()
         # Connectivity is additive for tensor products: deg(a⊗b) = deg(a) + deg(b),
         # so min(deg(a⊗b)) = min(deg(a)) + min(deg(b)).
@@ -117,7 +117,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         return result
 
-    def basis_it(self, d: int) -> Iterator:
+    def basis_iter(self, d: int) -> Iterator:
         """Iterate over basis elements of degree *d*.
 
         Yields all ``(left_key, right_key)`` tensor-module basis elements with

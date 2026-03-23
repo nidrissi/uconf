@@ -58,7 +58,7 @@ def _boundary_matrix(
     M = matrix(base_ring, n_target, n_source)
     # If the module supports planar normalisation (TreeModule and subclasses),
     # apply it so that boundary terms with non-planar vertex decorations are
-    # rewritten in the planar basis used by basis_it / graded_basis.
+    # rewritten in the planar basis used by basis_iter / graded_basis.
     normalize = getattr(module, "normalize_to_planar", None)
     for j, elem in enumerate(basis_source):
         bdry = module.boundary(elem)

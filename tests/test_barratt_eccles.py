@@ -33,7 +33,7 @@ def _as_dict(x):
 @pytest.mark.parametrize("r", range(1, 5))
 @pytest.mark.parametrize("d", range(0, 3))
 def test_be_basis(r: int, d: int) -> None:
-    basis = list(BarrattEccles(r, QQ).basis_it(d))
+    basis = list(BarrattEccles(r, QQ).basis_iter(d))
     if r == 1:
         expected_size = 1 if d == 0 else 0
     else:
@@ -41,10 +41,12 @@ def test_be_basis(r: int, d: int) -> None:
     assert len(basis) == expected_size, f"Unexpected basis size for r={r}, d={d}."
 
     for el in basis:
-        assert isinstance(el, BarrattEccles.Element), "Non-BarrattEccles element found in basis_it"
-        assert el != el.parent().zero(), "Zero element found in basis_it"
-        assert el.arity() == r, "Element with incorrect arity in basis_it"
-        assert _degree_matches(el, d), "Element with incorrect degree in BarrattEccles basis_it"
+        assert isinstance(el, BarrattEccles.Element), (
+            "Non-BarrattEccles element found in basis_iter"
+        )
+        assert el != el.parent().zero(), "Zero element found in basis_iter"
+        assert el.arity() == r, "Element with incorrect arity in basis_iter"
+        assert _degree_matches(el, d), "Element with incorrect degree in BarrattEccles basis_iter"
 
 
 def test_barratt_eccles_unit() -> None:

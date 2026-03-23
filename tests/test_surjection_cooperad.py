@@ -214,7 +214,7 @@ def test_differential_squared_zero() -> None:
     for _ in range(10):
         n = rng.randint(2, 4)
         d = rng.randint(-2, 0)
-        basis = list(SL(n, QQ).basis_it(d))
+        basis = list(SL(n, QQ).basis_iter(d))
         if not basis:
             continue
         elem = rng.choice(basis)
