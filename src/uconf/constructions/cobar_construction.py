@@ -43,6 +43,7 @@ from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
     decoration,
+    enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_cobar_in_degree,
     enumerate_shuffle_trees_generic_in_degree,
     expand_vertex,
@@ -299,7 +300,7 @@ class CobarConstruction(UniqueRepresentation):
                     yield self.term(1)
                 return
 
-            for tree in enumerate_shuffle_trees_generic_in_degree(
+            for tree in enumerate_planar_trees_generic_in_degree(
                 n,
                 self._max_weight,
                 self._cooperad_cls,

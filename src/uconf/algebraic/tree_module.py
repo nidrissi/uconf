@@ -27,6 +27,7 @@ from uconf.core.trees import (
     _koszul_sign_of_permutation,
     children,
     decoration,
+    enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
     relabel_leaves,
@@ -402,7 +403,7 @@ class TreeModule(CombinatorialFreeModule):
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_M))
                 if not m_tuples:
                     continue
-                for tree in enumerate_shuffle_trees_generic_in_degree(
+                for tree in enumerate_planar_trees_generic_in_degree(
                     n,
                     max_weight,
                     S,
@@ -497,7 +498,7 @@ class TreeModule(CombinatorialFreeModule):
                 m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_M, w))
                 if not m_tuples:
                     continue
-                for tree in enumerate_shuffle_trees_generic_in_degree(
+                for tree in enumerate_planar_trees_generic_in_degree(
                     n,
                     max_tree_weight,
                     S,
@@ -650,8 +651,30 @@ class TreeModule(CombinatorialFreeModule):
 
             return result
 
-        # All decorations already planar
-        return [(self.base_ring().one(), key)]
+        # All vertex decorations are already planar (σ = id for every vertex).
+        # The outer tree structure may still have a non-canonical DFS leaf order
+        # (e.g. a shuffle tree whose subtrees do not occupy consecutive intervals).
+        # Apply DFS relabeling so the resulting key is always in canonical form.
+        new_leaf_order = _leaves_dfs(tree)
+        n_leaves = len(m_tuple)
+        if new_leaf_order == list(range(1, n_leaves + 1)):
+            # Already canonical – nothing to do.
+            return [(self.base_ring().one(), key)]
+
+        relabel_map = {old: i + 1 for i, old in enumerate(new_leaf_order)}
+        canonical_tree = relabel_leaves(tree, relabel_map)
+        new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
+
+        if n_leaves > 1:
+            degrees = [
+                self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)
+            ]
+            perm_0idx = [old - 1 for old in new_leaf_order]
+            koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+        else:
+            koszul = 1
+
+        return [(koszul, (canonical_tree, new_m))]
 
     @staticmethod
     def _replace_subtree(tree, target, replacement):
