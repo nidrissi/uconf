@@ -168,15 +168,15 @@ class TestConnectivity:
 
         SC = SimplicialCochains(2, QQ)
         # degree 0: 3 vertices (0), (1), (2)
-        assert len(list(SC.basis_it(0))) == 3
+        assert len(list(SC.basis_iter(0))) == 3
         # degree -1: 3 edges (0,1), (0,2), (1,2)
-        assert len(list(SC.basis_it(-1))) == 3
+        assert len(list(SC.basis_iter(-1))) == 3
         # degree -2: 1 face (0,1,2)
-        assert len(list(SC.basis_it(-2))) == 1
+        assert len(list(SC.basis_iter(-2))) == 1
         # degree -3: empty
-        assert len(list(SC.basis_it(-3))) == 0
+        assert len(list(SC.basis_iter(-3))) == 0
         # degree 1: empty
-        assert len(list(SC.basis_it(1))) == 0
+        assert len(list(SC.basis_iter(1))) == 0
 
     def test_simplicial_cochains_boundary(self) -> None:
         """SimplicialCochains.boundary is an alias for coboundary."""

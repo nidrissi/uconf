@@ -164,7 +164,7 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- basis enumeration on Delta^N ----------------------------------------
 
     @staticmethod
-    def basis_it(base_ring, N: int):
+    def basis_iter(base_ring, N: int):
         """Iterate over all non-degenerate basis elements in ``C(Δ^N)``.
 
         Yields :class:`SimplicialChains` elements with vertices in
@@ -348,7 +348,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         """Homological degree convention: ``-(len(simplex) - 1)``."""
         return -(len(simplex) - 1)
 
-    def basis_it(self, d: int):
+    def basis_iter(self, d: int):
         """Iterate over basis cochains of degree ``d``.
 
         Degree ``d`` corresponds to simplices of dimension ``-d``,
@@ -364,7 +364,7 @@ class SimplicialCochains(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int):
         """Return a :class:`Family` of basis cochains in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     # -- coboundary ---------------------------------------------------------
 

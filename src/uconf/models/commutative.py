@@ -85,7 +85,7 @@ class Commutative(CombinatorialFreeModule):
         """Return the basis key of the unit element in arity ``1``."""
         return ()
 
-    def basis_it(self, d: int) -> Iterator[Commutative.Element]:
+    def basis_iter(self, d: int) -> Iterator[Commutative.Element]:
         """Iterate over basis elements in this arity and the given degree."""
         if self.arity() >= 1 and d == 0:
             yield self.term(())
@@ -93,7 +93,7 @@ class Commutative(CombinatorialFreeModule):
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis element."""

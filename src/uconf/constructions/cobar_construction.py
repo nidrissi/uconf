@@ -273,13 +273,13 @@ class CobarConstruction(UniqueRepresentation):
 
             Requires the base cooperad to implement ``planarize`` and
             ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
-            Use :meth:`basis_it` for the full shuffle-tree basis instead.
+            Use :meth:`basis_iter` for the full shuffle-tree basis instead.
             """
             if not self._cooperad_has_planarize():
                 raise NotImplementedError(
                     f"planar_basis_it requires {self._cooperad_cls.name!r} to implement "
                     "planarize and planar_basis_it (quasi-planar cooperad). "
-                    "Use basis_it() for the full shuffle-tree basis instead."
+                    "Use basis_iter() for the full shuffle-tree basis instead."
                 )
 
             n = self._arity
@@ -366,7 +366,7 @@ class CobarConstruction(UniqueRepresentation):
                 return 0
             return subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
 
-        def basis_it(self, d: int) -> Iterator["CobarConstruction.Element"]:
+        def basis_iter(self, d: int) -> Iterator["CobarConstruction.Element"]:
             """Iterate over shuffle-tree basis elements of degree *d*.
 
             Works for **any** connected cooperad.  For the cobar construction
@@ -402,7 +402,7 @@ class CobarConstruction(UniqueRepresentation):
         @cached_method
         def graded_basis(self, d: int) -> Family:
             """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_it(d))
+            return Family(self.basis_iter(d))
 
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one cobar basis tree."""

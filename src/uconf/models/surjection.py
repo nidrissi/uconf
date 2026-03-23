@@ -120,7 +120,7 @@ class Surjection(CombinatorialFreeModule):
         """Return the basis key of the unit element in arity ``1``."""
         return (1,)
 
-    def basis_it(self, d: int) -> Iterator[Surjection.Element]:
+    def basis_iter(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over basis elements in degree ``d``."""
         if d < 0:
             return
@@ -133,12 +133,12 @@ class Surjection(CombinatorialFreeModule):
 
     def planar_basis_it(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over planar basis elements in degree ``d``."""
-        return filter(lambda u: u.is_planar(), self.basis_it(d))
+        return filter(lambda u: u.is_planar(), self.basis_iter(d))
 
     @cached_method
     def graded_basis(self, d: int) -> Family:
         """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_it(d))
+        return Family(self.basis_iter(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:

@@ -20,9 +20,25 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 The project relies on **SageMath** (parents/modules, symmetric groups, tensor products, etc.).
 
-- Key dependency: `sagemath` (see `requirements.txt`).
+- Key dependency: `sagemath`.
 - Tests: `pytest`.
 - Optional: `comch` for compatibility tests (`test_comch_compatibility.py`).
+
+## Development
+
+Create and activate a virtual environment, then install the package in development mode:
+
+```bash
+python3 -m venv .venv --system-site-packages
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Then run tests:
+
+```bash
+pytest
+```
 
 ## `uconf` package
 
@@ -83,7 +99,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - **Quasi-planar structure** (when the base operad is quasi-planar, e.g. `Surjection`, `BarrattEccles`, or a `HadamardProduct` whose right factor is quasi-planar):
     - `Component.planarize(x)` — decomposes `x` into `x_pl ⊗ σ ∈ B(P)_pl(n) ⊗ k[S_n]`.
     - `Component.planar_basis_it(d)` — iterates over strongly-planar basis trees of bar degree `d`.
-    - `Component.basis_it(d)` — iterates over **all** shuffle-tree basis elements of bar degree `d`.
+    - `Component.basis_iter(d)` — iterates over **all** shuffle-tree basis elements of bar degree `d`.
     - `Component.d_sigma(x, σ)` — the `σ`-component of `boundary(x)`, i.e. `π_σ(d(x))`.
     - `Component.d_sigma_iterate(x, [σ₁,…,σₖ])` — iterated `d_σ` with zero-branch pruning.
     - `Element.planarize()` — convenience wrapper.
@@ -92,7 +108,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - Cobar construction of a connected dg-cooperad: `\Omega(C) = (T(s^{-1}\bar{C}), d_1 + d_2)`.
   - Operadic model on decorated rooted trees.
   - Differential combines internal differential and vertex-expansion terms from infinitesimal cocomposition.
-  - `Component.basis_it(d)` — iterates over shuffle-tree basis elements of cobar degree `d`.
+  - `Component.basis_iter(d)` — iterates over shuffle-tree basis elements of cobar degree `d`.
     Works for any connected cooperad, including those with negative-degree elements (e.g.
     `CoAssociative`).
 
@@ -171,9 +187,9 @@ attribute on concrete models, property on wrappers) representing the constant
   - Utilities for DFS traversal, arity/weight/leaves, grafting, edge contraction, and vertex expansion.
   - `enumerate_shuffle_trees_in_degree(arity, weight_bound, P, R, d)` — bar degree `Σ(deg_P+1)`.
   - `enumerate_shuffle_trees_free_in_degree(arity, weight_bound, P, R, d)` — free degree `Σ deg_P`.
-    Used by `FreeAlgebraModule.basis_it` and `CofreeCoalgebraModule.basis_it`.
+    Used by `FreeAlgebraModule.basis_iter` and `CofreeCoalgebraModule.basis_iter`.
   - `enumerate_shuffle_trees_cobar_in_degree(arity, weight_bound, C, R, d)` — cobar degree `Σ(deg_C-1)`.
-    Used by `CobarConstruction.Component.basis_it` and `TwistedCobarComplex.basis_it`.
+    Used by `CobarConstruction.Component.basis_iter` and `TwistedCobarComplex.basis_iter`.
 
 ### Chain complexes and homology (`homology.py`)
 
@@ -228,7 +244,7 @@ C.betti()
     simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data raises.
     - `SimplicialChains.fundamental_chain(n)` — the fundamental cycle `[0,…,n]`.
-    - `SimplicialChains.basis_it(N)` — iterator over all simplices in `Δ^N`.
+    - `SimplicialChains.basis_iter(N)` — iterator over all simplices in `Δ^N`.
     - `SimplicialChains.tensor_boundary(x)` — Koszul tensor-product differential
       on elements of `tensor([SimplicialChains()]*r)`.
     - `Element.boundary()` — simplicial boundary on arity-1 elements.
@@ -313,7 +329,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Aritywise Hadamard product: `(P ⊙ Q)(n) = P(n) ⊗ Q(n)`.
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
-  - `Component.basis_it(d)` — iterates over all `(left_key, right_key)` pairs with total degree `d`.
+  - `Component.basis_iter(d)` — iterates over all `(left_key, right_key)` pairs with total degree `d`.
   - `Component.planar_basis_it(d)` — if the right factor `Q` has `planar_basis_it`,
     iterates over pairs `(left_key, right_pl_key)` with right key planar and total degree `d`.
 
@@ -321,14 +337,14 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Input: a `P`-algebra `A` and a `Q`-algebra `B`.
   - Output: a `(P ⊙ Q)`-algebra on `tensor([A.module, B.module])`.
   - Action is diagonal on factors and multilinear on tensor arguments.
-  - `basis_it(d)` — iterates over all `(left_key, right_key)` tensor basis elements with total degree `d`.
+  - `basis_iter(d)` — iterates over all `(left_key, right_key)` tensor basis elements with total degree `d`.
 
 - `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad_cls, inner_module)`
   - Free P-algebra on a dg-module M: `P ∘ M = ⊕_{n≥1} P(n) ⊗_{S_n} M^{⊗n}`.
   - Basis keys are `(tree, m_tuple)` pairs where `tree` is a shuffle tree and
     `m_tuple` is a tuple of M-basis keys.
   - Degree: `deg(tree, m_tuple) = Σ_v deg_P(dec(v)) + Σ_i deg_M(m_i)` (no suspension).
-  - `FreeAlgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`.
+  - `FreeAlgebraModule.basis_iter(d)` — iterates over all basis elements of degree `d`.
     The arity is bounded automatically from M's minimum degree and P's connectivity.
     Works correctly when M has elements only in strictly-positive degrees or P has
     `connectivity ≥ 1`; otherwise it raises `ValueError` rather than returning a
@@ -337,8 +353,8 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 - `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module)`
   - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
   - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
-  - `CofreeCoalgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`;
-    same arity-bounding logic as `FreeAlgebraModule.basis_it` and the same
+  - `CofreeCoalgebraModule.basis_iter(d)` — iterates over all basis elements of degree `d`;
+    same arity-bounding logic as `FreeAlgebraModule.basis_iter` and the same
     `ValueError` fail-fast behavior in non-exhaustive regimes.
 - `algebraic/spherical.py`
   - `ReducedSphereCochains(d)` — rank-1 module for reduced cochains of `S^d`,
@@ -576,11 +592,3 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
   - `pytest -q tests/test_simplicial.py`
 - Run morphism tests:
   - `pytest -q tests/test_morphisms.py`
-
-## Notes
-
-- `uconf/` is the current source of truth.
-- `old-computations/` is historical material, not the primary target of the current test suite.
-- `OperadAlgebra` / `CooperadCoalgebra` use callable dispatch via constructor
-  parameters (`structure_map`, `coaction_map`). Overriding `act` / `coact` is
-  not part of the public extension pattern.

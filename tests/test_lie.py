@@ -20,7 +20,7 @@ def _as_dict(x):
 
 @pytest.mark.parametrize("n", range(0, 6))
 def test_basis_it_size(n: int) -> None:
-    basis = list(Lie(n, QQ).basis_it(0))
+    basis = list(Lie(n, QQ).basis_iter(0))
     if n == 0:
         expected_size = 0
     else:
@@ -289,7 +289,7 @@ def test_lie_differential_squared_zero(n: int) -> None:
     """d²(x) = 0 for every basis element of Lie(n, QQ) (boundary is identically 0)."""
     l = Lie(n, QQ)
     zero = l.zero()
-    for elem in l.basis_it(0):
+    for elem in l.basis_iter(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Lie({n}, QQ)"
 
 
@@ -319,7 +319,7 @@ def test_lie_permute_gf2(n: int) -> None:
     l = Lie(n, R)
     S = SymmetricGroup(n)
     sigma = S([2, 1] + list(range(3, n + 1)))
-    for elem in l.basis_it(0):
+    for elem in l.basis_iter(0):
         perm = elem.permute(sigma)
         # Permuted element lives in same parent
         assert perm.parent() is l

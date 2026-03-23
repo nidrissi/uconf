@@ -487,7 +487,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
 
         result = target.zero()
         for degree in range(n * max_v_dim + min_v_degree + 1):
-            for u in surj_parent.basis_it(degree):
+            for u in surj_parent.basis_iter(degree):
                 # surjection_chain_action returns:
                 #   SC element  (if n == 1)
                 #   tensor([SC]*n) element  (if n >= 2)

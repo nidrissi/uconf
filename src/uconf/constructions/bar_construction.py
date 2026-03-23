@@ -313,14 +313,14 @@ class BarConstruction(UniqueRepresentation):
 
             Requires the base operad to implement ``planarize`` and
             ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
-            Use :meth:`basis_it` for a full shuffle-tree basis that works with
+            Use :meth:`basis_iter` for a full shuffle-tree basis that works with
             any connected operad.
             """
             if not self._operad_has_planarize():
                 raise NotImplementedError(
                     f"planar_basis_it requires {self._operad_cls.name!r} to implement "
                     "planarize and planar_basis_it (quasi-planar operad). "
-                    "Use basis_it() for the full shuffle-tree basis instead."
+                    "Use basis_iter() for the full shuffle-tree basis instead."
                 )
 
             n = self._arity
@@ -336,7 +336,7 @@ class BarConstruction(UniqueRepresentation):
             ):
                 yield self.term(tree)
 
-        def basis_it(self, d: int) -> Iterator["BarConstruction.Element"]:
+        def basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
             """Iterate over shuffle-tree basis elements of degree ``d``.
 
             Works for **any** connected operad, not just quasi-planar ones.
@@ -372,7 +372,7 @@ class BarConstruction(UniqueRepresentation):
         @cached_method
         def graded_basis(self, d: int) -> Family:
             """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_it(d))
+            return Family(self.basis_iter(d))
 
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:
