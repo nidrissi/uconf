@@ -71,7 +71,7 @@ class TestFreeAlgebraModuleBasisIt:
         M = Commutative(1, base_ring=QQ)
         # Associative (connectivity=0) with M concentrated in degree 0:
         # arity is unbounded in any fixed degree.
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
             list(mod.basis_it(0))
 
@@ -79,7 +79,7 @@ class TestFreeAlgebraModuleBasisIt:
         """ShiftedOperad(Ass,1) has connectivity=1; degree-0 = arity-1 leaf only."""
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
-        mod = FreeAlgebraModule(P, M, QQ)
+        mod = FreeAlgebraModule(P, M)
         elems_d0 = list(mod.basis_it(0))
         assert len(elems_d0) == 1, "Only the arity-1 leaf in degree 0"
 
@@ -94,7 +94,7 @@ class TestFreeAlgebraModuleBasisIt:
         """
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
-        mod = FreeAlgebraModule(P, M, QQ)
+        mod = FreeAlgebraModule(P, M)
         elems_d1 = list(mod.basis_it(1))
         assert len(elems_d1) == 1
 
@@ -102,7 +102,7 @@ class TestFreeAlgebraModuleBasisIt:
         """All yielded elements have the requested degree."""
         P = ShiftedOperad(Associative, 1)
         M = Commutative(1, base_ring=QQ)
-        mod = FreeAlgebraModule(P, M, QQ)
+        mod = FreeAlgebraModule(P, M)
         for d in range(3):
             for elem in mod.basis_it(d):
                 for key, _ in elem:
@@ -112,7 +112,7 @@ class TestFreeAlgebraModuleBasisIt:
         """No degree-3 elements for ShiftedAss with Comm(1) module up to arity 2."""
         P = ShiftedOperad(Surjection, 1)
         M = Commutative(1, base_ring=QQ)
-        mod = FreeAlgebraModule(P, M, QQ)
+        mod = FreeAlgebraModule(P, M)
         # The degree-3 elements are arity-4 (P degree = 3): many elements.
         # We just check the count is positive and every element has the right degree.
         for elem in mod.basis_it(3):
@@ -135,7 +135,7 @@ class TestFreeAlgebraModuleBasisIt:
 
         for P in (Lie, Commutative):
             with pytest.raises(TypeError, match="not quasi-planar"):
-                FreeAlgebraModule(P, mod_M, QQ)
+                FreeAlgebraModule(P, mod_M)
 
 
 # ---------------------------------------------------------------------------
@@ -149,14 +149,14 @@ class TestCofreeCoalgebraModuleBasisIt:
     def test_raises_when_enumeration_is_not_exhaustive(self) -> None:
         """Raise when both C and M allow unbounded arity in fixed degree."""
         M = Commutative(1, base_ring=QQ)
-        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
+        mod = CofreeCoalgebraModule(CoAssociative, M)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
             list(mod.basis_it(0))
 
     def test_correct_degrees(self) -> None:
         """All yielded elements have the requested degree."""
         M = Commutative(1, base_ring=QQ)
-        mod = CofreeCoalgebraModule(ShiftedOperad(Associative, 1), M, QQ)
+        mod = CofreeCoalgebraModule(ShiftedOperad(Associative, 1), M)
         for d in range(3):
             for elem in mod.basis_it(d):
                 for key, _ in elem:
@@ -225,7 +225,7 @@ class TestTwistedBarComplexBasisIt:
     @pytest.fixture
     def trivial_bar(self):
         alg = TrivialAlgebra(Associative)
-        return TwistedBarComplex(canonical_projection(Associative), alg, QQ)
+        return TwistedBarComplex(canonical_projection(Associative), alg)
 
     def test_degree0_single_leaf(self, trivial_bar) -> None:
         """Degree 0 = single arity-1 leaf with the unique A-generator."""
@@ -248,7 +248,7 @@ class TestTwistedBarComplexBasisIt:
     def test_with_lie_operad(self) -> None:
         """Bar complex with Lie operad: degree ≥ 1 is non-exhaustive (connectivity=0)."""
         alg = TrivialAlgebra(Lie)
-        B = TwistedBarComplex(canonical_projection(Lie), alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Lie), alg)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
             list(B.basis_it(1))
 
@@ -274,7 +274,7 @@ class TestTwistedCobarComplexBasisIt:
                 return v_elem.parent().zero()
 
         coalg = _TrivialCoalgebra(CoAssociative)
-        return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg, QQ)
+        return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
 
     def test_degree0_single_leaf(self, trivial_cobar) -> None:
         """Raise when cooperad connectivity is 0 (non-exhaustive regime)."""
@@ -404,14 +404,14 @@ class TestBasisItConsistencyWithBarConstruction:
     def test_bar_degree0_count_surjection(self) -> None:
         """B(Sur; Comm(1)) degree 0 has exactly the single-leaf element."""
         alg = TrivialAlgebra(Surjection)
-        B = TwistedBarComplex(canonical_projection(Surjection), alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Surjection), alg)
         actual = _count(B.basis_it(0))
         assert actual == 1  # single leaf with a_key = ()
 
     def test_bar_degree_ge1_non_exhaustive(self) -> None:
         """B(Sur; Comm(1)) degree ≥ 1 is non-exhaustive (Sur has connectivity=0)."""
         alg = TrivialAlgebra(Surjection)
-        B = TwistedBarComplex(canonical_projection(Surjection), alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Surjection), alg)
         for d in range(1, 4):
             with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
                 list(B.basis_it(d))

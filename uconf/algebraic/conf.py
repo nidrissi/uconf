@@ -67,7 +67,7 @@ def labelled_configuration_model(
     XsLie = HadamardProduct(sLie, Surjection)
     BXsLie = BarConstruction(XsLie)
     OBXsLie = CobarConstruction(BXsLie)
-    free_alg = FreeOperadAlgebra(OBXsLie, coefficients, base_ring)
+    free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
 
     # The e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) is postcomposed with
     # table reduction on the left factor to obtain Δ': Ω(C) → S ⊙ Ω(C).
@@ -78,7 +78,7 @@ def labelled_configuration_model(
     comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     pi = canonical_projection(pulled_back.operad_cls)
-    bar = TwistedBarComplex(pi, pulled_back, base_ring)
+    bar = TwistedBarComplex(pi, pulled_back)
 
     return bar
 

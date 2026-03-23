@@ -59,7 +59,7 @@ class TestFreeAlgebraModule:
     def test_single_leaf_degree(self):
         """A single-leaf (identity) element has degree = deg_M(m)."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         # Ass(1) has basis key (1,); leaf element: ((1,), (m,))
         key = ((1,), ((),))
         assert mod.degree_on_basis(key) == 0
@@ -67,7 +67,7 @@ class TestFreeAlgebraModule:
     def test_weight1_binary_degree(self):
         """A corolla element decorated by P(2) has degree = deg_P(p) + deg_M × 2."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         # Ass(2) has basis key (1,2), degree 0; corolla: ((1,2), (m1, m2))
         full_key = ((1, 2), ((), ()))
         assert mod.degree_on_basis(full_key) == 0
@@ -76,26 +76,26 @@ class TestFreeAlgebraModule:
         """Non-quasi-planar operads (Lie) raise TypeError."""
         M = _zero_diff_module()
         with pytest.raises(TypeError, match="not quasi-planar"):
-            FreeAlgebraModule(Lie, M, QQ)
+            FreeAlgebraModule(Lie, M)
 
     def test_zero_differential_on_leaf(self):
         """Differential is zero on single-leaf elements when M has zero differential."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         elem = mod(((1,), ((),)))
         assert elem.boundary() == mod.zero()
 
     def test_zero_differential_on_corolla(self):
         """d=0 on a corolla element when P and M both have zero differential."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         elem = mod(((1, 2), ((), ())))
         assert elem.boundary() == mod.zero()
 
     def test_element_constructor_dict(self):
         """Dict construction builds linear combinations."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         corolla_key = ((1, 2), ((), ()))
         leaf_key = ((1,), ((),))
         elem = mod({corolla_key: 3, leaf_key: -1})
@@ -106,7 +106,7 @@ class TestFreeAlgebraModule:
     def test_validate_rejects_bad_key(self):
         """Invalid keys are silently rejected (mapped to zero)."""
         M = _zero_diff_module()
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         assert mod._validate_basis_key("bad") is None
         # 2 m-keys for arity-1 P-key (1,) -- wrong
         assert mod._validate_basis_key(((1,), ((), ()))) is None
@@ -144,14 +144,14 @@ class TestFreeAlgebraModulePlanarBasis:
         must yield exactly one element.  (Regression for the 'absurd.py' issue.)
         """
         M = _graded_module_on_one_generator(2)
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         elems = list(mod.basis_it(4))
         assert len(elems) == 1
 
     def test_ass_one_generator_degree4_key_uses_planar_decoration(self):
         """The unique degree-4 element has the planar decoration (1,2), not (2,1)."""
         M = _graded_module_on_one_generator(2)
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         elems = list(mod.basis_it(4))
         assert len(elems) == 1
         keys = [k for k, _ in elems[0]]
@@ -166,7 +166,7 @@ class TestFreeAlgebraModulePlanarBasis:
         This is just the generator itself (the arity-1 leaf).
         """
         M = _graded_module_on_one_generator(2)
-        mod = FreeAlgebraModule(Associative, M, QQ)
+        mod = FreeAlgebraModule(Associative, M)
         elems = list(mod.basis_it(2))
         assert len(elems) == 1
 
@@ -182,7 +182,7 @@ class TestFreeAlgebraModulePlanarBasis:
         mod_M.degree_on_basis = lambda _key: 2
         mod_M.boundary = lambda _elem: mod_M.zero()
 
-        mod = FreeAlgebraModule(Associative, mod_M, QQ)
+        mod = FreeAlgebraModule(Associative, mod_M)
         elems = list(mod.basis_it(4))
         assert len(elems) == 4
 
@@ -193,14 +193,14 @@ class TestFreeOperadAlgebra:
     def test_construction_associative(self):
         """FreeOperadAlgebra stores operad_cls and exposes module."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         assert F.operad_cls is Associative
         assert isinstance(F.module, FreeAlgebraModule)
 
     def test_include(self):
         """η(m) = module((id_key, (m,))) where id_key is the unique Ass(1) key (1,)."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         m_key = ()
         included = F.include(m_key)
         assert _as_dict(included) == {((1,), ((),)): 1}
@@ -208,7 +208,7 @@ class TestFreeOperadAlgebra:
     def test_act_unary_unit(self):
         """γ(id_1; η(m)) = η(m)  (unit axiom)."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         m = F.include(())
         unit = Associative.unit(QQ)  # id in P(1)
         result = F.act(unit, [m])
@@ -217,7 +217,7 @@ class TestFreeOperadAlgebra:
     def test_act_binary_grafts_two_leaves(self):
         """γ(μ; η(m1), η(m2)) builds a corolla (μ_key, (m1, m2))."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         m1 = F.include(())
         m2 = F.include(())
         mu = Associative(2, QQ)((1, 2))
@@ -229,12 +229,12 @@ class TestFreeOperadAlgebra:
         """Non-quasi-planar operads (Commutative) raise TypeError."""
         M = _zero_diff_module()
         with pytest.raises(TypeError, match="not quasi-planar"):
-            FreeOperadAlgebra(Commutative, M, QQ)
+            FreeOperadAlgebra(Commutative, M)
 
     def test_act_arity_mismatch_raises(self):
         """act() raises ValueError when wrong number of inputs supplied."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         m = F.include(())
         mu = Associative(2, QQ)((1, 2))
         with pytest.raises(ValueError, match="Expected 2"):
@@ -248,7 +248,7 @@ class TestFreeOperadAlgebra:
         with Ass(3)-decoration and 3 M-leaves.
         """
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         mu = Associative(2, QQ)((1, 2))
         # Build a corolla first: γ(μ; x, y)
         t1 = F.act(mu, [F.include(()), F.include(())])
@@ -275,7 +275,7 @@ class TestFreeOperadAlgebra:
         mod = CombinatorialFreeModule(QQ, ["a", "b"], category=GradedModulesWithBasis(QQ))
         mod.degree_on_basis = lambda _: 1
         mod.boundary_on_basis = lambda _: mod.zero()
-        F = FreeOperadAlgebra(Associative, mod, QQ)
+        F = FreeOperadAlgebra(Associative, mod)
         a = F.include(mod.term("a"))
         b = F.include(mod.term("b"))
         sigma = Associative(2, QQ)((2, 1))
@@ -292,7 +292,7 @@ class TestFreeOperadAlgebra:
     def test_boundary_zero_trivial(self):
         """Differential is 0 for trivial Ass operad (deg=0) and trivial M."""
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
+        F = FreeOperadAlgebra(Associative, M)
         elem = F.module(((1, 2), ((), ())))
         assert F.boundary(elem) == F.module.zero()
 
@@ -300,7 +300,7 @@ class TestFreeOperadAlgebra:
         """Non-quasi-planar operads (Lie) raise TypeError for FreeOperadAlgebra."""
         M = _zero_diff_module()
         with pytest.raises(TypeError, match="not quasi-planar"):
-            FreeOperadAlgebra(Lie, M, QQ)
+            FreeOperadAlgebra(Lie, M)
 
 
 # ===========================================================================
@@ -313,20 +313,20 @@ class TestCofreeCoalgebraModule:
 
     def test_single_leaf_degree(self):
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
+        mod = CofreeCoalgebraModule(CoAssociative, M)
         # CoAss(1) key is (1,); leaf element: ((1,), (m,))
         assert mod.degree_on_basis(((1,), ((),))) == 0
 
     def test_weight1_binary_degree(self):
         """Corolla element ((1,2), (m1, m2)) has degree = deg_C((1,2)) = 0."""
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
+        mod = CofreeCoalgebraModule(CoAssociative, M)
         assert mod.degree_on_basis(((1, 2), ((), ()))) == 0
 
     def test_zero_differential_trivial(self):
         """Differential is zero when C and M both have zero differential."""
         M = _zero_diff_module()
-        mod = CofreeCoalgebraModule(CoAssociative, M, QQ)
+        mod = CofreeCoalgebraModule(CoAssociative, M)
         elem = mod(((1, 2), ((), ())))
         assert elem.boundary() == mod.zero()
 
@@ -341,14 +341,14 @@ class TestCofreeConilpotentCoalgebra:
 
     def test_construction(self):
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         assert T.cooperad_cls is CoAssociative
         assert isinstance(T.module, CofreeCoalgebraModule)
 
     def test_project_single_leaf(self):
         """π((id_key, (m,))) = m in M."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         # CoAss(1) identity key is (1,)
         elem = T.module(((1,), ((),)))
         projected = T.project(elem)
@@ -357,7 +357,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_project_kills_n2_element(self):
         """π kills elements with n ≥ 2 (arity > 1)."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         elem = T.module(((1, 2), ((), ())))
         projected = T.project(elem)
         assert projected == M.zero()
@@ -365,7 +365,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_single_leaf_gives_zero(self):
         """δ_k is zero on arity-1 elements."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         elem = T.module(((1,), ((),)))
         result = T.coact(elem, 2)
         assert result.is_zero()
@@ -373,7 +373,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_binary_corolla_arity2(self):
         """δ_2 on a corolla of arity 2 splits at root."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         c_dec = (1, 2)
         elem = T.module((c_dec, ((), ())))
         result = T.coact(elem, 2)
@@ -390,7 +390,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_coact_wrong_arity_gives_zero(self):
         """δ_3 is zero on a corolla of arity 2 (arity mismatch)."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         elem = T.module(((1, 2), ((), ())))
         result = T.coact(elem, 3)
         assert result.is_zero()
@@ -398,7 +398,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_infinitesimal_cocompose_arity3_to_2x2(self):
         """Δ^{2;2,2} on an arity-3 corolla gives a non-zero tensor."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         # Use a CoAss(3) corolla: ((1,2,3), ((), (), ()))
         arity3_elem = T.module(((1, 2, 3), ((), (), ())))
         # Δ^{2;2,2}: split C(3)-decoration at position 2
@@ -408,7 +408,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_infinitesimal_cocompose_wrong_arity_raises(self):
         """infinitesimal_cocompose raises ValueError for invalid i, m, n."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         elem = T.module.zero()
         with pytest.raises(ValueError, match="Arities must be positive"):
             T.infinitesimal_cocompose(elem, 1, 0, 2)
@@ -418,7 +418,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_boundary_zero(self):
         """Differential is zero for trivial CoAss and trivial M."""
         M = _zero_diff_module()
-        T = CofreeConilpotentCoalgebra(CoAssociative, M, QQ)
+        T = CofreeConilpotentCoalgebra(CoAssociative, M)
         elem = T.module(((1, 2), ((), ())))
         assert T.boundary(elem) == T.module.zero()
 
@@ -437,8 +437,8 @@ class TestFreeAlgebraBarComplex:
         from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
-        B = TwistedBarComplex(canonical_projection(Associative), F, QQ)
+        F = FreeOperadAlgebra(Associative, M)
+        B = TwistedBarComplex(canonical_projection(Associative), F)
 
         mu = (1, 2)
         # Outer tree: weight-1 binary tree with two single-leaf inner trees
@@ -454,8 +454,8 @@ class TestFreeAlgebraBarComplex:
         from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
-        F = FreeOperadAlgebra(Associative, M, QQ)
-        B = TwistedBarComplex(canonical_projection(Associative), F, QQ)
+        F = FreeOperadAlgebra(Associative, M)
+        B = TwistedBarComplex(canonical_projection(Associative), F)
 
         mu = (1, 2)
         outer_tree = (mu, 1, 2)

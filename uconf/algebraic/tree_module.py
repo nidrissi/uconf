@@ -92,7 +92,6 @@ class TreeModule(CombinatorialFreeModule):
         self,
         symmetric_sequence_cls: VertexDecorationLike,
         inner_module: CombinatorialFreeModule,
-        base_ring,
         *,
         vertex_degree_shift: int = 0,
         name: str,
@@ -101,6 +100,7 @@ class TreeModule(CombinatorialFreeModule):
         self._inner_module = inner_module
         self._vertex_degree_shift = vertex_degree_shift
         self._max_arity: int | None = None
+        base_ring = inner_module.base_ring()
 
         super().__init__(
             base_ring,

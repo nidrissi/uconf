@@ -93,12 +93,11 @@ class TwistedBarComplex(TreeModule):
     Args:
         alpha: A :class:`~uconf.core.twisting.TwistingMorphism` α: C → P.
         algebra: An :class:`~uconf.algebraic.algebra.OperadAlgebra` (P-algebra).
-        base_ring: Coefficient ring.
     """
 
     name: ClassVar[str] = "B_α"
 
-    def __init__(self, alpha: TwistingMorphism, algebra: OperadAlgebra, base_ring):
+    def __init__(self, alpha: TwistingMorphism, algebra: OperadAlgebra):
         self._alpha = alpha
         self._algebra = algebra
         self._cooperad_cls = alpha.cooperad
@@ -124,7 +123,6 @@ class TwistedBarComplex(TreeModule):
         super().__init__(
             symmetric_sequence_cls=sym_seq,
             inner_module=algebra.module,
-            base_ring=base_ring,
             vertex_degree_shift=vertex_shift,
             name=f"B_{{{alpha.name}}}({algebra.module})",
         )
@@ -559,12 +557,11 @@ class TwistedCobarComplex(TreeModule):
     Args:
         alpha: A :class:`~uconf.core.twisting.TwistingMorphism` α: C → P.
         coalgebra: A :class:`~uconf.algebraic.coalgebra.CooperadCoalgebra` (C-coalgebra).
-        base_ring: Coefficient ring.
     """
 
     name: ClassVar[str] = "Ω_α"
 
-    def __init__(self, alpha: TwistingMorphism, coalgebra: CooperadCoalgebra, base_ring):
+    def __init__(self, alpha: TwistingMorphism, coalgebra: CooperadCoalgebra):
         self._alpha = alpha
         self._coalgebra = coalgebra
         self._cooperad_cls = alpha.cooperad
@@ -587,7 +584,6 @@ class TwistedCobarComplex(TreeModule):
         super().__init__(
             symmetric_sequence_cls=sym_seq,
             inner_module=coalgebra.module,
-            base_ring=base_ring,
             vertex_degree_shift=vertex_shift,
             name=f"Ω_{{{alpha.name}}}({coalgebra.module})",
         )

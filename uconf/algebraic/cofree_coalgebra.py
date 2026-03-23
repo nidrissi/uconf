@@ -65,7 +65,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         self,
         cooperad_cls: QuasiPlanarLike,
         inner_module: CombinatorialFreeModule,
-        base_ring,
         *,
         name: str | None = None,
     ):
@@ -74,7 +73,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         Args:
             cooperad_cls: Arity-indexed **quasi-planar** cooperad provider.
             inner_module: Cogenerating dg-module M.
-            base_ring: Coefficient ring.
             name: Display name override.  Defaults to ``T^c_C(M)``.
 
         Raises:
@@ -85,6 +83,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             name = f"T^c_{cooperad_cls.name}({inner_module})"
         self._cooperad_cls = cooperad_cls
         self._inner_module = inner_module
+        base_ring = inner_module.base_ring()
         # Runtime check: cooperad must be quasi-planar (free S_n-action)
         _comp2 = cooperad_cls(2, base_ring)
         if not callable(getattr(_comp2, "planarize", None)):
@@ -357,23 +356,22 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     Args:
         cooperad_cls: Quasi-planar cooperad provider C.
         inner_module: The cogenerating dg-module M.
-        base_ring: Coefficient ring.
 
     The coprojection ``pi: T^c_C(M) -> M`` is given by ``project()``.
 
     Examples::
 
-        cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M, QQ)
+        cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M)
         elem = cofree_coass.module.term(((1, 2), (m1, m2)))
         cofree_coass.coact(elem, 2)
 
     """
 
-    def __init__(self, cooperad_cls: QuasiPlanarLike, inner_module, base_ring):
-        cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module, base_ring)
+    def __init__(self, cooperad_cls: QuasiPlanarLike, inner_module):
+        cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module)
         super().__init__(cofree_module, cooperad_cls, self._coact_impl)
         self._inner_module = inner_module
-        self._base_ring = base_ring
+        self._base_ring = inner_module.base_ring()
 
     def _coact_impl(self, v_element, n: int):
         """C-coalgebra coaction delta_n on ``T^c_C(M)``.

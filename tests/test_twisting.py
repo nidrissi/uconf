@@ -253,14 +253,14 @@ class TestTwistedBarComplex:
         """B_π(A) can be constructed for a trivial Ass-algebra."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
         assert B is not None
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
         elem = B((1, ((),)))
         assert elem.degree() == 0
 
@@ -268,7 +268,7 @@ class TestTwistedBarComplex:
         """Weight-1 binary tree has degree = 1."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
         mu = (1, 2)
         elem = B(((mu, 1, 2), ((), ())))
         assert elem.degree() == 1
@@ -277,7 +277,7 @@ class TestTwistedBarComplex:
         """d_α with π: B(Ass) → Ass produces correct action on corolla."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
         mu = (1, 2)
         elem = B(((mu, 1, 2), ((), ())))
         dalpha = elem.dalpha()
@@ -300,7 +300,7 @@ class TestTwistedBarComplex:
         """d² = 0 on B_π(A) for π: B(Ass) → Ass."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
         elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
@@ -308,7 +308,7 @@ class TestTwistedBarComplex:
         """B_π(A) with canonical_projection produces correct d_α on a corolla."""
         alg = _trivial_ass_algebra()
         pi = canonical_projection(Associative)
-        B = TwistedBarComplex(pi, alg, QQ)
+        B = TwistedBarComplex(pi, alg)
 
         mu = (1, 2)
         tree = (mu, 1, 2)
@@ -327,7 +327,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         assert B is not None
 
     def test_single_leaf_degree(self):
@@ -335,7 +335,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         elem = B((1, ((),)))
         assert elem.degree() == 0
 
@@ -344,7 +344,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         mu = (1, 2)
         elem = B(((mu, 1, 2), ((), ())))
         assert elem.dalpha() == B.zero()
@@ -354,7 +354,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         mu = (1, 2)
         elem = B(((mu, 1, 2), ((), ())))
         assert elem.dalpha() == B((1, ((),)))
@@ -376,7 +376,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
@@ -394,7 +394,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
@@ -403,7 +403,7 @@ class TestTwistedBarComplexIota:
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg, QQ)
+        B = TwistedBarComplex(iota, alg)
         mu = (1, 2)
         t1 = B(((mu, 1, (mu, 2, 3)), ((), (), ())))
         t2 = B(((mu, (mu, 1, 2), 3), ((), (), ())))
@@ -423,21 +423,21 @@ class TestTwistedCobarComplex:
         """Ω_ι(V) can be constructed for a trivial CoAss-coalgebra."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg, QQ)
+        OmC = TwistedCobarComplex(iota, coalg)
         assert OmC is not None
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_V(v)."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg, QQ)
+        OmC = TwistedCobarComplex(iota, coalg)
         assert OmC.degree_on_basis((1, ((),))) == 0
 
     def test_dalpha_nonzero_on_leaf(self):
         """d_α on single leaf expands via coaction → non-zero."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg, QQ)
+        OmC = TwistedCobarComplex(iota, coalg)
         elem = OmC((1, ((),)))
         result = elem.dalpha()
         assert result != OmC.zero()
@@ -446,7 +446,7 @@ class TestTwistedCobarComplex:
         """Ω_ι(V) with canonical_inclusion produces correct degree."""
         coalg = _trivial_coass_coalgebra()
         iota = canonical_inclusion(CoAssociative)
-        OmC = TwistedCobarComplex(iota, coalg, QQ)
+        OmC = TwistedCobarComplex(iota, coalg)
 
         c_dec = (1, 2)
         tree = (c_dec, 1, 2)

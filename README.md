@@ -96,18 +96,18 @@ attribute on concrete models, property on wrappers) representing the constant
     Works for any connected cooperad, including those with negative-degree elements (e.g.
     `CoAssociative`).
 
-- `constructions/twisted_complex.py` — `TwistedBarComplex(alpha, alg, base_ring)` and
-  `TwistedCobarComplex(alpha, coalg, base_ring)`
+- `constructions/twisted_complex.py` — `TwistedBarComplex(alpha, alg)` and
+  `TwistedCobarComplex(alpha, coalg)`
   - General twisted bar/cobar constructions for an operadic twisting morphism `α: C → P`.
-  - `TwistedBarComplex(α, A, k)`: Given `α: C → P` and a P-algebra `A`, produces the
+  - `TwistedBarComplex(α, A)`: Given `α: C → P` and a P-algebra `A`, produces the
     twisted bar complex `B_α(A) = (T^c_C(A), d_internal + d_2 + d_α)`, a dg-C-coalgebra.
     Exposes `cooperad_cls` and `module` for use as a coalgebra.
-  - `TwistedCobarComplex(α, V, k)`: Given `α: C → P` and a C-coalgebra `V`, produces the
+  - `TwistedCobarComplex(α, V)`: Given `α: C → P` and a C-coalgebra `V`, produces the
     twisted cobar complex `Ω_α(V) = (T_P(V), d_internal + d_2 + d_α)`, a dg-P-algebra.
     Exposes `operad_cls` and `module` for use as an algebra.
-  - Standard bar complex: `TwistedBarComplex(canonical_projection(P), alg, base_ring)`
-  - Standard cobar complex: `TwistedCobarComplex(canonical_inclusion(C), coalg, base_ring)`
-  - Twisted bar complex B_ι(A): `TwistedBarComplex(canonical_inclusion(B(P)), alg, base_ring)`
+  - Standard bar complex: `TwistedBarComplex(canonical_projection(P), alg)`
+  - Standard cobar complex: `TwistedCobarComplex(canonical_inclusion(C), coalg)`
+  - Twisted bar complex B_ι(A): `TwistedBarComplex(canonical_inclusion(B(P)), alg)`
   - `set_n_factors(F)` on `TwistedBarComplex` restricts basis enumeration to elements
     with exactly `F` coefficient-module keys (for configuration models).
 
@@ -323,7 +323,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Action is diagonal on factors and multilinear on tensor arguments.
   - `basis_it(d)` — iterates over all `(left_key, right_key)` tensor basis elements with total degree `d`.
 
-- `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad_cls, inner_module, base_ring)`
+- `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad_cls, inner_module)`
   - Free P-algebra on a dg-module M: `P ∘ M = ⊕_{n≥1} P(n) ⊗_{S_n} M^{⊗n}`.
   - Basis keys are `(tree, m_tuple)` pairs where `tree` is a shuffle tree and
     `m_tuple` is a tuple of M-basis keys.
@@ -334,7 +334,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
     `connectivity ≥ 1`; otherwise it raises `ValueError` rather than returning a
     partial list.
 
-- `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module, base_ring)`
+- `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module)`
   - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
   - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
   - `CofreeCoalgebraModule.basis_it(d)` — iterates over all basis elements of degree `d`;
