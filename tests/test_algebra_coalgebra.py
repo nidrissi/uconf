@@ -3,10 +3,8 @@
 Covers:
 - :class:`uconf.algebra.OperadAlgebra`
 - :class:`uconf.coalgebra.CooperadCoalgebra`
-- :class:`uconf.bar_algebra.BarComplexAlgebra` (bar complex B_P(A))
-- :class:`uconf.cobar_coalgebra.CobarComplexCoalgebra` (cobar complex Ω_C(V))
-- :class:`uconf.constructions.twisted_bar_algebra.TwistedBarComplexAlgebra`
-  (twisted bar complex B_ι(A))
+- :class:`uconf.constructions.twisted_complex.TwistedBarComplex` (bar complex B_α(A))
+- :class:`uconf.constructions.twisted_complex.TwistedCobarComplex` (cobar complex Ω_α(V))
 """
 
 import itertools
@@ -18,11 +16,10 @@ from sage.all import tensor as sage_tensor
 from uconf import Associative, CoAssociative, Commutative, Lie
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.constructions.bar_algebra import BarComplexAlgebra
 from uconf.constructions.bar_construction import BarConstruction
-from uconf.constructions.cobar_coalgebra import CobarComplexCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.constructions.twisted_bar_algebra import TwistedBarComplexAlgebra
+from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
+from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 from uconf.core.trees import children, decoration, is_leaf, vertex_arity
 
 # ===========================================================================
@@ -168,18 +165,18 @@ class TestCooperadCoalgebra:
 
 
 # ===========================================================================
-# BarComplexAlgebra tests
+# TwistedBarComplex tests
 # ===========================================================================
 
 
 def _make_bar_complex(base_ring=QQ):
     """Build B_Ass(k) -- bar complex of the trivial 1-dim Ass-algebra."""
     alg = TrivialAssAlgebra(base_ring=base_ring)
-    return BarComplexAlgebra(alg, base_ring=base_ring)
+    return TwistedBarComplex(canonical_projection(Associative), alg, base_ring=base_ring)
 
 
-class TestBarComplexAlgebra:
-    """Tests for BarComplexAlgebra."""
+class TestTwistedBarComplex:
+    """Tests for TwistedBarComplex (bar complex B_π(A))."""
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
@@ -214,7 +211,7 @@ class TestBarComplexAlgebra:
         tree = (mu, 1, 2)
         a_tuple = ((), ())
         elem = B((tree, a_tuple))
-        result = elem.dact()
+        result = elem.dalpha()
         # Should give +(1, ((),)) -- single leaf with the product value
         assert result == B((1, ((),)))
 
@@ -279,7 +276,7 @@ class TestBarComplexAlgebra:
             return result
 
         alg = OperadAlgebra(module, Commutative, comm_structure_map)
-        B = BarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Commutative), alg, QQ)
         # Weight-1 arity-2 tree: Commutative(2, QQ) has basis {()}
         tree = ((), 1, 2)
         elem = B((tree, ((), ())))
@@ -287,18 +284,18 @@ class TestBarComplexAlgebra:
 
 
 # ===========================================================================
-# CobarComplexCoalgebra tests
+# TwistedCobarComplex tests
 # ===========================================================================
 
 
 def _make_cobar_complex(base_ring=QQ):
     """Build Ω_CoAss(k) -- cobar complex of the trivial 1-dim CoAss-coalgebra."""
     coalg = TrivialCoassCoalgebra(base_ring=base_ring)
-    return CobarComplexCoalgebra(coalg, base_ring=base_ring)
+    return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg, base_ring=base_ring)
 
 
-class TestCobarComplexCoalgebra:
-    """Tests for CobarComplexCoalgebra."""
+class TestTwistedCobarComplex:
+    """Tests for TwistedCobarComplex (cobar complex Ω_ι(V))."""
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_V(v)."""
@@ -353,7 +350,7 @@ class TestBarComplexLie:
     def test_d_squared_zero_weight1(self):
         """d² = 0 on a weight-1 Lie tree for the trivial Lie algebra."""
         alg = self._make_trivial_lie_algebra()
-        B = BarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_projection(Lie), alg, QQ)
         # Lie(2, QQ) has basis key (1,) in degree 0
         lie_dec = (1,)
         tree = (lie_dec, 1, 2)
@@ -362,7 +359,7 @@ class TestBarComplexLie:
 
 
 # ===========================================================================
-# TwistedBarComplexAlgebra tests
+# TwistedBarComplex (with canonical inclusion ι) tests
 # ===========================================================================
 
 
@@ -446,38 +443,17 @@ def _make_pullback_omega_bar_ass_algebra(base_ring=QQ):
 def _make_twisted_bar(base_ring=QQ):
     """Build B_ι(k) -- twisted bar complex of the trivial 1-dim ΩB(Ass)-algebra."""
     alg = _make_trivial_omega_bar_ass_algebra(base_ring=base_ring)
-    return TwistedBarComplexAlgebra(alg, base_ring=base_ring)
+    return TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, base_ring=base_ring)
 
 
-class TestTwistedBarComplexAlgebra:
-    """Tests for TwistedBarComplexAlgebra (twisted bar complex B_ι(A))."""
+class TestTwistedBarComplexIota:
+    """Tests for TwistedBarComplex with canonical inclusion ι (twisted bar complex B_ι(A))."""
 
     def test_construction(self):
-        """TwistedBarComplexAlgebra can be constructed from an ΩB(P)-algebra."""
+        """TwistedBarComplex can be constructed from an ΩB(P)-algebra."""
         alg = _make_trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
         assert B is not None
-
-    def test_rejects_non_cobar_algebra(self):
-        """TwistedBarComplexAlgebra raises TypeError for non-ΩB(P) algebras."""
-        alg = TrivialAssAlgebra()
-        with pytest.raises(TypeError, match="CobarConstruction"):
-            TwistedBarComplexAlgebra(alg, QQ)
-
-    def test_rejects_cobar_of_non_bar(self):
-        """TwistedBarComplexAlgebra raises TypeError when cooperad is not B(P)."""
-        # CobarConstruction(CoAssociative) is not CobarConstruction(BarConstruction(...))
-        from uconf import CoAssociative
-
-        module = Commutative(1, base_ring=QQ)
-        cobar_coass = CobarConstruction(CoAssociative)
-
-        def trivial_map(p_elem, a_list):
-            return module.zero()
-
-        alg = OperadAlgebra(module, cobar_coass, trivial_map)
-        with pytest.raises(TypeError, match="BarConstruction"):
-            TwistedBarComplexAlgebra(alg, QQ)
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
@@ -501,24 +477,24 @@ class TestTwistedBarComplexAlgebra:
         deg = B.degree_on_basis((tree, ((), (), ())))
         assert deg == 1
 
-    def test_dtwist_trivial_algebra_zero(self):
-        """d_twist = 0 for the trivial ΩB(Ass)-algebra."""
+    def test_dalpha_trivial_algebra_zero(self):
+        """d_alpha = 0 for the trivial ΩB(Ass)-algebra."""
         B = _make_twisted_bar()
         mu = (1, 2)
         tree = (mu, 1, 2)
         elem = B((tree, ((), ())))
-        assert elem.dtwist() == B.zero()
+        assert elem.dalpha() == B.zero()
 
-    def test_dtwist_pullback_algebra_nonempty(self):
-        """d_twist is non-zero for the pullback ΩB(Ass)-algebra (ε-pullback)."""
+    def test_dalpha_pullback_algebra_nonempty(self):
+        """d_alpha is non-zero for the pullback ΩB(Ass)-algebra (ε-pullback)."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
         # Weight-1 binary tree: (μ; 1, 2) with leaves decorated by () ∈ k
         mu = (1, 2)
         tree = (mu, 1, 2)
         elem = B((tree, ((), ())))
-        # d_twist applies γ(ι([μ]); (), ()) = () (non-zero via ε-pullback)
-        twist_result = elem.dtwist()
+        # d_alpha applies γ(ι([μ]); (), ()) = () (non-zero via ε-pullback)
+        twist_result = elem.dalpha()
         # Should produce a single-leaf element
         assert twist_result == B((1, ((),)))
 
@@ -560,14 +536,14 @@ class TestTwistedBarComplexAlgebra:
     def test_d_squared_zero_pullback(self, tree: tuple, a_tuple: tuple):
         """d² = 0 on tree elements of B_ι(A) for the ε-pullback ΩB(Ass)-algebra."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
         elem = B((tree, a_tuple))
         assert elem.boundary().boundary() == B.zero()
 
     def test_linear_combination_d_squared_zero(self):
         """d² = 0 on a linear combination of elements for the pullback algebra."""
         alg = _make_pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplexAlgebra(alg, QQ)
+        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg, QQ)
         mu = (1, 2)
         t1 = B(((mu, 1, (mu, 2, 3)), ((), (), ())))
         t2 = B(((mu, (mu, 1, 2), 3), ((), (), ())))
