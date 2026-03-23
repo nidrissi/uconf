@@ -42,11 +42,8 @@ from uconf.algebraic import (
     euclidean_unordered_configuration_model,
 )
 from uconf.constructions import (
-    BarComplexAlgebra,
     BarConstruction,
-    CobarComplexCoalgebra,
     CobarConstruction,
-    TwistedBarComplexAlgebra,
     TwistedBarComplex,
     TwistedCobarComplex,
     e_comodule_on_generator,
@@ -103,9 +100,6 @@ __all__ = [
     "CofreeConilpotentCoalgebra",
     "BarConstruction",
     "CobarConstruction",
-    "BarComplexAlgebra",
-    "CobarComplexCoalgebra",
-    "TwistedBarComplexAlgebra",
     "TwistedBarComplex",
     "TwistedCobarComplex",
     "SurjectionSimplicialCochainAlgebra",

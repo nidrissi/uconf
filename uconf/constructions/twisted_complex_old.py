@@ -12,12 +12,13 @@ Given a twisting morphism α: C → P satisfying the Maurer-Cartan equation
 where T^c_{C}(A) is the cofree conilpotent C-coalgebra on A, and:
 - d_internal: interleaved DFS differential (∂_C on vertex decorations + ∂_A on
   leaves)
-- d_2: structural differential on the C-decorated trees (cobar-type vertex
-  expansion when C is a raw cooperad; bar-type edge contraction when C = B(P))
+- d_2: structural cobar differential (expand vertices via C-cocomposition)
+  [Note: this is the cooperad structural differential on the C-decorated trees]
 - d_α: at each corolla vertex with C(n)-decoration c, apply α(c) ∈ P(n) via
   the P-algebra action γ(α(c); a_1,...,a_n)
 
-B_α(A) is a dg-C-coalgebra.
+The vertex degree shift is determined by the cooperad C (which controls the
+degree convention for basis elements).
 
 **Twisted cobar complex** Ω_α(V) for a C-coalgebra (V, δ):
     Ω_α(V) = (T_{P}(V), d_internal + d_2 + d_α)
@@ -25,16 +26,18 @@ B_α(A) is a dg-C-coalgebra.
 where T_{P}(V) is the free P-algebra on V, and:
 - d_internal: interleaved DFS differential (∂_P on vertex decorations + ∂_V on
   leaves)
-- d_2: structural differential on the P-decorated trees (bar-type edge
-  contraction when P is a raw operad; cobar-type vertex expansion when
-  P = Ω(C))
+- d_2: structural bar differential (contract internal edges via P-composition)
 - d_α: at each leaf l with value v_l, apply the C-coalgebra coaction
   δ_k(v_l) = Σ c_k ⊗ v'_1 ⊗ ... ⊗ v'_k, then convert via α:
   insert new vertex decorated by α(c_k) ∈ P(k).
 
-Ω_α(V) is a dg-P-algebra.
+**Canonical specializations**:
 
-Reference: Loday-Vallette "Algebraic Operads", Sections 11.2 and 11.4.
+- ``BarComplexAlgebra(alg, base_ring)`` ≅ ``TwistedBarComplex(canonical_projection(P), alg, base_ring)``
+- ``CobarComplexCoalgebra(coalg, base_ring)`` ≅ ``TwistedCobarComplex(canonical_inclusion(C), coalg, base_ring)``
+- ``TwistedBarComplexAlgebra(alg, base_ring)`` ≅ ``TwistedBarComplex(canonical_inclusion(B(P)), alg, base_ring)``
+
+Reference: Loday-Vallette "Algebraic Operads", Section 11.2 and 11.4.
 """
 
 from __future__ import annotations
@@ -77,16 +80,12 @@ class TwistedBarComplex(TreeModule):
     Basis keys are pairs ``(tree, a_tuple)`` where tree has C-decorated vertices
     and a_tuple carries A-module values at the leaves.
 
-    The result is a dg-C-coalgebra.  This class exposes ``cooperad_cls``
-    and ``module`` attributes so that it can serve as a
-    :class:`~uconf.algebraic.coalgebra.CooperadCoalgebra`-like object.
-
     The differential is d = d_internal + d_2 + d_α where:
 
     - d_internal: applies ∂_C to vertex decorations and ∂_A to leaf decorations
       with the Koszul sign rule (inherited from TreeModule).
-    - d_2: structural differential (bar-type edge contraction when cooperad = B(P),
-      cobar-type vertex expansion otherwise).
+    - d_2: expands internal vertices via C-cocomposition (cobar structural
+      differential on the cooperad side).
     - d_α: at each corolla vertex (all-leaf children) with C(n)-decoration c,
       applies the P-algebra action γ(α(c); a_1,...,a_n).
 
@@ -94,6 +93,12 @@ class TwistedBarComplex(TreeModule):
         alpha: A :class:`~uconf.core.twisting.TwistingMorphism` α: C → P.
         algebra: An :class:`~uconf.algebraic.algebra.OperadAlgebra` (P-algebra).
         base_ring: Coefficient ring.
+
+    Note:
+        The ``vertex_degree_shift`` is -1 (cobar/desuspension convention) since
+        the trees are decorated by the cooperad C.  The cooperad C carries the
+        s⁻¹ C̄ decoration, and the bar complex B_α(A) lives on the "cofree
+        C-coalgebra" side of the adjunction.
     """
 
     name: ClassVar[str] = "B_α"
@@ -138,15 +143,6 @@ class TwistedBarComplex(TreeModule):
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
         self._dalpha = self.module_morphism(on_basis=self._dalpha_on_basis, codomain=self)
 
-        # Expose cooperad_cls for CooperadCoalgebra-like interface.
-        # The result is a C-coalgebra, so cooperad_cls = C.
-        self.cooperad_cls = alpha.cooperad
-
-    @property
-    def module(self):
-        """The underlying dg-module (self, as a TreeModule)."""
-        return self
-
     # -----------------------------------------------------------------------
     # n_factors filtering
     # -----------------------------------------------------------------------
@@ -156,18 +152,19 @@ class TwistedBarComplex(TreeModule):
         occurrences of the coefficient module.
 
         When the inner module of the underlying algebra is a tensor product
-        ``A ⊗ Free_P(M)``, each leaf of the bar tree carries a tensor key
-        ``(a_key, (p_key, m_tuple))`` where ``m_tuple`` is a tuple of
-        coefficient-module basis keys.  The *total* number of
-        coefficient-module keys across all leaves is ``Σ_i len(m_tuple_i)``.
-        Setting ``n_factors`` restricts the basis enumeration to exactly that
-        total.
+        ``A ⊗ Free_P(M)`` (as produced by :func:`~uconf.algebraic.conf.labelled_configuration_model`),
+        each leaf of the bar tree carries a tensor key ``(a_key, (p_key, m_tuple))``
+        where ``m_tuple`` is a tuple of coefficient-module basis keys.
+        The *total* number of coefficient-module keys across all leaves is
+        ``Σ_i len(m_tuple_i)``.  Setting ``n_factors`` restricts the basis
+        enumeration to exactly that total.
 
         This also implies a finite arity bound on the bar tree (at most
         ``n_factors`` leaves) and enables automatic connectivity computation.
 
-        Passing ``None`` removes the restriction.  Clears cached
-        ``graded_basis`` results.
+        Passing ``None`` removes the restriction.
+
+        Clears cached ``graded_basis`` results.
         """
         self._n_factors = n_factors
         if n_factors is not None:
@@ -181,21 +178,37 @@ class TwistedBarComplex(TreeModule):
         """Minimum degree of any basis element.
 
         When ``_n_factors`` is set, computes a lower bound on the degree of
-        elements with exactly that many coefficient-module keys.
+        elements with exactly that many coefficient-module keys.  The bound
+        accounts for the minimum contributions from:
+
+        - Coefficient factors: ``n_factors * coeff_conn``
+        - Manifold/left factors: ``k * left_conn`` (for ``k`` bar-tree leaves)
+        - Free-algebra operad factors at various arities
+        - Bar-tree vertex decorations with degree shift +1
+
+        The analytical bound is conservative; the true connectivity may be
+        higher.
         """
         if self._n_factors is None:
             return super().connectivity
 
         F = self._n_factors
 
+        # Try to extract coefficient-module connectivity and left-module
+        # connectivity from the tensor product structure.
         inner = self._inner_module
         coeff_conn = 0
         left_conn = 0
         operad_conn = 0
 
+        # The inner module is typically a Sage tensor product A ⊗ B where
+        # A = manifold model module, B = free algebra module.
+        # HadamardTensorAlgebra sets module = tensor([left_module, right_module])
         if hasattr(inner, "_sets") and len(inner._sets) == 2:
             left_mod, right_mod = inner._sets
             left_conn = int(getattr(left_mod, "connectivity", 0))
+            # The right module is a FreeAlgebraModule; its connectivity comes
+            # from the coefficient module it wraps.
             if hasattr(right_mod, "_inner_module"):
                 coeff_conn = int(getattr(right_mod._inner_module, "connectivity", 0))
             if hasattr(right_mod, "_operad_cls"):
@@ -203,6 +216,7 @@ class TwistedBarComplex(TreeModule):
         else:
             left_conn = int(getattr(inner, "connectivity", 0))
 
+        # Operad connectivity for the bar tree vertices
         bar_operad_conn = int(getattr(self._symmetric_sequence_cls, "connectivity", 0))
 
         min_deg = None
@@ -223,7 +237,15 @@ class TwistedBarComplex(TreeModule):
         return min_deg if min_deg is not None else 0
 
     def count_factors(self, key) -> int:
-        """Count the total number of coefficient-module keys in a basis key."""
+        """Count the total number of coefficient-module keys in a basis key.
+
+        For a basis key ``(tree, a_tuple)`` where each ``a_tuple[i]`` is a
+        tensor key ``(left_key, right_key)``, and ``right_key = (p_key, m_tuple)``
+        is a free-algebra key, returns ``Σ_i len(m_tuple_i)``.
+
+        If the inner module is not a tensor product with a free algebra
+        right factor, falls back to counting one factor per leaf.
+        """
         _tree, a_tuple = key
         total = 0
         for a_entry in a_tuple:
@@ -234,6 +256,7 @@ class TwistedBarComplex(TreeModule):
                     if isinstance(m_tuple, (tuple, list)):
                         total += len(m_tuple)
                         continue
+            # Fallback: each leaf counts as 1 factor
             total += 1
         return total
 
@@ -241,7 +264,8 @@ class TwistedBarComplex(TreeModule):
         """Iterate over basis elements of total degree ``d``.
 
         When ``_n_factors`` is set, only yields elements whose total number
-        of coefficient-module keys equals ``_n_factors``.
+        of coefficient-module keys equals ``_n_factors``.  Otherwise delegates
+        to the parent :class:`TreeModule` implementation.
         """
         for elem in super().basis_it(d):
             if self._n_factors is None:
@@ -526,10 +550,6 @@ class TwistedBarComplex(TreeModule):
             parent = self.parent()
             return parent._dalpha(self)
 
-        # Backward-compatible aliases
-        dact = dalpha
-        dtwist = dalpha
-
 
 # ===========================================================================
 # TwistedCobarComplex: Ω_α(V)
@@ -543,23 +563,24 @@ class TwistedCobarComplex(TreeModule):
     Basis keys are pairs ``(tree, v_tuple)`` where tree has P-decorated vertices
     and v_tuple carries V-module values at the leaves.
 
-    The result is a dg-P-algebra.  This class exposes ``operad_cls``
-    and ``module`` attributes so that it can serve as an
-    :class:`~uconf.algebraic.algebra.OperadAlgebra`-like object.
-
     The differential is d = d_internal + d_2 + d_α where:
 
     - d_internal: applies ∂_P to vertex decorations and ∂_V to leaf decorations
       with the Koszul sign rule (inherited from TreeModule).
-    - d_2: structural differential (bar-type edge contraction when operad is raw,
-      cobar-type vertex expansion when operad = Ω(C)).
+    - d_2: contracts internal edges via P-composition (bar structural
+      differential on the operad side).
     - d_α: at each leaf l with value v_l, applies the C-coalgebra coaction
-      δ_k(v_l), then inserts a new vertex decorated by α(c_k) ∈ P(k).
+      δ_k(v_l) = Σ c_k ⊗ v'_1 ⊗ ... ⊗ v'_k, then inserts a new vertex
+      decorated by α(c_k) ∈ P(k).
 
     Args:
         alpha: A :class:`~uconf.core.twisting.TwistingMorphism` α: C → P.
         coalgebra: A :class:`~uconf.algebraic.coalgebra.CooperadCoalgebra` (C-coalgebra).
         base_ring: Coefficient ring.
+
+    Note:
+        The ``vertex_degree_shift`` is +1 (bar/suspension convention) when the
+        operad is a BarConstruction, and -1 (cobar convention) for raw operads.
     """
 
     name: ClassVar[str] = "Ω_α"
@@ -600,15 +621,6 @@ class TwistedCobarComplex(TreeModule):
         )
         self._d2 = self.module_morphism(on_basis=self._d2_on_basis, codomain=self)
         self._dalpha = self.module_morphism(on_basis=self._dalpha_on_basis, codomain=self)
-
-        # Expose operad_cls for OperadAlgebra-like interface.
-        # The result is a P-algebra, so operad_cls = P.
-        self.operad_cls = alpha.operad
-
-    @property
-    def module(self):
-        """The underlying dg-module (self, as a TreeModule)."""
-        return self
 
     # -----------------------------------------------------------------------
     # Differential
@@ -845,6 +857,3 @@ class TwistedCobarComplex(TreeModule):
             """Apply the twisted coaction differential via α."""
             parent = self.parent()
             return parent._dalpha(self)
-
-        # Backward-compatible alias
-        dcoact = dalpha
