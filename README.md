@@ -20,9 +20,25 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 The project relies on **SageMath** (parents/modules, symmetric groups, tensor products, etc.).
 
-- Key dependency: `sagemath` (see `requirements.txt`).
+- Key dependency: `sagemath`.
 - Tests: `pytest`.
 - Optional: `comch` for compatibility tests (`test_comch_compatibility.py`).
+
+## Development
+
+Create and activate a virtual environment, then install the package in development mode:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Then run tests:
+
+```bash
+pytest
+```
 
 ## `uconf` package
 
@@ -576,11 +592,3 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
   - `pytest -q tests/test_simplicial.py`
 - Run morphism tests:
   - `pytest -q tests/test_morphisms.py`
-
-## Notes
-
-- `uconf/` is the current source of truth.
-- `old-computations/` is historical material, not the primary target of the current test suite.
-- `OperadAlgebra` / `CooperadCoalgebra` use callable dispatch via constructor
-  parameters (`structure_map`, `coaction_map`). Overriding `act` / `coact` is
-  not part of the public extension pattern.
