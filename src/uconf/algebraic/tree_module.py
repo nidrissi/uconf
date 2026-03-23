@@ -569,11 +569,41 @@ class TreeModule(CombinatorialFreeModule):
         leaves are relabeled to canonical DFS order, ``m_tuple`` is permuted to
         match, and a Koszul sign ``ε(σ⁻¹; degrees)`` is included to account
         for the permutation of graded leaf-module elements.
+
+        If the inner module also exposes ``normalize_to_planar``, it is applied
+        recursively to each leaf value so that nested tree-decorated structures
+        (e.g. ``FreeAlgebraModule`` keys used as inner-module values) are fully
+        normalised.
         """
         result = self.zero()
         for key, coeff in elem:
             for norm_coeff, norm_key in self._normalize_key(key):
                 result += coeff * norm_coeff * self.term(norm_key)
+        # Recursively normalise inner-module keys if possible.
+        inner_normalize = getattr(self._inner_module, "normalize_to_planar", None)
+        if inner_normalize is not None:
+            result = self._normalize_inner_keys(result, inner_normalize)
+        return result
+
+    def _normalize_inner_keys(self, elem, inner_normalize):
+        """Apply inner-module normalisation to every leaf value."""
+        result = self.zero()
+        for (tree, m_tuple), coeff in elem:
+            # Build a temporary inner-module element for each leaf key,
+            # normalise it, and rebuild the outer key.
+            new_parts: list[list[tuple]] = []
+            for mk in m_tuple:
+                normed = inner_normalize(self._inner_module.term(mk))
+                new_parts.append(list(normed))
+            # Form all combinations (usually just 1 term per leaf)
+            from itertools import product as iprod
+            for combo in iprod(*new_parts):
+                inner_coeff = coeff
+                new_m_keys = []
+                for new_mk, mk_c in combo:
+                    inner_coeff *= mk_c
+                    new_m_keys.append(new_mk)
+                result += inner_coeff * self.term((tree, tuple(new_m_keys)))
         return result
 
     def _normalize_key(self, key):
