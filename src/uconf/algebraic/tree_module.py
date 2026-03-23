@@ -68,6 +68,54 @@ def _module_basis_keys_in_degree(module, d: int) -> Iterator:
             yield key
 
 
+def _inner_weight_on_key(module, m_key) -> int:
+    """Return the weight of a single basis key of ``module``.
+
+    If ``module`` exposes ``_weight_on_basis``, delegate to it.
+    Otherwise every key is assumed to have weight 1 (the default for
+    plain dg-modules without an explicit weight notion).
+    """
+    w_fn = getattr(module, "_weight_on_basis", None)
+    if w_fn is not None:
+        return w_fn(m_key)
+    return 1
+
+
+def _module_basis_keys_in_weight_and_degree(module, d: int, w: int) -> Iterator:
+    """Yield all basis keys of ``module`` in degree ``d`` and weight ``w``.
+
+    If ``module`` exposes ``basis_weight_iter``, it is used directly.
+    Otherwise every key is assigned weight 1 and only ``w == 1`` returns
+    any keys (those in degree ``d``).
+    """
+    basis_w_fn = getattr(module, "basis_weight_iter", None)
+    if basis_w_fn is not None:
+        for elem in basis_w_fn(d, w):
+            yield from elem.support()
+        return
+    # Default: every generator has weight 1.
+    if w == 1:
+        yield from _module_basis_keys_in_degree(module, d)
+
+
+def _tuples_in_degree_and_weight(
+    keys_by_dw: dict, n: int, d: int, w: int
+) -> Iterator[tuple]:
+    """Yield all ``n``-tuples of keys with total degree ``d`` and total weight ``w``."""
+    if n == 0:
+        if d == 0 and w == 0:
+            yield ()
+        return
+    for d_first in range(d + 1):
+        for w_first in range(1, w + 1):
+            first_keys = keys_by_dw.get((d_first, w_first), [])
+            for first_key in first_keys:
+                for rest in _tuples_in_degree_and_weight(
+                    keys_by_dw, n - 1, d - d_first, w - w_first
+                ):
+                    yield (first_key,) + rest
+
+
 def _tuples_in_degree(keys_by_deg: dict, n: int, d: int) -> Iterator[tuple]:
     """Yield all ``n``-tuples of keys whose total degree is ``d``."""
     if n == 0:
@@ -99,7 +147,6 @@ class TreeModule(CombinatorialFreeModule):
         self._symmetric_sequence_cls = symmetric_sequence_cls
         self._inner_module = inner_module
         self._vertex_degree_shift = vertex_degree_shift
-        self._max_arity: int | None = None
         base_ring = inner_module.base_ring()
 
         super().__init__(
@@ -243,15 +290,12 @@ class TreeModule(CombinatorialFreeModule):
             max_n = d // min_m_deg
         elif connectivity > 0:
             max_n = (d - self._vertex_degree_shift) // connectivity + 1
-        elif self._max_arity is not None:
-            max_n = self._max_arity
         else:
             raise ValueError(
                 "Cannot exhaustively enumerate basis_iter(d): both the inner module "
                 "and symmetric sequence admit degree-0 generators (min_deg=0, connectivity=0), "
                 "so arity is unbounded in fixed degree.  "
-                "Pass n_factors to chain_complex() to restrict to a finite subcomplex, "
-                "or call set_max_arity() on this module directly."
+                "Use basis_weight_iter(d, w) to enumerate elements of a fixed weight."
             )
 
         # Require quasi-planar support: basis_iter() is only correct when the
@@ -299,13 +343,114 @@ class TreeModule(CombinatorialFreeModule):
     def set_max_arity(self, max_arity: int | None) -> None:
         """Set the maximum leaf-arity for basis enumeration.
 
-        When the tree degree and inner-module connectivity are both ≤ 0,
-        the arity is unbounded.  Setting a finite ``max_arity`` truncates
-        the enumeration so that only trees with at most ``max_arity`` leaves
-        are generated.  This also clears the cached ``graded_basis`` results.
+        .. deprecated::
+            Use :meth:`basis_weight_iter` instead.  Setting a finite weight
+            ``w`` enumerates only elements whose total leaf-module weight is
+            exactly ``w``, which provides a finite subcomplex without the
+            need for global state.  This method is kept for backward
+            compatibility with callers that cannot yet use
+            ``basis_weight_iter``.
         """
-        self._max_arity = max_arity
-        self.graded_basis.clear_cache()
+        raise AttributeError(
+            "set_max_arity() has been removed.  "
+            "Use basis_weight_iter(d, w) to enumerate elements of a fixed weight."
+        )
+
+    # ------------------------------------------------------------------
+    # Weight
+    # ------------------------------------------------------------------
+
+    def _weight_on_basis(self, key) -> int:
+        """Weight of a single basis key ``(tree, m_tuple)``.
+
+        The weight is the sum of weights of the leaf-module elements in
+        ``m_tuple``.  Each leaf element's weight is obtained from the inner
+        module's ``_weight_on_basis``; modules without this attribute
+        default to weight 1 per key.
+        """
+        _tree, m_tuple = key
+        return sum(_inner_weight_on_key(self._inner_module, m) for m in m_tuple)
+
+    def basis_weight_iter(self, d: int, w: int) -> Iterator[Any]:
+        """Iterate over basis elements of total degree ``d`` and weight ``w``.
+
+        Weight is additive: the weight of ``(tree, m_tuple)`` is the sum of
+        the weights of its leaf-module elements.  The weight of an
+        inner-module key is given by the inner module's
+        :meth:`_weight_on_basis`; plain dg-modules without this attribute
+        default to weight 1 per key.
+
+        Unlike :meth:`basis_iter`, this method is always finite (``w``
+        bounds the arity) and never requires :meth:`set_max_arity`.
+
+        Raises:
+            NotImplementedError: when the symmetric sequence does not expose
+                ``planar_basis_it`` (e.g. ``Commutative``, ``Lie``).
+        """
+        if w < 1:
+            return
+
+        M = self._inner_module
+        S = self._symmetric_sequence_cls
+        R = self.base_ring()
+
+        connectivity = int(getattr(S, "connectivity", 0))
+        min_tree_deg = min(self._vertex_degree_shift + connectivity, 0)
+        max_m_deg = d - min_tree_deg
+
+        # Collect inner-module keys by (degree, weight)
+        keys_by_dw: dict[tuple, list] = {}
+        for d_m in range(max_m_deg + 1):
+            for w_m in range(1, w + 1):
+                keys = list(_module_basis_keys_in_weight_and_degree(M, d_m, w_m))
+                if keys:
+                    keys_by_dw[(d_m, w_m)] = keys
+
+        # Yield leaf elements: n=1, total weight=w, total degree=d
+        for m_key in keys_by_dw.get((d, w), []):
+            yield self.term((1, (m_key,)))
+
+        if not keys_by_dw:
+            return
+
+        min_tree_deg_n2 = self._vertex_degree_shift + connectivity
+        if d < min_tree_deg_n2:
+            return
+
+        # Require quasi-planar support
+        _use_planar = hasattr(S(2, R), "planar_basis_it")
+        if not _use_planar:
+            raise NotImplementedError(
+                f"basis_weight_iter() requires the symmetric sequence {S.name!r} to support "
+                "planar_basis_it() on its arity-2 component."
+            )
+
+        # Max arity: each leaf has weight >= 1, so n <= w
+        max_n = w
+
+        for n in range(2, max_n + 1):
+            max_tree_weight = n - 1
+            for d_M in range(max_m_deg + 1):
+                d_tree = d - d_M
+                m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_M, w))
+                if not m_tuples:
+                    continue
+                for tree in enumerate_shuffle_trees_generic_in_degree(
+                    n,
+                    max_tree_weight,
+                    S,
+                    R,
+                    d_tree,
+                    self._vertex_degree_shift,
+                    use_planar_decs=True,
+                ):
+                    for m_tuple in m_tuples:
+                        yield self.term((tree, m_tuple))
+
+    @cached_method
+    def graded_basis_by_weight(self, d: int, w: int):
+        """Cached family of basis elements of degree ``d`` and weight ``w``."""
+        return Family(self.basis_weight_iter(d, w))
 
     def _boundary_on_basis(self, key) -> Any:
         """Differential using interleaved DFS Koszul sign rule."""

@@ -22,7 +22,11 @@ from typing import Iterator
 from sage.all import tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.algebraic.tree_module import _module_basis_keys_in_degree
+from uconf.algebraic.tree_module import (
+    _inner_weight_on_key,
+    _module_basis_keys_in_degree,
+    _module_basis_keys_in_weight_and_degree,
+)
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -66,6 +70,13 @@ class HadamardTensorAlgebra(OperadAlgebra):
         )
         self.module.degree_on_basis = lambda key: (
             self.left_module.degree_on_basis(key[0]) + self.right_module.degree_on_basis(key[1])
+        )
+        # Weight API: additive over tensor factors.
+        self.module.basis_weight_iter = self.basis_weight_iter
+        self.module.graded_basis_by_weight = self.graded_basis_by_weight
+        self.module._weight_on_basis = lambda key: (
+            _inner_weight_on_key(self.left_module, key[0])
+            + _inner_weight_on_key(self.right_module, key[1])
         )
 
     def _act_impl(self, p_element, algebra_elements):
@@ -151,6 +162,57 @@ class HadamardTensorAlgebra(OperadAlgebra):
             for left_key in left_keys:
                 for right_key in right_keys:
                     yield tensor((self.left_module(left_key), self.right_module(right_key)))
+
+    def basis_weight_iter(self, d: int, w: int) -> Iterator:
+        """Iterate over basis elements of degree ``d`` and weight ``w``.
+
+        Yields all ``(left_key, right_key)`` tensor-module basis elements
+        where ``deg(left) + deg(right) = d`` and
+        ``weight(left) + weight(right) = w``.  Weights are obtained via
+        :func:`_module_basis_keys_in_weight_and_degree` on each factor.
+
+        Args:
+            d: Homological degree.
+            w: Weight to enumerate.
+
+        Yields:
+            Elements of the tensor module ``A ⊗ B`` with degree ``d`` and
+            weight ``w``.
+        """
+        left_mod = self.left_module
+        right_mod = self.right_module
+
+        min_d_left = left_mod.connectivity
+        min_d_right = right_mod.connectivity
+
+        for w_left in range(0, w + 1):
+            w_right = w - w_left
+            max_d_left = d - min_d_right
+            if max_d_left < min_d_left:
+                continue
+            for d_left in range(min_d_left, max_d_left + 1):
+                d_right = d - d_left
+                left_keys = list(
+                    _module_basis_keys_in_weight_and_degree(left_mod, d_left, w_left)
+                )
+                if not left_keys:
+                    continue
+                right_keys = list(
+                    _module_basis_keys_in_weight_and_degree(right_mod, d_right, w_right)
+                )
+                if not right_keys:
+                    continue
+                for left_key in left_keys:
+                    for right_key in right_keys:
+                        yield tensor(
+                            (self.left_module(left_key), self.right_module(right_key))
+                        )
+
+    def graded_basis_by_weight(self, d: int, w: int):
+        """Family of basis elements of degree ``d`` and weight ``w``."""
+        from sage.all import Family
+
+        return Family(self.basis_weight_iter(d, w))
 
     def _tensor_boundary_morphism(self):
         """Build a module morphism for the tensor differential on the module.
