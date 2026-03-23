@@ -114,6 +114,7 @@ class TwistedBarComplex(TreeModule):
         # For B(P) cooperad: trees use bar suspension (+1)
         # For a "raw" cooperad C: trees use cobar desuspension (-1)
         from uconf.constructions.bar_construction import BarConstruction
+
         if isinstance(self._cooperad_cls, BarConstruction):
             vertex_shift = 1  # bar trees: degree = Σ (deg_P(v) + 1)
             sym_seq = self._cooperad_cls.operad_cls  # P for decorations
@@ -314,6 +315,7 @@ class TwistedBarComplex(TreeModule):
 
                 # Build the cooperad element for this vertex
                 from uconf.constructions.bar_construction import BarConstruction
+
                 if isinstance(cooperad, BarConstruction):
                     # Vertex decoration is a P-basis key; build bar corolla
                     bar_corolla_key = (dec,) + tuple(range(1, v_arity + 1))
@@ -331,9 +333,7 @@ class TwistedBarComplex(TreeModule):
                 action_result = self._algebra.act(alpha_c, a_elems)
 
                 for new_a_key, coeff in action_result:
-                    new_tree, new_a_tuple = self._contract_leaf_vertex(
-                        tree, v, a_tuple, new_a_key
-                    )
+                    new_tree, new_a_tuple = self._contract_leaf_vertex(tree, v, a_tuple, new_a_key)
                     result += sign * coeff * self.term((new_tree, new_a_tuple))
 
             cumulative += vertex_sp_deg
@@ -457,6 +457,7 @@ class TwistedCobarComplex(TreeModule):
 
         # Determine vertex degree shift from the operad
         from uconf.constructions.cobar_construction import CobarConstruction
+
         if isinstance(self._operad_cls, CobarConstruction):
             vertex_shift = -1  # cobar trees: degree = Σ (deg_C(v) - 1)
             sym_seq = self._operad_cls.cooperad_cls  # C for decorations
@@ -664,7 +665,7 @@ class TwistedCobarComplex(TreeModule):
                     # Extract the P-key from α(c)
                     for p_key, alpha_coeff in alpha_c:
                         new_tree = self._expand_leaf(tree, leaf_l, p_key, k)
-                        new_v_tuple = v_tuple[:leaf_l - 1] + new_v_keys + v_tuple[leaf_l:]
+                        new_v_tuple = v_tuple[: leaf_l - 1] + new_v_keys + v_tuple[leaf_l:]
                         result += sign * coeff * alpha_coeff * self.term((new_tree, new_v_tuple))
 
             cumulative_v += self._module.degree_on_basis(v_key)

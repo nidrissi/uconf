@@ -67,7 +67,13 @@ from uconf.models import (
 )
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
 from uconf.homology import chain_complex, homology_basis
-from uconf.morphisms import ass_to_com, lie_to_ass, make_e_comodule_morphism, canonical_projection, canonical_inclusion
+from uconf.morphisms import (
+    ass_to_com,
+    lie_to_ass,
+    make_e_comodule_morphism,
+    canonical_projection,
+    canonical_inclusion,
+)
 
 __all__ = [
     "OperadComponent",

@@ -14,7 +14,7 @@ import pytest
 from sage.all import QQ
 from sage.all import tensor as sage_tensor
 
-from uconf import Associative, CoAssociative, Commutative, Lie
+from uconf import Associative, CoAssociative, Commutative
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.constructions.bar_construction import BarConstruction

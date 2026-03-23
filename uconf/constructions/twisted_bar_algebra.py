@@ -122,7 +122,7 @@ class TwistedBarComplexAlgebra(TreeModule):
             )
 
         self._cobar_bar_cls = cobar_bar  # Ω(B(P))
-        self._bar_cls = bar_cls           # B(P)
+        self._bar_cls = bar_cls  # B(P)
         self._base_operad_cls = bar_cls.operad_cls  # P
         self._module = algebra.module
 
@@ -281,9 +281,7 @@ class TwistedBarComplexAlgebra(TreeModule):
                 action_result = self._algebra.act(iota_elem, a_elems)
 
                 for new_a_key, coeff in action_result:
-                    new_tree, new_a_tuple = self._contract_leaf_vertex(
-                        tree, v, a_tuple, new_a_key
-                    )
+                    new_tree, new_a_tuple = self._contract_leaf_vertex(tree, v, a_tuple, new_a_key)
                     result += sign * coeff * self.term((new_tree, new_a_tuple))
 
             cumulative += vertex_sp_deg
@@ -348,7 +346,9 @@ class TwistedBarComplexAlgebra(TreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(ParentedElementMixin["TwistedBarComplexAlgebra"], CombinatorialFreeModule.Element):
+    class Element(
+        ParentedElementMixin["TwistedBarComplexAlgebra"], CombinatorialFreeModule.Element
+    ):
         """An element of the twisted bar complex B_ι(A)."""
 
         def boundary(self) -> "TwistedBarComplexAlgebra.Element":
