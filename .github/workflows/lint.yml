@@ -1,27 +1,23 @@
 name: Lint And Quality Checks
 
-"on":
+on:
     pull_request:
         paths:
-            - "uconf/**/*.py"
+            - "src/uconf/**/*.py"
             - "tests/**/*.py"
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
-            - "ruff.toml"
-            - "requirements.txt"
-            - "pytest.ini"
+            - "pyproject.toml"
             - "environment.yml"
     push:
         branches:
             - main
         paths:
-            - "uconf/**/*.py"
+            - "src/uconf/**/*.py"
             - "tests/**/*.py"
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
-            - "ruff.toml"
-            - "requirements.txt"
-            - "pytest.ini"
+            - "pyproject.toml"
             - "environment.yml"
     workflow_dispatch:
 
@@ -53,13 +49,13 @@ jobs:
                   python -m pip install ruff==0.15.7
 
             - name: Ruff lint
-              run: ruff check tests uconf
+              run: ruff check tests src
 
             - name: Ruff format check
-              run: ruff format --check tests uconf
+              run: ruff format --check tests src
 
             - name: Python syntax smoke test
-              run: python -m compileall -q uconf tests
+              run: python -m compileall -q src tests
 
     workflow-lint:
         name: GitHub Workflow Lint

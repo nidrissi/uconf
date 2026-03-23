@@ -7,3 +7,22 @@ name = "uconf"
 version = "0.1.0"
 authors = [{ name = "Najib Idrissi" }, { name = "Victor Roca i Lucio" }]
 readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+    "comch==0.1.4",
+    "pytest==9.0.2",
+    "pytest-cov==7.0.0",
+    "ruff==0.15.7",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+python_files = "tests/test_*.py"
+python_functions = "test_*"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+ignore = ["E741"]
