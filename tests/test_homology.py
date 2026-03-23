@@ -3,9 +3,14 @@
 import pytest
 from sage.all import GF, QQ
 
-from uconf import BarrattEccles, Lie, Surjection
-from uconf.homology import chain_complex, homology_basis
-
+from uconf import (
+    BarrattEccles,
+    Lie,
+    Surjection,
+    euclidean_unordered_configuration_model,
+    chain_complex,
+    homology_basis,
+)
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -95,12 +100,17 @@ class TestChainComplex:
         Regression test for ZeroDivisionError in Lie._pbw_left_inverse
         that occurred because (M^T M) is singular over GF(2).
         """
-        from uconf import euclidean_unordered_configuration_model
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
         C = chain_complex(model, degrees=range(2), weight=1)
         # Just verify it computes without errors; the Betti numbers
         # are approximate due to weight truncation and d²≠0 at degree ≥3.
+        assert C is not None
+
+    def test_check_complex(self) -> None:
+        """chain_complex with check=True does not raise an error."""
+        model = euclidean_unordered_configuration_model(GF(2), 2)
+        C = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert C is not None
 
 
@@ -213,6 +223,7 @@ class TestConnectivity:
     def test_free_algebra_connectivity(self) -> None:
         """FreeAlgebraModule connectivity is that of the inner module."""
         from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
         from uconf.algebraic.free_algebra import FreeOperadAlgebra
         from uconf.models.surjection import Surjection
 
@@ -226,9 +237,10 @@ class TestConnectivity:
 
     def test_tree_module_connectivity(self) -> None:
         """TreeModule connectivity is the min of leaf and tree contributions."""
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
         from uconf.algebraic.free_algebra import FreeOperadAlgebra
         from uconf.models.surjection import Surjection
-        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
         M = CombinatorialFreeModule(QQ, ["x"], category=GradedModulesWithBasis(QQ))
         M.degree_on_basis = lambda _: 2
