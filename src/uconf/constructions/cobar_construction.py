@@ -565,7 +565,7 @@ class CobarConstruction(UniqueRepresentation):
     ):
         """Element of a cobar construction operad component."""
 
-        def pretty(self) -> str:
+        def _repr_(self) -> str:
             """Return a readable linear-combination string for this element."""
             if not self:
                 return "0"
@@ -582,7 +582,7 @@ class CobarConstruction(UniqueRepresentation):
                     pieces.append(f"{coeff}*{term}")
             return " + ".join(pieces).replace("+ -", "- ")
 
-        def pretty_latex(self) -> str:
+        def _latex_(self) -> str:
             """Return a LaTeX linear-combination string for this element."""
             if not self:
                 return "0"
@@ -598,14 +598,6 @@ class CobarConstruction(UniqueRepresentation):
                 else:
                     pieces.append(f"{coeff} \\left({term}\\right)")
             return " + ".join(pieces).replace("+ -", "- ")
-
-        def _repr_(self) -> str:
-            """Display this cobar element as a formatted linear combination."""
-            return self.pretty()
-
-        def _latex_(self) -> str:
-            """LaTeX display for this cobar element."""
-            return self.pretty_latex()
 
         def arity(self) -> int:
             return self.parent().arity()

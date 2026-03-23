@@ -715,11 +715,10 @@ class BarConstruction(UniqueRepresentation):
     ):
         """Element of a bar construction cooperad component."""
 
-        def pretty(self) -> str:
-            """Return a readable linear-combination string for this element."""
+        def _repr_(self) -> str:
+            """Display this bar element as a formatted linear combination."""
             if not self:
                 return "0"
-
             pieces = []
             parent = self.parent()
             for basis, coeff in self:
@@ -732,7 +731,7 @@ class BarConstruction(UniqueRepresentation):
                     pieces.append(f"{coeff}*{term}")
             return " + ".join(pieces).replace("+ -", "- ")
 
-        def pretty_latex(self) -> str:
+        def _latex_(self) -> str:
             """Return a LaTeX linear-combination string for this element."""
             if not self:
                 return "0"
@@ -748,14 +747,6 @@ class BarConstruction(UniqueRepresentation):
                 else:
                     pieces.append(f"{coeff} \\left({term}\\right)")
             return " + ".join(pieces).replace("+ -", "- ")
-
-        def _repr_(self) -> str:
-            """Display this bar element as a formatted linear combination."""
-            return self.pretty()
-
-        def _latex_(self) -> str:
-            """LaTeX display for this bar element."""
-            return self.pretty_latex()
 
         def arity(self) -> int:
             return self.parent().arity()

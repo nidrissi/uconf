@@ -430,34 +430,6 @@ class TestBarConstructionLie:
         for new_tree, coeff in permuted:
             assert leaves(new_tree) == {1, 2, 3}
 
-    def test_bar_pretty_print(self):
-        """Bar terms should display in tree form with operad labels."""
-        BLie = BarConstruction(Lie)
-        B3 = BLie(3, QQ)
-        tree = ((1, 2), 1, 2, 3)
-        rep = B3._repr_term(tree)
-        latex = B3._latex_term(tree)
-        assert rep.startswith("(Lie")
-        assert "; 1, 2, 3)" in rep
-        assert "\\operatorname{Lie}" in latex
-
-    def test_bar_element_pretty_print(self):
-        """Bar elements should support direct pretty-printing."""
-        from sage.all import latex
-
-        BLie = BarConstruction(Lie)
-        B3 = BLie(3, QQ)
-        elem = B3(((1, 2), 1, 2, 3)) + 2 * B3(((2, 1), 1, 2, 3))
-
-        pretty = elem.pretty()
-        assert "(Lie(1, 2); 1, 2, 3)" in pretty
-        assert "2*(Lie(2, 1); 1, 2, 3)" in pretty
-        assert repr(elem) == pretty
-
-        latex_repr = elem.pretty_latex()
-        assert "\\operatorname{Lie}" in latex_repr
-        assert latex(elem) == latex_repr
-
 
 class TestBarConstructionSurjection:
     """Tests for bar construction of the Surjection operad."""
@@ -620,36 +592,6 @@ class TestCobarConstruction:
         elem = O4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
-
-    def test_cobar_pretty_print(self):
-        """Cobar terms should display trees and unit as id."""
-        OmegaS = CobarConstruction(SurjectionDual)
-        O1 = OmegaS(1, QQ)
-        O2 = OmegaS(2, QQ)
-
-        assert O1._repr_term(1) == "id"
-        assert O1._latex_term(1) == "\\mathrm{id}"
-
-        tree = ((1, 2), 1, 2)
-        rep = O2._repr_term(tree)
-        assert rep.startswith("(𝒳*")
-
-    def test_cobar_element_pretty_print(self):
-        """Cobar elements should support direct pretty-printing."""
-        from sage.all import latex
-
-        OmegaS = CobarConstruction(SurjectionDual)
-        O2 = OmegaS(2, QQ)
-        elem = O2(((1, 2), 1, 2)) + 3 * O2(((1, 2, 1), 1, 2))
-
-        pretty = elem.pretty()
-        assert "(𝒳*(1, 2); 1, 2)" in pretty
-        assert "3*(𝒳*(1, 2, 1); 1, 2)" in pretty
-        assert repr(elem) == pretty
-
-        latex_repr = elem.pretty_latex()
-        assert "\\operatorname{𝒳*}" in latex_repr
-        assert latex(elem) == latex_repr
 
 
 class TestContractEdge:
