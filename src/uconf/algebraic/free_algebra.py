@@ -361,6 +361,84 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         return Family(self.basis_iter(d))
 
     # ------------------------------------------------------------------
+    # Weight
+    # ------------------------------------------------------------------
+
+    def _weight_on_basis(self, key) -> int:
+        """Weight of a single basis key ``(p_key, m_tuple)``.
+
+        The weight equals the arity ``n = len(m_tuple)``.
+        """
+        _p_key, m_tuple = key
+        return len(m_tuple)
+
+    def basis_weight_iter(self, d: int, w: int) -> Iterator[Any]:
+        """Iterate over basis elements of total degree ``d`` and weight ``w``.
+
+        The weight of ``(p_key, m_tuple)`` is the arity ``len(m_tuple)``.
+        Only basis elements with exactly ``w`` inputs (arity ``w``) are
+        returned.
+
+        Args:
+            d: Homological degree.
+            w: Weight (arity) to enumerate.
+
+        Yields:
+            Elements of this module with degree ``d`` and weight ``w``.
+        """
+        if w < 1:
+            return
+
+        M = self._inner_module
+        P = self._operad_cls
+        R = self.base_ring()
+
+        if w == 1:
+            # n=1: identity key, inner-module generators in degree d
+            unit_key = P.unit_key()
+            for mk in _module_basis_keys_in_degree(M, d):
+                yield self.term((unit_key, (mk,)))
+            return
+
+        comp_n = P(w, R)
+        connectivity = int(getattr(P, "connectivity", 0))
+
+        # Collect inner-module keys by degree
+        max_m_deg = d - min(connectivity * (w - 1), 0)
+        m_keys_by_deg: dict[int, list] = {}
+        for d_m in range(max_m_deg + 1):
+            keys = list(_module_basis_keys_in_degree(M, d_m))
+            if keys:
+                m_keys_by_deg[d_m] = keys
+
+        if not m_keys_by_deg:
+            return
+
+        min_m_deg = min(m_keys_by_deg.keys())
+        min_d_p = min(connectivity * (w - 1), 0)
+        max_d_p = d - w * min_m_deg if min_m_deg >= 0 else d
+
+        for d_p in range(min_d_p, max_d_p + 1):
+            d_m_needed = d - d_p
+            if d_m_needed < 0:
+                continue
+            p_elems = list(comp_n.planar_basis_it(d_p))
+            if not p_elems:
+                continue
+            m_tuples = list(_tuples_in_degree(m_keys_by_deg, w, d_m_needed))
+            if not m_tuples:
+                continue
+            for p_elem in p_elems:
+                for p_key in p_elem.support():
+                    for m_tuple in m_tuples:
+                        yield self.term((p_key, m_tuple))
+
+    @cached_method
+    def graded_basis_by_weight(self, d: int, w: int):
+        """Cached family of basis elements of degree ``d`` and weight ``w``."""
+        return Family(self.basis_weight_iter(d, w))
+
+    # ------------------------------------------------------------------
     # Element class
     # ------------------------------------------------------------------
 

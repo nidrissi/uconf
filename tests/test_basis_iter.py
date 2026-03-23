@@ -415,3 +415,181 @@ class TestBasisItConsistencyWithBarConstruction:
         for d in range(1, 4):
             with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
                 list(B.basis_iter(d))
+
+
+# ---------------------------------------------------------------------------
+# 9. basis_weight_iter: FreeAlgebraModule
+# ---------------------------------------------------------------------------
+
+
+class TestFreeAlgebraModuleBasisWeightIter:
+    """Tests for FreeAlgebraModule.basis_weight_iter."""
+
+    def test_weight1_equals_arity1_slice(self) -> None:
+        """Weight-1 elements = arity-1 corollas = inner-module generators."""
+        P = ShiftedOperad(Associative, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        # Degree 0, weight 1: the unit corolla ((),((),))
+        elems = list(mod.basis_weight_iter(0, 1))
+        assert len(elems) == 1
+        for key, _ in elems[0]:
+            _p, m = key
+            assert len(m) == 1
+
+    def test_weight2_arity2_degree1(self) -> None:
+        """Weight-2 elements at degree 1 should be arity-2 corollas."""
+        P = ShiftedOperad(Associative, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        elems = list(mod.basis_weight_iter(1, 2))
+        assert len(elems) == 1
+        for key, _ in elems[0]:
+            _p, m = key
+            assert len(m) == 2
+
+    def test_weight_correct(self) -> None:
+        """All yielded elements have the requested weight."""
+        P = ShiftedOperad(Surjection, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        for w in range(1, 4):
+            for d in range(4):
+                for elem in mod.basis_weight_iter(d, w):
+                    for key, _ in elem:
+                        assert mod._weight_on_basis(key) == w
+
+    def test_degree_correct(self) -> None:
+        """All yielded elements have the requested degree."""
+        P = ShiftedOperad(Surjection, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        for w in range(1, 3):
+            for d in range(4):
+                for elem in mod.basis_weight_iter(d, w):
+                    for key, _ in elem:
+                        assert mod.degree_on_basis(key) == d
+
+    def test_graded_basis_by_weight_cached(self) -> None:
+        """graded_basis_by_weight returns a Family and is cached."""
+        P = ShiftedOperad(Associative, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        fam1 = mod.graded_basis_by_weight(0, 1)
+        fam2 = mod.graded_basis_by_weight(0, 1)
+        assert fam1 is fam2  # same object (cached)
+
+    def test_partitions_basis_iter(self) -> None:
+        """Union over weights reproduces basis_iter for bounded cases."""
+        P = ShiftedOperad(Associative, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        for d in range(4):
+            all_by_iter = set(_keys(mod.basis_iter(d)))
+            all_by_weight = set()
+            for w in range(1, d + 2):
+                all_by_weight |= set(_keys(mod.basis_weight_iter(d, w)))
+            assert all_by_iter == all_by_weight
+
+    def test_weight_zero_empty(self) -> None:
+        """Weight 0 yields nothing (arity 0 is not allowed)."""
+        P = ShiftedOperad(Associative, 1)
+        M = Commutative(1, base_ring=QQ)
+        mod = FreeAlgebraModule(P, M)
+        assert list(mod.basis_weight_iter(0, 0)) == []
+
+
+# ---------------------------------------------------------------------------
+# 10. basis_weight_iter: TreeModule (TwistedBarComplex)
+# ---------------------------------------------------------------------------
+
+
+class TestTreeModuleBasisWeightIter:
+    """Tests for TreeModule.basis_weight_iter via TwistedBarComplex."""
+
+    @pytest.fixture
+    def trivial_bar(self):
+        alg = TrivialAlgebra(Associative)
+        return TwistedBarComplex(canonical_projection(Associative), alg)
+
+    def test_weight1_degree0_single_leaf(self, trivial_bar) -> None:
+        """Weight-1, degree-0 should give the single-leaf element."""
+        elems = list(trivial_bar.basis_weight_iter(0, 1))
+        assert len(elems) == 1
+        key, _ = next(iter(elems[0]))
+        assert key == (1, ((),))
+
+    def test_weight_gives_finite_basis(self, trivial_bar) -> None:
+        """basis_weight_iter(d, w) gives a finite basis even when basis_iter raises."""
+        for d in range(1, 4):
+            with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+                list(trivial_bar.basis_iter(d))
+        # But weight-1 elements are always finite (just single-leaf)
+        elems = list(trivial_bar.basis_weight_iter(0, 1))
+        assert len(elems) >= 1
+
+    def test_weight_correct_keys(self, trivial_bar) -> None:
+        """All keys returned by basis_weight_iter(d, w) have total weight w."""
+        for w in range(1, 3):
+            for d in range(3):
+                for elem in trivial_bar.basis_weight_iter(d, w):
+                    for key, _ in elem:
+                        assert trivial_bar._weight_on_basis(key) == w
+
+    def test_degree_correct(self, trivial_bar) -> None:
+        """All keys have the requested degree."""
+        for w in range(1, 3):
+            for d in range(3):
+                for elem in trivial_bar.basis_weight_iter(d, w):
+                    for key, _ in elem:
+                        assert trivial_bar.degree_on_basis(key) == d
+
+    def test_graded_basis_by_weight_available(self, trivial_bar) -> None:
+        """graded_basis_by_weight returns the same Family as basis_weight_iter."""
+        fam = trivial_bar.graded_basis_by_weight(0, 1)
+        assert len(list(fam)) == 1
+
+
+# ---------------------------------------------------------------------------
+# 11. basis_weight_iter: HadamardTensorAlgebra
+# ---------------------------------------------------------------------------
+
+
+class TestHadamardTensorAlgebraBasisWeightIter:
+    """Tests for HadamardTensorAlgebra.basis_weight_iter."""
+
+    @pytest.fixture
+    def had_alg(self):
+        left = TrivialAlgebra(Associative)
+        right = TrivialAlgebra(Associative)
+        return HadamardTensorAlgebra(left, right)
+
+    def test_weight1_degree0(self, had_alg) -> None:
+        """Weight 1+1=2, degree 0: one tensor element (both modules are default weight 1)."""
+        # Each Commutative(1) key has default weight 1 → total weight = 2 for ((),())
+        elems = list(had_alg.basis_weight_iter(0, 2))
+        assert len(elems) == 1
+
+    def test_weight_correct(self, had_alg) -> None:
+        """All yielded elements have the right weight (sum of both factors)."""
+        for w in range(0, 3):
+            for d in range(3):
+                for elem in had_alg.basis_weight_iter(d, w):
+                    for (lk, rk), _ in elem:
+                        lw = (
+                            had_alg.left_module._weight_on_basis(lk)
+                            if hasattr(had_alg.left_module, "_weight_on_basis")
+                            else 1
+                        )
+                        rw = (
+                            had_alg.right_module._weight_on_basis(rk)
+                            if hasattr(had_alg.right_module, "_weight_on_basis")
+                            else 1
+                        )
+                        assert lw + rw == w
+
+    def test_module_weight_iter_patched(self, had_alg) -> None:
+        """The tensor module has basis_weight_iter patched onto it."""
+        assert hasattr(had_alg.module, "basis_weight_iter")
+        assert hasattr(had_alg.module, "graded_basis_by_weight")
+        assert hasattr(had_alg.module, "_weight_on_basis")

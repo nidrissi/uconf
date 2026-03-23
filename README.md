@@ -124,8 +124,6 @@ attribute on concrete models, property on wrappers) representing the constant
   - Standard bar complex: `TwistedBarComplex(canonical_projection(P), alg)`
   - Standard cobar complex: `TwistedCobarComplex(canonical_inclusion(C), coalg)`
   - Twisted bar complex B_ι(A): `TwistedBarComplex(canonical_inclusion(B(P)), alg)`
-  - `set_n_factors(F)` on `TwistedBarComplex` restricts basis enumeration to elements
-    with exactly `F` coefficient-module keys (for configuration models).
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of

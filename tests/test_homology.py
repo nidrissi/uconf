@@ -65,6 +65,30 @@ class TestChainComplex:
         C = chain_complex(S2, degrees=range(0))
         assert C.betti() == {}
 
+    def test_weight_parameter_restricts_basis(self) -> None:
+        """chain_complex with weight restricts basis to fixed-weight elements."""
+        from uconf import Associative
+        from uconf.algebraic.free_algebra import FreeAlgebraModule
+        from uconf.models.commutative import Commutative
+
+        # Associative (connectivity=0) + Commutative(1) (degree-0) → unbounded arity
+        M = Commutative(1, QQ)
+        mod = FreeAlgebraModule(Associative, M)
+
+        # Without weight: raises (unbounded arity in degree 0)
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            chain_complex(mod, degrees=range(2))
+
+        # With weight=1: only arity-1 element; gives finite complex
+        C = chain_complex(mod, degrees=range(2), weight=1)
+        assert C is not None
+
+    def test_weight_error_when_module_unsupported(self) -> None:
+        """chain_complex raises ValueError when weight is used on unsupported module."""
+        S2 = Surjection(2, QQ)
+        with pytest.raises(ValueError, match="does not support the weight API"):
+            chain_complex(S2, degrees=range(3), weight=1)
+
     def test_configuration_model_gf2(self) -> None:
         """chain_complex for euclidean configuration model over GF(2) succeeds.
 
@@ -74,9 +98,9 @@ class TestChainComplex:
         from uconf import euclidean_unordered_configuration_model
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = chain_complex(model, degrees=range(2), n_factors=1)
+        C = chain_complex(model, degrees=range(2), weight=1)
         # Just verify it computes without errors; the Betti numbers
-        # are approximate due to n_factors truncation and d²≠0 at degree ≥3.
+        # are approximate due to weight truncation and d²≠0 at degree ≥3.
         assert C is not None
 
 
