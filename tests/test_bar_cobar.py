@@ -632,7 +632,7 @@ class TestCobarConstruction:
 
         tree = ((1, 2), 1, 2)
         rep = O2._repr_term(tree)
-        assert rep.startswith("(S*")
+        assert rep.startswith("(𝒳*")
 
     def test_cobar_element_pretty_print(self):
         """Cobar elements should support direct pretty-printing."""
@@ -643,12 +643,12 @@ class TestCobarConstruction:
         elem = O2(((1, 2), 1, 2)) + 3 * O2(((1, 2, 1), 1, 2))
 
         pretty = elem.pretty()
-        assert "(S*(1, 2); 1, 2)" in pretty
-        assert "3*(S*(1, 2, 1); 1, 2)" in pretty
+        assert "(𝒳*(1, 2); 1, 2)" in pretty
+        assert "3*(𝒳*(1, 2, 1); 1, 2)" in pretty
         assert repr(elem) == pretty
 
         latex_repr = elem.pretty_latex()
-        assert "\\operatorname{S*}" in latex_repr
+        assert "\\operatorname{𝒳*}" in latex_repr
         assert latex(elem) == latex_repr
 
 
