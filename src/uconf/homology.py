@@ -18,7 +18,6 @@ Typical usage::
 
 from __future__ import annotations
 
-import warnings
 from typing import Any
 
 from sage.all import ChainComplex, matrix
@@ -71,12 +70,16 @@ def _boundary_matrix(
     return M
 
 
-def _deduplicated_basis(module: Any, d: int) -> tuple[list, list]:
+def _deduplicated_basis(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
     """Return (basis_elements, basis_keys) with duplicate keys removed."""
     seen: set = set()
     elems: list = []
     keys: list = []
-    for b in module.graded_basis(d):
+    if weight is not None:
+        family = module.graded_basis_by_weight(d, weight)
+    else:
+        family = module.graded_basis(d)
+    for b in family:
         support = list(b.support())
         if not support:
             continue
@@ -91,7 +94,7 @@ def _deduplicated_basis(module: Any, d: int) -> tuple[list, list]:
 # TODO To properly truncate the chain complex, we should:
 # * In the bottom degree: take the kernel of the differential;
 # * In the top degree: take the cokernel of the differential from the degree just above.
-def chain_complex(module: Any, degrees: range, *, n_factors: int | None = None) -> Any:
+def chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
     Parameters
@@ -108,13 +111,14 @@ def chain_complex(module: Any, degrees: range, *, n_factors: int | None = None) 
         so that the differential into ``max(degrees)`` is fully accounted for.
         Homology is correct for every degree in *degrees*; the Betti number
         at ``max(degrees)+1`` may be inflated by the truncation.
-    n_factors:
-        Optional fixed total number of coefficient-module keys ("tensor
-        factors") per basis element.  When the module is a bar complex of a
-        labelled configuration model, each basis element carries a certain
-        number of coefficient-module keys across its tree leaves.  Passing
-        ``n_factors`` restricts the basis to elements with exactly that count,
-        giving a well-defined finite subcomplex with computable connectivity.
+    weight:
+        Optional fixed weight.  When provided, only basis elements of the
+        given weight are included.  The module must expose
+        ``graded_basis_by_weight(d, weight)``; if it does not, a
+        :class:`ValueError` is raised.  Weight is the total number of
+        "tensor factors" as defined by the module's ``_weight_on_basis``
+        (for free algebras: the arity; for tree modules: the sum of leaf
+        weights; for plain modules: the number of leaves).
 
     Returns
     -------
@@ -133,26 +137,18 @@ def chain_complex(module: Any, degrees: range, *, n_factors: int | None = None) 
     if not degrees:
         return ChainComplex({}, base_ring=module.base_ring(), degree_of_differential=-1)
 
-    # Apply n_factors filtering for bar-complex modules.
-    _needs_restore = False
-    if n_factors is not None and hasattr(module, "set_n_factors"):
-        module.set_n_factors(n_factors)
-        _needs_restore = True
-    elif n_factors is not None:
-        warnings.warn(
-            f"n_factors={n_factors} ignored: module {type(module).__name__} "
-            "does not support set_n_factors",
-            stacklevel=2,
+    if weight is not None and not hasattr(module, "graded_basis_by_weight"):
+        raise ValueError(
+            f"weight={weight} was specified but module {type(module).__name__} "
+            "does not support the weight API.  "
+            "Implement _weight_on_basis(key), basis_weight_iter(d, w), and "
+            "graded_basis_by_weight(d, w) on the module first."
         )
 
-    try:
-        return _build_chain_complex(module, degrees)
-    finally:
-        if _needs_restore:
-            module.set_n_factors(None)
+    return _build_chain_complex(module, degrees, weight=weight)
 
 
-def _build_chain_complex(module: Any, degrees: range) -> Any:
+def _build_chain_complex(module: Any, degrees: range, *, weight: int | None = None) -> Any:
     """Internal: build the chain complex."""
     base_ring = module.base_ring()
 
@@ -170,7 +166,7 @@ def _build_chain_complex(module: Any, degrees: range) -> Any:
     key_to_idx: dict[int, dict] = {}
 
     for d in extended_degrees:
-        basis_elems, basis_keys = _deduplicated_basis(module, d)
+        basis_elems, basis_keys = _deduplicated_basis(module, d, weight)
         basis_by_degree[d] = basis_elems
         keys_by_degree[d] = basis_keys
         key_to_idx[d] = {k: i for i, k in enumerate(basis_keys)}
@@ -194,7 +190,7 @@ def _build_chain_complex(module: Any, degrees: range) -> Any:
 
 
 def homology_basis(
-    module: Any, degree: int, *, degrees: range | None = None, n_factors: int | None = None
+    module: Any, degree: int, *, degrees: range | None = None, weight: int | None = None
 ) -> list:
     """Return cycle representatives for a basis of the homology in *degree*.
 
@@ -212,7 +208,7 @@ def homology_basis(
         ``range(degree - 1, degree + 2)`` is used (negative
         degrees are clamped to 0).  Pass a wider range if the module
         has non-trivial basis below ``degree - 1``.
-    n_factors:
+    weight:
         Passed through to :func:`chain_complex`.  See its documentation.
 
     Returns
@@ -234,10 +230,10 @@ def homology_basis(
         if degree not in degrees:
             raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
-    C = chain_complex(module, degrees, n_factors=n_factors)
+    C = chain_complex(module, degrees, weight=weight)
 
     # Retrieve the (deduplicated) basis elements in the requested degree
-    basis_elems, _ = _deduplicated_basis(module, degree)
+    basis_elems, _ = _deduplicated_basis(module, degree, weight)
 
     h = C.homology(generators=True)
     result: list = []

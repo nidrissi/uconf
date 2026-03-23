@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from math import prod
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, cached_method, Family
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.models.surjection import Surjection
@@ -173,21 +173,21 @@ class ReducedSphereCochains(CombinatorialFreeModule):
     `k`-module spanned by the fundamental class `g` in degree `d` (using
     the homological grading convention `\deg(g) = d`).  The boundary is
     zero.
-
-    The unique basis element is represented by the empty tuple ``()``.
     """
 
     def __init__(self, d: int, base_ring):
         assert d >= 0
-        self._generator_name = f"ɑ[{d}]"
+        self._generator_name = f"ɑ{d}"
         super().__init__(
             base_ring,
             [self._generator_name],
+            prefix=f"N*𝐒{d}",
             category=GradedModulesWithBasis(base_ring),
         )
-        self.rename(f"N*(S^{d})")
+        self.rename(self.prefix())
         self._generator = self(self._generator_name)
         self._sphere_dim = d
+        self.connectivity = -d
         self.boundary = self.module_morphism(on_basis=lambda _: self.zero(), codomain=self)
 
     def sphere_dim(self) -> int:
@@ -195,11 +195,27 @@ class ReducedSphereCochains(CombinatorialFreeModule):
         return self._sphere_dim
 
     def degree_on_basis(self, _) -> int:
-        return self._sphere_dim
+        return -self._sphere_dim
 
     def generator(self):
         """Return the generator of the reduced cochains."""
         return self._generator
+
+    def basis_iter(self, d: int):
+        if d == -self._sphere_dim:
+            yield self._generator
+
+    @cached_method
+    def graded_basis(self, d: int):
+        return Family(self.basis_iter(d))
+
+    def basis_weight_iter(self, d: int, w: int):
+        if w == 0:
+            yield from self.basis_iter(d)
+
+    @cached_method
+    def graded_weighted_basis(self, d: int, w: int):
+        return Family(self.basis_weight_iter(d, w))
 
 
 class SurjectionSphereCochainAlgebra(OperadAlgebra):

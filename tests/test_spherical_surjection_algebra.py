@@ -19,7 +19,7 @@ def _as_dict(x):
 
 
 def _sphere_coeff(x, d):
-    return _as_dict(x).get(f"ɑ[{d}]", 0)
+    return _as_dict(x).get(f"ɑ{d}", 0)
 
 
 def _top_coeff(x, top_key):

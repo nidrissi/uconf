@@ -242,22 +242,24 @@ class TwistingMorphism:
         from uconf.constructions.twisted_complex import TwistedBarComplex
 
         B = TwistedBarComplex(self, trivial_alg)
-        B.set_max_arity(max_arity)
 
-        # Check d² = 0 on all basis elements
+        # Check d² = 0 on all basis elements of weight 1..max_arity.
+        # Each leaf carries one Commutative(1) key (weight 1), so weight
+        # equals the number of leaves (tree arity).
         conn = B.connectivity
         for d in range(conn, conn + 2 * max_arity + 4):
-            try:
-                basis = list(B.basis_iter(d))
-            except (ValueError, TypeError):
-                continue
-            for elem in basis:
-                d_elem = B.boundary(elem)
-                dd = B.boundary(d_elem)
-                if dd != B.zero():
-                    if verbose:
-                        key = next(iter(elem.support()))
-                        print(f"d² ≠ 0 at degree {d}: d²({key}) ≠ 0")
-                    return False
+            for w in range(1, max_arity + 1):
+                try:
+                    basis = list(B.basis_weight_iter(d, w))
+                except (ValueError, TypeError, NotImplementedError):
+                    continue
+                for elem in basis:
+                    d_elem = B.boundary(elem)
+                    dd = B.boundary(d_elem)
+                    if dd != B.zero():
+                        if verbose:
+                            key = next(iter(elem.support()))
+                            print(f"d² ≠ 0 at degree {d}, weight {w}: d²({key}) ≠ 0")
+                        return False
 
         return True
