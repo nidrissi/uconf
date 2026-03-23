@@ -29,7 +29,7 @@ The project relies on **SageMath** (parents/modules, symmetric groups, tensor pr
 Create and activate a virtual environment, then install the package in development mode:
 
 ```bash
-python3 -m venv .venv
+python3 -m venv .venv --system-site-packages
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
