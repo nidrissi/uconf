@@ -433,11 +433,12 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_ass_d_squared_zero_2(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M)) (second variant)."""
-        from uconf.constructions.bar_algebra import BarComplexAlgebra
+        from uconf.constructions.twisted_complex import TwistedBarComplex
+        from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M, QQ)
-        B = BarComplexAlgebra(F, QQ)
+        B = TwistedBarComplex(canonical_projection(Associative), F, QQ)
 
         mu = (1, 2)
         # Outer tree: weight-1 binary tree with two single-leaf inner trees
@@ -449,11 +450,12 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_ass_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M))."""
-        from uconf.constructions.bar_algebra import BarComplexAlgebra
+        from uconf.constructions.twisted_complex import TwistedBarComplex
+        from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M, QQ)
-        B = BarComplexAlgebra(F, QQ)
+        B = TwistedBarComplex(canonical_projection(Associative), F, QQ)
 
         mu = (1, 2)
         outer_tree = (mu, 1, 2)

@@ -7,12 +7,13 @@ from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.algebraic.simplicial import (
     SurjectionSimplicialCochainAlgebra,
 )
-from uconf.constructions.bar_algebra import BarComplexAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.constructions.twisted_complex import TwistedBarComplex
 from uconf.core.morphism import OperadMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
+from uconf.morphisms.canonical_twisting import canonical_projection
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
@@ -76,7 +77,8 @@ def labelled_configuration_model(
 
     comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
-    bar = BarComplexAlgebra(pulled_back, base_ring)
+    pi = canonical_projection(pulled_back.operad_cls)
+    bar = TwistedBarComplex(pi, pulled_back, base_ring)
 
     return bar
 
