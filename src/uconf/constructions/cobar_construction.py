@@ -582,10 +582,10 @@ class CobarConstruction(UniqueRepresentation):
                     pieces.append(f"{coeff}*{term}")
             return " + ".join(pieces).replace("+ -", "- ")
 
-        def _latex_(self) -> str:
+        def _repr_latex_(self) -> str:
             """Return a LaTeX linear-combination string for this element."""
             if not self:
-                return "0"
+                return "$0$"
 
             pieces = []
             parent = self.parent()
@@ -597,7 +597,7 @@ class CobarConstruction(UniqueRepresentation):
                     pieces.append(f"-{term}")
                 else:
                     pieces.append(f"{coeff} \\left({term}\\right)")
-            return " + ".join(pieces).replace("+ -", "- ")
+            return "$" + " + ".join(pieces).replace("+ -", "- ") + "$"
 
         def arity(self) -> int:
             return self.parent().arity()
