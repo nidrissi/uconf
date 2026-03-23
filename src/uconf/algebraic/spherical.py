@@ -33,6 +33,7 @@ from math import prod
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, cached_method, Family
 
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.display import latex_linear_combination
 from uconf.models.surjection import Surjection
 
 
@@ -216,6 +217,16 @@ class ReducedSphereCochains(CombinatorialFreeModule):
     @cached_method
     def graded_weighted_basis(self, d: int, w: int):
         return Family(self.basis_weight_iter(d, w))
+
+    def _repr_term(self, element) -> str:
+        return self._generator_name
+
+    def _latex_term(self, element) -> str:
+        return f"\\alpha^{{{self._sphere_dim}}}"
+
+    class Element(CombinatorialFreeModule.Element):
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
 
 class SurjectionSphereCochainAlgebra(OperadAlgebra):

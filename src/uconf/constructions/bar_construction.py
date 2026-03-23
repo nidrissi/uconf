@@ -39,6 +39,7 @@ from sage.all import (
 from uconf.core.signs import (
     sign_from_exponent,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
@@ -56,6 +57,7 @@ from uconf.core.trees import (
     to_shuffle_tree_bar,
     tree_to_latex,
     tree_to_string,
+    tree_to_svg,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -86,6 +88,13 @@ class BarConstruction(UniqueRepresentation):
     ):
         self.operad_cls = operad_cls
         self.name = f"B({operad_cls.name})"
+
+    def _repr_(self) -> str:
+        return self.name
+
+    def _repr_latex_(self) -> str:
+        base = getattr(self.operad_cls, "name", "P")
+        return f"B({base})"
 
     @property
     def connectivity(self) -> int:
@@ -455,11 +464,51 @@ class BarConstruction(UniqueRepresentation):
 
         def _repr_term(self, basis_element) -> str:
             """String representation of one bar basis tree."""
-            return tree_to_string(basis_element, self.factory.operad_cls.name)
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.operad_cls(arity, self.base_ring())
+                repr_term = getattr(parent, "_repr_term", None)
+                if callable(repr_term):
+                    return repr_term(dec)
+                return f"{self.factory.operad_cls.name}{dec}"
+
+            return tree_to_string(
+                basis_element,
+                self.factory.operad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
 
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one bar basis tree."""
-            return tree_to_latex(basis_element, self.factory.operad_cls.name)
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.operad_cls(arity, self.base_ring())
+                latex_term = getattr(parent, "_latex_term", None)
+                if callable(latex_term):
+                    return latex_term(dec)
+                return f"\\operatorname{{{self.factory.operad_cls.name}}}_{{{dec}}}"
+
+            return tree_to_latex(
+                basis_element,
+                self.factory.operad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
+
+        def _svg_term(self, basis_element) -> str:
+            """SVG representation of one bar basis tree."""
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.operad_cls(arity, self.base_ring())
+                repr_term = getattr(parent, "_repr_term", None)
+                if callable(repr_term):
+                    return repr_term(dec)
+                return f"{self.factory.operad_cls.name}{dec}"
+
+            return tree_to_svg(
+                basis_element,
+                operad_name=self.factory.operad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
 
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
@@ -715,41 +764,27 @@ class BarConstruction(UniqueRepresentation):
     ):
         """Element of a bar construction cooperad component."""
 
-        def _repr_(self) -> str:
-            """Display this bar element as a formatted linear combination."""
-            if not self:
-                return "0"
-            pieces = []
-            parent = self.parent()
-            for basis, coeff in self:
-                term = parent._repr_term(basis)
-                if coeff == 1:
-                    pieces.append(term)
-                elif coeff == -1:
-                    pieces.append(f"-{term}")
-                else:
-                    pieces.append(f"{coeff}*{term}")
-            return " + ".join(pieces).replace("+ -", "- ")
-
         def _repr_latex_(self) -> str:
             """Return a LaTeX linear-combination string for this element."""
-            if not self:
-                return "$0$"
-
-            pieces = []
-            parent = self.parent()
-            for basis, coeff in self:
-                term = parent._latex_term(basis)
-                if coeff == 1:
-                    pieces.append(term)
-                elif coeff == -1:
-                    pieces.append(f"-{term}")
-                else:
-                    pieces.append(f"{coeff} \\left({term}\\right)")
-            return "$" + " + ".join(pieces).replace("+ -", "- ") + "$"
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             return self.parent().arity()
+
+        def _repr_svg_(self) -> str:
+            """Return SVG markup for Sage display of a monomial bar tree."""
+            if not self:
+                raise ValueError("Cannot render SVG for the zero element.")
+            if len(self.support()) != 1:
+                raise ValueError(
+                    "SVG rendering currently supports only monomials with one basis term."
+                )
+            basis = next(iter(self.support()))
+            return self.parent()._svg_term(basis)
+
+        def to_svg(self) -> str:
+            """Compatibility alias for :meth:`_repr_svg_`."""
+            return self._repr_svg_()
 
         def boundary(self) -> "BarConstruction.Element":
             """Apply the bar differential (d_1 + d_2) to this element."""

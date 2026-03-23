@@ -15,7 +15,8 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from typing import Any, Iterator, Literal
+from html import escape
+from typing import Any, Callable, Iterator, Literal
 
 
 def is_leaf(node) -> bool:
@@ -433,24 +434,175 @@ def _planar_subtrees_for_leaves(
         yield relabel_leaves(tree, mapping)
 
 
-def tree_to_string(tree, operad_name: str = "P") -> str:
-    """Return a human-readable string representation of a tree."""
+def tree_to_string(
+    tree,
+    operad_name: str = "P",
+    decoration_formatter: Callable[[tuple, int], str] | None = None,
+) -> str:
+    """Return a human-readable string representation of a decorated tree.
+
+    Args:
+        tree: A rooted tree encoded by nested tuples.
+        operad_name: Prefix used by the default decoration formatter.
+        decoration_formatter: Optional callback ``(decoration, arity) -> str``.
+            When provided, it is used to render each vertex decoration.
+    """
     if is_leaf(tree):
         return str(tree)
-    dec_str = f"{operad_name}{decoration(tree)}"
-    children_str = ", ".join(tree_to_string(c, operad_name) for c in children(tree))
+
+    arity = vertex_arity(tree)
+    dec = decoration(tree)
+    if decoration_formatter is None:
+        dec_str = f"{operad_name}{dec}"
+    else:
+        dec_str = decoration_formatter(dec, arity)
+
+    children_str = ", ".join(
+        tree_to_string(c, operad_name, decoration_formatter) for c in children(tree)
+    )
     return f"({dec_str}; {children_str})"
 
 
-def tree_to_latex(tree, operad_name: str = "P") -> str:
-    """Return a LaTeX representation of a decorated rooted tree."""
+def tree_to_latex(
+    tree,
+    operad_name: str = "P",
+    decoration_formatter: Callable[[tuple, int], str] | None = None,
+) -> str:
+    """Return a LaTeX representation of a decorated rooted tree.
+
+    Args:
+        tree: A rooted tree encoded by nested tuples.
+        operad_name: Prefix used by the default decoration formatter.
+        decoration_formatter: Optional callback ``(decoration, arity) -> str``.
+            When provided, it is used to render each vertex decoration.
+    """
     if is_leaf(tree):
         return str(tree)
 
-    dec = ",".join(str(i) for i in decoration(tree))
-    dec_str = f"\\operatorname{{{operad_name}}}_{{({dec})}}"
-    children_str = ", ".join(tree_to_latex(c, operad_name) for c in children(tree))
+    arity = vertex_arity(tree)
+    dec = decoration(tree)
+    if decoration_formatter is None:
+        dec_indices = ",".join(str(i) for i in dec)
+        dec_str = f"\\operatorname{{{operad_name}}}_{{({dec_indices})}}"
+    else:
+        dec_str = decoration_formatter(dec, arity)
+
+    children_str = ", ".join(
+        tree_to_latex(c, operad_name, decoration_formatter) for c in children(tree)
+    )
     return f"\\left({dec_str}; {children_str}\\right)"
+
+
+def tree_to_svg(
+    tree,
+    operad_name: str = "P",
+    decoration_formatter: Callable[[tuple, int], str] | None = None,
+    leaf_formatter: Callable[[int], str] | None = None,
+    *,
+    leaf_dx: int = 70,
+    level_dy: int = 88,
+    margin: int = 22,
+) -> str:
+    """Render a decorated rooted tree to standalone SVG markup.
+
+    The layout is deterministic and compact: leaves are equally spaced on the
+    bottom row; each internal vertex is centered above its descendant leaves.
+
+    Args:
+        tree: A rooted tree encoded by nested tuples.
+        operad_name: Prefix used by the default decoration formatter.
+        decoration_formatter: Optional callback ``(decoration, arity) -> str``.
+        leaf_formatter: Optional callback ``leaf_label -> str``.
+        leaf_dx: Horizontal spacing between consecutive leaves.
+        level_dy: Vertical spacing between consecutive levels.
+        margin: Outer SVG margin.
+    """
+
+    def _dec_label(node) -> str:
+        dec = decoration(node)
+        ar = vertex_arity(node)
+        if decoration_formatter is not None:
+            return str(decoration_formatter(dec, ar))
+        return f"{operad_name}{dec}"
+
+    def _leaf_label(leaf: int) -> str:
+        if leaf_formatter is not None:
+            return str(leaf_formatter(leaf))
+        return str(leaf)
+
+    leaves_sorted = sorted(leaves(tree))
+    n_leaves = max(1, len(leaves_sorted))
+    leaf_index = {leaf: idx for idx, leaf in enumerate(leaves_sorted)}
+
+    def _depth(node) -> int:
+        if is_leaf(node):
+            return 0
+        if not children(node):
+            return 1
+        return 1 + max(_depth(c) for c in children(node))
+
+    max_depth = _depth(tree)
+    height = 2 * margin + max(1, max_depth) * level_dy
+    width = 2 * margin + max(1, n_leaves - 1) * leaf_dx
+
+    coords: dict[int, tuple[float, float]] = {}
+    edges: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    node_labels: list[tuple[tuple[float, float], str]] = []
+    leaf_labels: list[tuple[tuple[float, float], str]] = []
+
+    def _layout(node) -> tuple[float, float]:
+        node_id = id(node)
+        if node_id in coords:
+            return coords[node_id]
+
+        if is_leaf(node):
+            x = margin + leaf_index[node] * leaf_dx
+            y = margin + max_depth * level_dy
+            coords[node_id] = (x, y)
+            leaf_labels.append(((x, y + 22), _leaf_label(node)))
+            return (x, y)
+
+        child_coords = [_layout(c) for c in children(node)]
+        x = sum(cx for cx, _ in child_coords) / len(child_coords)
+        y = margin + (max_depth - _depth(node)) * level_dy
+        coords[node_id] = (x, y)
+
+        for cx, cy in child_coords:
+            edges.append(((x, y), (cx, cy)))
+        node_labels.append(((x, y - 10), _dec_label(node)))
+        return (x, y)
+
+    _layout(tree)
+
+    svg_lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{int(width)}" height="{int(height)}" ',
+        'viewBox="0 0 {w} {h}" role="img" aria-label="decorated rooted tree">'.format(
+            w=int(width), h=int(height)
+        ),
+        "<style>",
+        ".edge{stroke:#4b5563;stroke-width:1.6;fill:none;}",
+        ".node{fill:#111827;}",
+        '.vlabel{font: 13px "STIX Two Text", "Times New Roman", serif; fill:#0f172a; text-anchor:middle;}',
+        '.llabel{font: 12px "STIX Two Text", "Times New Roman", serif; fill:#334155; text-anchor:middle;}',
+        "</style>",
+    ]
+
+    for (x1, y1), (x2, y2) in edges:
+        svg_lines.append(
+            f'<line class="edge" x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" />'
+        )
+
+    for (x, y), label in node_labels:
+        svg_lines.append(f'<circle class="node" cx="{x:.2f}" cy="{y:.2f}" r="2.6" />')
+        svg_lines.append(
+            f'<text class="vlabel" x="{x:.2f}" y="{y - 14:.2f}">{escape(label)}</text>'
+        )
+
+    for (x, y), label in leaf_labels:
+        svg_lines.append(f'<text class="llabel" x="{x:.2f}" y="{y:.2f}">{escape(label)}</text>')
+
+    svg_lines.append("</svg>")
+    return "\n".join(svg_lines)
 
 
 def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> tuple:

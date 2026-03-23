@@ -15,6 +15,7 @@ from sage.all import (
 )
 
 from uconf.core.cooperad import CooperadLike
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import (
     shifted_boundary_sign,
@@ -35,6 +36,14 @@ class ShiftedCooperad(UniqueRepresentation):
         self.cooperad_cls = cooperad_cls
         self.shift_degree = int(shift_degree)
         self.name = f"{cooperad_cls.name}[{self.shift_degree}]"
+
+    def _repr_(self) -> str:
+        return self.name
+
+    def _repr_latex_(self) -> str:
+        base = getattr(self.cooperad_cls, "name", "C")
+        s = self.shift_degree
+        return f"{base}[{s}]"
 
     @property
     def connectivity(self) -> int:
@@ -159,6 +168,18 @@ class ShiftedCooperad(UniqueRepresentation):
             base_degree = self._base_parent.degree_on_basis(basis_element)
             return base_degree + self.factory.shift_degree * (self.arity() - 1)
 
+        def _repr_term(self, basis_element) -> str:
+            base_term = getattr(self._base_parent, "_repr_term", None)
+            if callable(base_term):
+                return base_term(basis_element)
+            return str(basis_element)
+
+        def _latex_term(self, basis_element) -> str:
+            base_term = getattr(self._base_parent, "_latex_term", None)
+            if callable(base_term):
+                return base_term(basis_element)
+            return str(basis_element)
+
         def counit(self, x: "ShiftedCooperad.Element"):
             base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
             return self.factory.cooperad_cls.counit(base_x)
@@ -199,6 +220,9 @@ class ShiftedCooperad(UniqueRepresentation):
         CombinatorialFreeModule.Element,
     ):
         """Element wrapper carrying shifted cooperad structure maps."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             return self.parent().arity()

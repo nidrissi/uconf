@@ -88,7 +88,7 @@ class TwistingMorphism:
         """
         return self._morphism_fn(c_elem)
 
-    def __repr__(self) -> str:
+    def _repr_(self) -> str:
         return f"TwistingMorphism({self.name})"
 
     def star(self, other: "TwistingMorphism", c_elem):

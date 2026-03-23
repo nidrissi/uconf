@@ -256,6 +256,20 @@ class TestTwistedBarComplex:
         B = TwistedBarComplex(pi, alg)
         assert B is not None
 
+    def test_element_repr_latex_and_svg(self):
+        """Twisted-bar elements implement explicit LaTeX/SVG display methods."""
+        pi = canonical_projection(Associative)
+        alg = _trivial_ass_algebra()
+        B = TwistedBarComplex(pi, alg)
+
+        x = B((1, ((),)))
+        ltx = x._repr_latex_()
+        assert ltx
+
+        svg = x._repr_svg_()
+        assert "<svg" in svg
+        assert "</svg>" in svg
+
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
         pi = canonical_projection(Associative)

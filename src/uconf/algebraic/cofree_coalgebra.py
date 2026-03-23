@@ -40,6 +40,7 @@ from sage.all import (
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
+from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
@@ -226,6 +227,32 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         m_deg = sum(self._inner_module.degree_on_basis(mk) for mk in m_tuple)
         return c_deg + m_deg
 
+    def _repr_term(self, basis_element) -> str:
+        """Readable basis-term notation for ``T^c_C(M)`` corollas."""
+        c_key, m_tuple = basis_element
+        n = len(m_tuple)
+        c_parent = self._cooperad_cls(n, self.base_ring())
+
+        c_repr = getattr(c_parent, "_repr_term", None)
+        m_repr = getattr(self._inner_module, "_repr_term", None)
+
+        c_str = c_repr(c_key) if callable(c_repr) else str(c_key)
+        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        return f"<{c_str}; {', '.join(leaves)}>"
+
+    def _latex_term(self, basis_element) -> str:
+        """LaTeX basis-term notation for ``T^c_C(M)`` corollas."""
+        c_key, m_tuple = basis_element
+        n = len(m_tuple)
+        c_parent = self._cooperad_cls(n, self.base_ring())
+
+        c_repr = getattr(c_parent, "_latex_term", None)
+        m_repr = getattr(self._inner_module, "_latex_term", None)
+
+        c_ltx = c_repr(c_key) if callable(c_repr) else str(c_key)
+        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        return f"\\langle {c_ltx}; {', '.join(leaves)} \\rangle"
+
     # ------------------------------------------------------------------
     # Differential
     # ------------------------------------------------------------------
@@ -338,6 +365,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     class Element(CombinatorialFreeModule.Element):
         """An element of the cofree C-coalgebra module ``T^c_C(M)``."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def boundary(self) -> "CofreeCoalgebraModule.Element":
             """Apply the differential d = d_C + d_M."""

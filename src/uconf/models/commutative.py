@@ -15,6 +15,7 @@ from sage.all import (
     SymmetricGroup,
     cached_method,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -99,6 +100,12 @@ class Commutative(CombinatorialFreeModule):
         """Return homological degree of one basis element."""
         return 0
 
+    def _repr_term(self, basis_element: tuple) -> str:
+        return f"μ([{self.arity}])"
+
+    def _latex_term(self, basis_element: tuple) -> str:
+        return "\\mu_{" + str(self.arity()) + "}"
+
     @staticmethod
     def compose(
         x,
@@ -122,6 +129,9 @@ class Commutative(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["Commutative"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity commutative component."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             """Return the arity of this element."""

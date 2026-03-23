@@ -42,6 +42,7 @@ from sage.all import (
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
+from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
@@ -231,6 +232,32 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         p_deg = comp.degree_on_basis(p_key)
         m_deg = sum(self._inner_module.degree_on_basis(mk) for mk in m_tuple)
         return p_deg + m_deg
+
+    def _repr_term(self, basis_element) -> str:
+        """Readable basis-term notation for ``P ∘ M`` corollas."""
+        p_key, m_tuple = basis_element
+        n = len(m_tuple)
+        p_parent = self._operad_cls(n, self.base_ring())
+
+        p_repr = getattr(p_parent, "_repr_term", None)
+        m_repr = getattr(self._inner_module, "_repr_term", None)
+
+        p_str = p_repr(p_key) if callable(p_repr) else str(p_key)
+        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        return f"<{p_str}; {', '.join(leaves)}>"
+
+    def _latex_term(self, basis_element) -> str:
+        """LaTeX basis-term notation for ``P ∘ M`` corollas."""
+        p_key, m_tuple = basis_element
+        n = len(m_tuple)
+        p_parent = self._operad_cls(n, self.base_ring())
+
+        p_repr = getattr(p_parent, "_latex_term", None)
+        m_repr = getattr(self._inner_module, "_latex_term", None)
+
+        p_ltx = p_repr(p_key) if callable(p_repr) else str(p_key)
+        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        return f"\\langle {p_ltx}; {', '.join(leaves)} \\rangle"
 
     # ------------------------------------------------------------------
     # Differential
@@ -444,6 +471,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     class Element(CombinatorialFreeModule.Element):
         """An element of the free P-algebra module ``P ∘ M``."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def boundary(self) -> "FreeAlgebraModule.Element":
             """Apply the differential d = d_P + d_M."""

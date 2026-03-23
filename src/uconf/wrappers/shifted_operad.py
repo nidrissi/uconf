@@ -18,6 +18,7 @@ from sage.all import (
     UniqueRepresentation,
     cached_method,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.operad import OperadLike
 from uconf.core.signs import (
@@ -47,6 +48,14 @@ class ShiftedOperad(UniqueRepresentation):
         self.operad_cls = operad_cls
         self.shift_degree = int(shift_degree)
         self.name = f"{operad_cls.name}[{self.shift_degree}]"
+
+    def _repr_(self) -> str:
+        return self.name
+
+    def _repr_latex_(self) -> str:
+        base = getattr(self.operad_cls, "name", "P")
+        s = self.shift_degree
+        return f"{base}[{s}]"
 
     @property
     def connectivity(self) -> int:
@@ -283,6 +292,18 @@ class ShiftedOperad(UniqueRepresentation):
             base_degree = self._base_parent.degree_on_basis(basis_element)
             return base_degree + self.factory.shift_degree * (self.arity() - 1)
 
+        def _repr_term(self, basis_element) -> str:
+            base_term = getattr(self._base_parent, "_repr_term", None)
+            if callable(base_term):
+                return base_term(basis_element)
+            return str(basis_element)
+
+        def _latex_term(self, basis_element) -> str:
+            base_term = getattr(self._base_parent, "_latex_term", None)
+            if callable(base_term):
+                return base_term(basis_element)
+            return str(basis_element)
+
         def compose(
             self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
         ) -> "ShiftedOperad.Element":
@@ -297,6 +318,9 @@ class ShiftedOperad(UniqueRepresentation):
 
     class Element(ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element):
         """Element wrapper carrying shifted operad structure maps."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             return self.parent().arity()

@@ -19,6 +19,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -171,6 +172,16 @@ class Surjection(CombinatorialFreeModule):
         """Return homological degree of one basis surjection."""
         return len(basis_element) - self.arity()
 
+    def _repr_term(self, basis_element: tuple) -> str:
+        """Readable basis-term notation ``u = (u_1 ... u_r)``."""
+        word = " ".join(str(i) for i in basis_element)
+        return f"u=({word})"
+
+    def _latex_term(self, basis_element: tuple) -> str:
+        """LaTeX basis-term notation for surjection words."""
+        word = "\\;".join(str(i) for i in basis_element)
+        return f"u=\\left({word}\\right)"
+
     def _boundary_on_basis(self, basis_element: tuple) -> "Surjection.Element":
         """Compute the differential on a basis surjection."""
         # determining the signs of the summands
@@ -303,6 +314,9 @@ class Surjection(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["Surjection"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity surjection component."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def boundary(self) -> Surjection.Element:
             """Apply the differential."""

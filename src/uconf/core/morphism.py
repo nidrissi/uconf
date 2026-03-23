@@ -44,6 +44,11 @@ class OperadMorphism:
         self.target = target
         self._on_element = on_element
 
+    def _repr_(self) -> str:
+        src = getattr(self.source, "name", repr(self.source))
+        tgt = getattr(self.target, "name", repr(self.target))
+        return f"OperadMorphism({src} -> {tgt})"
+
     def __call__(self, element: Any) -> Any:
         """Apply the morphism to an element of the source operad."""
         return self._on_element(element)

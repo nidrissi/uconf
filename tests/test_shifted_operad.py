@@ -124,3 +124,10 @@ def test_basis_it_keys_match_degree_on_basis() -> None:
         for elem in comp.basis_iter(d):
             for key, _ in elem:
                 assert comp.degree_on_basis(key) == d
+
+
+def test_element_repr_latex_exists() -> None:
+    shifted = ShiftedOperad(Lie, 1)
+    x = shifted(2, QQ)((1,))
+    ltx = x._repr_latex_()
+    assert ltx

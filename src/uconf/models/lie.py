@@ -13,6 +13,7 @@ from sage.all import (
     matrix,
     vector,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -296,20 +297,17 @@ class Lie(CombinatorialFreeModule):
             expr = f"[x{i},{expr}]"
         return expr
 
-    def _repr_latex_(self, basis_element: tuple[int, ...]) -> str:
+    def _latex_term(self, basis_element: tuple[int, ...]) -> str:
         """LaTeX representation of one basis element as nested brackets."""
         n = self.arity()
         if n == 0:
-            return "$0$"
+            return "0"
         if n == 1:
-            return "$x_{1}$"
+            return "x_{1}"
 
-        def _var(k: int) -> str:
-            return f"$x_{{{k}}}$"
-
-        expr = _var(n)
+        expr = f"x_{{{n}}}"
         for i in reversed(basis_element):
-            expr = f"$\\left[{_var(i)}, {expr}\\right]$"
+            expr = f"\\left[x_{{{i}}}, {expr}\\right]"
         return expr
 
     @staticmethod
@@ -375,6 +373,9 @@ class Lie(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["Lie"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity Lie component."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             """Return the element arity."""

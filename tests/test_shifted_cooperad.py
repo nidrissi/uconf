@@ -39,3 +39,10 @@ def test_shifted_infinitesimal_cocompose_sign() -> None:
         right_degree = right_parent.degree_on_basis(right_basis)
         expected_sign = -1 if right_degree % 2 else 1
         assert s[(left_basis, right_basis)] == expected_sign * coeff
+
+
+def test_element_repr_latex_exists() -> None:
+    shifted = ShiftedCooperad(SurjectionDual, 1)
+    x = shifted(2, QQ)((1, 2, 1))
+    ltx = x._repr_latex_()
+    assert ltx

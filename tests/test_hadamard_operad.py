@@ -90,3 +90,10 @@ def test_hadamard_accepts_shifted_operad_provider() -> None:
 
     assert x.arity() == 2
     assert composed.arity() == 3
+
+
+def test_element_repr_latex_exists() -> None:
+    had = HadamardProduct(Lie, Surjection)
+    x = had(2, QQ)(((1,), (1, 2, 1)))
+    ltx = x._repr_latex_()
+    assert ltx
