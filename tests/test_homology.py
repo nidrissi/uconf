@@ -113,6 +113,12 @@ class TestChainComplex:
         C = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert C is not None
 
+    def test_check_complex_QQ(self) -> None:
+        """chain_complex over QQ with check=True does not raise an error."""
+        model = euclidean_unordered_configuration_model(QQ, 2)
+        C = chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
+        assert C is not None
+
 
 # ---------------------------------------------------------------------------
 # homology_basis

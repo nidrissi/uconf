@@ -200,8 +200,9 @@ class BarConstruction(UniqueRepresentation):
             """Decompose a bar tree into planar part ⊗ global permutation.
 
             For each internal vertex ``v`` the base operad's ``planarize``
-            gives a planar decoration ``dec_pl`` and a vertex permutation
-            ``σ_v ∈ S_{k_v}``.  The planarized tree is assembled by:
+            gives a (possibly multi-term) decomposition into planar
+            decorations and vertex permutations.  The planarized tree is
+            assembled by:
 
             1. Replacing each vertex decoration with its planar form.
             2. Reordering the children of ``v``: new child at position ``j``
@@ -214,6 +215,13 @@ class BarConstruction(UniqueRepresentation):
             original leaf label at canonical position ``j``.
 
             Returns an element of ``self ⊗ k[S_n]``.
+
+            .. note::
+               For quasi-planar operads (Surjection, BarrattEccles) each
+               vertex yields a single term.  For operads like
+               ``HadamardProduct(sLie, Surjection)`` the Lie factor's
+               ``permute`` may expand into multiple planar-basis elements,
+               and every term is propagated here.
             """
             sym_alg = self._symmetric_group_algebra
             base_ring = self.base_ring()
@@ -223,67 +231,61 @@ class BarConstruction(UniqueRepresentation):
                 return self.term(tree).tensor(sym_alg.term(identity))
 
             def _planarize_subtree(node):
-                """Return ``(coeff, planar_node, leaf_order)``.
+                """Return list of ``(coeff, planar_node, leaf_order)`` triples.
 
-                ``planar_node`` has the same structure as ``node`` but with
-                planar vertex decorations and reordered children; its leaf
-                labels are still the *original* labels (not yet renumbered).
+                Each triple represents one term in the planar decomposition.
+                ``planar_node`` has planar vertex decorations with the
+                *original* leaf labels (not yet renumbered).
                 ``leaf_order[i]`` is the original leaf label that will sit at
                 canonical position ``i+1`` after renumbering.
-                ``coeff`` is the accumulated scalar from all decoration
-                planarizations (e.g. −1 from Lie antisymmetry).
                 """
                 if is_leaf(node):
-                    return 1, node, [node]
+                    return [(1, node, [node])]
 
                 k = vertex_arity(node)
                 dec = decoration(node)
                 op_parent = self._operad_cls(k, base_ring)
 
-                # Use the base operad's planarize morphism on the decoration.
                 dec_elem = op_parent.term(dec)
                 planarized = op_parent.planarize(dec_elem)
 
-                # For Surjection / BarrattEccles this is a single term;
-                # for other operads it may be a linear combination.
-                # We take the first term and propagate its coefficient.
-                planar_dec = dec
-                sigma_v_tuple = tuple(range(1, k + 1))  # identity fallback
-                dec_coeff = 1
-                for (planar_dec_key, sigma_key), c in planarized:
-                    planar_dec = planar_dec_key
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
-                    dec_coeff = c
-                    break  # single term expected for supported operads
-
                 old_ch = children(node)
-                # New child at 0-based index j = old child at sigma_v_tuple[j]-1
-                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+                results = []
+                for (planar_dec_key, sigma_key), dec_coeff in planarized:
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
-                # Recursively planarize each (reordered) child.
-                new_ch_planarized = []
-                leaf_order = []
-                total_child_coeff = 1
-                for ch in new_ch:
-                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
-                    total_child_coeff *= ch_coeff
-                    new_ch_planarized.append(p_ch)
-                    leaf_order.extend(lo_ch)
+                    # Recursively planarize each (reordered) child, combining
+                    # all term combinations from children.
+                    child_term_lists = []
+                    for ch in new_ch:
+                        child_term_lists.append(_planarize_subtree(ch))
 
-                total_coeff = dec_coeff * total_child_coeff
-                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
+                    from itertools import product as iter_product
+                    for combo in iter_product(*child_term_lists):
+                        total_child_coeff = 1
+                        new_ch_planarized = []
+                        leaf_order = []
+                        for ch_coeff, p_ch, lo_ch in combo:
+                            total_child_coeff *= ch_coeff
+                            new_ch_planarized.append(p_ch)
+                            leaf_order.extend(lo_ch)
 
-            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
+                        total_coeff = dec_coeff * total_child_coeff
+                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        results.append((total_coeff, node_result, leaf_order))
 
-            # leaf_order[i] = original label at canonical position i+1.
-            # Relabeling: old leaf l → canonical position sigma_global_inv[l].
-            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
-            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                return results
 
-            # sigma_global(j) = leaf_order[j-1]  (one-line notation list).
-            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+            target = tensor([self, sym_alg])
+            result = target.zero()
+            for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
+                sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+                canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
 
-            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
+            return result
 
         def _is_planar_tree(self, tree) -> bool:
             """Return ``True`` if every vertex decoration is planar.
