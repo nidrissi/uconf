@@ -30,7 +30,7 @@ class Surjection(CombinatorialFreeModule):
     zero, while malformed inputs raise.
     """
 
-    name: ClassVar[str] = "S"
+    name: ClassVar[str] = "𝒳"
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
