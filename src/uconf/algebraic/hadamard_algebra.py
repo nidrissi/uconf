@@ -192,9 +192,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 continue
             for d_left in range(min_d_left, max_d_left + 1):
                 d_right = d - d_left
-                left_keys = list(
-                    _module_basis_keys_in_weight_and_degree(left_mod, d_left, w_left)
-                )
+                left_keys = list(_module_basis_keys_in_weight_and_degree(left_mod, d_left, w_left))
                 if not left_keys:
                     continue
                 right_keys = list(
@@ -204,9 +202,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                     continue
                 for left_key in left_keys:
                     for right_key in right_keys:
-                        yield tensor(
-                            (self.left_module(left_key), self.right_module(right_key))
-                        )
+                        yield tensor((self.left_module(left_key), self.right_module(right_key)))
 
     def graded_basis_by_weight(self, d: int, w: int):
         """Family of basis elements of degree ``d`` and weight ``w``."""
