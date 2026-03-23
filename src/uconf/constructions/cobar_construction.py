@@ -37,6 +37,7 @@ from sage.all import (
 )
 
 from uconf.core.cooperad import CooperadLike
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
@@ -51,6 +52,7 @@ from uconf.core.trees import (
     subtree_degree_cobar,
     tree_to_latex,
     tree_to_string,
+    tree_to_svg,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -83,6 +85,13 @@ class CobarConstruction(UniqueRepresentation):
     def __init__(self, cooperad_cls: CooperadLike):
         self.cooperad_cls = cooperad_cls
         self.name = f"Ω({cooperad_cls.name})"
+
+    def _repr_(self) -> str:
+        return self.name
+
+    def _repr_latex_(self) -> str:
+        base = getattr(self.cooperad_cls, "name", "C")
+        return f"\\Omega({base})"
 
     @property
     def connectivity(self) -> int:
@@ -397,7 +406,19 @@ class CobarConstruction(UniqueRepresentation):
             """String representation of one cobar basis tree."""
             if is_leaf(basis_element):
                 return "id"
-            return tree_to_string(basis_element, self.factory.cooperad_cls.name)
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.cooperad_cls(arity, self.base_ring())
+                repr_term = getattr(parent, "_repr_term", None)
+                if callable(repr_term):
+                    return repr_term(dec)
+                return f"{self.factory.cooperad_cls.name}{dec}"
+
+            return tree_to_string(
+                basis_element,
+                self.factory.cooperad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
 
         @cached_method
         def graded_basis(self, d: int) -> Family:
@@ -408,7 +429,37 @@ class CobarConstruction(UniqueRepresentation):
             """LaTeX representation of one cobar basis tree."""
             if is_leaf(basis_element):
                 return "\\mathrm{id}"
-            return tree_to_latex(basis_element, self.factory.cooperad_cls.name)
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.cooperad_cls(arity, self.base_ring())
+                latex_term = getattr(parent, "_latex_term", None)
+                if callable(latex_term):
+                    return latex_term(dec)
+                return f"\\operatorname{{{self.factory.cooperad_cls.name}}}_{{{dec}}}"
+
+            return tree_to_latex(
+                basis_element,
+                self.factory.cooperad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
+
+        def _svg_term(self, basis_element) -> str:
+            """SVG representation of one cobar basis tree."""
+            if is_leaf(basis_element):
+                return tree_to_svg(1, operad_name="id")
+
+            def _dec_fmt(dec, arity):
+                parent = self.factory.cooperad_cls(arity, self.base_ring())
+                repr_term = getattr(parent, "_repr_term", None)
+                if callable(repr_term):
+                    return repr_term(dec)
+                return f"{self.factory.cooperad_cls.name}{dec}"
+
+            return tree_to_svg(
+                basis_element,
+                operad_name=self.factory.cooperad_cls.name,
+                decoration_formatter=_dec_fmt,
+            )
 
         def _boundary_on_basis(self, tree) -> "CobarConstruction.Element":
             """Compute the cobar differential d = d_1 + d_2 on a tree.
@@ -565,42 +616,27 @@ class CobarConstruction(UniqueRepresentation):
     ):
         """Element of a cobar construction operad component."""
 
-        def _repr_(self) -> str:
-            """Return a readable linear-combination string for this element."""
-            if not self:
-                return "0"
-
-            pieces = []
-            parent = self.parent()
-            for basis, coeff in self:
-                term = parent._repr_term(basis)
-                if coeff == 1:
-                    pieces.append(term)
-                elif coeff == -1:
-                    pieces.append(f"-{term}")
-                else:
-                    pieces.append(f"{coeff}*{term}")
-            return " + ".join(pieces).replace("+ -", "- ")
-
         def _repr_latex_(self) -> str:
             """Return a LaTeX linear-combination string for this element."""
-            if not self:
-                return "$0$"
-
-            pieces = []
-            parent = self.parent()
-            for basis, coeff in self:
-                term = parent._latex_term(basis)
-                if coeff == 1:
-                    pieces.append(term)
-                elif coeff == -1:
-                    pieces.append(f"-{term}")
-                else:
-                    pieces.append(f"{coeff} \\left({term}\\right)")
-            return "$" + " + ".join(pieces).replace("+ -", "- ") + "$"
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             return self.parent().arity()
+
+        def _repr_svg_(self) -> str:
+            """Return SVG markup for Sage display of a monomial cobar tree."""
+            if not self:
+                raise ValueError("Cannot render SVG for the zero element.")
+            if len(self.support()) != 1:
+                raise ValueError(
+                    "SVG rendering currently supports only monomials with one basis term."
+                )
+            basis = next(iter(self.support()))
+            return self.parent()._svg_term(basis)
+
+        def to_svg(self) -> str:
+            """Compatibility alias for :meth:`_repr_svg_`."""
+            return self._repr_svg_()
 
         def boundary(self) -> "CobarConstruction.Element":
             """Apply the cobar differential ``d = d_1 + d_2``."""

@@ -18,6 +18,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -132,6 +133,13 @@ class Associative(CombinatorialFreeModule):
         """Return homological degree of one basis element."""
         return 0
 
+    def _repr_term(self, basis_element: tuple) -> str:
+        return f"μ({basis_element})"
+
+    def _latex_term(self, basis_element: tuple) -> str:
+        entries = ",".join(str(i) for i in basis_element)
+        return f"\\mu_{{{entries}}}"
+
     @staticmethod
     def _compose_basis_tuple(
         sigma: tuple[int, ...], i: int, tau: tuple[int, ...]
@@ -176,6 +184,9 @@ class Associative(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["Associative"], CombinatorialFreeModule.Element):
         """Elements of a fixed-arity associative component."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             """Return the arity of this element."""

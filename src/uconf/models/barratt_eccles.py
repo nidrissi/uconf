@@ -20,6 +20,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -211,6 +212,16 @@ class BarrattEccles(CombinatorialFreeModule):
         """Return homological degree of a basis element."""
         return len(element) - 1
 
+    def _repr_term(self, basis_element: tuple) -> str:
+        perms = " | ".join(str(tuple(p.tuple())) for p in basis_element)
+        return f"({perms})"
+
+    def _latex_term(self, basis_element: tuple) -> str:
+        perms = " \\mid ".join(
+            "(" + ",".join(str(i) for i in p.tuple()) + ")" for p in basis_element
+        )
+        return f"\\left[{perms}\\right]"
+
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
         """Operadic composition ``x \\circ_i y`` using shuffle/EZ lifting."""
@@ -310,6 +321,9 @@ class BarrattEccles(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["BarrattEccles"], CombinatorialFreeModule.Element):
         """Elements of the Barratt--Eccles operad component."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             """Return the arity of this element."""

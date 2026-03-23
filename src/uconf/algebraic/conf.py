@@ -8,6 +8,7 @@ from uconf.algebraic.spherical import SurjectionSphereCochainAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.twisted_complex import TwistedBarComplex
+from uconf.core.display import latex_linear_combination
 from uconf.core.morphism import OperadMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
@@ -91,6 +92,17 @@ class TrivialModule(CombinatorialFreeModule):
 
     def degree_on_basis(self, key):
         return self._dimension
+
+    def _repr_term(self, basis_key):
+        return f"*[{self._dimension}]"
+
+    def _repr_latex(self, basis_key):
+        return f"\\ast^{{{self._dimension}}}"
+
+    class Element(CombinatorialFreeModule.Element):
+        def _repr_latex_(self) -> str:
+            """Return a LaTeX linear-combination string for this element."""
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
 
 def unordered_configuration_model(manifold_model: OperadAlgebra, dimension: int):

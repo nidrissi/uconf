@@ -27,6 +27,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
 
@@ -128,6 +129,12 @@ class SimplicialChains(CombinatorialFreeModule):
         """Degree = dimension of the simplex = ``len(simplex) - 1``."""
         return len(simplex) - 1
 
+    def _repr_term(self, simplex: tuple) -> str:
+        return "[" + ",".join(str(v) for v in simplex) + "]"
+
+    def _latex_term(self, simplex: tuple) -> str:
+        return "[" + ",".join(str(v) for v in simplex) + "]"
+
     # -- boundary -----------------------------------------------------------
 
     def _boundary_on_basis(self, simplex: tuple):
@@ -220,6 +227,9 @@ class SimplicialChains(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["SimplicialChains"], CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialChains`."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def boundary(self) -> "SimplicialChains.Element":
             """Apply the simplicial boundary ∂."""
@@ -348,6 +358,12 @@ class SimplicialCochains(CombinatorialFreeModule):
         """Homological degree convention: ``-(len(simplex) - 1)``."""
         return -(len(simplex) - 1)
 
+    def _repr_term(self, simplex: tuple) -> str:
+        return "<" + ",".join(str(v) for v in simplex) + ">"
+
+    def _latex_term(self, simplex: tuple) -> str:
+        return "\\langle " + ",".join(str(v) for v in simplex) + " \\rangle"
+
     def basis_iter(self, d: int):
         """Iterate over basis cochains of degree ``d``.
 
@@ -428,6 +444,9 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     class Element(ParentedElementMixin["SimplicialCochains"], CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialCochains`."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def coboundary(self) -> "SimplicialCochains.Element":
             """Apply the coboundary δ."""

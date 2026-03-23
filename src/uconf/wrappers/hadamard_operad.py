@@ -26,6 +26,7 @@ from sage.all import (
 )
 
 from uconf.core.operad import OperadLike
+from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 
@@ -69,6 +70,14 @@ class HadamardProduct(UniqueRepresentation):
         self.left_operad_cls = left_operad_cls
         self.right_operad_cls = right_operad_cls
         self.name = f"{left_operad_cls.name}⊙{right_operad_cls.name}"
+
+    def _repr_(self) -> str:
+        return self.name
+
+    def _repr_latex_(self) -> str:
+        left = getattr(self.left_operad_cls, "name", "P")
+        right = getattr(self.right_operad_cls, "name", "Q")
+        return f"{left} \\odot {right}"
 
     @property
     def connectivity(self) -> int:
@@ -284,6 +293,24 @@ class HadamardProduct(UniqueRepresentation):
                 left_basis
             ) + self._right_parent.degree_on_basis(right_basis)
 
+        def _repr_term(self, basis_element: tuple) -> str:
+            left_basis, right_basis = basis_element
+            left_term = getattr(self._left_parent, "_repr_term", None)
+            right_term = getattr(self._right_parent, "_repr_term", None)
+
+            left_str = left_term(left_basis) if callable(left_term) else str(left_basis)
+            right_str = right_term(right_basis) if callable(right_term) else str(right_basis)
+            return f"{left_str} ⊙ {right_str}"
+
+        def _latex_term(self, basis_element: tuple) -> str:
+            left_basis, right_basis = basis_element
+            left_term = getattr(self._left_parent, "_latex_term", None)
+            right_term = getattr(self._right_parent, "_latex_term", None)
+
+            left_ltx = left_term(left_basis) if callable(left_term) else str(left_basis)
+            right_ltx = right_term(right_basis) if callable(right_term) else str(right_basis)
+            return f"{left_ltx} \\odot {right_ltx}"
+
         def basis_iter(self, d: int) -> Iterator["HadamardProduct.Element"]:
             """Iterate over all basis elements of degree ``d``.
 
@@ -407,6 +434,9 @@ class HadamardProduct(UniqueRepresentation):
         CombinatorialFreeModule.Element,
     ):
         """Element wrapper carrying Hadamard-operad structure maps."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
         def arity(self) -> int:
             return self.parent().arity()

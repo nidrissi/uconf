@@ -21,6 +21,7 @@ from sage.all import (
     cached_method,
 )
 
+from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     _koszul_sign_of_permutation,
@@ -29,6 +30,9 @@ from uconf.core.trees import (
     enumerate_shuffle_trees_generic_in_degree,
     is_leaf,
     relabel_leaves,
+    tree_to_latex,
+    tree_to_string,
+    tree_to_svg,
     tree_arity,
     vertex_arity,
     vertices_dfs,
@@ -155,6 +159,82 @@ class TreeModule(CombinatorialFreeModule):
         )
         self.rename(name)
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
+
+    def _repr_(self) -> str:
+        return str(getattr(self, "_prefix", self.__class__.__name__))
+
+    def _repr_latex_(self) -> str:
+        return self._repr_()
+
+    @staticmethod
+    def _short(text: str, max_len: int = 56) -> str:
+        if len(text) <= max_len:
+            return text
+        return text[: max_len - 1] + "..."
+
+    def _repr_vertex_decoration(self, dec_key, arity: int) -> str:
+        comp = self._symmetric_sequence_cls(arity, self.base_ring())
+        term_repr = getattr(comp, "_repr_term", None)
+        if callable(term_repr):
+            return self._short(str(term_repr(dec_key)))
+        return self._short(str(dec_key))
+
+    def _latex_vertex_decoration(self, dec_key, arity: int) -> str:
+        comp = self._symmetric_sequence_cls(arity, self.base_ring())
+        latex_repr = getattr(comp, "_latex_term", None)
+        if callable(latex_repr):
+            return str(latex_repr(dec_key))
+        return str(dec_key)
+
+    def _repr_inner_key(self, m_key) -> str:
+        term_repr = getattr(self._inner_module, "_repr_term", None)
+        if callable(term_repr):
+            return self._short(str(term_repr(m_key)), max_len=36)
+        return self._short(str(m_key), max_len=36)
+
+    def _latex_inner_key(self, m_key) -> str:
+        latex_repr = getattr(self._inner_module, "_latex_term", None)
+        if callable(latex_repr):
+            return str(latex_repr(m_key))
+        return str(m_key)
+
+    def _repr_term(self, basis_element) -> str:
+        """Readable representation for one basis key ``(tree, m_tuple)``."""
+        tree, m_tuple = basis_element
+
+        tree_str = tree_to_string(
+            tree,
+            getattr(self._symmetric_sequence_cls, "name", "S"),
+            decoration_formatter=lambda dec, ar: self._repr_vertex_decoration(dec, ar),
+        )
+        leaves_str = " ⊗ ".join(self._repr_inner_key(mk) for mk in m_tuple)
+        return f"{tree_str} ▷ ({leaves_str})"
+
+    def _latex_term(self, basis_element) -> str:
+        """LaTeX representation for one basis key ``(tree, m_tuple)``."""
+        tree, m_tuple = basis_element
+
+        tree_ltx = tree_to_latex(
+            tree,
+            getattr(self._symmetric_sequence_cls, "name", "S"),
+            decoration_formatter=lambda dec, ar: self._latex_vertex_decoration(dec, ar),
+        )
+        leaves_ltx = " \\otimes ".join(self._latex_inner_key(mk) for mk in m_tuple)
+        return f"{tree_ltx} \\triangleright \\left({leaves_ltx}\\right)"
+
+    def _svg_term(self, basis_element) -> str:
+        """SVG representation for one basis key ``(tree, m_tuple)``."""
+        tree, m_tuple = basis_element
+
+        def _leaf_label(leaf: int) -> str:
+            return self._repr_inner_key(m_tuple[leaf - 1])
+
+        return tree_to_svg(
+            tree,
+            operad_name=getattr(self._symmetric_sequence_cls, "name", "S"),
+            decoration_formatter=lambda dec, ar: self._repr_vertex_decoration(dec, ar),
+            leaf_formatter=_leaf_label,
+        )
 
     def _validate_basis_key(self, key):
         """Validate and normalize a ``(tree, m_tuple)`` basis key."""
@@ -587,6 +667,28 @@ class TreeModule(CombinatorialFreeModule):
 
     class Element(CombinatorialFreeModule.Element):
         """An element of the free S-algebra module ``P ∘ M``."""
+
+        def _repr_latex_(self) -> str:
+            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
+
+        def _repr_svg_(self) -> str:
+            """Return SVG markup for Sage display of a monomial tree term.
+
+            For sums with multiple basis terms, select a monomial first.
+            """
+            if not self:
+                raise ValueError("Cannot render SVG for the zero element.")
+            if len(self.support()) != 1:
+                raise ValueError(
+                    "SVG rendering currently supports only monomials with one basis term."
+                )
+            parent = self.parent()
+            basis = next(iter(self.support()))
+            return parent._svg_term(basis)
+
+        def to_svg(self) -> str:
+            """Compatibility alias for :meth:`_repr_svg_`."""
+            return self._repr_svg_()
 
         def boundary(self) -> "TreeModule.Element":
             """Apply the differential d = d_P + d_M."""
