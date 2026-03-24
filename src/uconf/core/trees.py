@@ -252,19 +252,19 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     - All internal vertices have arity >= 2 (connected assumption)
     - All decorations are valid for the given operad/cooperad
 
-    Returns a validated tree with cleaned decorations, or ``None`` if invalid.
+    Returns a validated tree with cleaned decorations, raises if invalid, or None if decorations are invalid but the tree structure is fine.
     """
     # Check that tree_arity matches
     if is_leaf(tree):
         # A single leaf is only valid for arity 1
         if arity == 1 and tree == 1:
             return tree
-        return None
+        raise ValueError(f"Invalid leaf: {tree}, expected 1 for arity 1")
 
     # Check leaves
     tree_leaves = leaves(tree)
     if tree_leaves != set(range(1, arity + 1)):
-        return None
+        raise ValueError(f"Invalid leaves: {tree_leaves}, should be {set(range(1, arity + 1))}")
 
     # Validate all internal vertices
     def validate_vertex(node):
@@ -273,7 +273,7 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
 
         v_arity = vertex_arity(node)
         if v_arity < 2:
-            return None  # Connected assumption
+            raise ValueError(f"Invalid vertex with arity {v_arity} < 2: {node}")
 
         dec = decoration(node)
         parent = operad_cls(v_arity, base_ring)
