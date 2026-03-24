@@ -148,7 +148,9 @@ class TestChainComplex:
             d_phi_p = phi_p.parent().boundary(phi_p)
             assert phi_dp == d_phi_p, f"chain map failed at arity 2 for {p_elem}"
 
-    @pytest.mark.xfail(reason="Known open: chain map property at arity 3 degree 0 is not yet verified.")
+    @pytest.mark.xfail(
+        reason="Known open: chain map property at arity 3 degree 0 is not yet verified."
+    )
     def test_e_comodule_chain_map_arity3(self) -> None:
         """Chain map property at arity 3 degree 0 (known open)."""
         sLie = ShiftedOperad(Lie, -1)
