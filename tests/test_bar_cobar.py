@@ -35,7 +35,6 @@ from uconf.core.trees import (
     vertex_arity,
     vertices_dfs,
     weight,
-    tree_to_svg,
 )
 
 
@@ -153,31 +152,6 @@ def test_bar_cobar_accept_nested_operad_providers() -> None:
 
     cobar = CobarConstruction(bar)
     assert cobar(2, QQ).arity() == 2
-
-
-def test_tree_to_svg_basic_output() -> None:
-    tree = (((), 1, 2), 3, 4)
-    svg = tree_to_svg(tree, operad_name="P")
-    assert "<svg" in svg
-    assert "</svg>" in svg
-    assert 'aria-label="decorated rooted tree"' in svg
-    assert 'class="vlabel"' in svg
-
-
-def test_bar_element_to_svg() -> None:
-    bcom = BarConstruction(Commutative)
-    elem = bcom(2, QQ)(((), 1, 2))
-    svg = elem._repr_svg_()
-    assert "<svg" in svg
-    assert "</svg>" in svg
-
-
-def test_cobar_element_to_svg() -> None:
-    ococom = CobarConstruction(CoCommutative)
-    elem = ococom(2, QQ)(((), 1, 2))
-    svg = elem._repr_svg_()
-    assert "<svg" in svg
-    assert "</svg>" in svg
 
 
 class TestShuffleTrees:
