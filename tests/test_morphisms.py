@@ -337,6 +337,7 @@ class TestEComoduleMorphism:
         Delta = make_e_comodule_morphism(BH)
 
         BH2 = BH(2, QQ)
+        OBH2 = OBH(2, QQ)
         planar_elems = list(BH2.planar_basis_it(1))
         assert len(planar_elems) > 0
 
@@ -344,22 +345,29 @@ class TestEComoduleMorphism:
             dec_key = list(elem.support())[0]
             # Build single-vertex cobar tree
             cobar_tree = (dec_key,) + tuple(range(1, 3))
-            OBH2 = OBH(2, QQ)
             cobar_elem = OBH2(cobar_tree)
 
-            # e_comodule_on_generator result (in tensor format)
+            # e_comodule_on_generator returns E(n) ⊗ C(n) (cooperad level).
+            # Embed the C keys into Ω(C) as single-vertex cobar trees to compare
+            # with the Hadamard product result from Delta.
             tensor_result = e_comodule_on_generator(elem)
 
             # Delta result (in HadamardProduct format)
             had_result = Delta(cobar_elem)
 
-            # Compare: convert tensor keys to Hadamard keys
+            # Compare: embed cooperad keys as cobar trees and convert to Hadamard keys
             tensor_dict = {}
             for tensor_basis, coeff in tensor_result:
-                be_key, cobar_key = tensor_basis
-                tensor_dict[(be_key, cobar_key)] = (
-                    tensor_dict.get((be_key, cobar_key), QQ.zero()) + coeff
-                )
+                be_key, coop_key = tensor_basis
+                # Embed cooperad key as single-vertex cobar tree
+                cobar_key_raw = (coop_key,) + tuple(range(1, 3))
+                # Normalize the cobar tree key
+                cobar_normalized = OBH2(cobar_key_raw)
+                for ck, cc in cobar_normalized:
+                    had_key = (be_key, ck)
+                    tensor_dict[had_key] = (
+                        tensor_dict.get(had_key, QQ.zero()) + coeff * cc
+                    )
             tensor_dict = {k: v for k, v in tensor_dict.items() if v != 0}
 
             had_dict = _as_dict(had_result)

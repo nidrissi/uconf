@@ -131,11 +131,11 @@ class TestChainComplex:
         assert complex is not None
 
     def test_e_comodule_generator_chain_map_arity3(self) -> None:
-        """e_comodule_on_generator satisfies the chain map property at arity 3.
+        """e_comodule_on_generator satisfies the cooperad-level chain map at arity 3.
 
-        For c ∈ C(3), checks Δ_gen(∂c) = d_{E⊗Ω}(Δ_gen(c)).
-        This is the core identity that ensures the E-comodule map
-        on generators is compatible with the differential.
+        For c ∈ C(3), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
+        where ν: C → E ⊗ C is the Berger–Fresse E-comodule structure map
+        and ∂_C is the cooperad differential.
         """
         from sage.all import tensor
 
@@ -144,30 +144,30 @@ class TestChainComplex:
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
         C = BarConstruction(H)
-        P = CobarConstruction(C)
         C3 = C(3, QQ)
-        P3 = P(3, QQ)
         BE3 = BarrattEccles(3, QQ)
 
         for d in range(3):
             for elem in C3.basis_iter(d):
-                f_dc = e_comodule_on_generator(elem.boundary())
-                d_fc = tensor([BE3, P3]).zero()
+                nu_dc = e_comodule_on_generator(elem.boundary())
+                d_nu_c = tensor([BE3, C3]).zero()
                 for (b, u), coeff in e_comodule_on_generator(elem):
                     b_elem = BE3.term(b)
-                    u_elem = P3.term(u)
-                    d_fc += coeff * b_elem.boundary().tensor(u_elem)
-                    d_fc += (
-                        coeff * (-1) ** BE3.degree_on_basis(b) * b_elem.tensor(P3.boundary(u_elem))
+                    u_elem = C3.term(u)
+                    d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
+                    d_nu_c += (
+                        coeff
+                        * (-1) ** BE3.degree_on_basis(b)
+                        * b_elem.tensor(C3.boundary(u_elem))
                     )
-                assert f_dc == d_fc, f"generator chain map failed at arity 3 deg {d}: {elem}"
+                assert nu_dc == d_nu_c, f"generator chain map failed at arity 3 deg {d}: {elem}"
 
     def test_e_comodule_generator_chain_map_arity2(self) -> None:
-        """e_comodule_on_generator satisfies the chain map property at arity 2.
+        """e_comodule_on_generator satisfies the cooperad-level chain map at arity 2.
 
-        For c ∈ C(2), checks Δ_gen(∂c) = d_{E⊗Ω}(Δ_gen(c)).
-        This is the core identity that ensures the E-comodule map
-        on generators is compatible with the differential.
+        For c ∈ C(2), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
+        where ν: C → E ⊗ C is the Berger–Fresse E-comodule structure map
+        and ∂_C is the cooperad differential.
         """
         from sage.all import tensor
 
@@ -176,23 +176,23 @@ class TestChainComplex:
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
         C = BarConstruction(H)
-        P = CobarConstruction(C)
         C2 = C(2, QQ)
-        P2 = P(2, QQ)
         BE2 = BarrattEccles(2, QQ)
 
         for d in range(3):
             for elem in C2.basis_iter(d):
-                f_dc = e_comodule_on_generator(elem.boundary())
-                d_fc = tensor([BE2, P2]).zero()
+                nu_dc = e_comodule_on_generator(elem.boundary())
+                d_nu_c = tensor([BE2, C2]).zero()
                 for (b, u), coeff in e_comodule_on_generator(elem):
                     b_elem = BE2.term(b)
-                    u_elem = P2.term(u)
-                    d_fc += coeff * b_elem.boundary().tensor(u_elem)
-                    d_fc += (
-                        coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(P2.boundary(u_elem))
+                    u_elem = C2.term(u)
+                    d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
+                    d_nu_c += (
+                        coeff
+                        * (-1) ** BE2.degree_on_basis(b)
+                        * b_elem.tensor(C2.boundary(u_elem))
                     )
-                assert f_dc == d_fc, f"generator chain map failed at arity 2 deg {d}: {elem}"
+                assert nu_dc == d_nu_c, f"generator chain map failed at arity 2 deg {d}: {elem}"
 
     def test_e_comodule_chain_map(self) -> None:
         """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.

@@ -1,13 +1,16 @@
 """E-comodule morphism Δ: Ω(C) → E ⊗ Ω(C).
 
-For a quasi-planar cooperad C, the E-comodule map defines an operad morphism
-from the cobar construction Ω(C) to the Hadamard product E ⊗ Ω(C), where
-E = BarrattEccles is the Barratt–Eccles operad.
+For a quasi-planar cooperad C, the Berger–Fresse E-comodule structure gives
+a chain map :math:`\\nu: C \\to E \\otimes C` at the cooperad level, where
+E = BarrattEccles is the Barratt–Eccles operad.  This is computed by
+:func:`e_comodule_on_generator`.
 
-Since Ω(C) is the free operad T(s⁻¹C̄), the morphism is uniquely determined
-by its values on generators (single-vertex trees).  On generators, the map is
-computed by :func:`~uconf.constructions.e_comodule.e_comodule_on_generator`.
-The extension to arbitrary trees uses the universal property of the free operad.
+The extension to an operad morphism :math:`\\Omega(C) \\to E \\otimes \\Omega(C)`
+uses the universal property of the free operad :math:`\\Omega(C) = T(s^{-1}\\bar C)`:
+on each generator (single-vertex cobar tree), the cooperad element is mapped
+via :math:`\\nu`, embedded into :math:`E \\otimes \\Omega(C)` via the canonical
+inclusion :math:`\\iota: C \\hookrightarrow \\Omega(C)`, and then composed
+operadically with child images.
 
 The cooperad :math:`\\mathcal{C}` must be quasi-planar: its arity-n components
 must inherit from :class:`~uconf.core.quasi_planar.QuasiPlanarMixin` and expose
@@ -32,21 +35,30 @@ from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
 def e_comodule_on_generator(dec_elem: Any) -> Any:
-    """Compute the :math:`\\mathcal{E}_\\nu`-comodule map on a cooperad generator.
+    r"""Compute the Berger–Fresse E-comodule map on a cooperad element.
 
-    Given an element *dec_elem* :math:`\\in \\mathcal{C}(n)` (planar or not),
-    returns
+    Given an element *dec_elem* :math:`c \in \mathcal{C}(n)` (planar or not),
+    returns the E-comodule structure map
 
     .. math::
 
-        \\Delta(s^{-1}\\,\\text{dec\\_elem})
-          \\in \\mathcal{E}(n) \\otimes \\Omega(\\mathcal{C})(n).
+        \nu(c) \in \mathcal{E}(n) \otimes \mathcal{C}(n).
 
-    For planar input the formula is the direct recursive expansion.
-    Non-planar input is handled via equivariance:
-    :math:`\\Delta(c \\cdot \\sigma) = \\Delta(c) \\cdot \\sigma`,
+    This is a **cooperad-level** chain map: it satisfies
+
+    .. math::
+
+        \nu(\partial_C\, c)
+          = (d_E \otimes 1 + 1 \otimes \partial_C)(\nu(c))
+
+    where :math:`\partial_C` is the cooperad differential.
+
+    For planar input the formula is the direct recursive expansion using
+    :math:`d_\sigma` components.  Non-planar input is handled via
+    equivariance:
+    :math:`\nu(c \cdot \sigma) = \nu(c) \cdot \sigma`,
     where the diagonal :math:`S_n` action acts on both the
-    Barratt–Eccles and cobar factors.
+    Barratt–Eccles and cooperad factors.
 
     Parameters
     ----------
@@ -55,15 +67,15 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
     Returns
     -------
-    Element of ``tensor([be_component, cobar_component])``.
+    Element of ``tensor([be_component, cooperad_component])``.
 
     Notes
     -----
-    Sequences :math:`\\underline\\sigma` that contain the identity permutation
-    give :math:`\\rho(\\underline\\sigma) = 0` (degenerate Barratt–Eccles
-    element), so they are skipped.  Zero branches of :math:`d_\\sigma` are
+    Sequences :math:`\underline\sigma` that contain the identity permutation
+    give :math:`\rho(\underline\sigma) = 0` (degenerate Barratt–Eccles
+    element), so they are skipped.  Zero branches of :math:`d_\sigma` are
     pruned early.  The recursion terminates naturally because each
-    :math:`d_\\sigma` reduces the degree by 1 and the cooperad is bounded below.
+    :math:`d_\sigma` reduces the degree by 1 and the cooperad is bounded below.
     """
     cooperad_component: CooperadComponent = dec_elem.parent()
     assert isinstance(cooperad_component, QuasiPlanarMixin), (
@@ -72,20 +84,19 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
     n = cooperad_component.arity()
     base_ring = cooperad_component.base_ring()
-    cobar_component = CobarConstruction(cooperad_component.factory)(n, base_ring)
     be_component = BarrattEccles(n, base_ring)
 
     S_n = SymmetricGroup(n)
     identity_n = S_n.identity()
 
-    target = tensor([be_component, cobar_component])
+    target = tensor([be_component, cooperad_component])
 
     if not dec_elem:
         return target.zero()
 
     # -----------------------------------------------------------------------
     # Planarize the input: dec_elem = Σ pl_coeff * c_pl ⊗ σ.
-    # Compute Δ on each planar component and apply equivariance.
+    # Compute ν on each planar component and apply equivariance.
     # -----------------------------------------------------------------------
     planarized = cooperad_component.planarize(dec_elem)
 
@@ -95,39 +106,46 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         sigma = S_n(sigma_key)
         planar_elem = cooperad_component.term(planar_key)
 
-        # Compute Δ on the planar element via the recursive formula.
-        planar_result = _delta_on_planar(
-            planar_elem, cooperad_component, cobar_component,
+        # Compute ν on the planar element via the recursive formula.
+        planar_result = _nu_on_planar(
+            planar_elem, cooperad_component,
             be_component, S_n, identity_n, target,
         )
 
-        # Apply equivariance: Δ(c·σ) = Δ(c)·σ.
-        # The diagonal S_n action permutes both BE and cobar factors.
+        # Apply equivariance: ν(c·σ) = ν(c)·σ.
+        # The diagonal S_n RIGHT action acts on both factors:
+        #   (e ⊗ c)·σ = (e·σ) ⊗ (c·σ)
+        # Bar construction .permute(σ) already applies the RIGHT action (leaf relabeling).
+        # BE .permute(σ) applies LEFT action (σ·p), so for the RIGHT action e·σ
+        # we right-multiply each permutation in the BE basis: (p₀,...,pₖ)·σ = (p₀σ,...,pₖσ).
         if sigma == identity_n:
             total_result += pl_coeff * planar_result
         else:
             acted = target.zero()
-            for (be_key, cobar_key), t_coeff in planar_result:
-                be_perm = be_component.term(be_key).permute(sigma)
-                cobar_perm = cobar_component.term(cobar_key).permute(sigma)
+            for (be_key, coop_key), t_coeff in planar_result:
+                # RIGHT action on BE: right-multiply each simplex element by σ.
+                be_right = tuple(p * sigma for p in be_key)
+                be_perm = be_component(be_right)
+                coop_perm = cooperad_component.term(coop_key).permute(sigma)
                 for be_k, be_c in be_perm:
-                    for cb_k, cb_c in cobar_perm:
-                        acted += t_coeff * be_c * cb_c * target.term((be_k, cb_k))
+                    for cp_k, cp_c in coop_perm:
+                        acted += t_coeff * be_c * cp_c * target.term((be_k, cp_k))
             total_result += pl_coeff * acted
 
     return total_result
 
 
-def _delta_on_planar(
+def _nu_on_planar(
     planar_elem: Any,
     cooperad_component: Any,
-    cobar_component: Any,
     be_component: Any,
     S_n: Any,
     identity_n: Any,
     target: Any,
 ) -> Any:
-    """Core recursive computation of Δ on a **planar** cooperad element.
+    """Core recursive computation of ν on a **planar** cooperad element.
+
+    Returns an element of ``tensor([be_component, cooperad_component])``.
 
     Parameters
     ----------
@@ -135,8 +153,6 @@ def _delta_on_planar(
         A planar element of the cooperad component.
     cooperad_component :
         The arity-n cooperad component.
-    cobar_component :
-        The arity-n component of the cobar construction Ω(C).
     be_component :
         The arity-n Barratt–Eccles component.
     S_n :
@@ -144,35 +160,24 @@ def _delta_on_planar(
     identity_n :
         The identity element of ``S_n``.
     target :
-        The tensor product ``tensor([be_component, cobar_component])``.
+        The tensor product ``tensor([be_component, cooperad_component])``.
 
     Returns
     -------
     Element of *target*.
     """
-    n = cooperad_component.arity()
-
     result = target.zero()
 
-    def make_cobar_generator(pl_elem, sigma_prod=None):
-        """Build the weight-1 cobar tree element for *pl_elem* ∈ C_pl(n).
+    def make_cooperad_factor(pl_elem, sigma_prod=None):
+        """Build the cooperad factor for the formula.
 
-        If *sigma_prod* is given and is not the identity, the cooperad
-        S_n action is applied to the decoration (rather than permuting
-        cobar leaves).  This produces ``tree(dec·σ, 1, …, n)`` which
-        matches the representation used by the cobar differential d_1.
+        For k=0 (no permutations applied), returns the element as-is.
+        For k≥1, applies the cumulative permutation σ_prod to the
+        cooperad element via the S_n action: c ↦ c·σ_prod.
         """
-        acc = cobar_component.zero()
-        for dec_key, coeff in pl_elem:
-            if sigma_prod is not None and sigma_prod != identity_n:
-                acted = cooperad_component(dec_key).permute(sigma_prod)
-                for new_key, new_coeff in acted:
-                    tree = (new_key,) + tuple(range(1, n + 1))
-                    acc += coeff * new_coeff * cobar_component(tree)
-            else:
-                tree = (dec_key,) + tuple(range(1, n + 1))
-                acc += coeff * cobar_component(tree)
-        return acc
+        if sigma_prod is not None and sigma_prod != identity_n:
+            return pl_elem.permute(sigma_prod)
+        return pl_elem
 
     def recurse(current_d_elem, sigma_bar):
         """Accumulate contributions, pruning zero branches."""
@@ -185,8 +190,8 @@ def _delta_on_planar(
 
         if k == 0:
             be_elem = be_component((identity_n,))
-            cobar_gen = make_cobar_generator(current_d_elem)
-            result += be_elem.tensor(cobar_gen)
+            coop_factor = make_cooperad_factor(current_d_elem)
+            result += be_elem.tensor(coop_factor)
         else:
             be_elem = be_component.rho(list(sigma_bar))
 
@@ -195,8 +200,8 @@ def _delta_on_planar(
                 for s in sigma_bar:
                     sigma_prod = s * sigma_prod
 
-                cobar_gen = make_cobar_generator(current_d_elem, sigma_prod)
-                result += be_elem.tensor(cobar_gen)
+                coop_factor = make_cooperad_factor(current_d_elem, sigma_prod)
+                result += be_elem.tensor(coop_factor)
 
         for sigma in S_n:
             if sigma == identity_n:
@@ -213,6 +218,12 @@ def make_e_comodule_morphism(
     cooperad_cls: CooperadLike,
 ) -> OperadMorphism:
     """Build the operad morphism Δ: Ω(C) → E ⊗ Ω(C).
+
+    The morphism is defined on generators of the free operad
+    Ω(C) = T(s⁻¹C̄) by composing the cooperad-level E-comodule map
+    :func:`e_comodule_on_generator` (which gives ν: C → E ⊗ C) with
+    the canonical inclusion ι: C ↪ Ω(C), then extending via operadic
+    composition.
 
     Parameters
     ----------
@@ -239,19 +250,23 @@ def make_e_comodule_morphism(
         k = vertex_arity(tree)
 
         # Map the root generator via e_comodule_on_generator.
-        # The decoration may be non-planar; e_comodule_on_generator handles
-        # this via internal planarization and equivariance.
+        # This returns an element of E(k) ⊗ C(k) (cooperad level).
         cooperad_parent = cooperad_cls(k, base_ring)
         gen_elem = cooperad_parent(dec)
 
         root_tensor = e_comodule_on_generator(gen_elem)
 
-        # Convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element.
+        # Embed C(k) into Ω(C)(k) via the canonical inclusion ι,
+        # then convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element.
+        cobar_k = cobar(k, base_ring)
         target_k = target_factory(k, base_ring)
         root_image = target_k.zero()
-        for tensor_basis, t_coeff in root_tensor:
-            be_key, cobar_key = tensor_basis
-            root_image += t_coeff * target_k((be_key, cobar_key))
+        for (be_key, coop_key), t_coeff in root_tensor:
+            # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
+            cobar_tree = (coop_key,) + tuple(range(1, k + 1))
+            cobar_elem = cobar_k(cobar_tree)
+            for cobar_key, c_coeff in cobar_elem:
+                root_image += t_coeff * c_coeff * target_k((be_key, cobar_key))
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.
