@@ -129,7 +129,26 @@ def _delta_on_planar(
 ) -> Any:
     """Core recursive computation of Δ on a **planar** cooperad element.
 
-    Returns an element of ``target = tensor([be_component, cobar_component])``.
+    Parameters
+    ----------
+    planar_elem :
+        A planar element of the cooperad component.
+    cooperad_component :
+        The arity-n cooperad component.
+    cobar_component :
+        The arity-n component of the cobar construction Ω(C).
+    be_component :
+        The arity-n Barratt–Eccles component.
+    S_n :
+        The symmetric group ``S_n``.
+    identity_n :
+        The identity element of ``S_n``.
+    target :
+        The tensor product ``tensor([be_component, cobar_component])``.
+
+    Returns
+    -------
+    Element of *target*.
     """
     n = cooperad_component.arity()
 
