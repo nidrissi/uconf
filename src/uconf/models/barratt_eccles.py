@@ -31,7 +31,7 @@ class BarrattEccles(CombinatorialFreeModule):
     duplicates. Degenerate inputs map to zero, while malformed inputs raise.
     """
 
-    name: ClassVar[str] = "BE"
+    name: ClassVar[str] = "ℰ"
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
