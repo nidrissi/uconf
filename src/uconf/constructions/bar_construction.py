@@ -469,11 +469,10 @@ class BarConstruction(UniqueRepresentation):
                 repr_term = getattr(parent, "_repr_term", None)
                 if callable(repr_term):
                     return repr_term(dec)
-                return f"{self.factory.operad_cls.name}{dec}"
+                return f"B{self.factory.operad_cls.name}({dec})"
 
             return tree_to_string(
                 basis_element,
-                self.factory.operad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -485,11 +484,10 @@ class BarConstruction(UniqueRepresentation):
                 latex_term = getattr(parent, "_latex_term", None)
                 if callable(latex_term):
                     return latex_term(dec)
-                return f"\\operatorname{{{self.factory.operad_cls.name}}}_{{{dec}}}"
+                return f"\\operatorname{{{self.factory.operad_cls.name}}}({{{dec}}})"
 
             return tree_to_latex(
                 basis_element,
-                self.factory.operad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 

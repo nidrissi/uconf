@@ -435,7 +435,6 @@ class CobarConstruction(UniqueRepresentation):
 
             return tree_to_string(
                 basis_element,
-                self.factory.cooperad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -447,18 +446,17 @@ class CobarConstruction(UniqueRepresentation):
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one cobar basis tree."""
             if is_leaf(basis_element):
-                return "\\mathrm{id}"
+                return f"\\eta_{{{self.factory.cooperad_cls.name}}}"
 
             def _dec_fmt(dec, arity):
                 parent = self.factory.cooperad_cls(arity, self.base_ring())
                 latex_term = getattr(parent, "_latex_term", None)
                 if callable(latex_term):
                     return latex_term(dec)
-                return f"\\operatorname{{{self.factory.cooperad_cls.name}}}_{{{dec}}}"
+                return f"\\operatorname{{{self.factory.cooperad_cls.name}}}({{{dec}}})"
 
             return tree_to_latex(
                 basis_element,
-                self.factory.cooperad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 

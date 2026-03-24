@@ -203,7 +203,6 @@ class TreeModule(CombinatorialFreeModule):
 
         tree_str = tree_to_string(
             tree,
-            getattr(self._symmetric_sequence_cls, "name", "S"),
             decoration_formatter=lambda dec, ar: self._repr_vertex_decoration(dec, ar),
         )
         leaves_str = " ⊗ ".join(self._repr_inner_key(mk) for mk in m_tuple)
@@ -215,7 +214,6 @@ class TreeModule(CombinatorialFreeModule):
 
         tree_ltx = tree_to_latex(
             tree,
-            getattr(self._symmetric_sequence_cls, "name", "S"),
             decoration_formatter=lambda dec, ar: self._latex_vertex_decoration(dec, ar),
         )
         leaves_ltx = " \\otimes ".join(self._latex_inner_key(mk) for mk in m_tuple)

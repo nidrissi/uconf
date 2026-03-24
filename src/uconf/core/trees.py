@@ -435,14 +435,12 @@ def _planar_subtrees_for_leaves(
 
 def tree_to_string(
     tree,
-    operad_name: str = "P",
-    decoration_formatter: Callable[[tuple, int], str] | None = None,
+    decoration_formatter: Callable[[tuple, int], str],
 ) -> str:
     """Return a human-readable string representation of a decorated tree.
 
     Args:
         tree: A rooted tree encoded by nested tuples.
-        operad_name: Prefix used by the default decoration formatter.
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
@@ -451,27 +449,20 @@ def tree_to_string(
 
     arity = vertex_arity(tree)
     dec = decoration(tree)
-    if decoration_formatter is None:
-        dec_str = f"{operad_name}{dec}"
-    else:
-        dec_str = decoration_formatter(dec, arity)
+    dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(
-        tree_to_string(c, operad_name, decoration_formatter) for c in children(tree)
-    )
+    children_str = ", ".join(tree_to_string(c, decoration_formatter) for c in children(tree))
     return f"({dec_str}; {children_str})"
 
 
 def tree_to_latex(
     tree,
-    operad_name: str = "P",
-    decoration_formatter: Callable[[tuple, int], str] | None = None,
+    decoration_formatter: Callable[[tuple, int], str],
 ) -> str:
     """Return a LaTeX representation of a decorated rooted tree.
 
     Args:
         tree: A rooted tree encoded by nested tuples.
-        operad_name: Prefix used by the default decoration formatter.
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
@@ -480,15 +471,9 @@ def tree_to_latex(
 
     arity = vertex_arity(tree)
     dec = decoration(tree)
-    if decoration_formatter is None:
-        dec_indices = ",".join(str(i) for i in dec)
-        dec_str = f"\\operatorname{{{operad_name}}}_{{({dec_indices})}}"
-    else:
-        dec_str = decoration_formatter(dec, arity)
+    dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(
-        tree_to_latex(c, operad_name, decoration_formatter) for c in children(tree)
-    )
+    children_str = ", ".join(tree_to_latex(c, decoration_formatter) for c in children(tree))
     return f"\\left({dec_str}; {children_str}\\right)"
 
 
