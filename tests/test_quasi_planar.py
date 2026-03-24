@@ -10,9 +10,9 @@ from uconf import (
     HadamardProduct,
     Lie,
     Surjection,
-    e_comodule_on_generator,
 )
 from uconf.core.quasi_planar import QuasiPlanarMixin
+from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 
 
 # ---------------------------------------------------------------------------

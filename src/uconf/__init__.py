@@ -46,7 +46,6 @@ from uconf.constructions import (
     CobarConstruction,
     TwistedBarComplex,
     TwistedCobarComplex,
-    e_comodule_on_generator,
 )
 from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, TwistingMorphism
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
@@ -62,6 +61,7 @@ from uconf.models import (
     Surjection,
     SurjectionDual,
 )
+from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
 from uconf.homology import chain_complex, homology_basis
 from uconf.morphisms import (
