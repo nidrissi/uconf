@@ -50,6 +50,7 @@ from uconf.core.trees import (
     is_leaf,
     relabel_leaves,
     subtree_degree_cobar,
+    to_shuffle_tree_cobar,
     tree_to_latex,
     tree_to_string,
     tree_to_svg,
@@ -75,10 +76,9 @@ class CobarConstruction(UniqueRepresentation):
     every (arity, degree) basis finite without requiring an external weight cap.
 
     Note:
-        Unlike ``BarConstruction``, this module does not automatically normalize
-        trees to shuffle form.  Utilities ``to_shuffle_tree_cobar`` and
-        ``is_shuffle_tree`` in ``uconf.core.trees`` can be used explicitly when
-        needed.
+        Trees are automatically normalized to shuffle form via
+        ``to_shuffle_tree_cobar`` in the element constructor, analogous
+        to the bar construction.
 
     """
 
@@ -335,8 +335,21 @@ class CobarConstruction(UniqueRepresentation):
 
             return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
 
+        def _normalize_to_shuffle(self, tree):
+            """Normalize *tree* to shuffle form.
+
+            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.
+            """
+            if is_leaf(tree):
+                return [(tree, 1)]
+            return to_shuffle_tree_cobar(tree, self._cooperad_cls, self.base_ring())
+
         def _element_constructor_(self, x):
-            """Build elements from tree basis keys or sparse dictionaries."""
+            """Build elements from tree basis keys or sparse dictionaries.
+
+            Trees are automatically normalized to shuffle form.
+            """
             if isinstance(x, CobarConstruction.Element):
                 if x.parent().factory is self.factory:
                     return self.sum_of_terms((basis, coeff) for basis, coeff in x)
@@ -348,14 +361,17 @@ class CobarConstruction(UniqueRepresentation):
                     clean_key = self._validate_basis_key(key)
                     if clean_key is None:
                         continue
-                    clean_dict[clean_key] = clean_dict.get(clean_key, 0) + coeff
+                    for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
+                        clean_dict[shuffle_key] = (
+                            clean_dict.get(shuffle_key, 0) + coeff * shuffle_coeff
+                        )
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, (tuple, int)):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                return self.term(clean_key)
+                return self.sum_of_terms(self._normalize_to_shuffle(clean_key))
 
             return super()._element_constructor_(x)
 
@@ -573,7 +589,9 @@ class CobarConstruction(UniqueRepresentation):
                             new_tree = expand_vertex(
                                 tree, curr_vertex, i, dec_left, dec_right, m, n
                             )
-                            result += total_sign * coeff * self.term(new_tree)
+                            # Use _element_constructor_ (via __call__) so that
+                            # the expanded tree is normalised to shuffle form.
+                            result += total_sign * coeff * self(new_tree)
             return result
 
         def _replace_vertex_decoration_by_index(
@@ -675,7 +693,9 @@ class CobarConstruction(UniqueRepresentation):
                     new_tree = relabel_map.get(tree, tree)
                 else:
                     new_tree = relabel_leaves(tree, relabel_map)
-                result += coeff * parent.term(new_tree)
+                # Use parent(new_tree) so that shuffle normalization
+                # is applied — the relabeled tree may be out of order.
+                result += coeff * parent(new_tree)
             return result
 
 
