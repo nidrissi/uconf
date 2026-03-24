@@ -130,6 +130,38 @@ class TestChainComplex:
         complex = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert complex is not None
 
+    def test_e_comodule_generator_chain_map_arity3(self) -> None:
+        """e_comodule_on_generator satisfies the chain map property at arity 3.
+
+        For c ∈ C(3), checks Δ_gen(∂c) = d_{E⊗Ω}(Δ_gen(c)).
+        This is the core identity that ensures the E-comodule map
+        on generators is compatible with the differential.
+        """
+        from sage.all import tensor
+
+        from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
+
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        P = CobarConstruction(C)
+        C3 = C(3, QQ)
+        P3 = P(3, QQ)
+        BE3 = BarrattEccles(3, QQ)
+
+        for d in range(3):
+            for elem in C3.basis_iter(d):
+                f_dc = e_comodule_on_generator(elem.boundary())
+                d_fc = tensor([BE3, P3]).zero()
+                for (b, u), coeff in e_comodule_on_generator(elem):
+                    b_elem = BE3.term(b)
+                    u_elem = P3.term(u)
+                    d_fc += coeff * b_elem.boundary().tensor(u_elem)
+                    d_fc += (
+                        coeff * (-1) ** BE3.degree_on_basis(b) * b_elem.tensor(P3.boundary(u_elem))
+                    )
+                assert f_dc == d_fc, f"generator chain map failed at arity 3 deg {d}: {elem}"
+
     def test_e_comodule_generator_chain_map_arity2(self) -> None:
         """e_comodule_on_generator satisfies the chain map property at arity 2.
 
@@ -151,18 +183,16 @@ class TestChainComplex:
 
         for d in range(3):
             for elem in C2.basis_iter(d):
-                for key in elem.support():
-                    c = C2.term(key)
-                    f_dc = e_comodule_on_generator(c.boundary())
-                    d_fc = tensor([BE2, P2]).zero()
-                    for (b, u), coeff in e_comodule_on_generator(c):
-                        b_elem = BE2.term(b)
-                        u_elem = P2.term(u)
-                        d_fc += coeff * b_elem.boundary().tensor(u_elem)
-                        d_fc += coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(
-                            P2.boundary(u_elem)
-                        )
-                    assert f_dc == d_fc, f"generator chain map failed at arity 2 deg {d}: {key}"
+                f_dc = e_comodule_on_generator(elem.boundary())
+                d_fc = tensor([BE2, P2]).zero()
+                for (b, u), coeff in e_comodule_on_generator(elem):
+                    b_elem = BE2.term(b)
+                    u_elem = P2.term(u)
+                    d_fc += coeff * b_elem.boundary().tensor(u_elem)
+                    d_fc += (
+                        coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(P2.boundary(u_elem))
+                    )
+                assert f_dc == d_fc, f"generator chain map failed at arity 2 deg {d}: {elem}"
 
     def test_e_comodule_chain_map(self) -> None:
         """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.
