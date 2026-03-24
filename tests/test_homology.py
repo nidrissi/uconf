@@ -185,7 +185,7 @@ class TestChainComplex:
     @pytest.mark.xfail(
         reason=(
             "Full morphism chain map at arity 3 involves _extend_tree for weight-2 "
-            "cobar trees, which has a separate equivariance issue."
+            "cobar trees, that has a separate equivariance issue."
         ),
     )
     def test_e_comodule_chain_map_arity3(self) -> None:
