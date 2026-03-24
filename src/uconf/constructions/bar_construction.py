@@ -262,6 +262,7 @@ class BarConstruction(UniqueRepresentation):
                         child_term_lists.append(_planarize_subtree(ch))
 
                     from itertools import product as iter_product
+
                     for combo in iter_product(*child_term_lists):
                         total_child_coeff = 1
                         new_ch_planarized = []
