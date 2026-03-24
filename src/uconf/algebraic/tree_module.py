@@ -32,7 +32,6 @@ from uconf.core.trees import (
     relabel_leaves,
     tree_to_latex,
     tree_to_string,
-    tree_to_svg,
     tree_arity,
     vertex_arity,
     vertices_dfs,
@@ -221,20 +220,6 @@ class TreeModule(CombinatorialFreeModule):
         )
         leaves_ltx = " \\otimes ".join(self._latex_inner_key(mk) for mk in m_tuple)
         return f"{tree_ltx} \\triangleright \\left({leaves_ltx}\\right)"
-
-    def _svg_term(self, basis_element) -> str:
-        """SVG representation for one basis key ``(tree, m_tuple)``."""
-        tree, m_tuple = basis_element
-
-        def _leaf_label(leaf: int) -> str:
-            return self._repr_inner_key(m_tuple[leaf - 1])
-
-        return tree_to_svg(
-            tree,
-            operad_name=getattr(self._symmetric_sequence_cls, "name", "S"),
-            decoration_formatter=lambda dec, ar: self._repr_vertex_decoration(dec, ar),
-            leaf_formatter=_leaf_label,
-        )
 
     def _validate_basis_key(self, key):
         """Validate and normalize a ``(tree, m_tuple)`` basis key."""
@@ -735,25 +720,6 @@ class TreeModule(CombinatorialFreeModule):
 
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
-
-        def _repr_svg_(self) -> str:
-            """Return SVG markup for Sage display of a monomial tree term.
-
-            For sums with multiple basis terms, select a monomial first.
-            """
-            if not self:
-                raise ValueError("Cannot render SVG for the zero element.")
-            if len(self.support()) != 1:
-                raise ValueError(
-                    "SVG rendering currently supports only monomials with one basis term."
-                )
-            parent = self.parent()
-            basis = next(iter(self.support()))
-            return parent._svg_term(basis)
-
-        def to_svg(self) -> str:
-            """Compatibility alias for :meth:`_repr_svg_`."""
-            return self._repr_svg_()
 
         def boundary(self) -> "TreeModule.Element":
             """Apply the differential d = d_P + d_M."""

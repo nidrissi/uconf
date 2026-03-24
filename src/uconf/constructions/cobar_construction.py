@@ -53,7 +53,6 @@ from uconf.core.trees import (
     to_shuffle_tree_cobar,
     tree_to_latex,
     tree_to_string,
-    tree_to_svg,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -463,24 +462,6 @@ class CobarConstruction(UniqueRepresentation):
                 decoration_formatter=_dec_fmt,
             )
 
-        def _svg_term(self, basis_element) -> str:
-            """SVG representation of one cobar basis tree."""
-            if is_leaf(basis_element):
-                return tree_to_svg(1, operad_name="id")
-
-            def _dec_fmt(dec, arity):
-                parent = self.factory.cooperad_cls(arity, self.base_ring())
-                repr_term = getattr(parent, "_repr_term", None)
-                if callable(repr_term):
-                    return repr_term(dec)
-                return f"{self.factory.cooperad_cls.name}{dec}"
-
-            return tree_to_svg(
-                basis_element,
-                operad_name=self.factory.cooperad_cls.name,
-                decoration_formatter=_dec_fmt,
-            )
-
         def _boundary_on_basis(self, tree) -> "CobarConstruction.Element":
             """Compute the cobar differential d = d_1 + d_2 on a tree.
 
@@ -644,21 +625,6 @@ class CobarConstruction(UniqueRepresentation):
 
         def arity(self) -> int:
             return self.parent().arity()
-
-        def _repr_svg_(self) -> str:
-            """Return SVG markup for Sage display of a monomial cobar tree."""
-            if not self:
-                raise ValueError("Cannot render SVG for the zero element.")
-            if len(self.support()) != 1:
-                raise ValueError(
-                    "SVG rendering currently supports only monomials with one basis term."
-                )
-            basis = next(iter(self.support()))
-            return self.parent()._svg_term(basis)
-
-        def to_svg(self) -> str:
-            """Compatibility alias for :meth:`_repr_svg_`."""
-            return self._repr_svg_()
 
         def boundary(self) -> "CobarConstruction.Element":
             """Apply the cobar differential ``d = d_1 + d_2``."""
