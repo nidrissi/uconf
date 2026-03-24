@@ -597,6 +597,7 @@ class TreeModule(CombinatorialFreeModule):
                 new_parts.append(list(normed))
             # Form all combinations (usually just 1 term per leaf)
             from itertools import product as iprod
+
             for combo in iprod(*new_parts):
                 inner_coeff = coeff
                 new_m_keys = []
@@ -655,10 +656,7 @@ class TreeModule(CombinatorialFreeModule):
             new_m = tuple(m_tuple[old - 1] for old in new_leaf_order)
 
             if n_leaves > 1:
-                degrees = [
-                    self._inner_module.degree_on_basis(m_tuple[i])
-                    for i in range(n_leaves)
-                ]
+                degrees = [self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)]
                 perm_0idx = [old - 1 for old in new_leaf_order]
                 koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
             else:
@@ -724,17 +722,11 @@ class TreeModule(CombinatorialFreeModule):
             for (pl_dec, sigma_key), pl_coeff in terms:
                 sigma = S_k(sigma_key)
                 if sigma == identity:
-                    results.append(
-                        (child_coeff * pl_coeff, (pl_dec,) + tuple(new_kids))
-                    )
+                    results.append((child_coeff * pl_coeff, (pl_dec,) + tuple(new_kids)))
                 else:
                     sigma_inv = sigma.inverse()
-                    reordered = tuple(
-                        new_kids[sigma_inv(j) - 1] for j in range(1, k + 1)
-                    )
-                    results.append(
-                        (child_coeff * pl_coeff, (pl_dec,) + reordered)
-                    )
+                    reordered = tuple(new_kids[sigma_inv(j) - 1] for j in range(1, k + 1))
+                    results.append((child_coeff * pl_coeff, (pl_dec,) + reordered))
 
         return results
 
