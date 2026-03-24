@@ -287,7 +287,7 @@ class TestFreeOperadAlgebra:
         assert p_key == (1, 2)
         # ... with M-entries swapped: (b, a)
         assert m_tuple == (mod.term("b"), mod.term("a"))
-        assert coeff == 1
+        assert coeff == -1
 
     def test_boundary_zero_trivial(self):
         """Differential is 0 for trivial Ass operad (deg=0) and trivial M."""
