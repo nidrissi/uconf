@@ -108,7 +108,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         acc = cobar_component.zero()
         for dec_key, coeff in planar_elem:
             tree = (dec_key,) + tuple(range(1, n + 1))
-            acc += coeff * cobar_component.term(tree)
+            acc += coeff * cobar_component(tree)
         return acc
 
     def recurse(current_d_elem, sigma_bar):
@@ -132,7 +132,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
         # --- k = 0 term: ρ(()) = (id,), no permutation --------------------
         if k == 0:
-            be_elem = be_component.term((identity_n,))
+            be_elem = be_component((identity_n,))
             cobar_gen = make_cobar_generator(current_d_elem)
             result += be_elem.tensor(cobar_gen)
         else:
@@ -198,7 +198,7 @@ def make_e_comodule_morphism(
 
         # Map the root generator via e_comodule_on_generator
         cooperad_parent = cooperad_cls(k, base_ring)
-        gen_elem = cooperad_parent.term(dec)
+        gen_elem = cooperad_parent(dec)
         root_tensor = e_comodule_on_generator(gen_elem)
 
         # Convert the tensor([BE(k), Ω(C)(k)]) element to HadamardProduct element
@@ -206,7 +206,7 @@ def make_e_comodule_morphism(
         root_image = target_k.zero()
         for tensor_basis, coeff in root_tensor:
             be_key, cobar_key = tensor_basis
-            root_image += coeff * target_k.term((be_key, cobar_key))
+            root_image += coeff * target_k((be_key, cobar_key))
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.

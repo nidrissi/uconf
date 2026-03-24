@@ -4,13 +4,18 @@ import pytest
 from sage.all import GF, QQ
 
 from uconf import (
+    BarConstruction,
     BarrattEccles,
+    CobarConstruction,
+    HadamardProduct,
     Lie,
+    ShiftedOperad,
     Surjection,
-    euclidean_unordered_configuration_model,
     chain_complex,
+    euclidean_unordered_configuration_model,
     homology_basis,
 )
+from uconf.algebraic.conf import _make_surjection_comodule_morphism
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -108,53 +113,30 @@ class TestChainComplex:
         assert C is not None
 
     def test_check_complex(self) -> None:
-        """chain_complex with check=True does not raise an error."""
+        """chain_complex over GF(2) with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(GF(2), 2)
         C = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert C is not None
 
     def test_check_complex_QQ_weight2(self) -> None:
-        """chain_complex over QQ at weight=2 with check=True.
-
-        Currently expected to fail: the e-comodule morphism
-        Δ: Ω(C) → E ⊗ Ω(C) (composed with table reduction) is not a
-        chain map, so the PullbackAlgebra dg-compatibility identity
-        d(γ(p; a)) = γ(dp; a) + leaf_terms fails.  This causes d²≠0
-        in the TwistedBarComplex over QQ (invisible over GF(2) since
-        the residual coefficients are ±2).
-        """
+        """chain_complex over QQ at weight=2 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
-        with pytest.raises(ValueError, match="not compatible.*not zero"):
-            chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
+        complex = chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
+        assert complex is not None
 
-    @pytest.mark.xfail(
-        reason="e-comodule morphism is not a chain map; d²≠0 over QQ (coefficients ±2)",
-        strict=True,
-    )
-    def test_check_complex_QQ_weight2_desired(self) -> None:
-        """Desired behaviour: d²=0 over QQ at weight=2.
-
-        Will pass once the e-comodule chain-map bug is fixed.
-        """
+    def test_check_complex_QQ_weight3(self) -> None:
+        """chain_complex over QQ at weight=3 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
-        C = chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
-        assert C is not None
+        complex = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
+        assert complex is not None
 
-    def test_e_comodule_not_chain_map(self) -> None:
-        """Pinpoint: the composed morphism Ω(B(H)) → S⊙Ω(B(H)) is not a chain map.
+    def test_e_comodule_chain_map(self) -> None:
+        """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.
 
         For p ∈ Ω(B(H))(2), the identity φ(d(p)) = d(φ(p)) fails.
         The residual comes from the surjection-factor boundary of
         higher-weight terms in φ(p) that are not accounted for by φ(d(p)).
         """
-        from uconf.algebraic.conf import _make_surjection_comodule_morphism
-        from uconf.constructions.bar_construction import BarConstruction
-        from uconf.constructions.cobar_construction import CobarConstruction
-        from uconf.models.lie import Lie
-        from uconf.models.surjection import Surjection
-        from uconf.wrappers.hadamard_operad import HadamardProduct
-        from uconf.wrappers.shifted_operad import ShiftedOperad
-
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
         C = BarConstruction(H)
@@ -171,7 +153,7 @@ class TestChainComplex:
         d_phi_p = phi_p.parent().boundary(phi_p)
 
         # Document that the chain map property fails
-        assert phi_dp != d_phi_p, "chain map property unexpectedly holds — bug may be fixed!"
+        assert phi_dp == d_phi_p, "chain map property should hold"
 
 
 # ---------------------------------------------------------------------------
