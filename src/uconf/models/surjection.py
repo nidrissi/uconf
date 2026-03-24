@@ -175,12 +175,12 @@ class Surjection(CombinatorialFreeModule):
     def _repr_term(self, basis_element: tuple) -> str:
         """Readable basis-term notation ``u = (u_1 ... u_r)``."""
         word = " ".join(str(i) for i in basis_element)
-        return f"u=({word})"
+        return "{" + word + "}"
 
     def _latex_term(self, basis_element: tuple) -> str:
         """LaTeX basis-term notation for surjection words."""
         word = "\\;".join(str(i) for i in basis_element)
-        return f"u=\\left({word}\\right)"
+        return "\\left\\{" + word + "\\right\\}"
 
     def _boundary_on_basis(self, basis_element: tuple) -> "Surjection.Element":
         """Compute the differential on a basis surjection."""
