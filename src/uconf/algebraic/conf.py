@@ -42,10 +42,10 @@ def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
         result = target_n.zero()
         be_parent = source_parent.left_parent()
         for (be_key, cobar_key), coeff in be_had_elem:
-            surj_elem = be_parent.term(be_key).table_reduction()
+            surj_elem = be_parent(be_key).table_reduction()
 
             for surj_key, surj_coeff in surj_elem:
-                result += coeff * surj_coeff * target_n.term((surj_key, cobar_key))
+                result += coeff * surj_coeff * target_n((surj_key, cobar_key))
 
         return result
 
