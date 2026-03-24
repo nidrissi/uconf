@@ -2,7 +2,7 @@
 
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.constructions.e_comodule import e_comodule_on_generator
+from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
 
 __all__ = [

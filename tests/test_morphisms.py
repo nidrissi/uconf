@@ -329,7 +329,7 @@ class TestEComoduleMorphism:
 
     def test_generator_matches_e_comodule_on_generator(self):
         """On generators, Δ agrees with e_comodule_on_generator."""
-        from uconf import e_comodule_on_generator
+        from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 
         HLE = HadamardProduct(Lie, BarrattEccles)
         BH = BarConstruction(HLE)

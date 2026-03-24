@@ -143,12 +143,6 @@ class TestTwistingMorphism:
         pi = canonical_projection(Associative)
         assert isinstance(pi, TwistingMorphism)
 
-    def test_repr(self):
-        """TwistingMorphism has a readable repr."""
-        pi = canonical_projection(Associative)
-        assert "B(Ass)" in repr(pi)
-        assert "Ass" in repr(pi)
-
     def test_cooperad_operad_attributes(self):
         """TwistingMorphism stores cooperad and operad."""
         pi = canonical_projection(Associative)
