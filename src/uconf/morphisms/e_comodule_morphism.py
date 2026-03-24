@@ -32,26 +32,26 @@ from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
 def e_comodule_on_generator(dec_elem: Any) -> Any:
-    """Compute the :math:`\\mathcal{E}_\\nu`-comodule map on a planar generator.
+    """Compute the :math:`\\mathcal{E}_\\nu`-comodule map on a cooperad generator.
 
-    Given a **planar** element *dec_elem* :math:`\\in \\mathcal{C}_\\mathrm{pl}(n)`,
+    Given an element *dec_elem* :math:`\\in \\mathcal{C}(n)` (planar or not),
     returns
 
     .. math::
 
         \\Delta(s^{-1}\\,\\text{dec\\_elem})
-          = \\sum_{k \\ge 0}\\;
-            \\sum_{\\underline\\sigma \\in (S_n \\setminus \\{\\mathrm{id}\\})^k}
-            \\rho(\\underline\\sigma) \\otimes
-            \\operatorname{cobar}(d_{\\underline\\sigma}(\\text{dec\\_elem}))
-            \\cdot \\sigma_1 \\cdots \\sigma_k
+          \\in \\mathcal{E}(n) \\otimes \\Omega(\\mathcal{C})(n).
 
-    as an element of :math:`\\mathcal{E}(n) \\otimes \\Omega(\\mathcal{C})(n)`.
+    For planar input the formula is the direct recursive expansion.
+    Non-planar input is handled via equivariance:
+    :math:`\\Delta(c \\cdot \\sigma) = \\Delta(c) \\cdot \\sigma`,
+    where the diagonal :math:`S_n` action acts on both the
+    Barratt–Eccles and cobar factors.
 
     Parameters
     ----------
     dec_elem :
-        **Planar** element of *cooperad_component*.
+        Element of a quasi-planar cooperad component (planar or not).
 
     Returns
     -------
@@ -83,14 +83,60 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
     if not dec_elem:
         return target.zero()
 
+    # -----------------------------------------------------------------------
+    # Planarize the input: dec_elem = Σ pl_coeff * c_pl ⊗ σ.
+    # Compute Δ on each planar component and apply equivariance.
+    # -----------------------------------------------------------------------
+    planarized = cooperad_component.planarize(dec_elem)
+
+    total_result = target.zero()
+
+    for (planar_key, sigma_key), pl_coeff in planarized:
+        sigma = S_n(sigma_key)
+        planar_elem = cooperad_component.term(planar_key)
+
+        # Compute Δ on the planar element via the recursive formula.
+        planar_result = _delta_on_planar(
+            planar_elem, cooperad_component, cobar_component,
+            be_component, S_n, identity_n, target,
+        )
+
+        # Apply equivariance: Δ(c·σ) = Δ(c)·σ.
+        # The diagonal S_n action permutes both BE and cobar factors.
+        if sigma == identity_n:
+            total_result += pl_coeff * planar_result
+        else:
+            acted = target.zero()
+            for (be_key, cobar_key), t_coeff in planar_result:
+                be_perm = be_component.term(be_key).permute(sigma)
+                cobar_perm = cobar_component.term(cobar_key).permute(sigma)
+                for be_k, be_c in be_perm:
+                    for cb_k, cb_c in cobar_perm:
+                        acted += t_coeff * be_c * cb_c * target.term((be_k, cb_k))
+            total_result += pl_coeff * acted
+
+    return total_result
+
+
+def _delta_on_planar(
+    planar_elem: Any,
+    cooperad_component: Any,
+    cobar_component: Any,
+    be_component: Any,
+    S_n: Any,
+    identity_n: Any,
+    target: Any,
+) -> Any:
+    """Core recursive computation of Δ on a **planar** cooperad element.
+
+    Returns an element of ``target = tensor([be_component, cobar_component])``.
+    """
+    n = cooperad_component.arity()
+
     result = target.zero()
 
-    # -----------------------------------------------------------------------
-    # Local helpers
-    # -----------------------------------------------------------------------
-
-    def make_cobar_generator(planar_elem, sigma_prod=None):
-        """Build the weight-1 cobar tree element for *planar_elem* ∈ C(n).
+    def make_cobar_generator(pl_elem, sigma_prod=None):
+        """Build the weight-1 cobar tree element for *pl_elem* ∈ C_pl(n).
 
         If *sigma_prod* is given and is not the identity, the cooperad
         S_n action is applied to the decoration (rather than permuting
@@ -98,7 +144,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         matches the representation used by the cobar differential d_1.
         """
         acc = cobar_component.zero()
-        for dec_key, coeff in planar_elem:
+        for dec_key, coeff in pl_elem:
             if sigma_prod is not None and sigma_prod != identity_n:
                 acted = cooperad_component(dec_key).permute(sigma_prod)
                 for new_key, new_coeff in acted:
@@ -110,17 +156,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         return acc
 
     def recurse(current_d_elem, sigma_bar):
-        """Accumulate contributions, pruning zero branches.
-
-        Parameters
-        ----------
-        current_d_elem :
-            Element :math:`d_{\\underline\\sigma}(\\text{dec\\_elem})` computed
-            so far (a planar element of *cooperad_component*).
-        sigma_bar :
-            The list :math:`[\\sigma_1, \\ldots, \\sigma_k]` accumulated so far.
-
-        """
+        """Accumulate contributions, pruning zero branches."""
         nonlocal result
 
         if not current_d_elem:
@@ -128,42 +164,29 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
         k = len(sigma_bar)
 
-        # --- k = 0 term: ρ(()) = (id,), no permutation --------------------
         if k == 0:
             be_elem = be_component((identity_n,))
             cobar_gen = make_cobar_generator(current_d_elem)
             result += be_elem.tensor(cobar_gen)
         else:
-            # ρ(σ̄) = BE_n.rho([σ_1, σ_2, ..., σ_k])
             be_elem = be_component.rho(list(sigma_bar))
 
             if be_elem:
-                # σ_prod must match the last element of ρ(σ̄), which
-                # the ``rho`` helper builds as the cumulative product
-                #   e_j = σ_j * e_{j-1}  (SageMath left-to-right mult.)
-                # giving  e_k = σ_k * σ_{k-1} * ··· * σ_1.
                 sigma_prod = identity_n
                 for s in sigma_bar:
                     sigma_prod = s * sigma_prod
 
-                # Act σ_prod on the cooperad decoration rather than
-                # permuting cobar leaf labels.  This ensures the output
-                # uses the same representation as the cobar d_1.
                 cobar_gen = make_cobar_generator(current_d_elem, sigma_prod)
                 result += be_elem.tensor(cobar_gen)
 
-        # --- Recurse: extend sigma_bar by one more non-identity perm -------
-        # Terminates naturally: each d_sigma reduces degree by 1, and the
-        # cooperad is bounded below at each fixed arity, so eventually
-        # all d_sigma return zero and recursion stops.
         for sigma in S_n:
             if sigma == identity_n:
-                continue  # identity always makes ρ = 0
+                continue
             next_d = cooperad_component.d_sigma(current_d_elem, sigma)
-            if next_d:  # prune zero branches
+            if next_d:
                 recurse(next_d, sigma_bar + [sigma])
 
-    recurse(dec_elem, [])
+    recurse(planar_elem, [])
     return result
 
 
@@ -197,59 +220,19 @@ def make_e_comodule_morphism(
         k = vertex_arity(tree)
 
         # Map the root generator via e_comodule_on_generator.
-        # The decoration may be non-planar (e.g. when the cobar differential
-        # produces trees with non-planar vertex decorations).  We planarize
-        # first, apply the formula to each planar component, then use
-        # equivariance: Δ(s⁻¹(c·σ)) = Δ(s⁻¹c) · σ.
+        # The decoration may be non-planar; e_comodule_on_generator handles
+        # this via internal planarization and equivariance.
         cooperad_parent = cooperad_cls(k, base_ring)
         gen_elem = cooperad_parent(dec)
-        planarized = cooperad_parent.planarize(gen_elem)
 
-        S_k = SymmetricGroup(k)
-        identity_k = S_k.identity()
+        root_tensor = e_comodule_on_generator(gen_elem)
 
+        # Convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element.
         target_k = target_factory(k, base_ring)
         root_image = target_k.zero()
-
-        be_component_k = BarrattEccles(k, base_ring)
-
-        for (planar_key, sigma_key), pl_coeff in planarized:
-            sigma = S_k(sigma_key)
-            planar_elem = cooperad_parent(planar_key)
-
-            root_tensor = e_comodule_on_generator(planar_elem)
-
-            # Convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element,
-            # applying equivariance by sigma.
-            #
-            # Equivariance: Δ(s⁻¹(c·σ)) = Δ(s⁻¹c) · σ.
-            # The diagonal S_k action on the tensor product E⊗Ω(C) acts
-            # on BE by .permute(σ) and on the cobar factor by acting σ
-            # on the cooperad decoration (NOT by permuting leaf labels).
-            # This ensures that the cobar factor always lives in the
-            # same representation as the output of the cobar differential d_1,
-            # which uses non-planar decorations with standard leaf order.
-            partial = target_k.zero()
-            for tensor_basis, t_coeff in root_tensor:
-                be_key, cobar_key = tensor_basis
-
-                if sigma != identity_k:
-                    # BE factor: standard permutation
-                    be_perm = be_component_k(be_key).permute(sigma)
-
-                    # Cobar factor: act σ on the cooperad decoration.
-                    # cobar_key is a weight-1 tree (dec, 1, …, k).
-                    inner_dec = cobar_key[0]
-                    acted_dec = cooperad_parent(inner_dec).permute(sigma)
-
-                    for be_k, be_c in be_perm:
-                        for new_dec, dec_c in acted_dec:
-                            new_cobar_key = (new_dec,) + cobar_key[1:]
-                            partial += t_coeff * be_c * dec_c * target_k((be_k, new_cobar_key))
-                else:
-                    partial += t_coeff * target_k((be_key, cobar_key))
-
-            root_image += pl_coeff * partial
+        for tensor_basis, t_coeff in root_tensor:
+            be_key, cobar_key = tensor_basis
+            root_image += t_coeff * target_k((be_key, cobar_key))
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.

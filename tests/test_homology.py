@@ -130,6 +130,40 @@ class TestChainComplex:
         complex = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert complex is not None
 
+    def test_e_comodule_generator_chain_map_arity2(self) -> None:
+        """e_comodule_on_generator satisfies the chain map property at arity 2.
+
+        For c ∈ C(2), checks Δ_gen(∂c) = d_{E⊗Ω}(Δ_gen(c)).
+        This is the core identity that ensures the E-comodule map
+        on generators is compatible with the differential.
+        """
+        from sage.all import tensor
+
+        from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
+
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        P = CobarConstruction(C)
+        C2 = C(2, QQ)
+        P2 = P(2, QQ)
+        BE2 = BarrattEccles(2, QQ)
+
+        for d in range(3):
+            for elem in C2.basis_iter(d):
+                for key in elem.support():
+                    c = C2.term(key)
+                    f_dc = e_comodule_on_generator(c.boundary())
+                    d_fc = tensor([BE2, P2]).zero()
+                    for (b, u), coeff in e_comodule_on_generator(c):
+                        b_elem = BE2.term(b)
+                        u_elem = P2.term(u)
+                        d_fc += coeff * b_elem.boundary().tensor(u_elem)
+                        d_fc += coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(
+                            P2.boundary(u_elem)
+                        )
+                    assert f_dc == d_fc, f"generator chain map failed at arity 2 deg {d}: {key}"
+
     def test_e_comodule_chain_map(self) -> None:
         """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.
 
@@ -149,7 +183,10 @@ class TestChainComplex:
             assert phi_dp == d_phi_p, f"chain map failed at arity 2 for {p_elem}"
 
     @pytest.mark.xfail(
-        reason="Known open: chain map property at arity 3 degree 0 is not yet verified."
+        reason=(
+            "Full morphism chain map at arity 3 involves _extend_tree for weight-2 "
+            "cobar trees, which has a separate equivariance issue."
+        ),
     )
     def test_e_comodule_chain_map_arity3(self) -> None:
         """Chain map property at arity 3 degree 0 (known open)."""
