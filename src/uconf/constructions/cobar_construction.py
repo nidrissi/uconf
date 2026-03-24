@@ -496,13 +496,15 @@ class CobarConstruction(UniqueRepresentation):
 
                 sign = sign_from_exponent(cumulative_degree)
 
-                # Apply boundary to this vertex's decoration
-                dec_elem = cooperad_parent.term(dec)
+                # Apply boundary to this vertex's decoration.
+                # Use __call__ instead of term() to normalise through the
+                # cooperad's element constructor.
+                dec_elem = cooperad_parent(dec)
                 bdry = cooperad_parent.boundary(dec_elem)
 
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self.term(new_tree)
+                    result += sign * coeff * self(new_tree)
 
                 cumulative_degree += vertex_sinv_degree
 

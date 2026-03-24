@@ -138,10 +138,13 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
             be_elem = be_component.rho(list(sigma_bar))
 
             if be_elem:
-                # σ_prod = σ_1 · σ_2 · ... · σ_k
-                sigma_prod = sigma_bar[0]
-                for s in sigma_bar[1:]:
-                    sigma_prod = sigma_prod * s
+                # σ_prod must match the last element of ρ(σ̄), which
+                # the ``rho`` helper builds as the cumulative product
+                #   e_j = σ_j * e_{j-1}  (SageMath left-to-right mult.)
+                # giving  e_k = σ_k * σ_{k-1} * ··· * σ_1.
+                sigma_prod = identity_n
+                for s in sigma_bar:
+                    sigma_prod = s * sigma_prod
 
                 # Act σ_prod on the cooperad decoration rather than
                 # permuting cobar leaf labels.  This ensures the output

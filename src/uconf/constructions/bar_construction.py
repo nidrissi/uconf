@@ -23,7 +23,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Iterator
+from typing import Any, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -147,7 +147,7 @@ class BarConstruction(UniqueRepresentation):
     class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of the bar construction cooperad."""
 
-        name: ClassVar[str] = "B"
+        name = "B"
 
         def __init__(self, factory: "BarConstruction", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -532,14 +532,14 @@ class BarConstruction(UniqueRepresentation):
                 sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
-                dec_elem = operad_parent.term(dec)
+                dec_elem = operad_parent(dec)
                 bdry = operad_parent.boundary(dec_elem)
 
                 # For each term in the boundary, build a new tree
                 for new_dec, coeff in bdry:
                     # Replace decoration of this vertex
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self.term(new_tree)
+                    result += sign * coeff * self(new_tree)
 
                 cumulative_degree += vertex_sp_degree
 
@@ -611,7 +611,7 @@ class BarConstruction(UniqueRepresentation):
                 # For each term in the composition, build the contracted tree
                 for new_dec, coeff in composed:
                     new_tree = contract_edge(tree, parent_vertex, child_pos, new_dec)
-                    result += total_sign * coeff * self.term(new_tree)
+                    result += total_sign * coeff * self(new_tree)
 
             return result
 
