@@ -137,7 +137,8 @@ class TestTrees:
 
         # Invalid: wrong leaves
         bad_tree = ((1, 2), 1, 2, 4)
-        assert validate_tree(bad_tree, 3, Lie, QQ) is None
+        with pytest.raises(ValueError, match="Invalid leaves"):
+            validate_tree(bad_tree, 3, Lie, QQ)
 
 
 def test_bar_cobar_accept_nested_operad_providers() -> None:
