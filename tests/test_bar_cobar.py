@@ -220,7 +220,11 @@ class TestShuffleTrees:
         # ((), 2, 1) should normalize to ((), 1, 2) with sign
 
         tree = ((), 2, 1)
-        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+        terms = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        # For Commutative, single term expected
+        assert len(terms) == 1
+        shuffle, sign = terms[0]
 
         # Should be sorted
         assert is_shuffle_tree(shuffle)
@@ -239,7 +243,11 @@ class TestShuffleTrees:
         # Should swap children to get ((), ((), 1, 2), ((), 3, 4))
 
         tree = ((), ((), 3, 4), ((), 1, 2))
-        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+        terms = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        # For Commutative, single term expected
+        assert len(terms) == 1
+        shuffle, sign = terms[0]
 
         assert is_shuffle_tree(shuffle)
         # Children should be swapped: first child has min 1, second has min 3

@@ -394,16 +394,15 @@ class BarConstruction(UniqueRepresentation):
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
 
-            Returns ``(shuffle_tree, sign)`` where ``shuffle_tree`` is the
-            normalized tree and ``sign`` is the accumulated Koszul and operad
-            action sign.
+            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.
 
             A shuffle tree has children at each vertex sorted by min leaf label.
             This implements the standard basis for the bar construction on a
             symmetric operad (cf. Bremner-Dotsenko, Loday-Vallette).
             """
             if is_leaf(tree):
-                return tree, 1
+                return [(tree, 1)]
             return to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring())
 
         def _element_constructor_(self, x):
@@ -424,21 +423,19 @@ class BarConstruction(UniqueRepresentation):
                     clean_key = self._validate_basis_key(key)
                     if clean_key is None:
                         continue
-                    # Normalize to shuffle form
-                    shuffle_key, sign = self._normalize_to_shuffle(clean_key)
-                    clean_dict[shuffle_key] = clean_dict.get(shuffle_key, 0) + coeff * sign
+                    # Normalize to shuffle form (may produce multiple terms)
+                    for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
+                        clean_dict[shuffle_key] = (
+                            clean_dict.get(shuffle_key, 0) + coeff * shuffle_coeff
+                        )
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, tuple):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                # Normalize to shuffle form
-                shuffle_key, sign = self._normalize_to_shuffle(clean_key)
-                if sign == 1:
-                    return self.term(shuffle_key)
-                else:
-                    return sign * self.term(shuffle_key)
+                # Normalize to shuffle form (may produce multiple terms)
+                return self.sum_of_terms(self._normalize_to_shuffle(clean_key))
 
             if isinstance(x, int) and self._arity == 1 and x == 1:
                 # Special case: allow integer 1 to represent the single-leaf tree in arity 1

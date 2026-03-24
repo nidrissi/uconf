@@ -762,101 +762,76 @@ def _koszul_sign_of_permutation(perm: list[int], degrees: list[int]) -> int:
 def to_shuffle_tree_bar(tree, operad_cls, base_ring):
     """Normalize a tree to shuffle form for the bar construction B(P).
 
-    Returns ``(shuffle_tree, sign)`` where:
-    - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and operad-action coefficient
+    Returns a list of ``(shuffle_tree, coeff)`` pairs representing a
+    (possibly multi-term) linear combination.
 
     At each vertex, children are sorted by min leaf. The decoration is
     acted on by the sorting permutation (using the operad's permute method),
     and Koszul signs are computed based on bar-degrees of subtrees.
 
-    For the implemented bar grading, subtree degrees are computed by
-    ``subtree_degree`` (sum of ``deg_P(v) + 1`` over internal vertices).
+    When the operad's ``permute`` produces multiple basis terms (e.g. for
+    Lie-based operads), each term gives a separate output tree.
     """
     if is_leaf(tree):
-        return tree, 1
+        return [(tree, 1)]
 
     kids = children(tree)
     dec = decoration(tree)
     k = len(kids)
 
-    # Recursively normalize children first
-    normalized_kids = []
-    child_sign = 1
+    # Recursively normalize children first.
+    # Each child may expand into multiple terms.
+    from itertools import product as iter_product
+
+    child_term_lists: list[list[tuple]] = []
     for c in kids:
         if is_internal(c):
-            norm_c, s = to_shuffle_tree_bar(c, operad_cls, base_ring)
-            normalized_kids.append(norm_c)
-            child_sign *= s
+            child_term_lists.append(to_shuffle_tree_bar(c, operad_cls, base_ring))
         else:
-            normalized_kids.append(c)
+            child_term_lists.append([(c, 1)])
 
-    # Compute min leaf and bar-degree for each normalized child
-    min_leaves = [min_leaf(c) for c in normalized_kids]
-    bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
+    results = []
+    for combo in iter_product(*child_term_lists):
+        # combo is a tuple of (normalized_child, child_coeff)
+        normalized_kids = [item[0] for item in combo]
+        child_coeff = 1
+        for item in combo:
+            child_coeff *= item[1]
 
-    # Sort children by min leaf
-    # indexed_children = [(min_leaf, original_index, child, bar_degree)]
-    indexed = list(zip(min_leaves, range(k), normalized_kids, bar_degrees))
-    indexed.sort(key=lambda x: x[0])
+        # Compute min leaf and bar-degree for each normalized child
+        min_leaves = [min_leaf(c) for c in normalized_kids]
+        bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
 
-    # Extract the permutation: perm[new_pos] = old_pos
-    # We need the inverse: old_to_new[old_pos] = new_pos
-    perm = [item[1] for item in indexed]  # old positions in new order
+        # Sort children by min leaf
+        indexed = list(zip(min_leaves, range(k), normalized_kids, bar_degrees))
+        indexed.sort(key=lambda x: x[0])
 
-    # Check if already sorted
-    if perm == list(range(k)):
-        # Already in shuffle order
-        new_tree = (dec,) + tuple(normalized_kids)
-        return new_tree, child_sign
+        perm = [item[1] for item in indexed]
 
-    # Compute Koszul sign for reordering
-    # The bar-degrees are associated with the OLD positions
-    koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
+        if perm == list(range(k)):
+            new_tree = (dec,) + tuple(normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
 
-    # Compute operad action: the sorting permutation σ acts on decoration
-    # σ is the permutation that sends position i to perm[i] (one-indexed)
-    # In Sage permutation notation: σ = [perm[0]+1, perm[1]+1, ..., perm[k-1]+1]
-    sigma_list = [p + 1 for p in perm]
+        koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
 
-    # Apply operad action to decoration
-    operad_parent = operad_cls(k, base_ring)
-    dec_elem = operad_parent.term(dec)
+        # Compute σ^{-1} for the sorting permutation
+        sigma_list = [p + 1 for p in perm]
+        sigma_inv = [0] * k
+        for new_pos, old_pos_plus_one in enumerate(sigma_list):
+            sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
-    # The permute method applies σ to the element
-    # But we need σ^{-1} because we're reordering children to shuffle form
-    # When we sort children, we're effectively applying σ^{-1} to leaf labels
-    # So decoration should be acted on by σ^{-1}
+        operad_parent = operad_cls(k, base_ring)
+        dec_elem = operad_parent.term(dec)
+        permuted_dec_elem = dec_elem.permute(sigma_inv)
 
-    # Compute σ^{-1}: if σ(i) = sigma_list[i-1], then σ^{-1}(j) = position where j appears
-    sigma_inv = [0] * k
-    for new_pos, old_pos_plus_one in enumerate(sigma_list):
-        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
-    # Actually, let me reconsider...
-    # perm[new_pos] = old_pos means: child at new position came from old position
-    # So σ takes new_pos -> old_pos, meaning σ^{-1} takes old_pos -> new_pos
-    # The permutation acting on decoration should be the same as acting on children
-    # If we reorder children by σ (sorting), decoration gets acted on by σ
+        sorted_kids = tuple(item[2] for item in indexed)
+        for new_dec_key, dec_coeff in permuted_dec_elem:
+            new_tree = (new_dec_key,) + sorted_kids
+            total_coeff = child_coeff * koszul_sign * dec_coeff
+            results.append((new_tree, total_coeff))
 
-    # Let's use the inverse: σ^{-1}[old_pos] = new_pos
-    # sigma_inv already computed above
-
-    permuted_dec_elem = dec_elem.permute(sigma_inv)
-
-    # Extract the new decoration (should be a single term for most operads)
-    operad_sign = 1
-    new_dec = dec
-    for new_dec_key, coeff in permuted_dec_elem:
-        new_dec = new_dec_key
-        operad_sign = coeff
-        break  # Assume single term result
-
-    # Build sorted tree
-    sorted_kids = tuple(item[2] for item in indexed)
-    new_tree = (new_dec,) + sorted_kids
-
-    total_sign = child_sign * koszul_sign * operad_sign
-    return new_tree, total_sign
+    return results
 
 
 def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
@@ -1601,65 +1576,64 @@ def enumerate_shuffle_trees_generic_in_degree(
 def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     """Normalize a tree to shuffle form for the cobar construction Ω(C).
 
-    Returns ``(shuffle_tree, sign)`` where:
-    - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and cooperad-action coefficient
+    Returns a list of ``(shuffle_tree, coeff)`` pairs representing a
+    (possibly multi-term) linear combination.
 
     For the implemented cobar grading, subtree degrees are computed by
     ``subtree_degree_cobar`` (sum of ``deg_C(v) - 1`` over internal vertices).
     """
     if is_leaf(tree):
-        return tree, 1
+        return [(tree, 1)]
 
     kids = children(tree)
     dec = decoration(tree)
     k = len(kids)
 
-    # Recursively normalize children first
-    normalized_kids = []
-    child_sign = 1
+    # Recursively normalize children first.
+    from itertools import product as iter_product
+
+    child_term_lists: list[list[tuple]] = []
     for c in kids:
         if is_internal(c):
-            norm_c, s = to_shuffle_tree_cobar(c, cooperad_cls, base_ring)
-            normalized_kids.append(norm_c)
-            child_sign *= s
+            child_term_lists.append(to_shuffle_tree_cobar(c, cooperad_cls, base_ring))
         else:
-            normalized_kids.append(c)
+            child_term_lists.append([(c, 1)])
 
-    # Compute min leaf and cobar-degree for each normalized child
-    min_leaves = [min_leaf(c) for c in normalized_kids]
-    cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
+    results = []
+    for combo in iter_product(*child_term_lists):
+        normalized_kids = [item[0] for item in combo]
+        child_coeff = 1
+        for item in combo:
+            child_coeff *= item[1]
 
-    # Sort children by min leaf
-    indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
-    indexed.sort(key=lambda x: x[0])
+        min_leaves = [min_leaf(c) for c in normalized_kids]
+        cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
 
-    perm = [item[1] for item in indexed]
+        indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
+        indexed.sort(key=lambda x: x[0])
 
-    if perm == list(range(k)):
-        new_tree = (dec,) + tuple(normalized_kids)
-        return new_tree, child_sign
+        perm = [item[1] for item in indexed]
 
-    koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
+        if perm == list(range(k)):
+            new_tree = (dec,) + tuple(normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
 
-    sigma_list = [p + 1 for p in perm]
-    sigma_inv = [0] * k
-    for new_pos, old_pos_plus_one in enumerate(sigma_list):
-        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
+        koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
 
-    cooperad_parent = cooperad_cls(k, base_ring)
-    dec_elem = cooperad_parent.term(dec)
-    permuted_dec_elem = dec_elem.permute(sigma_inv)
+        sigma_list = [p + 1 for p in perm]
+        sigma_inv = [0] * k
+        for new_pos, old_pos_plus_one in enumerate(sigma_list):
+            sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
-    operad_sign = 1
-    new_dec = dec
-    for new_dec_key, coeff in permuted_dec_elem:
-        new_dec = new_dec_key
-        operad_sign = coeff
-        break
+        cooperad_parent = cooperad_cls(k, base_ring)
+        dec_elem = cooperad_parent.term(dec)
+        permuted_dec_elem = dec_elem.permute(sigma_inv)
 
-    sorted_kids = tuple(item[2] for item in indexed)
-    new_tree = (new_dec,) + sorted_kids
+        sorted_kids = tuple(item[2] for item in indexed)
+        for new_dec_key, dec_coeff in permuted_dec_elem:
+            new_tree = (new_dec_key,) + sorted_kids
+            total_coeff = child_coeff * koszul_sign * dec_coeff
+            results.append((new_tree, total_coeff))
 
-    total_sign = child_sign * koszul_sign * operad_sign
-    return new_tree, total_sign
+    return results

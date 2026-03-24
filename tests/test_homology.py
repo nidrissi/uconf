@@ -133,9 +133,7 @@ class TestChainComplex:
     def test_e_comodule_chain_map(self) -> None:
         """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.
 
-        For p ∈ Ω(B(H))(2), the identity φ(d(p)) = d(φ(p)) fails.
-        The residual comes from the surjection-factor boundary of
-        higher-weight terms in φ(p) that are not accounted for by φ(d(p)).
+        Checks φ(d(p)) = d(φ(p)) for all degree-0 generators at arity 2.
         """
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
@@ -144,16 +142,27 @@ class TestChainComplex:
         phi = _make_surjection_comodule_morphism(C)
 
         P2 = P(2, QQ)
-        # Take a degree-0 generator
-        p_key = list(P2.basis_iter(0))[0].support()[0]
-        p_elem = P2.term(p_key)
+        for p_elem in P2.basis_iter(0):
+            phi_dp = phi(P2.boundary(p_elem))
+            phi_p = phi(p_elem)
+            d_phi_p = phi_p.parent().boundary(phi_p)
+            assert phi_dp == d_phi_p, f"chain map failed at arity 2 for {p_elem}"
 
-        phi_dp = phi(P2.boundary(p_elem))
-        phi_p = phi(p_elem)
-        d_phi_p = phi_p.parent().boundary(phi_p)
+    @pytest.mark.xfail(reason="e_comodule morphism not yet correct at arity 3")
+    def test_e_comodule_chain_map_arity3(self) -> None:
+        """Chain map property at arity 3 degree 0 (known open)."""
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        P = CobarConstruction(C)
+        phi = _make_surjection_comodule_morphism(C)
 
-        # Document that the chain map property fails
-        assert phi_dp == d_phi_p, "chain map property should hold"
+        P3 = P(3, QQ)
+        for p_elem in P3.basis_iter(0):
+            phi_dp = phi(P3.boundary(p_elem))
+            phi_p = phi(p_elem)
+            d_phi_p = phi_p.parent().boundary(phi_p)
+            assert phi_dp == d_phi_p, f"chain map failed at arity 3 for {p_elem}"
 
 
 # ---------------------------------------------------------------------------
