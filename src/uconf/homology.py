@@ -67,11 +67,16 @@ def _boundary_matrix(
             i = key_to_idx_target.get(key)
             if i is not None:
                 M[i, j] += coeff
+            else:
+                raise ValueError(
+                    f"Boundary of basis element {elem} contains key {key} "
+                    "not found in target basis keys"
+                )
     return M
 
 
-def _deduplicated_basis(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
-    """Return (basis_elements, basis_keys) with duplicate keys removed."""
+def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
+    """Return (basis_elements, basis_keys)."""
     seen: set = set()
     elems: list = []
     keys: list = []
@@ -88,12 +93,13 @@ def _deduplicated_basis(module: Any, d: int, weight: int | None = None) -> tuple
             seen.add(key)
             elems.append(b)
             keys.append(key)
+        else:
+            raise ValueError(
+                f"Duplicate basis key {key} in degree {d} weight {weight} in {type(module).__name__}"
+            )
     return elems, keys
 
 
-# TODO To properly truncate the chain complex, we should:
-# * In the bottom degree: take the kernel of the differential;
-# * In the top degree: take the cokernel of the differential from the degree just above.
 def chain_complex(
     module: Any, degrees: range, *, weight: int | None = None, check: bool = False
 ) -> Any:
@@ -157,13 +163,13 @@ def chain_complex(
     # may be inflated by the truncation.
     extended_degrees = range(min(degrees), max(degrees) + 2)
 
-    # Collect basis elements and keys for each degree (deduplicated)
+    # Collect basis elements and keys for each degree
     basis_by_degree: dict[int, list] = {}
     keys_by_degree: dict[int, list] = {}
     key_to_idx: dict[int, dict] = {}
 
     for d in extended_degrees:
-        basis_elems, basis_keys = _deduplicated_basis(module, d, weight)
+        basis_elems, basis_keys = _get_basis_elements(module, d, weight)
         basis_by_degree[d] = basis_elems
         keys_by_degree[d] = basis_keys
         key_to_idx[d] = {k: i for i, k in enumerate(basis_keys)}
@@ -230,7 +236,7 @@ def homology_basis(
     C = chain_complex(module, degrees, weight=weight)
 
     # Retrieve the (deduplicated) basis elements in the requested degree
-    basis_elems, _ = _deduplicated_basis(module, degree, weight)
+    basis_elems, _ = _get_basis_elements(module, degree, weight)
 
     h = C.homology(generators=True)
     result: list = []
