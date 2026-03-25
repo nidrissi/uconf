@@ -212,6 +212,9 @@ def compute_homology_representatives(module: Any, degree: int, weight: int | Non
     basis_elems, _ = _get_basis_elements(module, degree, weight)
 
     ho = cc.homology(degree, generators=True)
+    # The method returns a list of pairs (vector space, generator), but if there are no generators it returns `(Vector space of dimension 0 over Rational Field, ())` instead of an empty list, so we check for that case and return an empty list of representatives.
+    if not isinstance(ho, list):
+        return []
     result: list = []
     for _vspace, gen in ho:
         vec = gen.vector(degree)
