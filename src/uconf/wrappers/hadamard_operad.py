@@ -187,6 +187,7 @@ class HadamardProduct(UniqueRepresentation):
                     codomain=tensor([self, self._symmetric_group_algebra]),
                 )
 
+        @cached_method
         def _planarize_on_basis(self, basis_element: tuple) -> Any:
             """Planarize via the right factor's quasi-planar structure.
 

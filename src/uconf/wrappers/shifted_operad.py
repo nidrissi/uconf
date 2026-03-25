@@ -166,36 +166,31 @@ class ShiftedOperad(UniqueRepresentation):
             if callable(getattr(self._base_parent, "planarize", None)):
                 from sage.all import SymmetricGroupAlgebra, tensor as sage_tensor
 
-                _sga = SymmetricGroupAlgebra(base_ring, n)
-                _codomain = sage_tensor([self, _sga])
-                _shift = factory.shift_degree
-                _self_ref = self
-                _base_ref = self._base_parent
-                _S_n_ref = self._symmetric_group
-
-                def _planarize_on_basis(
-                    p_key,
-                    _sga=_sga,
-                    _shift=_shift,
-                    _self_ref=_self_ref,
-                    _base_ref=_base_ref,
-                    _S_n_ref=_S_n_ref,
-                    _codomain=_codomain,
-                ):
-                    base_pz = _base_ref.planarize(_base_ref.term(p_key))
-                    result = _codomain.zero()
-                    for (p_pl_key, sigma_key), coeff in base_pz:
-                        sigma = _S_n_ref(sigma_key)
-                        sign_twist = int(sigma.sign()) ** _shift
-                        result += (sign_twist * coeff) * _self_ref.term(p_pl_key).tensor(
-                            _sga(sigma)
-                        )
-                    return result
+                self._pz_sga = SymmetricGroupAlgebra(base_ring, n)
+                self._pz_codomain = sage_tensor([self, self._pz_sga])
 
                 self.planarize = self.module_morphism(
-                    on_basis=_planarize_on_basis,
-                    codomain=_codomain,
+                    on_basis=self._planarize_on_basis,
+                    codomain=self._pz_codomain,
                 )
+
+        @cached_method
+        def _planarize_on_basis(self, p_key):
+            """Planarize a single shifted-operad basis key.
+
+            Applies the base operad's ``planarize`` and twists the resulting
+            permutation sign by ``sgn(σ)^shift``.  Cached per basis key so
+            that repeated calls during basis enumeration are O(1).
+            """
+            base_pz = self._base_parent.planarize(self._base_parent.term(p_key))
+            result = self._pz_codomain.zero()
+            for (p_pl_key, sigma_key), coeff in base_pz:
+                sigma = self._symmetric_group(sigma_key)
+                sign_twist = int(sigma.sign()) ** self.factory.shift_degree
+                result += (sign_twist * coeff) * self.term(p_pl_key).tensor(
+                    self._pz_sga(sigma)
+                )
+            return result
 
         def _validate_basis_key(self, basis_key):
             if hasattr(self._base_parent, "_validate_basis_key"):
