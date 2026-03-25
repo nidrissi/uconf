@@ -33,6 +33,8 @@ def _boundary_matrix(
     basis_source: list,
     key_to_idx_target: dict,
     n_target: int,
+    *,
+    sparse: bool,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -54,7 +56,7 @@ def _boundary_matrix(
     """
     base_ring = module.base_ring()
     n_source = len(basis_source)
-    M = matrix(base_ring, n_target, n_source)
+    M = matrix(base_ring, n_target, n_source, sparse=sparse)
     # If the module supports planar normalisation (TreeModule and subclasses),
     # apply it so that boundary terms with non-planar vertex decorations are
     # rewritten in the planar basis used by basis_iter / graded_basis.
@@ -77,6 +79,10 @@ def _boundary_matrix(
 
 def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
     """Return (basis_elements, basis_keys)."""
+    connectivity = getattr(module, "connectivity", None)
+    if isinstance(connectivity, int) and d < connectivity:
+        return [], []
+
     seen: set = set()
     elems: list = []
     keys: list = []
@@ -85,10 +91,13 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
     else:
         family = module.graded_basis(d)
     for b in family:
-        support = list(b.support())
-        if not support:
-            continue
-        key = support[0]
+        # Basis elements are monomials; leading_support avoids allocating a full support list.
+        key = b.leading_support() if hasattr(b, "leading_support") else None
+        if key is None:
+            support = list(b.support())
+            if not support:
+                continue
+            key = support[0]
         if key not in seen:
             seen.add(key)
             elems.append(b)
@@ -101,7 +110,12 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
 
 
 def compute_chain_complex(
-    module: Any, degrees: range, *, weight: int | None = None, check: bool = False
+    module: Any,
+    degrees: range,
+    *,
+    weight: int | None = None,
+    check: bool = False,
+    sparse: bool = True,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -127,6 +141,10 @@ def compute_chain_complex(
         "tensor factors" as defined by the module's ``_weight_on_basis``
         (for free algebras: the arity; for tree modules: the sum of leaf
         weights; for plain modules: the number of leaves).
+    sparse:
+        Whether to build differential matrices in sparse format.  This is
+        usually faster and significantly lighter in memory for dg-modules
+        with sparse boundaries.
 
     Returns
     -------
@@ -155,13 +173,8 @@ def compute_chain_complex(
             "graded_basis_by_weight(d, w) on the module first."
         )
 
-    # Extend by one degree above the requested range so that the differential
-    # d_{max+1}: C_{max+1} -> C_{max} is included.  Without it, every cycle
-    # in C_{max} appears as a homology generator even though it may be a
-    # boundary, yielding a spurious H_{max} = 1.  The homology of the
-    # returned complex is correct for all degrees in *degrees*; H_{max+1}
-    # may be inflated by the truncation.
-    extended_degrees = range(min(degrees), max(degrees) + 2)
+    # Extend degrees by one in each direction to ensure we have the necessary basis elements to build the differentials for all degrees in the input range.  The chain complex will be correct in the input degrees; the extra degrees are just to ensure the differentials are correct and the homology computation can be performed without missing data.
+    extended_degrees = range(min(degrees) - 1, max(degrees) + 2)
 
     # Collect basis elements and keys for each degree
     basis_by_degree: dict[int, list] = {}
@@ -181,13 +194,19 @@ def compute_chain_complex(
             # Target degree not in range; if there are source basis elements,
             # we still need a zero matrix so the complex knows the rank of C_d.
             if basis_by_degree[d]:
-                differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]))
+                differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]), sparse=sparse)
             continue
         n_target = len(keys_by_degree[d - 1])
         source = basis_by_degree[d]
         if not source and n_target == 0:
             continue
-        differentials[d] = _boundary_matrix(module, source, key_to_idx[d - 1], n_target)
+        differentials[d] = _boundary_matrix(
+            module,
+            source,
+            key_to_idx[d - 1],
+            n_target,
+            sparse=sparse,
+        )
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
