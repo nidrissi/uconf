@@ -187,9 +187,7 @@ class ShiftedOperad(UniqueRepresentation):
             for (p_pl_key, sigma_key), coeff in base_pz:
                 sigma = self._symmetric_group(sigma_key)
                 sign_twist = int(sigma.sign()) ** self.factory.shift_degree
-                result += (sign_twist * coeff) * self.term(p_pl_key).tensor(
-                    self._pz_sga(sigma)
-                )
+                result += (sign_twist * coeff) * self.term(p_pl_key).tensor(self._pz_sga(sigma))
             return result
 
         def _validate_basis_key(self, basis_key):
