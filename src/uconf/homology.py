@@ -100,7 +100,7 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
     return elems, keys
 
 
-def chain_complex(
+def compute_chain_complex(
     module: Any, degrees: range, *, weight: int | None = None, check: bool = False
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
@@ -192,6 +192,37 @@ def chain_complex(
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
 
+def compute_homology_representatives(module: Any, degree: int, weight: int | None, cc) -> list:
+    """
+    Compute homology representatives for a given module at a specific degree and weight.
+
+    Extracts basis elements from the module and uses the chain complex homology computation
+    to generate representative elements. Each homology generator is converted back to a
+    module element by expressing it as a linear combination of basis elements.
+
+    Args:
+        module (Any): The module for which to compute homology representatives.
+        degree (int): The homological degree at which to compute representatives.
+        weight (int | None): The weight parameter for basis element selection, or None if not applicable.
+        cc: The chain complex object with a homology method that accepts degree and generators=True.
+
+    Returns:
+        list: A list of module elements representing the homology generators at the given degree.
+    """
+    basis_elems, _ = _get_basis_elements(module, degree, weight)
+
+    ho = cc.homology(degree, generators=True)
+    result: list = []
+    for _vspace, gen in ho:
+        vec = gen.vector(degree)
+        elem = module.zero()
+        for i, coeff in enumerate(vec):
+            if coeff:
+                elem += coeff * basis_elems[i]
+        result.append(elem)
+    return result
+
+
 def homology_basis(
     module: Any, degree: int, *, degrees: range | None = None, weight: int | None = None
 ) -> list:
@@ -233,19 +264,6 @@ def homology_basis(
         if degree not in degrees:
             raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
-    C = chain_complex(module, degrees, weight=weight)
+    C = compute_chain_complex(module, degrees, weight=weight)
 
-    # Retrieve the basis elements in the requested degree
-    basis_elems, _ = _get_basis_elements(module, degree, weight)
-
-    h = C.homology(generators=True)
-    result: list = []
-    for _vspace, gen in h.get(degree, []):
-        vec = gen.vector(degree)
-        elem = module.zero()
-        for i, coeff in enumerate(vec):
-            if coeff:
-                elem += coeff * basis_elems[i]
-        result.append(elem)
-
-    return result
+    return compute_homology_representatives(module, degree, weight, C)

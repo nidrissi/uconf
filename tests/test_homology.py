@@ -7,7 +7,7 @@ from uconf import (
     BarrattEccles,
     Lie,
     Surjection,
-    chain_complex,
+    compute_chain_complex,
     homology_basis,
 )
 
@@ -26,28 +26,28 @@ class TestChainComplex:
         truncation; only Betti numbers for degrees 0-4 are checked.
         """
         S2 = Surjection(2, QQ)
-        C = chain_complex(S2, degrees=range(5))
+        C = compute_chain_complex(S2, degrees=range(5))
         for d in range(5):
             assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_surjection_arity3(self) -> None:
         """Surjection(3, QQ) has H_0=1 and H_d=0 for d in 1..3."""
         S3 = Surjection(3, QQ)
-        C = chain_complex(S3, degrees=range(4))
+        C = compute_chain_complex(S3, degrees=range(4))
         for d in range(4):
             assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_barratt_eccles_arity2(self) -> None:
         """BarrattEccles(2, QQ) has H_0=1 and H_d=0 for 1<=d<=4."""
         E2 = BarrattEccles(2, QQ)
-        C = chain_complex(E2, degrees=range(5))
+        C = compute_chain_complex(E2, degrees=range(5))
         for d in range(5):
             assert C.betti().get(d, 0) == (1 if d == 0 else 0)
 
     def test_lie_arity2(self) -> None:
         """Lie is concentrated in degree 0; homology is the module itself."""
         L2 = Lie(2, QQ)
-        C = chain_complex(L2, degrees=range(3))
+        C = compute_chain_complex(L2, degrees=range(3))
         assert C.betti().get(0, 0) == 1
         assert C.betti().get(1, 0) == 0
         assert C.betti().get(2, 0) == 0
@@ -56,7 +56,7 @@ class TestChainComplex:
         """The chain complex differential squares to zero (implicitly
         checked by ChainComplex, but verify explicitly)."""
         S2 = Surjection(2, QQ)
-        C = chain_complex(S2, degrees=range(5))
+        C = compute_chain_complex(S2, degrees=range(5))
         # Complex now spans degrees 0-5 (extended internally by 1)
         for d in range(1, 6):
             d_prev = C.differential(d - 1)
@@ -66,7 +66,7 @@ class TestChainComplex:
     def test_empty_degrees(self) -> None:
         """Empty degree range gives a trivial complex."""
         S2 = Surjection(2, QQ)
-        C = chain_complex(S2, degrees=range(0))
+        C = compute_chain_complex(S2, degrees=range(0))
         assert C.betti() == {}
 
     def test_weight_parameter_restricts_basis(self) -> None:
@@ -81,17 +81,17 @@ class TestChainComplex:
 
         # Without weight: raises (unbounded arity in degree 0)
         with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            chain_complex(mod, degrees=range(2))
+            compute_chain_complex(mod, degrees=range(2))
 
         # With weight=1: only arity-1 element; gives finite complex
-        C = chain_complex(mod, degrees=range(2), weight=1)
+        C = compute_chain_complex(mod, degrees=range(2), weight=1)
         assert C is not None
 
     def test_weight_error_when_module_unsupported(self) -> None:
         """chain_complex raises ValueError when weight is used on unsupported module."""
         S2 = Surjection(2, QQ)
         with pytest.raises(ValueError, match="does not support the weight API"):
-            chain_complex(S2, degrees=range(3), weight=1)
+            compute_chain_complex(S2, degrees=range(3), weight=1)
 
 
 # ---------------------------------------------------------------------------
