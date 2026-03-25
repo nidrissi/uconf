@@ -310,6 +310,26 @@ class Lie(CombinatorialFreeModule):
             expr = f"\\left[x_{{{i}}}, {expr}\\right]"
         return expr
 
+    @cached_method
+    def _permute_on_basis(self, basis_key: tuple, sigma_tuple: tuple) -> "Lie.Element":
+        """Permute a single Lie basis key by a permutation given as a tuple.
+
+        Caching this at the component level means each ``(basis_key, σ)`` pair
+        is computed only once regardless of how many distinct elements share
+        that basis key.  The cache is persistent across elements because it
+        lives on the ``Lie`` component (a ``UniqueRepresentation`` instance).
+        """
+        sigma_perm = self._symmetric_group(list(sigma_tuple))
+        assoc: dict[tuple, Any] = {}
+        key_assoc = self._assoc_from_basis_key(basis_key)
+        for word, word_coeff in key_assoc.items():
+            permuted_word = tuple(sigma_perm(i) for i in word)
+            assoc[permuted_word] = (
+                assoc.get(permuted_word, self.base_ring().zero()) + word_coeff
+            )
+        assoc = {w: c for w, c in assoc.items() if c != 0}
+        return self._element_from_assoc(assoc)
+
     @staticmethod
     def compose(x: "Lie.Element", i: int, y: "Lie.Element") -> "Lie.Element":
         """Operadic composition ``x \\circ_i y`` in the Lie operad.
@@ -400,14 +420,8 @@ class Lie(CombinatorialFreeModule):
             else:
                 sigma_perm: Permutation = sigma
 
-            assoc: dict[tuple[int, ...], Any] = {}
+            sigma_tuple = sigma_perm.tuple()
+            result = parent.zero()
             for key, coeff in self:
-                key_assoc = parent._assoc_from_basis_key(key)
-                for word, word_coeff in key_assoc.items():
-                    permuted_word = tuple(sigma_perm(i) for i in word)
-                    assoc[permuted_word] = (
-                        assoc.get(permuted_word, self.base_ring().zero()) + coeff * word_coeff
-                    )
-
-            assoc = {w: c for w, c in assoc.items() if c != 0}
-            return parent._element_from_assoc(assoc)
+                result += coeff * parent._permute_on_basis(key, sigma_tuple)
+            return result

@@ -201,6 +201,7 @@ class CobarConstruction(UniqueRepresentation):
             test = self._cooperad_cls(2, self.base_ring())
             return callable(getattr(test, "planarize", None))
 
+        @cached_method
         def _planarize_on_basis(self, tree):
             """Decompose a cobar tree into planar part ⊗ global permutation.
 
@@ -334,15 +335,17 @@ class CobarConstruction(UniqueRepresentation):
 
             return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
 
+        @cached_method
         def _normalize_to_shuffle(self, tree):
             """Normalize *tree* to shuffle form.
 
-            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
-            a (possibly multi-term) linear combination.
+            Returns a tuple of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.  Cached so that the
+            same contracted tree is only normalised once.
             """
             if is_leaf(tree):
-                return [(tree, 1)]
-            return to_shuffle_tree_cobar(tree, self._cooperad_cls, self.base_ring())
+                return ((tree, 1),)
+            return tuple(to_shuffle_tree_cobar(tree, self._cooperad_cls, self.base_ring()))
 
         def _element_constructor_(self, x):
             """Build elements from tree basis keys or sparse dictionaries.
@@ -460,6 +463,7 @@ class CobarConstruction(UniqueRepresentation):
                 decoration_formatter=_dec_fmt,
             )
 
+        @cached_method
         def _boundary_on_basis(self, tree) -> "CobarConstruction.Element":
             """Compute the cobar differential d = d_1 + d_2 on a tree.
 
@@ -470,6 +474,7 @@ class CobarConstruction(UniqueRepresentation):
                 return self.zero()
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
+        @cached_method
         def _d1_on_basis(self, tree) -> "CobarConstruction.Element":
             """Internal differential: apply cooperad boundary to each vertex.
 
@@ -510,6 +515,7 @@ class CobarConstruction(UniqueRepresentation):
 
             return result
 
+        @cached_method
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
             """Structural differential: expand vertices using cocomposition.
 

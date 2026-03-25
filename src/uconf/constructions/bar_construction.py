@@ -195,6 +195,7 @@ class BarConstruction(UniqueRepresentation):
             test = self._operad_cls(2, self.base_ring())
             return hasattr(test, "planarize")
 
+        @cached_method
         def _planarize_on_basis(self, tree) -> Any:
             """Decompose a bar tree into planar part ⊗ global permutation.
 
@@ -390,19 +391,22 @@ class BarConstruction(UniqueRepresentation):
             """Return the ``Family`` of planar basis elements in degree ``d``."""
             return Family(self.planar_basis_it(d))
 
+        @cached_method
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
 
-            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
-            a (possibly multi-term) linear combination.
+            Returns a tuple of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.  Cached so that the
+            same contracted tree (produced by multiple d_2 contractions) is
+            only normalised once.
 
             A shuffle tree has children at each vertex sorted by min leaf label.
             This implements the standard basis for the bar construction on a
             symmetric operad (cf. Bremner-Dotsenko, Loday-Vallette).
             """
             if is_leaf(tree):
-                return [(tree, 1)]
-            return to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring())
+                return ((tree, 1),)
+            return tuple(to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring()))
 
         def _element_constructor_(self, x):
             """Build elements from tree basis keys or sparse dictionaries.
@@ -491,6 +495,7 @@ class BarConstruction(UniqueRepresentation):
                 decoration_formatter=_dec_fmt,
             )
 
+        @cached_method
         def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
 
@@ -499,6 +504,7 @@ class BarConstruction(UniqueRepresentation):
             """
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
+        @cached_method
         def _d1_on_basis(self, tree) -> "BarConstruction.Element":
             """Internal differential: apply operad boundary to each vertex.
 
@@ -545,6 +551,7 @@ class BarConstruction(UniqueRepresentation):
 
             return result
 
+        @cached_method
         def _d2_on_basis(self, tree) -> "BarConstruction.Element":
             """Structural differential: contract each internal edge.
 
