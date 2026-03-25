@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sage.all import SymmetricGroup, tensor
+from sage.all import SymmetricGroup, cached_function, tensor
 
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.cooperad import CooperadComponent, CooperadLike
@@ -34,6 +34,20 @@ from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
+@cached_function
+def _non_identity_perms(n: int) -> list:
+    """Return the list of non-identity elements of ``S_n`` in a fixed order.
+
+    Cached so that ``SymmetricGroup(n).__iter__`` (which internally invokes
+    GAP's ``StabChain``/``strong_generating_system``) is called only once
+    per arity ``n`` for the lifetime of the process.
+    """
+    S = SymmetricGroup(n)
+    identity = S.identity()
+    return [s for s in S if s != identity]
+
+
+@cached_function
 def e_comodule_on_generator(dec_elem: Any) -> Any:
     r"""Compute the Berger–Fresse E-comodule map on a cooperad element.
 
@@ -172,6 +186,14 @@ def _nu_on_planar(
     """
     result = target.zero()
 
+    # Pre-materialise the non-identity permutations once so that the inner
+    # loop never triggers GAP's strong_generating_system on each recursion.
+    n = cooperad_component.arity()
+    non_id_perms = _non_identity_perms(n)
+    # Cache the k=0 BE basis element (identity simplex) to avoid repeated
+    # construction on every recursion entry.
+    be_id_elem = be_component((identity_n,))
+
     def make_cooperad_factor(pl_elem, sigma_prod=None):
         """Build the cooperad factor for the formula.
 
@@ -193,9 +215,7 @@ def _nu_on_planar(
         k = len(sigma_bar)
 
         if k == 0:
-            be_elem = be_component((identity_n,))
-            coop_factor = make_cooperad_factor(current_d_elem)
-            result += be_elem.tensor(coop_factor)
+            result += be_id_elem.tensor(current_d_elem)
         else:
             be_elem = be_component.rho(list(sigma_bar))
 
@@ -207,9 +227,7 @@ def _nu_on_planar(
                 coop_factor = make_cooperad_factor(current_d_elem, sigma_prod)
                 result += be_elem.tensor(coop_factor)
 
-        for sigma in S_n:
-            if sigma == identity_n:
-                continue
+        for sigma in non_id_perms:
             next_d = cooperad_component.d_sigma(current_d_elem, sigma)
             if next_d:
                 recurse(next_d, sigma_bar + [sigma])

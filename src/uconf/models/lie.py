@@ -324,9 +324,7 @@ class Lie(CombinatorialFreeModule):
         key_assoc = self._assoc_from_basis_key(basis_key)
         for word, word_coeff in key_assoc.items():
             permuted_word = tuple(sigma_perm(i) for i in word)
-            assoc[permuted_word] = (
-                assoc.get(permuted_word, self.base_ring().zero()) + word_coeff
-            )
+            assoc[permuted_word] = assoc.get(permuted_word, self.base_ring().zero()) + word_coeff
         assoc = {w: c for w, c in assoc.items() if c != 0}
         return self._element_from_assoc(assoc)
 
