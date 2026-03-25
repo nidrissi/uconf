@@ -31,7 +31,7 @@ class BarrattEccles(CombinatorialFreeModule):
     duplicates. Degenerate inputs map to zero, while malformed inputs raise.
     """
 
-    name: ClassVar[str] = "BE"
+    name: ClassVar[str] = "ℰ"
     connectivity: ClassVar[int] = 0
     """All components live in non-negative degrees."""
 
@@ -269,11 +269,13 @@ class BarrattEccles(CombinatorialFreeModule):
 
                     for sh in shuffles:
                         # 1. Calculate the Sign of the shuffle
-                        # Formula: (-1)^(sum of 1-based indices of y-steps) - q(q+1)/2
-                        # This is equivalent to the sign of the permutation un-shuffling the lists
+                        # The Eilenberg-Zilber shuffle sign is the signature of the
+                        # un-shuffle permutation.  For y-steps at 1-indexed positions
+                        # j_1 < ... < j_q the exponent is
+                        #   sum(j_k - k - p) = y_indices_sum - q(q+1)/2 - p*q.
                         y_indices_sum = sum(k + 1 for k, step in enumerate(sh) if step == 1)
-                        sign_exponent = y_indices_sum - (q * (q + 1) // 2)
-                        sign = (-1) ** sign_exponent
+                        sign_exponent = y_indices_sum - (q * (q + 1) // 2) - p * q
+                        sign = 1 if sign_exponent % 2 == 0 else -1
 
                         # 2. Build the new basis element (Path lifting)
                         # We start at (x0, y0) and walk the path defined by the shuffle

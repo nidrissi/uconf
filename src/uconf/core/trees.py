@@ -15,7 +15,6 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from html import escape
 from typing import Any, Callable, Iterator, Literal
 
 
@@ -253,19 +252,19 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     - All internal vertices have arity >= 2 (connected assumption)
     - All decorations are valid for the given operad/cooperad
 
-    Returns a validated tree with cleaned decorations, or ``None`` if invalid.
+    Returns a validated tree with cleaned decorations, raises if invalid, or None if decorations are invalid but the tree structure is fine.
     """
     # Check that tree_arity matches
     if is_leaf(tree):
         # A single leaf is only valid for arity 1
         if arity == 1 and tree == 1:
             return tree
-        return None
+        raise ValueError(f"Invalid leaf: {tree}, expected 1 for arity 1")
 
     # Check leaves
     tree_leaves = leaves(tree)
     if tree_leaves != set(range(1, arity + 1)):
-        return None
+        raise ValueError(f"Invalid leaves: {tree_leaves}, should be {set(range(1, arity + 1))}")
 
     # Validate all internal vertices
     def validate_vertex(node):
@@ -274,7 +273,7 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
 
         v_arity = vertex_arity(node)
         if v_arity < 2:
-            return None  # Connected assumption
+            raise ValueError(f"Invalid vertex with arity {v_arity} < 2: {node}")
 
         dec = decoration(node)
         parent = operad_cls(v_arity, base_ring)
@@ -436,14 +435,12 @@ def _planar_subtrees_for_leaves(
 
 def tree_to_string(
     tree,
-    operad_name: str = "P",
-    decoration_formatter: Callable[[tuple, int], str] | None = None,
+    decoration_formatter: Callable[[tuple, int], str],
 ) -> str:
     """Return a human-readable string representation of a decorated tree.
 
     Args:
         tree: A rooted tree encoded by nested tuples.
-        operad_name: Prefix used by the default decoration formatter.
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
@@ -452,27 +449,20 @@ def tree_to_string(
 
     arity = vertex_arity(tree)
     dec = decoration(tree)
-    if decoration_formatter is None:
-        dec_str = f"{operad_name}{dec}"
-    else:
-        dec_str = decoration_formatter(dec, arity)
+    dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(
-        tree_to_string(c, operad_name, decoration_formatter) for c in children(tree)
-    )
+    children_str = ", ".join(tree_to_string(c, decoration_formatter) for c in children(tree))
     return f"({dec_str}; {children_str})"
 
 
 def tree_to_latex(
     tree,
-    operad_name: str = "P",
-    decoration_formatter: Callable[[tuple, int], str] | None = None,
+    decoration_formatter: Callable[[tuple, int], str],
 ) -> str:
     """Return a LaTeX representation of a decorated rooted tree.
 
     Args:
         tree: A rooted tree encoded by nested tuples.
-        operad_name: Prefix used by the default decoration formatter.
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
@@ -481,128 +471,10 @@ def tree_to_latex(
 
     arity = vertex_arity(tree)
     dec = decoration(tree)
-    if decoration_formatter is None:
-        dec_indices = ",".join(str(i) for i in dec)
-        dec_str = f"\\operatorname{{{operad_name}}}_{{({dec_indices})}}"
-    else:
-        dec_str = decoration_formatter(dec, arity)
+    dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(
-        tree_to_latex(c, operad_name, decoration_formatter) for c in children(tree)
-    )
+    children_str = ", ".join(tree_to_latex(c, decoration_formatter) for c in children(tree))
     return f"\\left({dec_str}; {children_str}\\right)"
-
-
-def tree_to_svg(
-    tree,
-    operad_name: str = "P",
-    decoration_formatter: Callable[[tuple, int], str] | None = None,
-    leaf_formatter: Callable[[int], str] | None = None,
-    *,
-    leaf_dx: int = 70,
-    level_dy: int = 88,
-    margin: int = 22,
-) -> str:
-    """Render a decorated rooted tree to standalone SVG markup.
-
-    The layout is deterministic and compact: leaves are equally spaced on the
-    bottom row; each internal vertex is centered above its descendant leaves.
-
-    Args:
-        tree: A rooted tree encoded by nested tuples.
-        operad_name: Prefix used by the default decoration formatter.
-        decoration_formatter: Optional callback ``(decoration, arity) -> str``.
-        leaf_formatter: Optional callback ``leaf_label -> str``.
-        leaf_dx: Horizontal spacing between consecutive leaves.
-        level_dy: Vertical spacing between consecutive levels.
-        margin: Outer SVG margin.
-    """
-
-    def _dec_label(node) -> str:
-        dec = decoration(node)
-        ar = vertex_arity(node)
-        if decoration_formatter is not None:
-            return str(decoration_formatter(dec, ar))
-        return f"{operad_name}{dec}"
-
-    def _leaf_label(leaf: int) -> str:
-        if leaf_formatter is not None:
-            return str(leaf_formatter(leaf))
-        return str(leaf)
-
-    leaves_sorted = sorted(leaves(tree))
-    n_leaves = max(1, len(leaves_sorted))
-    leaf_index = {leaf: idx for idx, leaf in enumerate(leaves_sorted)}
-
-    def _depth(node) -> int:
-        if is_leaf(node):
-            return 0
-        if not children(node):
-            return 1
-        return 1 + max(_depth(c) for c in children(node))
-
-    max_depth = _depth(tree)
-    height = 2 * margin + max(1, max_depth) * level_dy
-    width = 2 * margin + max(1, n_leaves - 1) * leaf_dx
-
-    coords: dict[int, tuple[float, float]] = {}
-    edges: list[tuple[tuple[float, float], tuple[float, float]]] = []
-    node_labels: list[tuple[tuple[float, float], str]] = []
-    leaf_labels: list[tuple[tuple[float, float], str]] = []
-
-    def _layout(node) -> tuple[float, float]:
-        node_id = id(node)
-        if node_id in coords:
-            return coords[node_id]
-
-        if is_leaf(node):
-            x = margin + leaf_index[node] * leaf_dx
-            y = margin + max_depth * level_dy
-            coords[node_id] = (x, y)
-            leaf_labels.append(((x, y + 22), _leaf_label(node)))
-            return (x, y)
-
-        child_coords = [_layout(c) for c in children(node)]
-        x = sum(cx for cx, _ in child_coords) / len(child_coords)
-        y = margin + (max_depth - _depth(node)) * level_dy
-        coords[node_id] = (x, y)
-
-        for cx, cy in child_coords:
-            edges.append(((x, y), (cx, cy)))
-        node_labels.append(((x, y - 10), _dec_label(node)))
-        return (x, y)
-
-    _layout(tree)
-
-    svg_lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{int(width)}" height="{int(height)}" ',
-        'viewBox="0 0 {w} {h}" role="img" aria-label="decorated rooted tree">'.format(
-            w=int(width), h=int(height)
-        ),
-        "<style>",
-        ".edge{stroke:#4b5563;stroke-width:1.6;fill:none;}",
-        ".node{fill:#111827;}",
-        '.vlabel{font: 13px "STIX Two Text", "Times New Roman", serif; fill:#0f172a; text-anchor:middle;}',
-        '.llabel{font: 12px "STIX Two Text", "Times New Roman", serif; fill:#334155; text-anchor:middle;}',
-        "</style>",
-    ]
-
-    for (x1, y1), (x2, y2) in edges:
-        svg_lines.append(
-            f'<line class="edge" x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" />'
-        )
-
-    for (x, y), label in node_labels:
-        svg_lines.append(f'<circle class="node" cx="{x:.2f}" cy="{y:.2f}" r="2.6" />')
-        svg_lines.append(
-            f'<text class="vlabel" x="{x:.2f}" y="{y - 14:.2f}">{escape(label)}</text>'
-        )
-
-    for (x, y), label in leaf_labels:
-        svg_lines.append(f'<text class="llabel" x="{x:.2f}" y="{y:.2f}">{escape(label)}</text>')
-
-    svg_lines.append("</svg>")
-    return "\n".join(svg_lines)
 
 
 def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> tuple:
@@ -762,101 +634,76 @@ def _koszul_sign_of_permutation(perm: list[int], degrees: list[int]) -> int:
 def to_shuffle_tree_bar(tree, operad_cls, base_ring):
     """Normalize a tree to shuffle form for the bar construction B(P).
 
-    Returns ``(shuffle_tree, sign)`` where:
-    - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and operad-action coefficient
+    Returns a list of ``(shuffle_tree, coeff)`` pairs representing a
+    (possibly multi-term) linear combination.
 
     At each vertex, children are sorted by min leaf. The decoration is
     acted on by the sorting permutation (using the operad's permute method),
     and Koszul signs are computed based on bar-degrees of subtrees.
 
-    For the implemented bar grading, subtree degrees are computed by
-    ``subtree_degree`` (sum of ``deg_P(v) + 1`` over internal vertices).
+    When the operad's ``permute`` produces multiple basis terms (e.g. for
+    Lie-based operads), each term gives a separate output tree.
     """
     if is_leaf(tree):
-        return tree, 1
+        return [(tree, 1)]
 
     kids = children(tree)
     dec = decoration(tree)
     k = len(kids)
 
-    # Recursively normalize children first
-    normalized_kids = []
-    child_sign = 1
+    # Recursively normalize children first.
+    # Each child may expand into multiple terms.
+    from itertools import product as iter_product
+
+    child_term_lists: list[list[tuple]] = []
     for c in kids:
         if is_internal(c):
-            norm_c, s = to_shuffle_tree_bar(c, operad_cls, base_ring)
-            normalized_kids.append(norm_c)
-            child_sign *= s
+            child_term_lists.append(to_shuffle_tree_bar(c, operad_cls, base_ring))
         else:
-            normalized_kids.append(c)
+            child_term_lists.append([(c, 1)])
 
-    # Compute min leaf and bar-degree for each normalized child
-    min_leaves = [min_leaf(c) for c in normalized_kids]
-    bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
+    results = []
+    for combo in iter_product(*child_term_lists):
+        # combo is a tuple of (normalized_child, child_coeff)
+        normalized_kids = [item[0] for item in combo]
+        child_coeff = 1
+        for item in combo:
+            child_coeff *= item[1]
 
-    # Sort children by min leaf
-    # indexed_children = [(min_leaf, original_index, child, bar_degree)]
-    indexed = list(zip(min_leaves, range(k), normalized_kids, bar_degrees))
-    indexed.sort(key=lambda x: x[0])
+        # Compute min leaf and bar-degree for each normalized child
+        min_leaves = [min_leaf(c) for c in normalized_kids]
+        bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
 
-    # Extract the permutation: perm[new_pos] = old_pos
-    # We need the inverse: old_to_new[old_pos] = new_pos
-    perm = [item[1] for item in indexed]  # old positions in new order
+        # Sort children by min leaf
+        indexed = list(zip(min_leaves, range(k), normalized_kids, bar_degrees))
+        indexed.sort(key=lambda x: x[0])
 
-    # Check if already sorted
-    if perm == list(range(k)):
-        # Already in shuffle order
-        new_tree = (dec,) + tuple(normalized_kids)
-        return new_tree, child_sign
+        perm = [item[1] for item in indexed]
 
-    # Compute Koszul sign for reordering
-    # The bar-degrees are associated with the OLD positions
-    koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
+        if perm == list(range(k)):
+            new_tree = (dec,) + tuple(normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
 
-    # Compute operad action: the sorting permutation σ acts on decoration
-    # σ is the permutation that sends position i to perm[i] (one-indexed)
-    # In Sage permutation notation: σ = [perm[0]+1, perm[1]+1, ..., perm[k-1]+1]
-    sigma_list = [p + 1 for p in perm]
+        koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
 
-    # Apply operad action to decoration
-    operad_parent = operad_cls(k, base_ring)
-    dec_elem = operad_parent.term(dec)
+        # Compute σ^{-1} for the sorting permutation
+        sigma_list = [p + 1 for p in perm]
+        sigma_inv = [0] * k
+        for new_pos, old_pos_plus_one in enumerate(sigma_list):
+            sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
-    # The permute method applies σ to the element
-    # But we need σ^{-1} because we're reordering children to shuffle form
-    # When we sort children, we're effectively applying σ^{-1} to leaf labels
-    # So decoration should be acted on by σ^{-1}
+        operad_parent = operad_cls(k, base_ring)
+        dec_elem = operad_parent.term(dec)
+        permuted_dec_elem = dec_elem.permute(sigma_inv)
 
-    # Compute σ^{-1}: if σ(i) = sigma_list[i-1], then σ^{-1}(j) = position where j appears
-    sigma_inv = [0] * k
-    for new_pos, old_pos_plus_one in enumerate(sigma_list):
-        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
-    # Actually, let me reconsider...
-    # perm[new_pos] = old_pos means: child at new position came from old position
-    # So σ takes new_pos -> old_pos, meaning σ^{-1} takes old_pos -> new_pos
-    # The permutation acting on decoration should be the same as acting on children
-    # If we reorder children by σ (sorting), decoration gets acted on by σ
+        sorted_kids = tuple(item[2] for item in indexed)
+        for new_dec_key, dec_coeff in permuted_dec_elem:
+            new_tree = (new_dec_key,) + sorted_kids
+            total_coeff = child_coeff * koszul_sign * dec_coeff
+            results.append((new_tree, total_coeff))
 
-    # Let's use the inverse: σ^{-1}[old_pos] = new_pos
-    # sigma_inv already computed above
-
-    permuted_dec_elem = dec_elem.permute(sigma_inv)
-
-    # Extract the new decoration (should be a single term for most operads)
-    operad_sign = 1
-    new_dec = dec
-    for new_dec_key, coeff in permuted_dec_elem:
-        new_dec = new_dec_key
-        operad_sign = coeff
-        break  # Assume single term result
-
-    # Build sorted tree
-    sorted_kids = tuple(item[2] for item in indexed)
-    new_tree = (new_dec,) + sorted_kids
-
-    total_sign = child_sign * koszul_sign * operad_sign
-    return new_tree, total_sign
+    return results
 
 
 def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
@@ -1257,6 +1104,235 @@ def _shuffle_subtrees_iter_generic(
                         )
 
 
+def _consecutive_parts_iter(leaf_range: tuple, k: int) -> Iterator[list[tuple]]:
+    """Yield all partitions of a consecutive leaf range into *k* consecutive sub-ranges.
+
+    Unlike :func:`_shuffle_partitions`, which partitions into parts sorted only
+    by their minimum element, this function insists that each part is a
+    *consecutive* block ``(leaf_range[a], ..., leaf_range[b])`` for some
+    ``a ≤ b``.  This is the correct partition type for *planar* (DFS-canonical)
+    trees, where each subtree occupies a contiguous interval of leaf labels.
+
+    Args:
+        leaf_range: A tuple of consecutive leaf labels, e.g. ``(1, 2, 3, 4)``.
+        k: Number of parts.
+
+    Yields:
+        Lists of *k* consecutive sub-tuples that together cover *leaf_range*.
+    """
+    from itertools import combinations
+
+    n = len(leaf_range)
+    if k <= 0 or k > n:
+        return
+    if k == 1:
+        yield [leaf_range]
+        return
+    # Choose k-1 split points from positions 1..n-1 (exclusive start/end)
+    for split_positions in combinations(range(1, n), k - 1):
+        parts = []
+        prev = 0
+        for s in split_positions:
+            parts.append(leaf_range[prev:s])
+            prev = s
+        parts.append(leaf_range[prev:])
+        yield parts
+
+
+def _planar_children_iter_generic(
+    parts: list,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    total_deg: int,
+    root_dec: tuple,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator[tuple]:
+    """Yield complete planar-decorated trees ``(root_dec, t_1, …, t_k)`` for consecutive parts."""
+    connectivity = getattr(operad_cls, "connectivity", 0)
+
+    min_from = [0] * (len(parts) + 1)
+    for i in range(len(parts) - 1, -1, -1):
+        min_from[i] = (
+            _min_subtree_degree_generic(len(parts[i]), connectivity, vertex_offset)
+            + min_from[i + 1]
+        )
+
+    def _children_combinations(idx: int, remaining: int) -> Iterator[list]:
+        if idx == len(parts):
+            if remaining == 0:
+                yield []
+            return
+        if remaining < min_from[idx]:
+            return
+        part = parts[idx]
+        n_part = len(part)
+        if n_part == 1:
+            first = part[0]
+            for rest in _children_combinations(idx + 1, remaining):
+                yield [first] + rest
+        else:
+            min_deg_this = _min_subtree_degree_generic(n_part, connectivity, vertex_offset)
+            max_d = remaining - min_from[idx + 1]
+            if max_d < min_deg_this:
+                return
+            for d_first in range(min_deg_this, max_d + 1):
+                first_trees = list(
+                    _planar_subtrees_iter_generic(
+                        part,
+                        max_weight,
+                        operad_cls,
+                        base_ring,
+                        d_first,
+                        vertex_offset,
+                        use_planar_decs,
+                    )
+                )
+                if not first_trees:
+                    continue
+                for rest in _children_combinations(idx + 1, remaining - d_first):
+                    for ft in first_trees:
+                        yield [ft] + rest
+
+    for ch in _children_combinations(0, total_deg):
+        yield (root_dec,) + tuple(ch)
+
+
+def _planar_subtrees_iter_generic(
+    leaf_range: tuple,
+    max_weight: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator:
+    """Enumerate planar trees over *leaf_range* (a consecutive block) with generic offset.
+
+    A *planar tree* (in the DFS-canonical sense) has children at every vertex
+    occupying *consecutive* sub-ranges of its leaf range.  This guarantees that
+    the DFS leaf order equals ``1, 2, …, n`` and that
+    ``planarize(T) = T ⊗ id`` (sigma_global = identity) when all vertex
+    decorations are already in planar form.
+
+    Compared to :func:`_shuffle_subtrees_iter_generic`, this function replaces
+    :func:`_shuffle_partitions` with :func:`_consecutive_parts_iter`, excluding
+    shuffle-tree configurations where subtrees carry non-consecutive leaf sets.
+
+    Args:
+        leaf_range: Tuple of consecutive leaf labels (e.g. ``(1, 2, 3)``).
+        max_weight: Maximum number of internal vertices.
+        operad_cls: Operad/cooperad factory for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact total degree to enumerate.
+        vertex_offset: Per-vertex degree contribution (+1 bar, 0 free, −1 cobar).
+        use_planar_decs: When True, restrict each vertex decoration to planar
+            basis elements via ``planar_basis_it``.
+    """
+    n = len(leaf_range)
+    if n == 0:
+        return
+    if n == 1:
+        if target_degree == 0:
+            yield leaf_range[0]
+        return
+    if max_weight < 1:
+        return
+
+    connectivity = getattr(operad_cls, "connectivity", 0)
+    _dec_iter = (
+        _planar_operad_basis_keys_in_degree if use_planar_decs else _operad_basis_keys_in_degree
+    )
+
+    for v_arity in range(2, n + 1):
+        root_parent = operad_cls(v_arity, base_ring)
+        min_root_dec_deg = connectivity * (v_arity - 1)
+        if v_arity == n:
+            # Corolla: all leaves are direct children
+            root_dec_deg = target_degree - vertex_offset
+            if root_dec_deg >= min_root_dec_deg:
+                for root_dec in _dec_iter(root_parent, root_dec_deg):
+                    yield (root_dec,) + leaf_range
+        else:
+            # Split leaf_range into v_arity consecutive sub-ranges
+            for parts in _consecutive_parts_iter(leaf_range, v_arity):
+                min_child_total = sum(
+                    _min_subtree_degree_generic(len(p), connectivity, vertex_offset)
+                    for p in parts
+                    if len(p) >= 2
+                )
+                max_root_dec_deg = target_degree - vertex_offset - min_child_total
+                for root_dec_deg in range(min_root_dec_deg, max_root_dec_deg + 1):
+                    child_total = target_degree - root_dec_deg - vertex_offset
+                    for root_dec in _dec_iter(root_parent, root_dec_deg):
+                        yield from _planar_children_iter_generic(
+                            parts,
+                            max_weight - 1,
+                            operad_cls,
+                            base_ring,
+                            child_total,
+                            root_dec,
+                            vertex_offset,
+                            use_planar_decs,
+                        )
+
+
+def enumerate_planar_trees_generic_in_degree(
+    arity: int,
+    weight_bound: int,
+    operad_cls: Any,
+    base_ring: Any,
+    target_degree: int,
+    vertex_offset: int,
+    use_planar_decs: bool = True,
+) -> Iterator[tuple]:
+    """Enumerate DFS-canonical planar trees with an arbitrary per-vertex degree offset.
+
+    A *planar tree* in the DFS-canonical sense has leaves ``1, …, n`` in strict
+    left-to-right order and every child subtree occupies a contiguous block of
+    leaf labels.  Together with planar vertex decorations (one per ``S_k``-orbit),
+    these trees form a basis for the *planar part* ``P_pl(n)`` of a quasi-planar
+    symmetric sequence ``P``.
+
+    Unlike :func:`enumerate_shuffle_trees_generic_in_degree`, which generates
+    *all* shuffle trees (and thus over-counts orbits when the canonical form of
+    ``P(n)`` under ``planarize`` is DFS-canonical rather than shuffle), this
+    function yields exactly one representative per ``S_n``-orbit, matching the
+    output of ``P.Component.planarize(T)`` when ``sigma_global == id``.
+
+    The three canonical choices for ``vertex_offset`` are:
+
+    - ``+1``: bar degree ``Σ (deg_P(v) + 1)``.
+    - ``0``:  free degree ``Σ deg_P(v)`` (no suspension).
+    - ``-1``: cobar degree ``Σ (deg_C(v) − 1)``.
+
+    Args:
+        arity: Number of leaves.
+        weight_bound: Maximum number of internal vertices.
+        operad_cls: Operad or cooperad factory for vertex decorations.
+        base_ring: Coefficient ring.
+        target_degree: Exact total degree to enumerate.
+        vertex_offset: Per-vertex degree contribution.
+        use_planar_decs: When ``True`` (default), restrict vertex decorations
+            to the planar basis via ``planar_basis_it``.
+
+    Yields:
+        Decorated planar trees (nested tuples) as valid tree basis keys.
+    """
+    if arity < 2 or weight_bound < 1:
+        return
+    yield from _planar_subtrees_iter_generic(
+        tuple(range(1, arity + 1)),
+        weight_bound,
+        operad_cls,
+        base_ring,
+        target_degree,
+        vertex_offset,
+        use_planar_decs,
+    )
+
+
 def enumerate_shuffle_trees_free_in_degree(
     arity: int,
     weight_bound: int,
@@ -1372,65 +1448,64 @@ def enumerate_shuffle_trees_generic_in_degree(
 def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     """Normalize a tree to shuffle form for the cobar construction Ω(C).
 
-    Returns ``(shuffle_tree, sign)`` where:
-    - ``shuffle_tree`` is the tree with children reordered at each vertex
-    - ``sign`` is the accumulated Koszul sign and cooperad-action coefficient
+    Returns a list of ``(shuffle_tree, coeff)`` pairs representing a
+    (possibly multi-term) linear combination.
 
     For the implemented cobar grading, subtree degrees are computed by
     ``subtree_degree_cobar`` (sum of ``deg_C(v) - 1`` over internal vertices).
     """
     if is_leaf(tree):
-        return tree, 1
+        return [(tree, 1)]
 
     kids = children(tree)
     dec = decoration(tree)
     k = len(kids)
 
-    # Recursively normalize children first
-    normalized_kids = []
-    child_sign = 1
+    # Recursively normalize children first.
+    from itertools import product as iter_product
+
+    child_term_lists: list[list[tuple]] = []
     for c in kids:
         if is_internal(c):
-            norm_c, s = to_shuffle_tree_cobar(c, cooperad_cls, base_ring)
-            normalized_kids.append(norm_c)
-            child_sign *= s
+            child_term_lists.append(to_shuffle_tree_cobar(c, cooperad_cls, base_ring))
         else:
-            normalized_kids.append(c)
+            child_term_lists.append([(c, 1)])
 
-    # Compute min leaf and cobar-degree for each normalized child
-    min_leaves = [min_leaf(c) for c in normalized_kids]
-    cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
+    results = []
+    for combo in iter_product(*child_term_lists):
+        normalized_kids = [item[0] for item in combo]
+        child_coeff = 1
+        for item in combo:
+            child_coeff *= item[1]
 
-    # Sort children by min leaf
-    indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
-    indexed.sort(key=lambda x: x[0])
+        min_leaves = [min_leaf(c) for c in normalized_kids]
+        cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
 
-    perm = [item[1] for item in indexed]
+        indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
+        indexed.sort(key=lambda x: x[0])
 
-    if perm == list(range(k)):
-        new_tree = (dec,) + tuple(normalized_kids)
-        return new_tree, child_sign
+        perm = [item[1] for item in indexed]
 
-    koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
+        if perm == list(range(k)):
+            new_tree = (dec,) + tuple(normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
 
-    sigma_list = [p + 1 for p in perm]
-    sigma_inv = [0] * k
-    for new_pos, old_pos_plus_one in enumerate(sigma_list):
-        sigma_inv[old_pos_plus_one - 1] = new_pos + 1
+        koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
 
-    cooperad_parent = cooperad_cls(k, base_ring)
-    dec_elem = cooperad_parent.term(dec)
-    permuted_dec_elem = dec_elem.permute(sigma_inv)
+        sigma_list = [p + 1 for p in perm]
+        sigma_inv = [0] * k
+        for new_pos, old_pos_plus_one in enumerate(sigma_list):
+            sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
-    operad_sign = 1
-    new_dec = dec
-    for new_dec_key, coeff in permuted_dec_elem:
-        new_dec = new_dec_key
-        operad_sign = coeff
-        break
+        cooperad_parent = cooperad_cls(k, base_ring)
+        dec_elem = cooperad_parent.term(dec)
+        permuted_dec_elem = dec_elem.permute(sigma_inv)
 
-    sorted_kids = tuple(item[2] for item in indexed)
-    new_tree = (new_dec,) + sorted_kids
+        sorted_kids = tuple(item[2] for item in indexed)
+        for new_dec_key, dec_coeff in permuted_dec_elem:
+            new_tree = (new_dec_key,) + sorted_kids
+            total_coeff = child_coeff * koszul_sign * dec_coeff
+            results.append((new_tree, total_coeff))
 
-    total_sign = child_sign * koszul_sign * operad_sign
-    return new_tree, total_sign
+    return results
