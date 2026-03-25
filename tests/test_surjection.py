@@ -32,16 +32,6 @@ def _as_dict(x):
     return {_canonical_basis_key(basis): coeff for basis, coeff in x}
 
 
-def usual_planar_test(rmax: int, dmax: int) -> Iterable[Surjection.Element]:
-    for r in range(1, rmax):
-        for d in range(1, dmax):
-            yield from Surjection(r, QQ).planar_basis_it(d)
-
-
-PLANAR_SMALL = tuple(usual_planar_test(2, 3))
-PLANAR_LARGE = tuple(usual_planar_test(3, 5))
-
-
 def test_surjection_unit() -> None:
     u = Surjection.unit(QQ)
     assert _as_dict(u) == {(1,): 1}, "Surjection unit should be (1,)."
@@ -158,32 +148,40 @@ def test_planar_surjection_basis(r: int, d: int) -> None:
         assert el.is_planar(), "Non-planar element found in planar_basis_it"
 
 
-@pytest.mark.parametrize("s1", PLANAR_SMALL)
-@pytest.mark.parametrize("s2", PLANAR_SMALL)
-def test_planar_preserved_under_composition_last_input(
-    s1: Surjection.Element, s2: Surjection.Element
-) -> None:
-    pos = s1.arity()
-    composed = Surjection.compose(s1, pos, s2)
-    assert composed.is_planar(), f"Composition of {s1} and {s2} at position {pos} is not planar."
+@pytest.mark.parametrize("r1", range(2, 3))
+@pytest.mark.parametrize("r2", range(2, 3))
+@pytest.mark.parametrize("d1", range(0, 3))
+@pytest.mark.parametrize("d2", range(0, 3))
+def test_planar_preserved_under_composition_last_input(r1: int, d1: int, r2: int, d2: int) -> None:
+    for s1 in Surjection(r1, QQ).planar_basis_it(d1):
+        for s2 in Surjection(r2, QQ).planar_basis_it(d2):
+            pos = s1.arity()
+            composed = Surjection.compose(s1, pos, s2)
+            assert composed.is_planar(), (
+                f"Composition of {s1} and {s2} at position {pos} is not planar."
+            )
 
 
-@pytest.mark.parametrize("s", PLANAR_LARGE)
-def test_section_right_inverse(s: Surjection.Element) -> None:
-    sect = s.section()
-    nat = sect.table_reduction()
-    assert nat == s, f"Section failed for {s}, got {nat} instead."
+@pytest.mark.parametrize("r", range(2, 4))
+@pytest.mark.parametrize("d", range(0, 4))
+def test_section_right_inverse(r: int, d: int) -> None:
+    for s in Surjection(r, QQ).planar_basis_it(d):
+        sect = s.section()
+        nat = sect.table_reduction()
+        assert nat == s, f"Section failed for {s}, got {nat} instead."
 
 
-@pytest.mark.parametrize("s", PLANAR_LARGE)
-def test_section_planar(s: Surjection.Element) -> None:
-    r = s.arity()
-    sect = s.section()
-    for key in sect.support():
-        first_perm = key[0]
-        assert tuple(first_perm.tuple()) == tuple(range(1, r + 1)), (
-            f"Section of planar surjection {s} is not planar at {key}."
-        )
+@pytest.mark.parametrize("r", range(2, 4))
+@pytest.mark.parametrize("d", range(0, 4))
+def test_section_planar(r: int, d: int) -> None:
+    for s in Surjection(r, QQ).planar_basis_it(d):
+        r = s.arity()
+        sect = s.section()
+        for key in sect.support():
+            first_perm = key[0]
+            assert tuple(first_perm.tuple()) == tuple(range(1, r + 1)), (
+                f"Section of planar surjection {s} is not planar at {key}."
+            )
 
 
 @pytest.mark.parametrize(
