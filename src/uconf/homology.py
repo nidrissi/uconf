@@ -235,7 +235,7 @@ def homology_basis(
 
     C = chain_complex(module, degrees, weight=weight)
 
-    # Retrieve the (deduplicated) basis elements in the requested degree
+    # Retrieve the basis elements in the requested degree
     basis_elems, _ = _get_basis_elements(module, degree, weight)
 
     h = C.homology(generators=True)
