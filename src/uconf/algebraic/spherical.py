@@ -198,6 +198,9 @@ class ReducedSphereCochains(CombinatorialFreeModule):
     def degree_on_basis(self, _) -> int:
         return -self._sphere_dim
 
+    def _weight_on_basis(self, _) -> int:
+        return 0
+
     def generator(self):
         """Return the generator of the reduced cochains."""
         return self._generator

@@ -39,6 +39,28 @@ from uconf.core.trees import (
 from uconf.core.vertex_decoration import VertexDecorationLike
 
 
+def _min_tree_degree(connectivity: int, vertex_shift: int, max_arity: int) -> int:
+    """Lower bound on the minimum tree degree across all arities and tree shapes.
+
+    For a tree with *n* leaves in a composite ``S ∘ M`` where the symmetric
+    sequence *S* has per-arity minimum degree ``connectivity * (n - 1)``
+    (the standard convention for connected symmetric sequences), the tree
+    degree of an *r*-vertex tree is at least::
+
+        connectivity * (n - 1) + r * vertex_shift
+
+    When ``vertex_shift ≥ 0`` the corolla (``r = 1``) minimises the
+    expression; otherwise the fully binary tree (``r = n - 1``) does.
+    """
+    if max_arity < 2:
+        return 0
+    if vertex_shift >= 0:
+        # Corolla at highest arity is worst case.
+        return min(connectivity * (max_arity - 1) + vertex_shift, 0)
+    # Binary tree at highest arity is worst case.
+    return min((max_arity - 1) * (connectivity + vertex_shift), 0)
+
+
 def _dfs_all_iter(tree):
     """DFS pre-order traversal of all nodes (internal vertices and leaves)."""
     if is_leaf(tree):
@@ -323,9 +345,9 @@ class TreeModule(CombinatorialFreeModule):
 
         # When the symmetric sequence has negative-degree elements, the tree
         # contribution can be negative.  A corolla at arity n has minimum tree
-        # degree = connectivity*(n-1) + vertex_degree_shift.  The inner-module
-        # keys must therefore be collected up to degree d − min_tree_deg, which
-        # can exceed d.
+        # degree connectivity*(n-1) + vertex_degree_shift, which can decrease
+        # with arity when connectivity < 0.  We first compute a provisional
+        # bound (for arity 2), then refine after max_n is known.
         min_tree_deg = min(self._vertex_degree_shift + connectivity, 0)
         max_m_deg = d - min_tree_deg  # could exceed d
 
@@ -342,9 +364,11 @@ class TreeModule(CombinatorialFreeModule):
             return
 
         min_m_deg = min(m_keys_by_deg.keys())
-        min_tree_deg_n2 = self._vertex_degree_shift + connectivity
 
-        if d < min_tree_deg_n2:
+        # Early exit: the smallest tree for n≥2 is a single arity-2 vertex
+        # with degree connectivity + vertex_shift.  If d is below this even
+        # with m_tuple degree 0, no n≥2 elements exist.
+        if d < self._vertex_degree_shift + connectivity:
             return
 
         if min_m_deg > 0:
@@ -358,6 +382,24 @@ class TreeModule(CombinatorialFreeModule):
                 "so arity is unbounded in fixed degree.  "
                 "Use basis_weight_iter(d, w) to enumerate elements of a fixed weight."
             )
+
+        # Refine min_tree_deg now that max_n is known.
+        # For connected symmetric sequences, S(n) has minimum degree
+        # connectivity*(n-1).  A tree with n leaves and r internal vertices
+        # contributes at least connectivity*(n-1) + r*vertex_shift.  When
+        # vertex_shift >= 0 the corolla (r=1) is worst; otherwise the
+        # binary tree (r=n-1) is worst.
+        min_tree_deg = _min_tree_degree(connectivity, self._vertex_degree_shift, max_n)
+        max_m_deg = d - min_tree_deg
+
+        # Collect any additional m_keys in the extended range.
+        for d_m in range(max(m_keys_by_deg.keys()) + 1, max_m_deg + 1):
+            keys = list(_module_basis_keys_in_degree(M, d_m))
+            if keys:
+                m_keys_by_deg[d_m] = keys
+
+        if d < min_tree_deg:
+            return
 
         # Require quasi-planar support: basis_iter() is only correct when the
         # symmetric sequence exposes planar_basis_it on its components, so that
@@ -440,7 +482,14 @@ class TreeModule(CombinatorialFreeModule):
         R = self.base_ring()
 
         connectivity = int(getattr(S, "connectivity", 0))
-        min_tree_deg = min(self._vertex_degree_shift + connectivity, 0)
+
+        # Max arity: each leaf has weight >= 1, so n <= w.
+        max_n = w
+
+        # Minimum tree degree considering all arities from 2 to max_n.
+        # For connected symmetric sequences, S(n) has minimum degree
+        # connectivity*(n-1).  See _min_tree_degree for the derivation.
+        min_tree_deg = _min_tree_degree(connectivity, self._vertex_degree_shift, max_n)
         max_m_deg = d - min_tree_deg
 
         # Collect inner-module keys by (degree, weight)
@@ -458,8 +507,7 @@ class TreeModule(CombinatorialFreeModule):
         if not keys_by_dw:
             return
 
-        min_tree_deg_n2 = self._vertex_degree_shift + connectivity
-        if d < min_tree_deg_n2:
+        if d < min_tree_deg:
             return
 
         # Require quasi-planar support
@@ -469,9 +517,6 @@ class TreeModule(CombinatorialFreeModule):
                 f"basis_weight_iter() requires the symmetric sequence {S.name!r} to support "
                 "planar_basis_it() on its arity-2 component."
             )
-
-        # Max arity: each leaf has weight >= 1, so n <= w
-        max_n = w
 
         for n in range(2, max_n + 1):
             max_tree_weight = n - 1
