@@ -8,7 +8,7 @@ from uconf import (
     Lie,
     ShiftedOperad,
     Surjection,
-    chain_complex,
+    compute_chain_complex,
     euclidean_unordered_configuration_model,
 )
 from uconf.algebraic.conf import _make_surjection_comodule_morphism
@@ -24,25 +24,25 @@ class TestConfigurationModelCore:
         """chain_complex for euclidean configuration model over GF(2) succeeds."""
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = chain_complex(model, degrees=range(3), weight=1)
+        C = compute_chain_complex(model, degrees=range(3), weight=1)
         assert C is not None
 
     def test_check_complex(self) -> None:
         """chain_complex over GF(2) with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
+        C = compute_chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert C is not None
 
     def test_check_complex_QQ_weight2(self) -> None:
         """chain_complex over QQ at weight=2 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
-        complex = chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
+        complex = compute_chain_complex(model, degrees=range(-2, 3), weight=2, check=True)
         assert complex is not None
 
     def test_check_complex_QQ_weight3(self) -> None:
         """chain_complex over QQ at weight=3 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
-        complex = chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
+        complex = compute_chain_complex(model, degrees=range(-2, 3), weight=3, check=True)
         assert complex is not None
 
 

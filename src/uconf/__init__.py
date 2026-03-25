@@ -59,7 +59,7 @@ from uconf.models import (
 )
 from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
-from uconf.homology import chain_complex, homology_basis
+from uconf.homology import compute_chain_complex, homology_basis, compute_homology_representatives
 from uconf.morphisms import (
     ass_to_com,
     lie_to_ass,
@@ -113,6 +113,7 @@ __all__ = [
     "labelled_configuration_model",
     "unordered_configuration_model",
     "euclidean_unordered_configuration_model",
-    "chain_complex",
+    "compute_chain_complex",
+    "compute_homology_representatives",
     "homology_basis",
 ]
