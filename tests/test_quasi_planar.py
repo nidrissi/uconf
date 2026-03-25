@@ -338,6 +338,7 @@ def _delta_equiv(coop_key, B_n, BE_n):
     coop_elem = B_n(coop_key)
     return e_comodule_on_generator(coop_elem)
 
+
 class TestComoduleAxioms:
     """Check that ``e_comodule_on_generator`` defines a genuine dg E-comodule.
 
@@ -419,10 +420,7 @@ class TestComoduleAxioms:
         # ν(∂_C(x))
         nu_dc = e_comodule_on_generator(BH2.boundary(dec_elem))
 
-        assert d_nu == nu_dc, (
-            f"Chain-map failed:\n  d(ν(x)) = {d_nu}\n"
-            f"  ν(∂x)   = {nu_dc}"
-        )
+        assert d_nu == nu_dc, f"Chain-map failed:\n  d(ν(x)) = {d_nu}\n  ν(∂x)   = {nu_dc}"
 
     def test_chain_map_all_degree1_planar_generators(self):
         """Chain-map axiom holds for every degree-1 planar B(Lie⊙E)(2) generator."""

@@ -108,8 +108,12 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
         # Compute ν on the planar element via the recursive formula.
         planar_result = _nu_on_planar(
-            planar_elem, cooperad_component,
-            be_component, S_n, identity_n, target,
+            planar_elem,
+            cooperad_component,
+            be_component,
+            S_n,
+            identity_n,
+            target,
         )
 
         # Apply equivariance: ν(c·σ) = ν(c)·σ.
