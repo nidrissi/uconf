@@ -156,9 +156,7 @@ class TestChainComplex:
                     u_elem = C3.term(u)
                     d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
                     d_nu_c += (
-                        coeff
-                        * (-1) ** BE3.degree_on_basis(b)
-                        * b_elem.tensor(C3.boundary(u_elem))
+                        coeff * (-1) ** BE3.degree_on_basis(b) * b_elem.tensor(C3.boundary(u_elem))
                     )
                 assert nu_dc == d_nu_c, f"generator chain map failed at arity 3 deg {d}: {elem}"
 
@@ -188,9 +186,7 @@ class TestChainComplex:
                     u_elem = C2.term(u)
                     d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
                     d_nu_c += (
-                        coeff
-                        * (-1) ** BE2.degree_on_basis(b)
-                        * b_elem.tensor(C2.boundary(u_elem))
+                        coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(C2.boundary(u_elem))
                     )
                 assert nu_dc == d_nu_c, f"generator chain map failed at arity 2 deg {d}: {elem}"
 

@@ -365,9 +365,7 @@ class TestEComoduleMorphism:
                 cobar_normalized = OBH2(cobar_key_raw)
                 for ck, cc in cobar_normalized:
                     had_key = (be_key, ck)
-                    tensor_dict[had_key] = (
-                        tensor_dict.get(had_key, QQ.zero()) + coeff * cc
-                    )
+                    tensor_dict[had_key] = tensor_dict.get(had_key, QQ.zero()) + coeff * cc
             tensor_dict = {k: v for k, v in tensor_dict.items() if v != 0}
 
             had_dict = _as_dict(had_result)
