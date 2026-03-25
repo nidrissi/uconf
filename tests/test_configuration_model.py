@@ -62,6 +62,51 @@ class TestConfigurationModelCore:
         assert complex is not None
 
 
+class TestConfigurationModelDSquaredMinimal:
+    """Minimal reproducers for d²≠0 bugs in the twisted bar complex.
+
+    The {d_internal, d_alpha} anticommutator is non-zero for specific
+    elements at weight ≥ 2 over QQ.  These tests document the simplest
+    cases found during investigation.
+
+    Root cause (under investigation):
+        The algebra action chain-map condition requires a Koszul sign
+        adjustment in ``FreeOperadAlgebra._act_impl`` to account for
+        M-tuple degrees when separating P-keys from M-values during
+        operadic substitution.  Specifically, the operadic composition
+        uses P-degree signs, but the free-algebra Leibniz rule needs
+        signs based on total degree (P + M).  When M-degrees are even
+        (d=2, sphere degree −2) the sign correction is trivially +1;
+        when M-degrees are odd (d=1, sphere degree −1) it is not.
+
+        However, applying this correction alone does not fully resolve
+        d²≠0, indicating an additional sign interaction between
+        d_alpha and the interleaved-DFS sign convention in TreeModule.
+    """
+
+    @pytest.mark.xfail(
+        reason="d²≠0 at weight 2, degree 2 for d=1: {d_int, d_alpha} ≠ 0 on 1 element."
+    )
+    def test_dsquared_weight2_d1_minimal(self) -> None:
+        """Minimal d²≠0 reproducer: weight=2, d=1, single arity-2 bar corolla."""
+        model = euclidean_unordered_configuration_model(QQ, 1)
+        basis = list(model.graded_basis_by_weight(2, 2))
+        for elem in basis:
+            dd = model.boundary(model.boundary(elem))
+            assert dd == model.zero(), f"d²≠0 for {list(elem)[0][0]}"
+
+    @pytest.mark.xfail(
+        reason="d²≠0 at weight 2, degree 3 for d=2: {d_int, d_alpha} ≠ 0 on 1 element."
+    )
+    def test_dsquared_weight2_d2_minimal(self) -> None:
+        """Minimal d²≠0 reproducer: weight=2, d=2, single arity-2 bar corolla."""
+        model = euclidean_unordered_configuration_model(QQ, 2)
+        basis = list(model.graded_basis_by_weight(3, 2))
+        for elem in basis:
+            dd = model.boundary(model.boundary(elem))
+            assert dd == model.zero(), f"d²≠0 for {list(elem)[0][0]}"
+
+
 class TestConfigurationModelBasis:
     """Tests for the graded basis on the configuration model."""
 
