@@ -43,16 +43,16 @@ from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
     children,
     decoration,
+    enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_cobar_in_degree,
-    enumerate_shuffle_trees_generic_in_degree,
     expand_vertex,
     graft,
     is_leaf,
     relabel_leaves,
     subtree_degree_cobar,
+    to_shuffle_tree_cobar,
     tree_to_latex,
     tree_to_string,
-    tree_to_svg,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -75,10 +75,9 @@ class CobarConstruction(UniqueRepresentation):
     every (arity, degree) basis finite without requiring an external weight cap.
 
     Note:
-        Unlike ``BarConstruction``, this module does not automatically normalize
-        trees to shuffle form.  Utilities ``to_shuffle_tree_cobar`` and
-        ``is_shuffle_tree`` in ``uconf.core.trees`` can be used explicitly when
-        needed.
+        Trees are automatically normalized to shuffle form via
+        ``to_shuffle_tree_cobar`` in the element constructor, analogous
+        to the bar construction.
 
     """
 
@@ -207,8 +206,8 @@ class CobarConstruction(UniqueRepresentation):
 
             Mirrors ``BarConstruction.Component._planarize_on_basis``: for each
             internal vertex ``v`` the base cooperad's ``planarize`` gives a
-            planar decoration ``dec_pl`` and a vertex permutation ``σ_v ∈ S_{k_v}``.
-            The planarized tree is assembled by:
+            (possibly multi-term) decomposition into planar decorations and
+            vertex permutations.  The planarized tree is assembled by:
 
             1. Replacing each vertex decoration with its planar form.
             2. Reordering the children of ``v``: new child at position ``j``
@@ -229,9 +228,9 @@ class CobarConstruction(UniqueRepresentation):
                 return self.term(tree).tensor(sym_alg.term(identity))
 
             def _planarize_subtree(node):
-                """Return ``(coeff, planar_node, leaf_order)``."""
+                """Return list of ``(coeff, planar_node, leaf_order)`` triples."""
                 if is_leaf(node):
-                    return 1, node, [node]
+                    return [(1, node, [node])]
 
                 k = vertex_arity(node)
                 dec = decoration(node)
@@ -240,38 +239,42 @@ class CobarConstruction(UniqueRepresentation):
                 dec_elem = coop_parent.term(dec)
                 planarized = coop_parent.planarize(dec_elem)
 
-                planar_dec = dec
-                sigma_v_tuple = tuple(range(1, k + 1))
-                dec_coeff = 1
-                for (planar_dec_key, sigma_key), c in planarized:
-                    planar_dec = planar_dec_key
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
-                    dec_coeff = c
-                    break  # single term expected
-
                 old_ch = children(node)
-                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+                results = []
+                for (planar_dec_key, sigma_key), dec_coeff in planarized:
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
-                new_ch_planarized = []
-                leaf_order = []
-                total_child_coeff = 1
-                for ch in new_ch:
-                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
-                    total_child_coeff *= ch_coeff
-                    new_ch_planarized.append(p_ch)
-                    leaf_order.extend(lo_ch)
+                    child_term_lists = []
+                    for ch in new_ch:
+                        child_term_lists.append(_planarize_subtree(ch))
 
-                total_coeff = dec_coeff * total_child_coeff
-                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
+                    from itertools import product as iter_product
 
-            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
+                    for combo in iter_product(*child_term_lists):
+                        total_child_coeff = 1
+                        new_ch_planarized = []
+                        leaf_order = []
+                        for ch_coeff, p_ch, lo_ch in combo:
+                            total_child_coeff *= ch_coeff
+                            new_ch_planarized.append(p_ch)
+                            leaf_order.extend(lo_ch)
 
-            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
-            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                        total_coeff = dec_coeff * total_child_coeff
+                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        results.append((total_coeff, node_result, leaf_order))
 
-            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                return results
 
-            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
+            target = tensor([self, sym_alg])
+            result = target.zero()
+            for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
+                sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+                canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
+
+            return result
 
         def planar_basis_it(self, d: int) -> "Iterator[CobarConstruction.Element]":
             """Iterate over planar cobar basis elements of degree ``d``.
@@ -299,7 +302,7 @@ class CobarConstruction(UniqueRepresentation):
                     yield self.term(1)
                 return
 
-            for tree in enumerate_shuffle_trees_generic_in_degree(
+            for tree in enumerate_planar_trees_generic_in_degree(
                 n,
                 self._max_weight,
                 self._cooperad_cls,
@@ -331,8 +334,21 @@ class CobarConstruction(UniqueRepresentation):
 
             return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
 
+        def _normalize_to_shuffle(self, tree):
+            """Normalize *tree* to shuffle form.
+
+            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.
+            """
+            if is_leaf(tree):
+                return [(tree, 1)]
+            return to_shuffle_tree_cobar(tree, self._cooperad_cls, self.base_ring())
+
         def _element_constructor_(self, x):
-            """Build elements from tree basis keys or sparse dictionaries."""
+            """Build elements from tree basis keys or sparse dictionaries.
+
+            Trees are automatically normalized to shuffle form.
+            """
             if isinstance(x, CobarConstruction.Element):
                 if x.parent().factory is self.factory:
                     return self.sum_of_terms((basis, coeff) for basis, coeff in x)
@@ -344,14 +360,17 @@ class CobarConstruction(UniqueRepresentation):
                     clean_key = self._validate_basis_key(key)
                     if clean_key is None:
                         continue
-                    clean_dict[clean_key] = clean_dict.get(clean_key, 0) + coeff
+                    for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
+                        clean_dict[shuffle_key] = (
+                            clean_dict.get(shuffle_key, 0) + coeff * shuffle_coeff
+                        )
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, (tuple, int)):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                return self.term(clean_key)
+                return self.sum_of_terms(self._normalize_to_shuffle(clean_key))
 
             return super()._element_constructor_(x)
 
@@ -416,7 +435,6 @@ class CobarConstruction(UniqueRepresentation):
 
             return tree_to_string(
                 basis_element,
-                self.factory.cooperad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -428,36 +446,17 @@ class CobarConstruction(UniqueRepresentation):
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one cobar basis tree."""
             if is_leaf(basis_element):
-                return "\\mathrm{id}"
+                return f"\\eta_{{{self.factory.cooperad_cls.name}}}"
 
             def _dec_fmt(dec, arity):
                 parent = self.factory.cooperad_cls(arity, self.base_ring())
                 latex_term = getattr(parent, "_latex_term", None)
                 if callable(latex_term):
                     return latex_term(dec)
-                return f"\\operatorname{{{self.factory.cooperad_cls.name}}}_{{{dec}}}"
+                return f"\\operatorname{{{self.factory.cooperad_cls.name}}}({{{dec}}})"
 
             return tree_to_latex(
                 basis_element,
-                self.factory.cooperad_cls.name,
-                decoration_formatter=_dec_fmt,
-            )
-
-        def _svg_term(self, basis_element) -> str:
-            """SVG representation of one cobar basis tree."""
-            if is_leaf(basis_element):
-                return tree_to_svg(1, operad_name="id")
-
-            def _dec_fmt(dec, arity):
-                parent = self.factory.cooperad_cls(arity, self.base_ring())
-                repr_term = getattr(parent, "_repr_term", None)
-                if callable(repr_term):
-                    return repr_term(dec)
-                return f"{self.factory.cooperad_cls.name}{dec}"
-
-            return tree_to_svg(
-                basis_element,
-                operad_name=self.factory.cooperad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -497,13 +496,15 @@ class CobarConstruction(UniqueRepresentation):
 
                 sign = sign_from_exponent(cumulative_degree)
 
-                # Apply boundary to this vertex's decoration
-                dec_elem = cooperad_parent.term(dec)
+                # Apply boundary to this vertex's decoration.
+                # Use __call__ instead of term() to normalise through the
+                # cooperad's element constructor.
+                dec_elem = cooperad_parent(dec)
                 bdry = cooperad_parent.boundary(dec_elem)
 
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self.term(new_tree)
+                    result += sign * coeff * self(new_tree)
 
                 cumulative_degree += vertex_sinv_degree
 
@@ -569,7 +570,9 @@ class CobarConstruction(UniqueRepresentation):
                             new_tree = expand_vertex(
                                 tree, curr_vertex, i, dec_left, dec_right, m, n
                             )
-                            result += total_sign * coeff * self.term(new_tree)
+                            # Use _element_constructor_ (via __call__) so that
+                            # the expanded tree is normalised to shuffle form.
+                            result += total_sign * coeff * self(new_tree)
             return result
 
         def _replace_vertex_decoration_by_index(
@@ -623,21 +626,6 @@ class CobarConstruction(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def _repr_svg_(self) -> str:
-            """Return SVG markup for Sage display of a monomial cobar tree."""
-            if not self:
-                raise ValueError("Cannot render SVG for the zero element.")
-            if len(self.support()) != 1:
-                raise ValueError(
-                    "SVG rendering currently supports only monomials with one basis term."
-                )
-            basis = next(iter(self.support()))
-            return self.parent()._svg_term(basis)
-
-        def to_svg(self) -> str:
-            """Compatibility alias for :meth:`_repr_svg_`."""
-            return self._repr_svg_()
-
         def boundary(self) -> "CobarConstruction.Element":
             """Apply the cobar differential ``d = d_1 + d_2``."""
             parent = self.parent()
@@ -671,7 +659,9 @@ class CobarConstruction(UniqueRepresentation):
                     new_tree = relabel_map.get(tree, tree)
                 else:
                     new_tree = relabel_leaves(tree, relabel_map)
-                result += coeff * parent.term(new_tree)
+                # Use parent(new_tree) so that shuffle normalization
+                # is applied — the relabeled tree may be out of order.
+                result += coeff * parent(new_tree)
             return result
 
 

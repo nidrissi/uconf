@@ -35,7 +35,6 @@ from uconf.core.trees import (
     vertex_arity,
     vertices_dfs,
     weight,
-    tree_to_svg,
 )
 
 
@@ -138,7 +137,8 @@ class TestTrees:
 
         # Invalid: wrong leaves
         bad_tree = ((1, 2), 1, 2, 4)
-        assert validate_tree(bad_tree, 3, Lie, QQ) is None
+        with pytest.raises(ValueError, match="Invalid leaves"):
+            validate_tree(bad_tree, 3, Lie, QQ)
 
 
 def test_bar_cobar_accept_nested_operad_providers() -> None:
@@ -153,31 +153,6 @@ def test_bar_cobar_accept_nested_operad_providers() -> None:
 
     cobar = CobarConstruction(bar)
     assert cobar(2, QQ).arity() == 2
-
-
-def test_tree_to_svg_basic_output() -> None:
-    tree = (((), 1, 2), 3, 4)
-    svg = tree_to_svg(tree, operad_name="P")
-    assert "<svg" in svg
-    assert "</svg>" in svg
-    assert 'aria-label="decorated rooted tree"' in svg
-    assert 'class="vlabel"' in svg
-
-
-def test_bar_element_to_svg() -> None:
-    bcom = BarConstruction(Commutative)
-    elem = bcom(2, QQ)(((), 1, 2))
-    svg = elem._repr_svg_()
-    assert "<svg" in svg
-    assert "</svg>" in svg
-
-
-def test_cobar_element_to_svg() -> None:
-    ococom = CobarConstruction(CoCommutative)
-    elem = ococom(2, QQ)(((), 1, 2))
-    svg = elem._repr_svg_()
-    assert "<svg" in svg
-    assert "</svg>" in svg
 
 
 class TestShuffleTrees:
@@ -220,7 +195,11 @@ class TestShuffleTrees:
         # ((), 2, 1) should normalize to ((), 1, 2) with sign
 
         tree = ((), 2, 1)
-        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+        terms = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        # For Commutative, single term expected
+        assert len(terms) == 1
+        shuffle, sign = terms[0]
 
         # Should be sorted
         assert is_shuffle_tree(shuffle)
@@ -239,7 +218,11 @@ class TestShuffleTrees:
         # Should swap children to get ((), ((), 1, 2), ((), 3, 4))
 
         tree = ((), ((), 3, 4), ((), 1, 2))
-        shuffle, sign = to_shuffle_tree_bar(tree, Commutative, QQ)
+        terms = to_shuffle_tree_bar(tree, Commutative, QQ)
+
+        # For Commutative, single term expected
+        assert len(terms) == 1
+        shuffle, sign = terms[0]
 
         assert is_shuffle_tree(shuffle)
         # Children should be swapped: first child has min 1, second has min 3

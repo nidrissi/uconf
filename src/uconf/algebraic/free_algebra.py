@@ -44,6 +44,7 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import _koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
@@ -117,9 +118,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         For each basis term ``(p_key, coeff)`` of ``p_elem ∈ P(n)``, applies
         ``planarize`` to obtain ``Σ (p_planar_key ⊗ σ) * c`` and returns::
 
-            Σ coeff * c * self.term((p_planar_key, σ · m_tuple))
+            Σ coeff * c * ε(σ⁻¹; degrees) * self.term((p_planar_key, σ⁻¹ · m_tuple))
 
-        where ``σ · m_tuple = (m_tuple[σ⁻¹(1)−1], ..., m_tuple[σ⁻¹(n)−1])``.
+        where ``σ⁻¹ · m_tuple = (m_tuple[σ⁻¹(1)−1], ..., m_tuple[σ⁻¹(n)−1])``
+        and ``ε(σ⁻¹; degrees)`` is the Koszul sign for the graded permutation
+        of the leaf-module elements.
 
         This ensures all stored P-keys are in the planar basis.
 
@@ -134,6 +137,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         n = len(m_tuple)
         comp = p_elem.parent()
         S_n = SymmetricGroup(n)
+        M = self._inner_module
         result = self.zero()
         for p_key, p_coeff in p_elem:
             planarized = comp.planarize(comp.term(p_key))
@@ -141,7 +145,14 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 sigma = S_n(sigma_key)
                 sigma_inv = sigma.inverse()
                 permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
-                result += p_coeff * pl_coeff * self.term((p_planar_key, permuted_m))
+                # Koszul sign for permuting graded leaf-module elements.
+                if n > 1 and sigma != S_n.identity():
+                    perm_0idx = [sigma_inv(i) - 1 for i in range(1, n + 1)]
+                    degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                else:
+                    koszul = 1
+                result += p_coeff * pl_coeff * koszul * self.term((p_planar_key, permuted_m))
         return result
 
     # ------------------------------------------------------------------
@@ -267,17 +278,21 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Leibniz rule: d(p ⊗ m_1 ⊗…⊗ m_n) = d_P(p) ⊗ m_… + Σ_i (−1)^{…} p ⊗…⊗ d_M(m_i) ⊗….
 
         Koszul sign at leaf i: ``(−1)^{deg_P(p_key) + Σ_{j<i} deg_M(m_j)}``.
-        Non-planar keys produced by ``d_P`` are normalised via planarize.
+
+        Non-planar keys produced by ``d_P`` are **not** normalised here so that
+        cancellations in ``d² = 0`` are preserved exactly.  Normalisation to
+        planar representatives happens at module boundaries (e.g.
+        :meth:`normalize_to_planar`, :meth:`graded_basis`) instead.
         """
         p_key, m_tuple = key
         n = len(m_tuple)
         comp = self._operad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_P term: normalise via planarize since boundary may produce non-planar keys
+        # d_P term: keep raw operad keys (may be non-planar)
         dp_elem = comp.boundary(comp.term(p_key))
-        if dp_elem:
-            result += self._normalized_corolla_sum(dp_elem, m_tuple)
+        for dp_key, dp_coeff in dp_elem:
+            result += dp_coeff * self.term((dp_key, m_tuple))
 
         # d_M terms with Koszul signs
         p_deg = comp.degree_on_basis(p_key)
@@ -290,6 +305,21 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 result += sign * m_coeff * self.term((p_key, new_m))
             cumulative += self._inner_module.degree_on_basis(mk)
 
+        return result
+
+    def normalize_to_planar(self, elem: "FreeAlgebraModule.Element") -> "FreeAlgebraModule.Element":
+        """Rewrite *elem* so every P-key is in the planar basis.
+
+        For each basis key ``(p_key, m_tuple)`` whose ``p_key`` is not yet
+        planar, ``_normalized_corolla_sum`` applies the operad's ``planarize``
+        and permutes the ``m_tuple`` accordingly, including the Koszul sign for
+        the graded permutation of leaf-module elements.
+        """
+        result = self.zero()
+        for (p_key, m_tuple), coeff in elem:
+            result += coeff * self._normalized_corolla_sum(
+                self._operad_cls(len(m_tuple), self.base_ring()).term(p_key), m_tuple
+            )
         return result
 
     # ------------------------------------------------------------------

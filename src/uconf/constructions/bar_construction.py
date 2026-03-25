@@ -23,7 +23,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Iterator
+from typing import Any, Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -57,7 +57,6 @@ from uconf.core.trees import (
     to_shuffle_tree_bar,
     tree_to_latex,
     tree_to_string,
-    tree_to_svg,
     validate_tree,
     vertex_arity,
     vertices_dfs,
@@ -148,7 +147,7 @@ class BarConstruction(UniqueRepresentation):
     class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of the bar construction cooperad."""
 
-        name: ClassVar[str] = "B"
+        name = "B"
 
         def __init__(self, factory: "BarConstruction", n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
@@ -200,8 +199,9 @@ class BarConstruction(UniqueRepresentation):
             """Decompose a bar tree into planar part ⊗ global permutation.
 
             For each internal vertex ``v`` the base operad's ``planarize``
-            gives a planar decoration ``dec_pl`` and a vertex permutation
-            ``σ_v ∈ S_{k_v}``.  The planarized tree is assembled by:
+            gives a (possibly multi-term) decomposition into planar
+            decorations and vertex permutations.  The planarized tree is
+            assembled by:
 
             1. Replacing each vertex decoration with its planar form.
             2. Reordering the children of ``v``: new child at position ``j``
@@ -214,6 +214,13 @@ class BarConstruction(UniqueRepresentation):
             original leaf label at canonical position ``j``.
 
             Returns an element of ``self ⊗ k[S_n]``.
+
+            .. note::
+               For quasi-planar operads (Surjection, BarrattEccles) each
+               vertex yields a single term.  For operads like
+               ``HadamardProduct(sLie, Surjection)`` the Lie factor's
+               ``permute`` may expand into multiple planar-basis elements,
+               and every term is propagated here.
             """
             sym_alg = self._symmetric_group_algebra
             base_ring = self.base_ring()
@@ -223,67 +230,62 @@ class BarConstruction(UniqueRepresentation):
                 return self.term(tree).tensor(sym_alg.term(identity))
 
             def _planarize_subtree(node):
-                """Return ``(coeff, planar_node, leaf_order)``.
+                """Return list of ``(coeff, planar_node, leaf_order)`` triples.
 
-                ``planar_node`` has the same structure as ``node`` but with
-                planar vertex decorations and reordered children; its leaf
-                labels are still the *original* labels (not yet renumbered).
+                Each triple represents one term in the planar decomposition.
+                ``planar_node`` has planar vertex decorations with the
+                *original* leaf labels (not yet renumbered).
                 ``leaf_order[i]`` is the original leaf label that will sit at
                 canonical position ``i+1`` after renumbering.
-                ``coeff`` is the accumulated scalar from all decoration
-                planarizations (e.g. −1 from Lie antisymmetry).
                 """
                 if is_leaf(node):
-                    return 1, node, [node]
+                    return [(1, node, [node])]
 
                 k = vertex_arity(node)
                 dec = decoration(node)
                 op_parent = self._operad_cls(k, base_ring)
 
-                # Use the base operad's planarize morphism on the decoration.
                 dec_elem = op_parent.term(dec)
                 planarized = op_parent.planarize(dec_elem)
 
-                # For Surjection / BarrattEccles this is a single term;
-                # for other operads it may be a linear combination.
-                # We take the first term and propagate its coefficient.
-                planar_dec = dec
-                sigma_v_tuple = tuple(range(1, k + 1))  # identity fallback
-                dec_coeff = 1
-                for (planar_dec_key, sigma_key), c in planarized:
-                    planar_dec = planar_dec_key
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
-                    dec_coeff = c
-                    break  # single term expected for supported operads
-
                 old_ch = children(node)
-                # New child at 0-based index j = old child at sigma_v_tuple[j]-1
-                new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+                results = []
+                for (planar_dec_key, sigma_key), dec_coeff in planarized:
+                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
-                # Recursively planarize each (reordered) child.
-                new_ch_planarized = []
-                leaf_order = []
-                total_child_coeff = 1
-                for ch in new_ch:
-                    ch_coeff, p_ch, lo_ch = _planarize_subtree(ch)
-                    total_child_coeff *= ch_coeff
-                    new_ch_planarized.append(p_ch)
-                    leaf_order.extend(lo_ch)
+                    # Recursively planarize each (reordered) child, combining
+                    # all term combinations from children.
+                    child_term_lists = []
+                    for ch in new_ch:
+                        child_term_lists.append(_planarize_subtree(ch))
 
-                total_coeff = dec_coeff * total_child_coeff
-                return total_coeff, (planar_dec,) + tuple(new_ch_planarized), leaf_order
+                    from itertools import product as iter_product
 
-            total_coeff, planar_with_orig, leaf_order = _planarize_subtree(tree)
+                    for combo in iter_product(*child_term_lists):
+                        total_child_coeff = 1
+                        new_ch_planarized = []
+                        leaf_order = []
+                        for ch_coeff, p_ch, lo_ch in combo:
+                            total_child_coeff *= ch_coeff
+                            new_ch_planarized.append(p_ch)
+                            leaf_order.extend(lo_ch)
 
-            # leaf_order[i] = original label at canonical position i+1.
-            # Relabeling: old leaf l → canonical position sigma_global_inv[l].
-            sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
-            canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                        total_coeff = dec_coeff * total_child_coeff
+                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        results.append((total_coeff, node_result, leaf_order))
 
-            # sigma_global(j) = leaf_order[j-1]  (one-line notation list).
-            sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                return results
 
-            return total_coeff * self.term(canonical_tree).tensor(sigma_global)
+            target = tensor([self, sym_alg])
+            result = target.zero()
+            for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
+                sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
+                canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
+                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
+
+            return result
 
         def _is_planar_tree(self, tree) -> bool:
             """Return ``True`` if every vertex decoration is planar.
@@ -391,16 +393,15 @@ class BarConstruction(UniqueRepresentation):
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
 
-            Returns ``(shuffle_tree, sign)`` where ``shuffle_tree`` is the
-            normalized tree and ``sign`` is the accumulated Koszul and operad
-            action sign.
+            Returns a list of ``(shuffle_tree, coeff)`` pairs representing
+            a (possibly multi-term) linear combination.
 
             A shuffle tree has children at each vertex sorted by min leaf label.
             This implements the standard basis for the bar construction on a
             symmetric operad (cf. Bremner-Dotsenko, Loday-Vallette).
             """
             if is_leaf(tree):
-                return tree, 1
+                return [(tree, 1)]
             return to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring())
 
         def _element_constructor_(self, x):
@@ -421,21 +422,19 @@ class BarConstruction(UniqueRepresentation):
                     clean_key = self._validate_basis_key(key)
                     if clean_key is None:
                         continue
-                    # Normalize to shuffle form
-                    shuffle_key, sign = self._normalize_to_shuffle(clean_key)
-                    clean_dict[shuffle_key] = clean_dict.get(shuffle_key, 0) + coeff * sign
+                    # Normalize to shuffle form (may produce multiple terms)
+                    for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
+                        clean_dict[shuffle_key] = (
+                            clean_dict.get(shuffle_key, 0) + coeff * shuffle_coeff
+                        )
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, tuple):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                # Normalize to shuffle form
-                shuffle_key, sign = self._normalize_to_shuffle(clean_key)
-                if sign == 1:
-                    return self.term(shuffle_key)
-                else:
-                    return sign * self.term(shuffle_key)
+                # Normalize to shuffle form (may produce multiple terms)
+                return self.sum_of_terms(self._normalize_to_shuffle(clean_key))
 
             if isinstance(x, int) and self._arity == 1 and x == 1:
                 # Special case: allow integer 1 to represent the single-leaf tree in arity 1
@@ -470,11 +469,10 @@ class BarConstruction(UniqueRepresentation):
                 repr_term = getattr(parent, "_repr_term", None)
                 if callable(repr_term):
                     return repr_term(dec)
-                return f"{self.factory.operad_cls.name}{dec}"
+                return f"B{self.factory.operad_cls.name}({dec})"
 
             return tree_to_string(
                 basis_element,
-                self.factory.operad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -486,27 +484,10 @@ class BarConstruction(UniqueRepresentation):
                 latex_term = getattr(parent, "_latex_term", None)
                 if callable(latex_term):
                     return latex_term(dec)
-                return f"\\operatorname{{{self.factory.operad_cls.name}}}_{{{dec}}}"
+                return f"\\operatorname{{{self.factory.operad_cls.name}}}({{{dec}}})"
 
             return tree_to_latex(
                 basis_element,
-                self.factory.operad_cls.name,
-                decoration_formatter=_dec_fmt,
-            )
-
-        def _svg_term(self, basis_element) -> str:
-            """SVG representation of one bar basis tree."""
-
-            def _dec_fmt(dec, arity):
-                parent = self.factory.operad_cls(arity, self.base_ring())
-                repr_term = getattr(parent, "_repr_term", None)
-                if callable(repr_term):
-                    return repr_term(dec)
-                return f"{self.factory.operad_cls.name}{dec}"
-
-            return tree_to_svg(
-                basis_element,
-                operad_name=self.factory.operad_cls.name,
                 decoration_formatter=_dec_fmt,
             )
 
@@ -551,14 +532,14 @@ class BarConstruction(UniqueRepresentation):
                 sign = sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
-                dec_elem = operad_parent.term(dec)
+                dec_elem = operad_parent(dec)
                 bdry = operad_parent.boundary(dec_elem)
 
                 # For each term in the boundary, build a new tree
                 for new_dec, coeff in bdry:
                     # Replace decoration of this vertex
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self.term(new_tree)
+                    result += sign * coeff * self(new_tree)
 
                 cumulative_degree += vertex_sp_degree
 
@@ -630,7 +611,7 @@ class BarConstruction(UniqueRepresentation):
                 # For each term in the composition, build the contracted tree
                 for new_dec, coeff in composed:
                     new_tree = contract_edge(tree, parent_vertex, child_pos, new_dec)
-                    result += total_sign * coeff * self.term(new_tree)
+                    result += total_sign * coeff * self(new_tree)
 
             return result
 
@@ -770,21 +751,6 @@ class BarConstruction(UniqueRepresentation):
 
         def arity(self) -> int:
             return self.parent().arity()
-
-        def _repr_svg_(self) -> str:
-            """Return SVG markup for Sage display of a monomial bar tree."""
-            if not self:
-                raise ValueError("Cannot render SVG for the zero element.")
-            if len(self.support()) != 1:
-                raise ValueError(
-                    "SVG rendering currently supports only monomials with one basis term."
-                )
-            basis = next(iter(self.support()))
-            return self.parent()._svg_term(basis)
-
-        def to_svg(self) -> str:
-            """Compatibility alias for :meth:`_repr_svg_`."""
-            return self._repr_svg_()
 
         def boundary(self) -> "BarConstruction.Element":
             """Apply the bar differential (d_1 + d_2) to this element."""

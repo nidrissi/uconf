@@ -7,7 +7,7 @@ operad ``P ⊙ Q``:
 - differential ``d(p ⊗ q) = dp ⊗ q + (-1)^|p| p ⊗ dq``,
 - symmetric action diagonal: ``(p ⊗ q)·σ = (p·σ) ⊗ (q·σ)``,
 - partial composition diagonal:
-  ``(p ⊗ q) ∘_i (p' ⊗ q') = (p ∘_i p') ⊗ (q ∘_i q')``.
+  ``(p ⊗ q) ∘_i (p' ⊗ q') = (-1)^{|q|·|p'|} (p ∘_i p') ⊗ (q ∘_i q')``.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from uconf.core.operad import OperadLike
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
+from uconf.core.signs import sign_from_exponent
 
 
 def _component_basis_in_degree(component, d: int) -> list:
@@ -132,19 +133,25 @@ class HadamardProduct(UniqueRepresentation):
             left_x_basis, right_x_basis = x_basis
             left_x_term = left_x.term(left_x_basis)
             right_x_term = right_x.term(right_x_basis)
+            right_x_degree = right_x.degree_on_basis(right_x_basis)
             for y_basis, y_coeff in y:
                 left_y_basis, right_y_basis = y_basis
                 left_y_term = left_y.term(left_y_basis)
                 right_y_term = right_y.term(right_y_basis)
+                left_y_degree = left_y.degree_on_basis(left_y_basis)
+
+                # Koszul sign from commuting right_x past left_y:
+                # (a⊗b) ∘_i (c⊗d) = (-1)^{|b|·|c|} (a∘_i c) ⊗ (b∘_i d)
+                koszul_sign = sign_from_exponent(right_x_degree * left_y_degree)
 
                 left_composed = self.left_operad_cls.compose(left_x_term, i, left_y_term)
                 right_composed = self.right_operad_cls.compose(right_x_term, i, right_y_term)
 
                 for left_basis, left_coeff in left_composed:
                     for right_basis, right_coeff in right_composed:
-                        accumulated += (x_coeff * y_coeff * left_coeff * right_coeff) * target.term(
-                            (left_basis, right_basis)
-                        )
+                        accumulated += (
+                            koszul_sign * x_coeff * y_coeff * left_coeff * right_coeff
+                        ) * target.term((left_basis, right_basis))
 
         return accumulated
 
