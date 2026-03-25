@@ -1,6 +1,5 @@
 """Regression tests for the Surjection operad."""
 
-from collections.abc import Iterable
 import math
 from random import Random
 
