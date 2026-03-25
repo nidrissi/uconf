@@ -191,11 +191,14 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Chain complexes and homology (`homology.py`)
 
-- `chain_complex(module, degrees, *, n_factors=None)` — builds a SageMath
+- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True)` — builds a SageMath
   `ChainComplex` from any dg-module that exposes `graded_basis(d)`,
   `boundary`, and `base_ring()`.  This includes all operad/cooperad
   components, bar/cobar constructions, free algebras, cofree coalgebras,
   and similar objects.
+
+  Use `sparse=True` (the default) for substantially faster and lighter
+  differential matrix assembly on typical sparse boundaries.
 
   When *module* is the bar complex of a labelled configuration model, the
   `n_factors` parameter restricts to elements with exactly that many
