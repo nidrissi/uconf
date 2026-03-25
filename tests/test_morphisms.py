@@ -313,7 +313,7 @@ class TestEComoduleMorphism:
         # Find a degree-1 generator
         BH = BarConstruction(HadamardProduct(Lie, BarrattEccles))
         BH2 = BH(2, QQ)
-        for elem in BH2.planar_basis_it(1):
+        for elem in BH2.planar_basis_iter(1):
             tree_key = list(elem.support())[0]
             cobar_tree = (tree_key,) + tuple(range(1, 3))
             cobar_elem = OBHn(cobar_tree)
@@ -338,7 +338,7 @@ class TestEComoduleMorphism:
 
         BH2 = BH(2, QQ)
         OBH2 = OBH(2, QQ)
-        planar_elems = list(BH2.planar_basis_it(1))
+        planar_elems = list(BH2.planar_basis_iter(1))
         assert len(planar_elems) > 0
 
         for elem in planar_elems[:2]:

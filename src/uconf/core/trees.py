@@ -317,11 +317,11 @@ def enumerate_planar_trees_in_degree(
     run ``1, …, n`` strictly left-to-right, and each child subtree occupies a
     contiguous block.  All such trees are automatically in shuffle form.
 
-    Uses the operad's ``planar_basis_it`` at the exact required degree for
+    Uses the operad's ``planar_basis_iter`` at the exact required degree for
     each vertex, so this is efficient even for operads with many basis elements
     per degree (e.g. Barratt–Eccles).
 
-    Requires the operad to implement ``planar_basis_it``.
+    Requires the operad to implement ``planar_basis_iter``.
 
     The enumeration mirrors the binary-root topologies produced by
     ``enumerate_trees_by_weight``, extended to planar decorations and
@@ -332,7 +332,7 @@ def enumerate_planar_trees_in_degree(
         weight_bound: Maximum number of internal vertices.  For connected
             operads, callers should pass ``arity - 1`` (the hard upper bound
             from the branching constraint ``sum(m_v - 1) = n - 1``).
-        operad_cls: Operad factory; must supply ``planar_basis_it``.
+        operad_cls: Operad factory; must supply ``planar_basis_iter``.
         base_ring: Coefficient ring.
         target_degree: Exact bar degree to enumerate.  May be any integer,
             including zero or negative, when the base operad has elements
@@ -353,8 +353,8 @@ def enumerate_planar_trees_in_degree(
         min_dec_degree = connectivity * (arity - 1)
         if dec_degree >= min_dec_degree:
             parent = operad_cls(arity, base_ring)
-            if hasattr(parent, "planar_basis_it"):
-                for elem in parent.planar_basis_it(dec_degree):
+            if hasattr(parent, "planar_basis_iter"):
+                for elem in parent.planar_basis_iter(dec_degree):
                     for dec in elem.support():
                         yield (dec,) + tuple(range(1, arity + 1))
 
@@ -366,7 +366,7 @@ def enumerate_planar_trees_in_degree(
     # ------------------------------------------------------------------
     if weight_bound >= 2 and arity >= 3:
         root_parent = operad_cls(2, base_ring)
-        if not hasattr(root_parent, "planar_basis_it"):
+        if not hasattr(root_parent, "planar_basis_iter"):
             return
 
         min_root_dec_degree = connectivity  # v_arity = 2
@@ -380,7 +380,7 @@ def enumerate_planar_trees_in_degree(
             max_root_dec_degree = target_degree - 1 - min_child_total
             for root_dec_degree in range(min_root_dec_degree, max_root_dec_degree + 1):
                 remaining = target_degree - root_dec_degree - 1
-                for root_dec_elem in root_parent.planar_basis_it(root_dec_degree):
+                for root_dec_elem in root_parent.planar_basis_iter(root_dec_degree):
                     for root_dec in root_dec_elem.support():
                         max_deg1 = remaining - min_deg2
                         for deg1 in range(min_deg1, max_deg1 + 1):
@@ -727,7 +727,7 @@ def _operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
 def _planar_operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
     """Yield planar basis keys of *operad_parent* in the given degree.
 
-    Uses ``planar_basis_it`` when available (quasi-planar operads such as
+    Uses ``planar_basis_iter`` when available (quasi-planar operads such as
     ``Associative``, ``Surjection``, ``BarrattEccles``), otherwise falls back
     to :func:`_operad_basis_keys_in_degree`.
 
@@ -736,14 +736,14 @@ def _planar_operad_basis_keys_in_degree(operad_parent, degree: int) -> Iterator:
     the isomorphism ``P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}`` shows
     that only the planar representative from each S_n-orbit is needed.
 
-    When ``planar_basis_it`` is present and returns an empty iterator for a
+    When ``planar_basis_iter`` is present and returns an empty iterator for a
     given degree, no keys are yielded (correctly indicating no planar basis
     elements exist in that degree).  The full-basis fallback is only used when
-    the operad does not expose ``planar_basis_it`` at all.
+    the operad does not expose ``planar_basis_iter`` at all.
     """
-    planar_basis_it = getattr(operad_parent, "planar_basis_it", None)
-    if planar_basis_it is not None:
-        for elem in planar_basis_it(degree):
+    planar_basis_iter = getattr(operad_parent, "planar_basis_iter", None)
+    if planar_basis_iter is not None:
+        for elem in planar_basis_iter(degree):
             yield from elem.support()
         return
     yield from _operad_basis_keys_in_degree(operad_parent, degree)
@@ -932,7 +932,7 @@ def enumerate_shuffle_trees_in_degree(
     symmetric operad — not just quasi-planar ones.
 
     Unlike :func:`enumerate_planar_trees_in_degree`, this function does **not**
-    require the base operad to implement ``planarize`` or ``planar_basis_it``.
+    require the base operad to implement ``planarize`` or ``planar_basis_iter``.
     It relies only on ``operad_cls(k, base_ring)`` having a ``basis_iter``
     method (degree-aware or not) or Sage's ``basis()`` family.
 
@@ -1053,7 +1053,7 @@ def _shuffle_subtrees_iter_generic(
     - ``-1``: cobar degree ``Σ (deg_C(v) - 1)``.
 
     When ``use_planar_decs=True``, only the planar basis of each vertex
-    decoration is used (via ``planar_basis_it`` when available).  This is
+    decoration is used (via ``planar_basis_iter`` when available).  This is
     the correct choice for the composite product ``P ∘ M``, where only one
     representative per ``S_n``-orbit is needed.
     """
@@ -1228,7 +1228,7 @@ def _planar_subtrees_iter_generic(
         target_degree: Exact total degree to enumerate.
         vertex_offset: Per-vertex degree contribution (+1 bar, 0 free, −1 cobar).
         use_planar_decs: When True, restrict each vertex decoration to planar
-            basis elements via ``planar_basis_it``.
+            basis elements via ``planar_basis_iter``.
     """
     n = len(leaf_range)
     if n == 0:
@@ -1315,7 +1315,7 @@ def enumerate_planar_trees_generic_in_degree(
         target_degree: Exact total degree to enumerate.
         vertex_offset: Per-vertex degree contribution.
         use_planar_decs: When ``True`` (default), restrict vertex decorations
-            to the planar basis via ``planar_basis_it``.
+            to the planar basis via ``planar_basis_iter``.
 
     Yields:
         Decorated planar trees (nested tuples) as valid tree basis keys.
@@ -1425,7 +1425,7 @@ def enumerate_shuffle_trees_generic_in_degree(
         target_degree: Exact tree degree to enumerate.
         vertex_offset: Per-vertex degree offset.
         use_planar_decs: When ``True``, restrict vertex decorations to the
-            planar basis (via ``planar_basis_it``) instead of the full basis.
+            planar basis (via ``planar_basis_iter``) instead of the full basis.
             Use this for composite-product ``P ∘ M`` enumeration to obtain
             one representative per ``S_n``-orbit.
 

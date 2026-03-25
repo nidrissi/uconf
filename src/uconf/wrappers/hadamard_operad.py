@@ -354,19 +354,19 @@ class HadamardProduct(UniqueRepresentation):
                     for right_elem in right_elems:
                         yield self.from_factors(left_elem, right_elem)
 
-        def planar_basis_it(self, d: int) -> Iterator["HadamardProduct.Element"]:
+        def planar_basis_iter(self, d: int) -> Iterator["HadamardProduct.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
             A pair ``(left_key, right_key)`` is *planar* when ``right_key``
             is a planar element of the right factor.  Requires the right
-            factor to implement ``planar_basis_it``.  The left factor is
+            factor to implement ``planar_basis_iter``.  The left factor is
             iterated with ``basis_iter(d_left)`` (degree-indexed).
             """
             left_parent = self._left_parent
             right_parent = self._right_parent
 
-            if not hasattr(right_parent, "planar_basis_it"):
-                raise NotImplementedError("Right parent does not support planar_basis_it.")
+            if not hasattr(right_parent, "planar_basis_iter"):
+                raise NotImplementedError("Right parent does not support planar_basis_iter.")
 
             min_d_left = _min_component_degree(left_parent, self._arity)
             min_d_right = _min_component_degree(right_parent, self._arity)
@@ -376,7 +376,7 @@ class HadamardProduct(UniqueRepresentation):
 
             for d_right in range(min_d_right, max_d_right + 1):
                 d_left = d - d_right
-                right_elems = list(right_parent.planar_basis_it(d_right))
+                right_elems = list(right_parent.planar_basis_iter(d_right))
                 if not right_elems:
                     continue
 
@@ -394,7 +394,7 @@ class HadamardProduct(UniqueRepresentation):
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:
             """Return the ``Family`` of planar basis elements in degree ``d``."""
-            return Family(self.planar_basis_it(d))
+            return Family(self.planar_basis_iter(d))
 
         def from_factors(self, left_element, right_element) -> "HadamardProduct.Element":
             left_parent = left_element.parent()

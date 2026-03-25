@@ -107,7 +107,7 @@ class Associative(CombinatorialFreeModule):
             for key in self._basis_keys():
                 yield self(key)
 
-    def planar_basis_it(self, d: int) -> Iterator[Element]:
+    def planar_basis_iter(self, d: int) -> Iterator[Element]:
         """Iterate over planar basis elements in this arity and the given degree."""
         if d == 0:
             yield self(tuple(range(1, self.arity() + 1)))
@@ -120,7 +120,7 @@ class Associative(CombinatorialFreeModule):
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
         """Return the ``Family`` of planar basis elements in degree ``d``."""
-        return Family(self.planar_basis_it(d))
+        return Family(self.planar_basis_iter(d))
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""

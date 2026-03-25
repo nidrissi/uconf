@@ -993,14 +993,14 @@ class TestBarPlanarize:
             assert self._round_trip_ok(B2, tree), f"Round-trip failed for {tree}"
 
     # ------------------------------------------------------------------
-    # planar_basis_it
+    # planar_basis_iter
     # ------------------------------------------------------------------
 
     def test_planar_basis_it_surjection_degree1_arity2(self):
         """B(Surj)(2) degree-1 planar basis is exactly {(1,2)}."""
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
-        basis = list(B2.planar_basis_it(1))
+        basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
         assert tree_key == ((1, 2), 1, 2)
@@ -1009,7 +1009,7 @@ class TestBarPlanarize:
         """B(Surj)(3) degree-1 planar basis is exactly {(1,2,3)}."""
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
-        basis = list(B3.planar_basis_it(1))
+        basis = list(B3.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
         assert tree_key == ((1, 2, 3), 1, 2, 3)
@@ -1018,20 +1018,20 @@ class TestBarPlanarize:
         """B(Surj)(2) degree-2 planar basis is exactly {(1,2,1)}."""
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
-        basis = list(B2.planar_basis_it(2))
+        basis = list(B2.planar_basis_iter(2))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
         assert tree_key == ((1, 2, 1), 1, 2)
 
     def test_planar_basis_it_all_planar(self):
-        """Every element yielded by planar_basis_it is planar (σ = id)."""
+        """Every element yielded by planar_basis_iter is planar (σ = id)."""
         from sage.all import SymmetricGroup
 
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
         S3 = SymmetricGroup(3)
         for d in range(3):
-            for elem in B3.planar_basis_it(d):
+            for elem in B3.planar_basis_iter(d):
                 result = elem.planarize()
                 for (_, sigma_key), _ in result:
                     assert S3(sigma_key) == S3.identity(), (
@@ -1042,7 +1042,7 @@ class TestBarPlanarize:
         """B(BE)(2) degree-1 planar basis contains the identity-starting tuple."""
         BBE = BarConstruction(BarrattEccles)
         B2 = BBE(2, QQ)
-        basis = list(B2.planar_basis_it(1))
+        basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
         dec = tree_key[0]
@@ -1083,21 +1083,21 @@ class TestBarPlanarize:
 
 
 class TestBasisIter:
-    """Tests for BarConstruction.Component.basis_iter and planar_basis_it raising."""
+    """Tests for BarConstruction.Component.basis_iter and planar_basis_iter raising."""
 
     def test_planar_basis_it_raises_for_commutative(self):
-        """planar_basis_it should raise NotImplementedError for Com (no planarize)."""
+        """planar_basis_iter should raise NotImplementedError for Com (no planarize)."""
         BCom = BarConstruction(Commutative)
         B2 = BCom(2, QQ)
         with pytest.raises(NotImplementedError):
-            list(B2.planar_basis_it(1))
+            list(B2.planar_basis_iter(1))
 
     def test_planar_basis_it_raises_for_lie(self):
-        """planar_basis_it should raise NotImplementedError for Lie (no planarize)."""
+        """planar_basis_iter should raise NotImplementedError for Lie (no planarize)."""
         BLie = BarConstruction(Lie)
         B2 = BLie(2, QQ)
         with pytest.raises(NotImplementedError):
-            list(B2.planar_basis_it(1))
+            list(B2.planar_basis_iter(1))
 
     def test_basis_it_arity1_degree0(self):
         """B(Com)(1) in degree 0 is the single leaf."""
@@ -1151,11 +1151,11 @@ class TestBasisIter:
                     assert is_shuffle_tree(key), f"Not a shuffle tree: {key} in degree {d}"
 
     def test_basis_it_lie_consistent_with_planar_for_surjection(self):
-        """For Surjection, basis_iter and planar_basis_it correspond element-by-element."""
+        """For Surjection, basis_iter and planar_basis_iter correspond element-by-element."""
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
         for d in range(1, 4):
-            planar = {next(iter(e))[0] for e in B2.planar_basis_it(d)}
+            planar = {next(iter(e))[0] for e in B2.planar_basis_iter(d)}
             full = {next(iter(e))[0] for e in B2.basis_iter(d)}
             # Every planar tree is also a shuffle tree.
             assert planar <= full

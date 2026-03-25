@@ -323,11 +323,11 @@ class TestHadamardProductComponentBasisIter:
                     assert h2.degree_on_basis(key) == d
 
     def test_basis_it_vs_planar_basis_it_surjection(self) -> None:
-        """basis_iter should contain all elements from planar_basis_it."""
+        """basis_iter should contain all elements from planar_basis_iter."""
         had = HadamardProduct(Surjection, Surjection)
         h2 = had(2, QQ)
         for d in range(3):
-            planar = set(_keys(h2.planar_basis_it(d)))
+            planar = set(_keys(h2.planar_basis_iter(d)))
             all_keys = set(_keys(h2.basis_iter(d)))
             assert planar <= all_keys, f"planar basis not subset of full basis at d={d}"
 
@@ -398,7 +398,7 @@ class TestHadamardTensorAlgebraBasisIter:
 # ---------------------------------------------------------------------------
 
 
-class TestBasisItConsistencyWithBarConstruction:
+class TestBasisIterConsistencyWithBarConstruction:
     """Sanity-check that TwistedBarComplex.basis_iter counts match the expected tree × module count."""
 
     def test_bar_degree0_count_surjection(self) -> None:

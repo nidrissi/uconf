@@ -312,7 +312,7 @@ class BarConstruction(UniqueRepresentation):
                         return False
             return True
 
-        def planar_basis_it(self, d: int) -> Iterator["BarConstruction.Element"]:
+        def planar_basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar
@@ -324,14 +324,14 @@ class BarConstruction(UniqueRepresentation):
             operad, so a tree with n leaves has at most n − 1 vertices).
 
             Requires the base operad to implement ``planarize`` and
-            ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
+            ``planar_basis_iter``; raises :exc:`NotImplementedError` otherwise.
             Use :meth:`basis_iter` for a full shuffle-tree basis that works with
             any connected operad.
             """
             if not self._operad_has_planarize():
                 raise NotImplementedError(
-                    f"planar_basis_it requires {self._operad_cls.name!r} to implement "
-                    "planarize and planar_basis_it (quasi-planar operad). "
+                    f"planar_basis_iter requires {self._operad_cls.name!r} to implement "
+                    "planarize and planar_basis_iter (quasi-planar operad). "
                     "Use basis_iter() for the full shuffle-tree basis instead."
                 )
 
@@ -352,7 +352,7 @@ class BarConstruction(UniqueRepresentation):
             """Iterate over shuffle-tree basis elements of degree ``d``.
 
             Works for **any** connected operad, not just quasi-planar ones.
-            Unlike :meth:`planar_basis_it`, this does not require the base
+            Unlike :meth:`planar_basis_iter`, this does not require the base
             operad to implement ``planarize``.
 
             The basis consists of all rooted trees with leaves
@@ -389,7 +389,7 @@ class BarConstruction(UniqueRepresentation):
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:
             """Return the ``Family`` of planar basis elements in degree ``d``."""
-            return Family(self.planar_basis_it(d))
+            return Family(self.planar_basis_iter(d))
 
         @cached_method
         def _normalize_to_shuffle(self, tree):
