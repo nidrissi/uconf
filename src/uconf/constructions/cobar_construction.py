@@ -277,7 +277,7 @@ class CobarConstruction(UniqueRepresentation):
 
             return result
 
-        def planar_basis_it(self, d: int) -> "Iterator[CobarConstruction.Element]":
+        def planar_basis_iter(self, d: int) -> "Iterator[CobarConstruction.Element]":
             """Iterate over planar cobar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar element
@@ -285,13 +285,13 @@ class CobarConstruction(UniqueRepresentation):
             (children occupy consecutive leaf ranges).
 
             Requires the base cooperad to implement ``planarize`` and
-            ``planar_basis_it``; raises :exc:`NotImplementedError` otherwise.
+            ``planar_basis_iter``; raises :exc:`NotImplementedError` otherwise.
             Use :meth:`basis_iter` for the full shuffle-tree basis instead.
             """
             if not self._cooperad_has_planarize():
                 raise NotImplementedError(
-                    f"planar_basis_it requires {self._cooperad_cls.name!r} to implement "
-                    "planarize and planar_basis_it (quasi-planar cooperad). "
+                    f"planar_basis_iter requires {self._cooperad_cls.name!r} to implement "
+                    "planarize and planar_basis_iter (quasi-planar cooperad). "
                     "Use basis_iter() for the full shuffle-tree basis instead."
                 )
 
@@ -317,7 +317,7 @@ class CobarConstruction(UniqueRepresentation):
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:
             """Return the ``Family`` of planar basis elements in degree ``d``."""
-            return Family(self.planar_basis_it(d))
+            return Family(self.planar_basis_iter(d))
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key.

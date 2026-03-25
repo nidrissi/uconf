@@ -71,7 +71,7 @@ attribute on concrete models, property on wrappers) representing the constant
 - `models/surjection.py` — `Surjection`
   - Basis: non-degenerate surjective words (no consecutive repetitions).
   - Constructor semantics: tuples with consecutive repetitions or missing labels map to zero; malformed labels/types raise.
-  - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_it`.
+  - Operations: `unit`, `compose`, `boundary`, `permute`, `complexity`, `planar_basis_iter`.
   - Acts on simplicial models through wrappers in `uconf.algebraic.simplicial`.
 
 - `models/barratt_eccles.py` — `BarrattEccles`
@@ -98,7 +98,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - Differential combines internal differential on vertex decorations and edge-contraction terms.
   - **Quasi-planar structure** (when the base operad is quasi-planar, e.g. `Surjection`, `BarrattEccles`, or a `HadamardProduct` whose right factor is quasi-planar):
     - `Component.planarize(x)` — decomposes `x` into `x_pl ⊗ σ ∈ B(P)_pl(n) ⊗ k[S_n]`.
-    - `Component.planar_basis_it(d)` — iterates over strongly-planar basis trees of bar degree `d`.
+    - `Component.planar_basis_iter(d)` — iterates over strongly-planar basis trees of bar degree `d`.
     - `Component.basis_iter(d)` — iterates over **all** shuffle-tree basis elements of bar degree `d`.
     - `Component.d_sigma(x, σ)` — the `σ`-component of `boundary(x)`, i.e. `π_σ(d(x))`.
     - `Component.d_sigma_iterate(x, [σ₁,…,σₖ])` — iterated `d_σ` with zero-branch pruning.
@@ -331,7 +331,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Tensor differential: `d(a⊗b)=da⊗b+(-1)^|a|a⊗db`.
   - Diagonal symmetric action and diagonal composition.
   - `Component.basis_iter(d)` — iterates over all `(left_key, right_key)` pairs with total degree `d`.
-  - `Component.planar_basis_it(d)` — if the right factor `Q` has `planar_basis_it`,
+  - `Component.planar_basis_iter(d)` — if the right factor `Q` has `planar_basis_iter`,
     iterates over pairs `(left_key, right_pl_key)` with right key planar and total degree `d`.
 
 - `algebraic/hadamard_algebra.py` — `HadamardTensorAlgebra(A, B)`

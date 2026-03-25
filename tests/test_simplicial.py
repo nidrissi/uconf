@@ -242,7 +242,7 @@ class TestSurjectionAction:
         Here u ∈ S(r) has degree d, x is the volume form in degree n, and we
         test θ_u(x, …, x) with r copies of x.
         """
-        for u in Surjection(r, QQ).planar_basis_it(d):
+        for u in Surjection(r, QQ).planar_basis_iter(d):
             for n in range(d, d + 4):
                 x = SimplicialCochains.volume_form(n, QQ)
                 l = [x] * r
@@ -268,7 +268,7 @@ class TestSurjectionAction:
     def test_chain_map_property(self, r: int, d: int):
         """∂(θ_u(x_1,…,x_r)) = θ_{∂u}(x) + Σ_k (-1)^{|u|+Σ_{l<k}|x_l|} θ_u(…,∂x_k,…)."""
         rng = Random(20260312)
-        basis = list(Surjection(r, QQ).planar_basis_it(d))
+        basis = list(Surjection(r, QQ).planar_basis_iter(d))
         possible_simplices: dict[int, list[tuple[int, ...]]] = {}
         for n in range(d, d + 4):
             possible_simplices[n] = list(self.powerset_nonempty(range(n + 1)))

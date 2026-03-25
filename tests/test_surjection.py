@@ -137,7 +137,7 @@ def test_surjection_basis(r: int, d: int) -> None:
 @pytest.mark.parametrize("r", range(2, 3))
 @pytest.mark.parametrize("d", range(1, 3))
 def test_planar_surjection_basis(r: int, d: int) -> None:
-    planar_basis = list(Surjection(r, QQ).planar_basis_it(d))
+    planar_basis = list(Surjection(r, QQ).planar_basis_iter(d))
     basis = list(Surjection(r, QQ).basis_iter(d))
     assert set(planar_basis).issubset(basis), "Planar basis should be a subset of the full basis."
     assert len(planar_basis) * math.factorial(r) == len(basis), (
@@ -145,7 +145,7 @@ def test_planar_surjection_basis(r: int, d: int) -> None:
     )
 
     for el in planar_basis:
-        assert el.is_planar(), "Non-planar element found in planar_basis_it"
+        assert el.is_planar(), "Non-planar element found in planar_basis_iter"
 
 
 @pytest.mark.parametrize("r1", range(2, 3))
@@ -153,8 +153,8 @@ def test_planar_surjection_basis(r: int, d: int) -> None:
 @pytest.mark.parametrize("d1", range(0, 3))
 @pytest.mark.parametrize("d2", range(0, 3))
 def test_planar_preserved_under_composition_last_input(r1: int, d1: int, r2: int, d2: int) -> None:
-    for s1 in Surjection(r1, QQ).planar_basis_it(d1):
-        for s2 in Surjection(r2, QQ).planar_basis_it(d2):
+    for s1 in Surjection(r1, QQ).planar_basis_iter(d1):
+        for s2 in Surjection(r2, QQ).planar_basis_iter(d2):
             pos = s1.arity()
             composed = Surjection.compose(s1, pos, s2)
             assert composed.is_planar(), (
@@ -165,7 +165,7 @@ def test_planar_preserved_under_composition_last_input(r1: int, d1: int, r2: int
 @pytest.mark.parametrize("r", range(2, 4))
 @pytest.mark.parametrize("d", range(0, 4))
 def test_section_right_inverse(r: int, d: int) -> None:
-    for s in Surjection(r, QQ).planar_basis_it(d):
+    for s in Surjection(r, QQ).planar_basis_iter(d):
         sect = s.section()
         nat = sect.table_reduction()
         assert nat == s, f"Section failed for {s}, got {nat} instead."
@@ -174,7 +174,7 @@ def test_section_right_inverse(r: int, d: int) -> None:
 @pytest.mark.parametrize("r", range(2, 4))
 @pytest.mark.parametrize("d", range(0, 4))
 def test_section_planar(r: int, d: int) -> None:
-    for s in Surjection(r, QQ).planar_basis_it(d):
+    for s in Surjection(r, QQ).planar_basis_iter(d):
         r = s.arity()
         sect = s.section()
         for key in sect.support():

@@ -183,15 +183,15 @@ class TestGradedBasisMethods:
                     )
 
     def test_hadamard_planar_basis_it(self):
-        """HadamardProduct(Lie, BE)(2).planar_basis_it(d) contains planar pairs."""
+        """HadamardProduct(Lie, BE)(2).planar_basis_iter(d) contains planar pairs."""
         HLE = HadamardProduct(Lie, BarrattEccles)
         HLE2 = HLE(2, QQ)
         for d in range(3):
-            for elem in HLE2.planar_basis_it(d):
+            for elem in HLE2.planar_basis_iter(d):
                 for (l_key, r_key), coeff in elem:
                     # Right factor should be planar (starts with identity)
                     assert r_key[0] == BarrattEccles(2, QQ)._symmetric_group.identity(), (
-                        f"Non-planar right key {r_key} in HadamardProduct planar_basis_it({d})"
+                        f"Non-planar right key {r_key} in HadamardProduct planar_basis_iter({d})"
                     )
 
 
@@ -208,7 +208,7 @@ class TestEComoduleMap:
         _, BH2, _, _, BE2 = _BH_setup(2)
 
         # Degree-1 planar element: ((1,), (id,)) at weight 1
-        planar_elems = list(BH2.planar_basis_it(1))
+        planar_elems = list(BH2.planar_basis_iter(1))
         assert len(planar_elems) >= 1, "Need at least one planar element"
 
         dec_key = list(planar_elems[0].support())[0]
@@ -233,7 +233,7 @@ class TestEComoduleMap:
         _, BH2, _, _, BE2 = _BH_setup(2)
 
         for d in range(1, 3):
-            for pl_elem in BH2.planar_basis_it(d):
+            for pl_elem in BH2.planar_basis_iter(d):
                 dec_key = list(pl_elem.support())[0]
                 dec_elem = BH2(dec_key)
                 result = e_comodule_on_generator(dec_elem)
@@ -311,7 +311,7 @@ class TestEComoduleMap:
     def test_comodule_result_in_tensor(self):
         """Output type is an element of BE(n) ⊗ C(n) (cooperad level)."""
         _, BH2, _, OBH2, BE2 = _BH_setup(2)
-        planar = list(BH2.planar_basis_it(1))
+        planar = list(BH2.planar_basis_iter(1))
         if not planar:
             pytest.skip("No planar basis elements found")
 
@@ -427,7 +427,7 @@ class TestComoduleAxioms:
         _, BH2, _, OBH2, BE2 = _BH_setup(2)
         T = tensor([BE2, BH2])
 
-        for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
+        for pl_elem in BH2.planar_basis_iter(2):  # BH-degree 2 = cobar-degree 1
             dec_key = list(pl_elem.support())[0]
             dec_elem = BH2(dec_key)
 
@@ -510,7 +510,7 @@ class TestComoduleAxioms:
         _, BH2, _, OBH2, BE2 = _BH_setup(2)
         T_EEC = tensor([BE2, BE2, BH2])
 
-        for pl_elem in BH2.planar_basis_it(2):  # BH-degree 2 = cobar-degree 1
+        for pl_elem in BH2.planar_basis_iter(2):  # BH-degree 2 = cobar-degree 1
             dec_key = list(pl_elem.support())[0]
             dec_elem = BH2(dec_key)
             nu_x = e_comodule_on_generator(dec_elem)

@@ -132,7 +132,7 @@ class Surjection(CombinatorialFreeModule):
             if res != self.zero():
                 yield res
 
-    def planar_basis_it(self, d: int) -> Iterator[Surjection.Element]:
+    def planar_basis_iter(self, d: int) -> Iterator[Surjection.Element]:
         """Iterate over planar basis elements in degree ``d``."""
         return filter(lambda u: u.is_planar(), self.basis_iter(d))
 
@@ -144,7 +144,7 @@ class Surjection(CombinatorialFreeModule):
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
         """Return the ``Family`` of planar basis elements in degree ``d``."""
-        return Family(self.planar_basis_it(d))
+        return Family(self.planar_basis_iter(d))
 
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""

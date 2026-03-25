@@ -33,7 +33,7 @@ class QuasiPlanarProtocol(ComponentProtocol, Protocol):
     ``boundary`` (both linear maps) and ``arity()``.
     """
 
-    def planar_basis_it(self, d: int) -> Iterable:
+    def planar_basis_iter(self, d: int) -> Iterable:
         """Returns an iterator over the planar basis keys of this component."""
         ...
 

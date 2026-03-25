@@ -325,7 +325,7 @@ class TreeModule(CombinatorialFreeModule):
     def basis_iter(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
-        Requires the symmetric sequence to support ``planar_basis_it`` on its
+        Requires the symmetric sequence to support ``planar_basis_iter`` on its
         components (quasi-planar operads such as ``Associative``, ``Surjection``,
         ``BarrattEccles``, or ``ShiftedOperad`` wrapping any of these).  Only
         planar vertex decorations are enumerated, yielding one representative per
@@ -333,7 +333,7 @@ class TreeModule(CombinatorialFreeModule):
 
         Raises:
             NotImplementedError: when the symmetric sequence does not expose
-                ``planar_basis_it`` (e.g. ``Commutative``, ``Lie``).
+                ``planar_basis_iter`` (e.g. ``Commutative``, ``Lie``).
             ValueError: when the arity is unbounded in the requested degree
                 (both S and M admit degree-0 generators).
         """
@@ -402,18 +402,18 @@ class TreeModule(CombinatorialFreeModule):
             return
 
         # Require quasi-planar support: basis_iter() is only correct when the
-        # symmetric sequence exposes planar_basis_it on its components, so that
+        # symmetric sequence exposes planar_basis_iter on its components, so that
         # we can pick one representative per S_n-orbit (matching the isomorphism
         # P(n) ⊗_{S_n} M^{⊗n} ≅ P_pl(n) ⊗ M^{⊗n}).  For non-quasi-planar
         # operads (e.g. Commutative, Lie) the tensor-over-S_n quotient cannot
         # be represented by a naive product of full bases, and falling back to
         # the full basis would silently produce an overcomplete set.
-        _use_planar = hasattr(S(2, R), "planar_basis_it")
+        _use_planar = hasattr(S(2, R), "planar_basis_iter")
 
         if not _use_planar:
             raise NotImplementedError(
                 f"basis_iter() requires the symmetric sequence {S.name!r} to support "
-                "planar_basis_it() on its arity-2 component.  "
+                "planar_basis_iter() on its arity-2 component.  "
                 "Supported quasi-planar sequences include Associative, Surjection, "
                 "BarrattEccles, and ShiftedOperad wrapping any of these.  "
                 "For non-quasi-planar operads (e.g. Commutative, Lie) the basis "
@@ -472,7 +472,7 @@ class TreeModule(CombinatorialFreeModule):
 
         Raises:
             NotImplementedError: when the symmetric sequence does not expose
-                ``planar_basis_it`` (e.g. ``Commutative``, ``Lie``).
+                ``planar_basis_iter`` (e.g. ``Commutative``, ``Lie``).
         """
         if w < 1:
             return
@@ -511,11 +511,11 @@ class TreeModule(CombinatorialFreeModule):
             return
 
         # Require quasi-planar support
-        _use_planar = hasattr(S(2, R), "planar_basis_it")
+        _use_planar = hasattr(S(2, R), "planar_basis_iter")
         if not _use_planar:
             raise NotImplementedError(
                 f"basis_weight_iter() requires the symmetric sequence {S.name!r} to support "
-                "planar_basis_it() on its arity-2 component."
+                "planar_basis_iter() on its arity-2 component."
             )
 
         for n in range(2, max_n + 1):
