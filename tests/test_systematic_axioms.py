@@ -13,8 +13,10 @@ Structures tested:
 - TwistedCobarComplex (canonical inclusion)
 """
 
+import itertools
+
 import pytest
-from sage.all import GF, QQ
+from sage.all import CombinatorialFreeModule, GF, GradedModulesWithBasis, QQ, tensor as sage_tensor
 
 from uconf import (
     Associative,
@@ -27,7 +29,7 @@ from uconf import (
     Surjection,
 )
 from uconf.algebraic.algebra import OperadAlgebra
-from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
+from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
@@ -289,7 +291,7 @@ class TestHadamardProductAxioms:
             pytest.skip("No degree-1 elements")
         x = elems[0]
         sigma = [2, 1]
-        result = x.permute(sigma)
+        result = x.permute(sigma)  # noqa: F841
         # Verify it's well-defined (doesn't raise) and consistent with composition
         # permute(id) = x
         assert _as_dict(x.permute([1, 2])) == _as_dict(x)
@@ -317,7 +319,6 @@ class TestFreeOperadAlgebraAxioms:
 
     def _make_free_surj(self, R):
         """Free Surjection-algebra on a 1-dim module in degree 1."""
-        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
         M = CombinatorialFreeModule(R, [()], category=GradedModulesWithBasis(R))
         M.degree_on_basis = lambda _: 1
         M.boundary = lambda x: M.zero()
@@ -355,7 +356,7 @@ class TestFreeOperadAlgebraAxioms:
         mod = alg.module
         for elem in mod.basis_iter(2):
             dd = mod.boundary(mod.boundary(elem))
-            assert dd == mod.zero(), f"d²≠0 at degree 2"
+            assert dd == mod.zero(), "d²≠0 at degree 2"
 
     # -- Unit axiom --
 
@@ -613,8 +614,6 @@ class TestTwistedBarComplexIotaGF2:
 # TwistedCobarComplex -- GF(2) and QQ tests
 # ---------------------------------------------------------------------------
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, tensor as sage_tensor
-import itertools
 
 
 class TrivialCoassCoalgebra:
