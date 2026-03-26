@@ -291,8 +291,8 @@ class TestHadamardProductAxioms:
             pytest.skip("No degree-1 elements")
         x = elems[0]
         sigma = [2, 1]
-        result = x.permute(sigma)  # noqa: F841
-        # Verify it's well-defined (doesn't raise) and consistent with composition
+        # Verify permute is well-defined (doesn't raise)
+        x.permute(sigma)
         # permute(id) = x
         assert _as_dict(x.permute([1, 2])) == _as_dict(x)
 
@@ -616,39 +616,35 @@ class TestTwistedBarComplexIotaGF2:
 
 
 
-class TrivialCoassCoalgebra:
-    """Wrapper for CoAssociative coalgebra on the 1-dim module k."""
+def _trivial_coass_coaction(R, v_element, n):
+    """Coaction map for the trivial CoAss-coalgebra on k.
 
-    def __init__(self, R=QQ):
-        self.base_ring_val = R
-        self.module = Commutative(1, base_ring=R)
-        self.cooperad_cls = CoAssociative
+    Maps v to Σ_σ σ ⊗ v ⊗ ... ⊗ v (sum over all permutations).
+    """
+    left_parent = CoAssociative(n, base_ring=R)
+    right_parent = Commutative(1, base_ring=R)
+    right_factors = [right_parent] * n
 
-    def coact(self, v_element, n):
-        left_parent = CoAssociative(n, base_ring=self.base_ring_val)
-        right_parent = Commutative(1, base_ring=self.base_ring_val)
-        right_factors = [right_parent] * n
+    if n == 1:
+        target = sage_tensor([left_parent, right_parent])
+    else:
+        right_tensor = sage_tensor(right_factors)
+        target = sage_tensor([left_parent, right_tensor])
 
-        if n == 1:
-            target = sage_tensor([left_parent, right_parent])
-        else:
-            right_tensor = sage_tensor(right_factors)
-            target = sage_tensor([left_parent, right_tensor])
-
-        result = target.zero()
-        for _v_key, v_coeff in v_element:
-            for sigma in itertools.permutations(range(1, n + 1)):
-                left_elem = left_parent(sigma)
-                if n == 1:
-                    right_elem = right_parent(())
-                    result += v_coeff * left_elem.tensor(right_elem)
-                else:
-                    right_elem = right_parent(())
-                    right_full = right_elem
-                    for _ in range(n - 1):
-                        right_full = right_full.tensor(right_parent(()))
-                    result += v_coeff * left_elem.tensor(right_full)
-        return result
+    result = target.zero()
+    for _v_key, v_coeff in v_element:
+        for sigma in itertools.permutations(range(1, n + 1)):
+            left_elem = left_parent(sigma)
+            if n == 1:
+                right_elem = right_parent(())
+                result += v_coeff * left_elem.tensor(right_elem)
+            else:
+                right_elem = right_parent(())
+                right_full = right_elem
+                for _ in range(n - 1):
+                    right_full = right_full.tensor(right_parent(()))
+                result += v_coeff * left_elem.tensor(right_full)
+    return result
 
 
 def _make_cobar_complex_for_test(R):
@@ -658,30 +654,7 @@ def _make_cobar_complex_for_test(R):
     module = Commutative(1, base_ring=R)
 
     def coaction_map(v_element, n):
-        left_parent = CoAssociative(n, base_ring=R)
-        right_parent = Commutative(1, base_ring=R)
-        right_factors = [right_parent] * n
-
-        if n == 1:
-            target = sage_tensor([left_parent, right_parent])
-        else:
-            right_tensor = sage_tensor(right_factors)
-            target = sage_tensor([left_parent, right_tensor])
-
-        result = target.zero()
-        for _v_key, v_coeff in v_element:
-            for sigma in itertools.permutations(range(1, n + 1)):
-                left_elem = left_parent(sigma)
-                if n == 1:
-                    right_elem = right_parent(())
-                    result += v_coeff * left_elem.tensor(right_elem)
-                else:
-                    right_elem = right_parent(())
-                    right_full = right_elem
-                    for _ in range(n - 1):
-                        right_full = right_full.tensor(right_parent(()))
-                    result += v_coeff * left_elem.tensor(right_full)
-        return result
+        return _trivial_coass_coaction(R, v_element, n)
 
     coalg = CooperadCoalgebra(module, CoAssociative, coaction_map)
     return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
