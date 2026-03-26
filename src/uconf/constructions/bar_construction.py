@@ -46,7 +46,7 @@ from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
     children,
     decoration,
-    enumerate_planar_trees_in_degree,
+    enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_in_degree,
     internal_edges_dfs,
     is_leaf,
@@ -343,8 +343,14 @@ class BarConstruction(UniqueRepresentation):
                     yield self.term(1)
                 return
 
-            for tree in enumerate_planar_trees_in_degree(
-                n, self._max_weight, self._operad_cls, base_ring, d
+            for tree in enumerate_planar_trees_generic_in_degree(
+                n,
+                self._max_weight,
+                self._operad_cls,
+                base_ring,
+                d,
+                vertex_offset=+1,
+                use_planar_decs=True,
             ):
                 yield self.term(tree)
 
