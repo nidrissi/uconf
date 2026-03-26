@@ -11,7 +11,7 @@ from uconf import (
     compute_chain_complex,
     euclidean_unordered_configuration_model,
 )
-from uconf.algebraic.conf import _make_surjection_comodule_morphism
+from uconf.algebraic.configuration import _make_surjection_comodule_morphism
 
 
 from sage.all import GF, QQ
