@@ -104,10 +104,11 @@ class TestFreeAlgebraModule:
         assert d[leaf_key] == -1
 
     def test_validate_rejects_bad_key(self):
-        """Invalid keys are silently rejected (mapped to zero)."""
+        """Invalid keys raise ValueError."""
         M = _zero_diff_module()
         mod = FreeAlgebraModule(Associative, M)
-        assert mod._validate_basis_key("bad") is None
+        with pytest.raises(ValueError):
+            mod._validate_basis_key("bad")
         # 2 m-keys for arity-1 P-key (1,) -- wrong
         assert mod._validate_basis_key(((1,), ((), ()))) is None
 
