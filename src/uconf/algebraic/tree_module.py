@@ -543,12 +543,19 @@ class TreeModule(CombinatorialFreeModule):
         return Family(self.basis_weight_iter(d, w))
 
     def _boundary_on_basis(self, key) -> Any:
-        """Differential using interleaved DFS Koszul sign rule."""
+        """Differential using interleaved DFS Koszul sign rule.
+
+        Inner-module boundary terms are normalised to planar form (when
+        the inner module exposes ``normalize_to_planar``) so that the
+        output lives in the same basis as the structure-map outputs
+        produced by ``_dalpha_on_basis`` and similar methods.
+        """
         tree, m_tuple = key
         result = self.zero()
         base_ring = self.base_ring()
         shift = self._vertex_degree_shift
         cumulative = 0
+        inner_normalize = getattr(self._inner_module, "normalize_to_planar", None)
 
         for node, leaf_0idx in _dfs_all_iter(tree):
             sign = sign_from_exponent(cumulative)
@@ -557,6 +564,8 @@ class TreeModule(CombinatorialFreeModule):
                 m_key = m_tuple[leaf_0idx]
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
+                if inner_normalize is not None:
+                    bdry = inner_normalize(bdry)
                 for new_m_key, coeff in bdry:
                     new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
                     result += sign * coeff * self.term((tree, new_m))
