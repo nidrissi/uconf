@@ -10,7 +10,6 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 F = GF(2)
 
 model = euclidean_unordered_configuration_model(F, 2)
-cc = compute_chain_complex(model, degrees=range(-2, 4), weight = 3)
+cc = compute_chain_complex(model, degrees=range(-2, 3), weight = 5)
 
-
-
+#Remarque: ça ne marche pas mod 2 non plus. 
