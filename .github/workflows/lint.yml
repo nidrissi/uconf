@@ -49,7 +49,7 @@ jobs:
                   python -m pip install ruff==0.15.7
 
             - name: Ruff lint
-              run: ruff check tests src
+              run: ruff check --output-format=github tests src
 
             - name: Ruff format check
               run: ruff format --check tests src
