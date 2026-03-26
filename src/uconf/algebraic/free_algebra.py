@@ -169,7 +169,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             raise ValueError(f"Invalid basis key {key!r}: expected a pair (p_key, m_tuple).")
         p_key_raw, m_tuple_raw = key[0], key[1]
         if not isinstance(m_tuple_raw, (tuple, list)):
-            return None
+            raise ValueError(
+                f"Invalid basis key {key!r}: m_tuple must be a tuple/list of leaf keys."
+            )
         n = len(m_tuple_raw)
         if n == 0:
             return None
@@ -180,12 +182,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         # and should propagate, not be silently ignored.
         comp = self._operad_cls(n, self.base_ring())
         if hasattr(comp, "_validate_basis_key"):
-            try:
-                p_key = comp._validate_basis_key(p_key_raw)
-            except (TypeError, ValueError):
-                # The p_key is invalid for arity n (wrong type, wrong length,
-                # out-of-range values, etc.); treat the composite key as invalid.
-                return None
+            p_key = comp._validate_basis_key(p_key_raw)
             if p_key is None:
                 return None
         else:
