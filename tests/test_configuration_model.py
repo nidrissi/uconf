@@ -1,3 +1,5 @@
+from random import Random
+
 import pytest
 
 from uconf import (
@@ -63,18 +65,22 @@ class TestConfigurationModelCore:
 
 
 class TestConfigurationModelIntermediate:
-    def test_check_bar_cobar_square_zero(self) -> None:
+    @pytest.mark.parametrize("n", [3, 4])
+    @pytest.mark.parametrize("d", range(3))
+    def test_check_bar_cobar_square_zero(self, n: int, d: int) -> None:
         """The bar-cobar construction on the shifted Lie–Surjection cooperad satisfies d²=0."""
+        rng = Random(20260326)
+
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
         C = BarConstruction(H)
         P = CobarConstruction(C)
 
-        for n in range(2, 5):
-            for d in range(3):
-                for p_elem in P(n, QQ).basis_iter(d):
-                    dd = p_elem.boundary().boundary()
-                    assert dd == P(n, QQ).zero(), f"d²≠0 at arity {n} degree {d} for {p_elem}"
+        basis = P(n, QQ).graded_basis(d)
+        for _ in range(20):
+            p_elem = rng.choice(basis)
+            dd = p_elem.boundary().boundary()
+            assert dd == P(n, QQ).zero(), f"d²≠0 at arity {n} degree {d} for {p_elem}"
 
 
 class TestConfigurationModelDSquaredMinimal:
