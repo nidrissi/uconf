@@ -62,6 +62,24 @@ class TestConfigurationModelCore:
         assert complex is not None
 
 
+class TestConfigurationModelIntermediate:
+    @pytest.mark.xfail(
+        reason="Fails at arity 4 for d=1 due to a bug in the boundary map implementation."
+    )
+    def test_check_bar_cobar_square_zero(self) -> None:
+        """The bar-cobar construction on the shifted Lie–Surjection cooperad satisfies d²=0."""
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        P = CobarConstruction(C)
+
+        for n in range(2, 5):
+            for d in range(3):
+                for p_elem in P(n, QQ).basis_iter(d):
+                    dd = p_elem.boundary().boundary()
+                    assert dd == P(n, QQ).zero(), f"d²≠0 at arity {n} degree {d} for {p_elem}"
+
+
 class TestConfigurationModelDSquaredMinimal:
     """Minimal d²=0 regression tests at weight 2.
 
@@ -75,8 +93,7 @@ class TestConfigurationModelDSquaredMinimal:
         """d²=0 at weight=2 for d=1 (all degrees up to 4)."""
         model = euclidean_unordered_configuration_model(QQ, 1)
         for deg in range(-1, 5):
-            basis = list(model.graded_basis_by_weight(deg, 2))
-            for elem in basis:
+            for elem in model.graded_basis_by_weight(deg, 2):
                 dd = model.boundary(model.boundary(elem))
                 assert dd == model.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
 
@@ -84,8 +101,7 @@ class TestConfigurationModelDSquaredMinimal:
         """d²=0 at weight=2 for d=2 (all degrees up to 4)."""
         model = euclidean_unordered_configuration_model(QQ, 2)
         for deg in range(-1, 5):
-            basis = list(model.graded_basis_by_weight(deg, 2))
-            for elem in basis:
+            for elem in model.graded_basis_by_weight(deg, 2):
                 dd = model.boundary(model.boundary(elem))
                 assert dd == model.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
 
