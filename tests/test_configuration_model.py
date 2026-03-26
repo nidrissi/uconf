@@ -63,9 +63,6 @@ class TestConfigurationModelCore:
 
 
 class TestConfigurationModelIntermediate:
-    @pytest.mark.xfail(
-        reason="Fails at arity 4 for d=1 due to a bug in the boundary map implementation."
-    )
     def test_check_bar_cobar_square_zero(self) -> None:
         """The bar-cobar construction on the shifted Lie–Surjection cooperad satisfies d²=0."""
         sLie = ShiftedOperad(Lie, -1)
