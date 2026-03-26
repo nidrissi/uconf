@@ -244,14 +244,18 @@ class TreeModule(CombinatorialFreeModule):
     def _validate_basis_key(self, key):
         """Validate and normalize a ``(tree, m_tuple)`` basis key."""
         if not isinstance(key, (tuple, list)) or len(key) != 2:
-            return None
+            raise TypeError(
+                f"Basis key must be a tuple/list of length 2: (tree, m_tuple). Got {key!r}."
+            )
         tree, m_tuple = key[0], key[1]
         if not isinstance(m_tuple, (tuple, list)):
-            return None
+            raise TypeError(f"m_tuple must be a tuple/list of leaf keys. Got {m_tuple!r}.")
 
         if is_leaf(tree):
             if tree != 1 or len(m_tuple) != 1:
-                return None
+                raise ValueError(
+                    f"Leaf trees must have the form (1, (m_key,)). Got tree={tree}, m_tuple={m_tuple!r}."
+                )
             m_key = self._validate_m_key(m_tuple[0])
             if m_key is None:
                 return None
@@ -260,13 +264,13 @@ class TreeModule(CombinatorialFreeModule):
         n = tree_arity(tree)
         if len(m_tuple) != n:
             return None
-        new_m = []
+        clean_m = []
         for m_key in m_tuple:
             vk = self._validate_m_key(m_key)
             if vk is None:
                 return None
-            new_m.append(vk)
-        return (tree, tuple(new_m))
+            clean_m.append(vk)
+        return (tree, tuple(clean_m))
 
     def _validate_m_key(self, m_key):
         """Validate one inner-module basis key."""
