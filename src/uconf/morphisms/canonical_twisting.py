@@ -139,7 +139,7 @@ def canonical_inclusion(cooperad: CooperadLike) -> TwistingMorphism:
         for c_key, coeff in c_elem:
             # Build single-vertex cobar tree: (c_key, 1, 2, ..., n)
             cobar_tree_key = (c_key,) + tuple(range(1, n + 1))
-            result += coeff * cobar_parent.term(cobar_tree_key)
+            result += coeff * cobar_parent(cobar_tree_key)
 
         return result
 

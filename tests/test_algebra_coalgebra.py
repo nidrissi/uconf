@@ -10,12 +10,13 @@ Covers:
 import itertools
 
 import pytest
-from sage.all import QQ
+from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
 from sage.all import tensor as sage_tensor
 
 from uconf import Associative, CoAssociative, Commutative, Lie
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
@@ -54,6 +55,18 @@ class TrivialAssAlgebra(OperadAlgebra):
                     coeff = coeff * a_coeff
             result += coeff * self.module(())
         return result
+
+
+class TrivialModule(CombinatorialFreeModule):
+    def __init__(self, dimension: int, base_ring):
+        super().__init__(base_ring, [()], category=GradedModulesWithBasis(base_ring))
+        self._dimension = dimension
+        self.boundary = lambda _: self.zero()
+        self.connectivity = 0
+        self.rename(f"K[{dimension}]")
+
+    def degree_on_basis(self, key):
+        return self._dimension
 
 
 class TrivialCoassCoalgebra(CooperadCoalgebra):
@@ -169,14 +182,18 @@ class TestCooperadCoalgebra:
 # ===========================================================================
 
 
-def _make_bar_complex(base_ring=QQ):
+def _make_bar_complex(base_ring=QQ, trivial_algebra=True):
     """Build B_Ass(k) -- bar complex of the trivial 1-dim Ass-algebra."""
-    alg = TrivialAssAlgebra(base_ring=base_ring)
+    if trivial_algebra:
+        alg = TrivialAssAlgebra(base_ring=base_ring)
+    else:
+        simple_module = TrivialModule(1, QQ)
+        alg = FreeOperadAlgebra(Associative, simple_module)
     return TwistedBarComplex(canonical_projection(Associative), alg)
 
 
 class TestTwistedBarComplex:
-    """Tests for TwistedBarComplex (bar complex B_π(A))."""
+    """Tests for TwistedBarComplex (bar complex B_π(A)) with TrivialAssAlgebra."""
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
@@ -281,6 +298,136 @@ class TestTwistedBarComplex:
         tree = ((), 1, 2)
         elem = B((tree, ((), ())))
         assert elem.boundary().boundary() == B.zero()
+
+
+# ===========================================================================
+# TwistedBarComplex tests -- FreeOperadAlgebra algebra
+# ===========================================================================
+
+
+class TestTwistedBarComplexFreeAlgebra:
+    """Tests for TwistedBarComplex with FreeOperadAlgebra(Ass, k[1]).
+
+    The algebra module is Free_Ass(k[1]) = Ass ∘ k[1], whose basis elements
+    are pairs (p_key, m_tuple) where p_key ∈ Ass(n) (planar) and m_tuple is an
+    n-tuple of the single basis element () of k[1].
+
+    Basis keys used below:
+    - _GEN1 = ((1,), ((),))   → the arity-1 generator, degree 1
+    - _GEN2 = ((1,2), ((),()))→ the arity-2 element, degree 2
+
+    Bar complex basis key format: (tree, a_tuple) where a_tuple is a tuple of
+    FreeAlgebraModule basis keys.  Degrees:
+    - Single leaf decorated by _GEN1: 0 + deg(_GEN1) = 1
+    - Weight-1 binary tree with two _GEN1 leaves:
+        (deg_Ass(μ) + 1) + 2*deg(_GEN1) = 1 + 2 = 3
+    - Weight-1 ternary tree with three _GEN1 leaves: 1 + 3 = 4
+    - Weight-2 binary tree (two internal vertices) with three _GEN1 leaves:
+        2*1 + 3 = 5
+    """
+
+    # arity-1 generator of Free_Ass(k[1]): key = (Ass(1)-key, (inner-module-key,))
+    _GEN1 = ((1,), ((),))
+    # arity-2 element: γ(μ; gen1, gen1) = ((1,2), ((),()))
+    _GEN2 = ((1, 2), ((), ()))
+    _MU = (1, 2)
+    _MU3 = (1, 2, 3)
+
+    def test_construction(self):
+        """TwistedBarComplex can be constructed with FreeOperadAlgebra."""
+        B = _make_bar_complex(trivial_algebra=False)
+        assert B is not None
+
+    def test_single_leaf_degree(self):
+        """Single-leaf element has degree = deg_free(_GEN1) = 1."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        elem = B((1, (gen1,)))
+        assert elem.degree() == 1
+
+    def test_weight1_binary_degree(self):
+        """Weight-1 binary tree has degree = (deg_Ass(μ)+1) + 2*deg(_GEN1) = 3."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        mu = (1, 2)
+        tree = (mu, 1, 2)
+        elem = B((tree, (gen1, gen1)))
+        assert elem.degree() == 3
+
+    def test_weight1_ternary_degree(self):
+        """Weight-1 ternary tree has degree = 1 + 3*1 = 4."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        mu3 = (1, 2, 3)
+        tree = (mu3, 1, 2, 3)
+        deg = B.degree_on_basis((tree, (gen1, gen1, gen1)))
+        assert deg == 4
+
+    def test_weight2_binary_degree(self):
+        """Weight-2 right-nested binary tree has degree = 2 + 3*1 = 5."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        mu = (1, 2)
+        tree = (mu, 1, (mu, 2, 3))
+        deg = B.degree_on_basis((tree, (gen1, gen1, gen1)))
+        assert deg == 5
+
+    def test_dact_weight1_binary_gives_arity2_generator(self):
+        """d_act on weight-1 binary tree produces a leaf decorated by the arity-2 generator.
+
+        α(bar corolla at μ) = μ ∈ Ass(2), and γ(μ; gen1, gen1) = gen2 in Free_Ass(k[1]).
+        """
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        gen2 = ((1, 2), ((), ()))
+        mu = (1, 2)
+        tree = (mu, 1, 2)
+        elem = B((tree, (gen1, gen1)))
+        result = elem.dalpha()
+        assert result == B((1, (gen2,)))
+
+    @pytest.mark.parametrize(
+        "tree,a_tuple",
+        [
+            # weight-1 binary tree: (μ; 1, 2)
+            ((_MU, 1, 2), (_GEN1, _GEN1)),
+            # weight-2 right-nested: (μ; 1, (μ; 2, 3))
+            ((_MU, 1, (_MU, 2, 3)), (_GEN1, _GEN1, _GEN1)),
+            # weight-2 left-nested: (μ; (μ; 1, 2), 3)
+            ((_MU, (_MU, 1, 2), 3), (_GEN1, _GEN1, _GEN1)),
+            # weight-1 ternary tree: (μ₃; 1, 2, 3)
+            ((_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
+        ],
+    )
+    def test_d_squared_zero(self, tree: tuple, a_tuple: tuple):
+        """d² = 0 on tree elements of the bar complex with the free algebra."""
+        B = _make_bar_complex(trivial_algebra=False)
+        elem = B((tree, a_tuple))
+        assert elem.boundary().boundary() == B.zero()
+
+    def test_linear_combination_d_squared_zero(self):
+        """d² = 0 on a linear combination of bar elements with the free algebra."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        mu = (1, 2)
+        t1 = B(((mu, 1, (mu, 2, 3)), (gen1, gen1, gen1)))
+        t2 = B(((mu, (mu, 1, 2), 3), (gen1, gen1, gen1)))
+        combo = 3 * t1 - 2 * t2
+        assert combo.boundary().boundary() == B.zero()
+
+    def test_d2_tree_connects_to_ternary(self):
+        """d_2 on weight-2 binary tree produces a weight-1 ternary term."""
+        B = _make_bar_complex(trivial_algebra=False)
+        gen1 = ((1,), ((),))
+        mu = (1, 2)
+        tree = (mu, 1, (mu, 2, 3))
+        elem = B((tree, (gen1, gen1, gen1)))
+        d2_result = elem.d2()
+        has_ternary = False
+        for (t, _a), _coeff in d2_result:
+            if hasattr(t, "__len__") and len(t) == 4:  # (dec, leaf1, leaf2, leaf3)
+                has_ternary = True
+        assert has_ternary
 
 
 # ===========================================================================
