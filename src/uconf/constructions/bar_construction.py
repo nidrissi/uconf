@@ -753,15 +753,11 @@ class BarConstruction(UniqueRepresentation):
 
                         # Compute after_deg: total bar-degree of vertices that come
                         # after the split subtree in DFS order of the full tree.
-                        vertex_idx = next(
-                            j for j, v in enumerate(all_verts) if v is vertex
-                        )
+                        vertex_idx = next(j for j, v in enumerate(all_verts) if v is vertex)
                         bottom_verts = vertices_dfs(vertex)
                         n_bottom = len(bottom_verts)
                         after_deg = sum(
-                            operad_cls(vertex_arity(v), base_ring).degree_on_basis(
-                                decoration(v)
-                            )
+                            operad_cls(vertex_arity(v), base_ring).degree_on_basis(decoration(v))
                             + 1
                             for v in all_verts[vertex_idx + n_bottom :]
                         )
