@@ -475,6 +475,58 @@ class TestTwistedCobarComplex:
         elem = C((tree, ((), ())))
         assert elem.d_internal() == C.zero()
 
+    def test_dalpha_on_leaf_expands(self):
+        """d_α on a single leaf produces weight-1 cobar trees."""
+        C = _make_cobar_complex()
+        elem = C((1, ((),)))
+        result = elem.dalpha()
+        assert result != C.zero()
+
+    def test_d2_on_weight1_zero(self):
+        """d_2 on a weight-1 (single-vertex) tree is zero (no edge to split)."""
+        C = _make_cobar_complex()
+        c_dec = (1, 2)
+        tree = (c_dec, 1, 2)
+        elem = C((tree, ((), ())))
+        assert elem.d2() == C.zero()
+
+    _CDEC2 = (1, 2)
+    _CDEC3 = (1, 2, 3)
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            # single leaf
+            (1, ((),)),
+            # weight-1 binary tree
+            (((1, 2), 1, 2), ((), ())),
+        ],
+    )
+    @pytest.mark.xfail(
+        reason="Pre-existing sign issue in TwistedCobarComplex._dalpha_on_basis: "
+        "d_α sign convention needs leaf-module-degree-dependent correction "
+        "for the cobar complex (see interleaved DFS sign analysis).",
+        strict=True,
+    )
+    def test_d_squared_zero(self, key):
+        """d² = 0 on elements of the cobar complex Ω_ι(V)."""
+        C = _make_cobar_complex()
+        elem = C(key)
+        assert elem.boundary().boundary() == C.zero()
+
+    @pytest.mark.xfail(
+        reason="Pre-existing sign issue in TwistedCobarComplex._dalpha_on_basis.",
+        strict=True,
+    )
+    def test_d_squared_zero_linear_combo(self):
+        """d² = 0 on a linear combination of cobar elements."""
+        C = _make_cobar_complex()
+        t1 = C((1, ((),)))
+        c_dec = (1, 2)
+        t2 = C(((c_dec, 1, 2), ((), ())))
+        combo = 2 * t1 - 3 * t2
+        assert combo.boundary().boundary() == C.zero()
+
 
 # ===========================================================================
 # Lie operad -- bar complex with non-trivial operad
