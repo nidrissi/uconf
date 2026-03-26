@@ -125,7 +125,7 @@ class Associative(CombinatorialFreeModule):
     def _planarize_on_basis(self, basis_element: tuple):
         """Split into planar representative and symmetric-group factor."""
         n = self.arity()
-        sigma = self._symmetric_group(tuple(basis_element))
+        sigma = self._symmetric_group(list(basis_element))
         planar = tuple(range(1, n + 1))
         return self.term(planar).tensor(SymmetricGroupAlgebra(self.base_ring(), n)(sigma))
 
