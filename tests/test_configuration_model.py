@@ -45,18 +45,11 @@ class TestConfigurationModelCore:
 
     @pytest.mark.parametrize("d", [1, 2])
     def test_check_complex_QQ_weight3(self, d: int) -> None:
-        if d == 1:
-            pytest.xfail(
-                reason="Fails at weight 3 for d=1 due to a bug in the boundary map implementation."
-            )
         """chain_complex over QQ at weight=3 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, d)
         complex = compute_chain_complex(model, degrees=range(-1, 3), weight=3, check=True)
         assert complex is not None
 
-    @pytest.mark.xfail(
-        reason="Currently fails due to a bug in the boundary map implementation at weight 4."
-    )
     def test_check_complex_QQ_weight4(self) -> None:
         """chain_complex over QQ at weight=4 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
