@@ -166,7 +166,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         Does **not** planarize; use :meth:`_normalized_corolla_sum` for that.
         """
         if not isinstance(key, (tuple, list)) or len(key) != 2:
-            return None
+            raise ValueError(f"Invalid basis key {key!r}: expected a pair (p_key, m_tuple).")
         p_key_raw, m_tuple_raw = key[0], key[1]
         if not isinstance(m_tuple_raw, (tuple, list)):
             return None
