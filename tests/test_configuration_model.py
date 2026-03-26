@@ -22,7 +22,7 @@ from sage.all import GF, QQ
 class TestConfigurationModelCore:
     """Tests for the configuration model and its homology."""
 
-    def test_configuration_model_gf2(self) -> None:
+    def test_configuration_model_GF2(self) -> None:
         """chain_complex for euclidean configuration model over GF(2) succeeds."""
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
@@ -30,10 +30,17 @@ class TestConfigurationModelCore:
         assert C is not None
 
     @pytest.mark.parametrize("d", [1, 2])
-    def test_check_complex_gf2_weight3(self, d: int) -> None:
+    def test_check_complex_GF2_weight3(self, d: int) -> None:
         """chain_complex over GF(2) with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(GF(2), d)
         C = compute_chain_complex(model, degrees=range(-1, 3), weight=3, check=True)
+        assert C is not None
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_check_complex_GF2_weight4(self, d: int) -> None:
+        """chain_complex over GF(2) with check=True does not raise an error."""
+        model = euclidean_unordered_configuration_model(GF(2), d)
+        C = compute_chain_complex(model, degrees=range(-1, 2), weight=4, check=True)
         assert C is not None
 
     @pytest.mark.parametrize("d", [1, 2])
