@@ -196,7 +196,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             comp = self._cooperad_cls(n, self.base_ring())
             return self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
 
-        return super()._element_constructor_(x)
+        raise TypeError(
+            f"Cannot construct element from {x!r}. Expected a dict of basis keys to coefficients, or a single basis key tuple (c_key, m_tuple)."
+        )
 
     # ------------------------------------------------------------------
     # Connectivity

@@ -257,7 +257,9 @@ class HadamardProduct(UniqueRepresentation):
                     return self.zero()
                 return self.term(clean_key)
 
-            return super()._element_constructor_(x)
+            raise TypeError(
+                f"Expected dict, tuple/list, or HadamardProduct.Element; got {type(x).__name__}: {x!r}."
+            )
 
         def _boundary_on_basis(self, basis_element):
             left_basis, right_basis = basis_element

@@ -217,7 +217,9 @@ class ShiftedOperad(UniqueRepresentation):
                     return self.zero()
                 return self.term(clean_key)
 
-            return super()._element_constructor_(x)
+            raise TypeError(
+                f"Expected dict, tuple/list, or {self._base_parent.__class__.__name__} element; got {type(x).__name__}: {x!r}."
+            )
 
         def _boundary_on_basis(self, basis_element):
             sign = shifted_boundary_sign(self.factory.shift_degree)
