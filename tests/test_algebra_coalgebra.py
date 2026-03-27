@@ -10,8 +10,7 @@ Covers:
 import itertools
 
 import pytest
-from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis
-from sage.all import tensor as sage_tensor
+from sage.all import GF, QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
 from uconf import Associative, CoAssociative, Commutative, Lie
 from uconf.algebraic.algebra import OperadAlgebra
@@ -20,12 +19,32 @@ from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
-from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 from uconf.core.trees import children, decoration, is_leaf, vertex_arity
+from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 # ===========================================================================
 # Helpers: build simple algebra modules
 # ===========================================================================
+
+
+@pytest.fixture(params=[QQ, GF(2)])
+def R(request):
+    return request.param
+
+
+class TrivialModule(CombinatorialFreeModule):
+    def __init__(self, dimension: int, base_ring):
+        super().__init__(base_ring, [()], category=GradedModulesWithBasis(base_ring))
+        self._dimension = dimension
+        self.boundary = lambda _: self.zero()
+        self.connectivity = 0
+        self.rename(f"K[{dimension}]")
+
+    def degree_on_basis(self, key):
+        return self._dimension
+
+    def _repr_term(self, key):
+        return "g"
 
 
 class TrivialAssAlgebra(OperadAlgebra):
@@ -36,7 +55,7 @@ class TrivialAssAlgebra(OperadAlgebra):
     """
 
     def __init__(self, base_ring=QQ):
-        self.module = Commutative(1, base_ring=base_ring)
+        self.module = TrivialModule(0, base_ring)
         super().__init__(self.module, Associative, self._structure_map)
 
     def _structure_map(self, p_element, algebra_elements):
@@ -57,16 +76,9 @@ class TrivialAssAlgebra(OperadAlgebra):
         return result
 
 
-class TrivialModule(CombinatorialFreeModule):
-    def __init__(self, dimension: int, base_ring):
-        super().__init__(base_ring, [()], category=GradedModulesWithBasis(base_ring))
-        self._dimension = dimension
-        self.boundary = lambda _: self.zero()
-        self.connectivity = 0
-        self.rename(f"K[{dimension}]")
-
-    def degree_on_basis(self, key):
-        return self._dimension
+@pytest.fixture
+def trivial_ass_algebra(R):
+    return TrivialAssAlgebra(base_ring=R)
 
 
 class TrivialCoassCoalgebra(CooperadCoalgebra):
@@ -78,7 +90,7 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
 
     def __init__(self, base_ring=QQ):
         self.base_ring = base_ring
-        self.module = Commutative(1, base_ring=base_ring)
+        self.module = TrivialModule(0, base_ring=base_ring)
         super().__init__(self.module, CoAssociative, self._coaction_map)
 
     def _coaction_map(self, v_element, n):
@@ -87,10 +99,10 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
         right_factors = [right_parent] * n
 
         if n == 1:
-            target = sage_tensor([left_parent, right_parent])
+            target = tensor([left_parent, right_parent])
         else:
-            right_tensor = sage_tensor(right_factors)
-            target = sage_tensor([left_parent, right_tensor])
+            right_tensor = tensor(right_factors)
+            target = tensor([left_parent, right_tensor])
 
         result = target.zero()
         for _v_key, v_coeff in v_element:
@@ -108,6 +120,11 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
         return result
 
 
+@pytest.fixture
+def trivial_coass_coalgebra(R):
+    return TrivialCoassCoalgebra(base_ring=R)
+
+
 # ===========================================================================
 # OperadAlgebra tests
 # ===========================================================================
@@ -116,44 +133,39 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
 class TestOperadAlgebra:
     """Tests for OperadAlgebra wrapper."""
 
-    def test_construction(self):
-        alg = TrivialAssAlgebra()
-        assert alg.operad_cls is Associative
-        assert alg.module is not None
+    def test_construction(self, trivial_ass_algebra):
+        assert trivial_ass_algebra.operad_cls is Associative
+        assert trivial_ass_algebra.module is not None
 
-    def test_act_unary(self):
+    def test_act_unary(self, trivial_ass_algebra, R):
         """Unit axiom: γ_1(id; a) = a."""
-        alg = TrivialAssAlgebra()
-        module = alg.module
+        module = trivial_ass_algebra.module
         a = module(())
-        unit = Associative.unit(QQ)
-        result = alg.act(unit, [a])
+        unit = Associative.unit(R)
+        result = trivial_ass_algebra.act(unit, [a])
         assert result == a
 
-    def test_act_binary(self):
+    def test_act_binary(self, trivial_ass_algebra, R):
         """Binary product γ_2(σ; a, a) = a (trivial algebra)."""
-        alg = TrivialAssAlgebra()
-        module = alg.module
+        module = trivial_ass_algebra.module
         a = module(())
-        p = Associative(2, QQ)((1, 2))
-        result = alg.act(p, [a, a])
+        p = Associative(2, R)((1, 2))
+        result = trivial_ass_algebra.act(p, [a, a])
         assert result == a
 
-    def test_act_arity_mismatch(self):
+    def test_act_arity_mismatch(self, trivial_ass_algebra, R):
         """act() raises ValueError when len(algebra_elements) != arity."""
-        alg = TrivialAssAlgebra()
-        module = alg.module
+        module = trivial_ass_algebra.module
         a = module(())
-        p = Associative(2, QQ)((1, 2))
+        p = Associative(2, R)((1, 2))
         with pytest.raises(ValueError, match="Expected 2"):
-            alg.act(p, [a])
+            trivial_ass_algebra.act(p, [a])
 
-    def test_boundary_zero(self):
+    def test_boundary_zero(self, trivial_ass_algebra):
         """Boundary of algebra element is 0 (Commutative module has zero differential)."""
-        alg = TrivialAssAlgebra()
-        module = alg.module
+        module = trivial_ass_algebra.module
         a = module(())
-        assert alg.boundary(a) == module.zero()
+        assert trivial_ass_algebra.boundary(a) == module.zero()
 
 
 # ===========================================================================
@@ -169,9 +181,9 @@ class TestCooperadCoalgebra:
         assert coalg.cooperad_cls is CoAssociative
         assert coalg.module is not None
 
-    def test_boundary_zero(self):
+    def test_boundary_zero(self, trivial_coass_coalgebra):
         """Boundary of coalgebra element is 0."""
-        coalg = TrivialCoassCoalgebra()
+        coalg = trivial_coass_coalgebra
         module = coalg.module
         v = module(())
         assert coalg.boundary(v) == module.zero()

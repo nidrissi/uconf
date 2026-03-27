@@ -45,7 +45,7 @@ def _as_dict(x):
     return {basis: coeff for basis, coeff in x if coeff != 0}
 
 
-@pytest.fixture(scope="module", params=[QQ, GF(2)])
+@pytest.fixture(params=[QQ, GF(2)])
 def R(request):
     return request.param
 
