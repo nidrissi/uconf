@@ -46,7 +46,7 @@ from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
     children,
     decoration,
-    enumerate_planar_trees_in_degree,
+    enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_in_degree,
     internal_edges_dfs,
     is_leaf,
@@ -343,8 +343,14 @@ class BarConstruction(UniqueRepresentation):
                     yield self.term(1)
                 return
 
-            for tree in enumerate_planar_trees_in_degree(
-                n, self._max_weight, self._operad_cls, base_ring, d
+            for tree in enumerate_planar_trees_generic_in_degree(
+                n,
+                self._max_weight,
+                self._operad_cls,
+                base_ring,
+                d,
+                vertex_offset=+1,
+                use_planar_decs=True,
             ):
                 yield self.term(tree)
 
@@ -701,9 +707,12 @@ class BarConstruction(UniqueRepresentation):
                 """Cocompose a single tree basis element."""
                 result = target.zero()
                 target_leaves = set(range(i, i + n))
+                base_ring = self.base_ring()
+                operad_cls = self._operad_cls
 
                 # Find all internal vertices whose subtree leaves are exactly target_leaves
-                for vertex in vertices_dfs(tree):
+                all_verts = vertices_dfs(tree)
+                for vertex in all_verts:
                     if leaves(vertex) == target_leaves:
                         split = split_at_vertex(tree, vertex)
                         if split is None:
@@ -734,8 +743,34 @@ class BarConstruction(UniqueRepresentation):
                         if right_parent._validate_basis_key(relabeled_bot) is None:
                             continue
 
-                        # Add to result (sign = 1 for cofree cooperad)
-                        result += left_parent.term(relabeled_top).tensor(
+                        # Koszul sign from the graded cofree cooperad structure.
+                        #
+                        # In B(P) = T^c(sP̄), a tree represents a tensor product
+                        # of suspended generators sv₁ ⊗ sv₂ ⊗ ... ⊗ svₖ (DFS order).
+                        # Splitting into top ⊗ bottom rearranges this tensor product.
+                        # The Koszul sign comes from commuting the "after" vertices
+                        # (those in DFS order after the bottom subtree but not in it)
+                        # past the bottom vertices:
+                        #
+                        #   ε = (-1)^{|after_total| · |bottom_total|}
+                        #
+                        # where |·| denotes the total sP̄-degree (bar degree).
+                        bottom_deg = subtree_degree(vertex, operad_cls, base_ring)
+
+                        # Compute after_deg: total bar-degree of vertices that come
+                        # after the split subtree in DFS order of the full tree.
+                        vertex_idx = next(j for j, v in enumerate(all_verts) if v is vertex)
+                        bottom_verts = vertices_dfs(vertex)
+                        n_bottom = len(bottom_verts)
+                        after_deg = sum(
+                            operad_cls(vertex_arity(v), base_ring).degree_on_basis(decoration(v))
+                            + 1
+                            for v in all_verts[vertex_idx + n_bottom :]
+                        )
+
+                        koszul_sign = sign_from_exponent(after_deg * bottom_deg)
+
+                        result += koszul_sign * left_parent.term(relabeled_top).tensor(
                             right_parent.term(relabeled_bot)
                         )
 

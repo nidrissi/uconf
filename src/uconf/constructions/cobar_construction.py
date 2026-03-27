@@ -331,7 +331,10 @@ class CobarConstruction(UniqueRepresentation):
                 # Check if it's a tree with no internal vertices
                 if is_leaf(basis_key) and basis_key == 1:
                     return 1
-                return None
+                else:
+                    raise ValueError(
+                        f"Invalid basis key for arity 1: expected 1. Got {basis_key!r}."
+                    )
 
             return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
 

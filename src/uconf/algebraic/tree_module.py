@@ -87,10 +87,10 @@ def _module_basis_keys_in_degree(module, d: int) -> Iterator:
     if basis_it_fn is not None:
         for elem in basis_it_fn(d):
             yield from elem.support()
-        return
-    for key in module.basis():
-        if module.degree_on_basis(key) == d:
-            yield key
+    else:
+        for elem in module.basis():
+            if module.degree_on_basis(elem) == d:
+                yield from elem.support() if hasattr(elem, "support") else [elem]
 
 
 def _inner_weight_on_key(module, m_key) -> int:
@@ -244,14 +244,18 @@ class TreeModule(CombinatorialFreeModule):
     def _validate_basis_key(self, key):
         """Validate and normalize a ``(tree, m_tuple)`` basis key."""
         if not isinstance(key, (tuple, list)) or len(key) != 2:
-            return None
+            raise TypeError(
+                f"Basis key must be a tuple/list of length 2: (tree, m_tuple). Got {key!r}."
+            )
         tree, m_tuple = key[0], key[1]
         if not isinstance(m_tuple, (tuple, list)):
-            return None
+            raise TypeError(f"m_tuple must be a tuple/list of leaf keys. Got {m_tuple!r}.")
 
         if is_leaf(tree):
             if tree != 1 or len(m_tuple) != 1:
-                return None
+                raise ValueError(
+                    f"Leaf trees must have the form (1, (m_key,)). Got tree={tree}, m_tuple={m_tuple!r}."
+                )
             m_key = self._validate_m_key(m_tuple[0])
             if m_key is None:
                 return None
@@ -260,13 +264,13 @@ class TreeModule(CombinatorialFreeModule):
         n = tree_arity(tree)
         if len(m_tuple) != n:
             return None
-        new_m = []
+        clean_m = []
         for m_key in m_tuple:
             vk = self._validate_m_key(m_key)
             if vk is None:
                 return None
-            new_m.append(vk)
-        return (tree, tuple(new_m))
+            clean_m.append(vk)
+        return (tree, tuple(clean_m))
 
     def _validate_m_key(self, m_key):
         """Validate one inner-module basis key."""
@@ -543,12 +547,19 @@ class TreeModule(CombinatorialFreeModule):
         return Family(self.basis_weight_iter(d, w))
 
     def _boundary_on_basis(self, key) -> Any:
-        """Differential using interleaved DFS Koszul sign rule."""
+        """Differential using interleaved DFS Koszul sign rule.
+
+        Inner-module boundary terms are normalised to planar form (when
+        the inner module exposes ``normalize_to_planar``) so that the
+        output lives in the same basis as the structure-map outputs
+        produced by ``_dalpha_on_basis`` and similar methods.
+        """
         tree, m_tuple = key
         result = self.zero()
         base_ring = self.base_ring()
         shift = self._vertex_degree_shift
         cumulative = 0
+        inner_normalize = getattr(self._inner_module, "normalize_to_planar", None)
 
         for node, leaf_0idx in _dfs_all_iter(tree):
             sign = sign_from_exponent(cumulative)
@@ -557,6 +568,8 @@ class TreeModule(CombinatorialFreeModule):
                 m_key = m_tuple[leaf_0idx]
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
+                if inner_normalize is not None:
+                    bdry = inner_normalize(bdry)
                 for new_m_key, coeff in bdry:
                     new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
                     result += sign * coeff * self.term((tree, new_m))

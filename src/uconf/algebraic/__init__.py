@@ -19,7 +19,7 @@ from uconf.algebraic.spherical import (
     SurjectionSphereCochainAlgebra,
 )
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
-from uconf.algebraic.conf import (
+from uconf.algebraic.configuration import (
     labelled_configuration_model,
     unordered_configuration_model,
     euclidean_unordered_configuration_model,

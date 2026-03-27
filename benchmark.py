@@ -1,15 +1,5 @@
 from uconf import euclidean_unordered_configuration_model, compute_chain_complex
-from sage.all import QQ
+from sage.all import GF
 
-from sage.all import *
-# or more specifically:
-from sage.rings.finite_rings.finite_field_constructor import GF
-
-#Compute the chain complex over any field:
-
-F = GF(2)
-
-model = euclidean_unordered_configuration_model(F, 2)
-cc = compute_chain_complex(model, degrees=range(-2, 3), weight = 5)
-
-#Remarque: ça ne marche pas mod 2 non plus. 
+model = euclidean_unordered_configuration_model(GF(2), 2)
+cc = compute_chain_complex(model, degrees=range(0, 1), weight=4)

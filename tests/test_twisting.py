@@ -234,6 +234,51 @@ class TestCanonicalInclusion:
         assert isinstance(iota.operad, CobarConstruction)
         assert iota.check_maurer_cartan(3, QQ)
 
+    def test_includes_arity3_element(self):
+        """ι maps c ∈ C(3) to a single-vertex cobar tree."""
+        iota = canonical_inclusion(CoAssociative)
+        comp3 = CoAssociative(3, QQ)
+        c_elem = comp3.term((1, 3, 2))
+        result = iota(c_elem)
+        cobar_parent = CobarConstruction(CoAssociative)(3, QQ)
+        expected = cobar_parent.term(((1, 3, 2), 1, 2, 3))
+        assert result == expected
+
+    def test_inclusion_degree(self):
+        """ι(c) has degree deg_C(c) - 1 in Ω(C)."""
+        iota = canonical_inclusion(CoAssociative)
+        comp2 = CoAssociative(2, QQ)
+        c_elem = comp2.term((1, 2))
+        result = iota(c_elem)
+        cobar_parent = CobarConstruction(CoAssociative)(2, QQ)
+        # CoAss elements have degree 0, so ι(c) has degree -1
+        for key, _coeff in result:
+            assert cobar_parent.degree_on_basis(key) == -1
+
+    def test_inclusion_linear_combination(self):
+        """ι is linear: ι(2c₁ + 3c₂) = 2·ι(c₁) + 3·ι(c₂)."""
+        iota = canonical_inclusion(CoAssociative)
+        comp2 = CoAssociative(2, QQ)
+        c1 = comp2.term((1, 2))
+        c2 = comp2.term((2, 1))
+        result = iota(2 * c1 + 3 * c2)
+        expected = 2 * iota(c1) + 3 * iota(c2)
+        assert result == expected
+
+    def test_inclusion_bar_arity3(self):
+        """ι maps B(Ass)(3) corolla to single-vertex cobar tree in ΩB(Ass)(3)."""
+        bar_ass = BarConstruction(Associative)
+        iota = canonical_inclusion(bar_ass)
+        comp3 = bar_ass(3, QQ)
+        # B(Ass)(3) corolla: ((1,2,3), 1, 2, 3)
+        corolla_key = ((1, 2, 3), 1, 2, 3)
+        c_elem = comp3.term(corolla_key)
+        result = iota(c_elem)
+        # Result should be a single-vertex tree in ΩB(Ass)(3)
+        cobar_parent = CobarConstruction(bar_ass)(3, QQ)
+        expected = cobar_parent.term((corolla_key, 1, 2, 3))
+        assert result == expected
+
 
 # ===========================================================================
 # TwistedBarComplex tests
