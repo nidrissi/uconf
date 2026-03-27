@@ -39,10 +39,6 @@ def _BH_setup(n: int = 2):
 class TestDSigmaOnSurjection:
     """Test ``d_sigma`` on a quasi-planar bar construction over Surjection."""
 
-    def _make_bar_surjection(self, n: int):
-        BS = BarConstruction(Surjection)
-        return BS(n, QQ)
-
     def test_d_sigma_sum_equals_boundary(self):
         """Σ_σ d_σ(x) ⊗ σ == boundary(x) (basic quasi-planar identity)."""
         BS = BarConstruction(Surjection)

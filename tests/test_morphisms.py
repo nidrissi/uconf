@@ -210,7 +210,8 @@ class TestComposedMorphism:
 class TestPullbackAlgebra:
     """Tests for the pullback algebra construction."""
 
-    def _make_trivial_com_algebra(self):
+    @pytest.fixture
+    def trivial_com_algebra(self):
         """Build a trivial Com-algebra on the 1-dim module k."""
         module = Commutative(1, QQ)
 
@@ -226,50 +227,45 @@ class TestPullbackAlgebra:
 
         return OperadAlgebra(module, Commutative, structure_map)
 
-    def test_pullback_ass_to_com(self):
+    def test_pullback_ass_to_com(self, trivial_com_algebra):
         """Pull back a Com-algebra along Ass → Com to get an Ass-algebra."""
-        com_alg = self._make_trivial_com_algebra()
-        ass_alg = PullbackAlgebra(ass_to_com, com_alg)
+        ass_alg = PullbackAlgebra(ass_to_com, trivial_com_algebra)
         assert ass_alg.operad_cls is Associative
 
         # Act with an Ass(2) element
         mu = Associative(2, QQ)((1, 2))
-        a = com_alg.module(())
+        a = trivial_com_algebra.module(())
         result = ass_alg.act(mu, [a, a])
         assert _as_dict(result) == _as_dict(a)
 
-    def test_pullback_lie_via_ass_to_com(self):
+    def test_pullback_lie_via_ass_to_com(self, trivial_com_algebra):
         """Pull back a Com-algebra along Lie → Ass → Com gives zero bracket."""
-        com_alg = self._make_trivial_com_algebra()
-
         # Compose the morphisms: make a Lie-algebra from the Ass-algebra
         composed = OperadMorphism(
             Lie,
             Commutative,
             lambda elem: ass_to_com(lie_to_ass(elem)),
         )
-        lie_alg = PullbackAlgebra(composed, com_alg)
+        lie_alg = PullbackAlgebra(composed, trivial_com_algebra)
 
         # The Lie bracket [a, a] should be zero
         bracket = Lie(2, QQ)((1,))
-        a = com_alg.module(())
+        a = trivial_com_algebra.module(())
         result = lie_alg.act(bracket, [a, a])
         assert not result
 
-    def test_pullback_unit_axiom(self):
+    def test_pullback_unit_axiom(self, trivial_com_algebra):
         """Pullback preserves unit axiom: γ_P(id; a) = a."""
-        com_alg = self._make_trivial_com_algebra()
-        ass_alg = PullbackAlgebra(ass_to_com, com_alg)
-        a = com_alg.module(())
+        ass_alg = PullbackAlgebra(ass_to_com, trivial_com_algebra)
+        a = trivial_com_algebra.module(())
         unit = Associative.unit(QQ)
         result = ass_alg.act(unit, [a])
         assert _as_dict(result) == _as_dict(a)
 
-    def test_pullback_boundary(self):
+    def test_pullback_boundary(self, trivial_com_algebra):
         """Pullback boundary delegates to algebra boundary."""
-        com_alg = self._make_trivial_com_algebra()
-        ass_alg = PullbackAlgebra(ass_to_com, com_alg)
-        a = com_alg.module(())
+        ass_alg = PullbackAlgebra(ass_to_com, trivial_com_algebra)
+        a = trivial_com_algebra.module(())
         result = ass_alg.boundary(a)
         assert not result
 

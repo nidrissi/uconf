@@ -45,6 +45,11 @@ def _as_dict(x):
     return {basis: coeff for basis, coeff in x if coeff != 0}
 
 
+@pytest.fixture(scope="module", params=[QQ, GF(2)])
+def R(request):
+    return request.param
+
+
 # ---------------------------------------------------------------------------
 # ShiftedOperad axioms
 # ---------------------------------------------------------------------------
@@ -59,10 +64,6 @@ class TestShiftedOperadAxioms:
     has degree 1+1=2.  The base operad Surjection also has a nontrivial
     boundary, making this a genuine dg-operad.
     """
-
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
 
     def _shifted_surj(self):
         return ShiftedOperad(Surjection, 1)
@@ -200,10 +201,6 @@ class TestHadamardProductAxioms:
     degree 1.
     """
 
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
-
     def _had(self):
         sLie = ShiftedOperad(Lie, 1)
         return HadamardProduct(sLie, Surjection)
@@ -306,16 +303,14 @@ class TestFreeOperadAlgebraAxioms:
     Tests algebra axioms with both Associative and Surjection operads.
     """
 
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
-
-    def _make_free_ass(self, R):
+    @pytest.fixture
+    def free_ass(self, R):
         """Free Ass-algebra on the 1-dim module k."""
         M = Commutative(1, base_ring=R)
         return FreeOperadAlgebra(Associative, M)
 
-    def _make_free_surj(self, R):
+    @pytest.fixture
+    def free_surj(self, R):
         """Free Surjection-algebra on a 1-dim module in degree 1."""
         M = CombinatorialFreeModule(R, [()], category=GradedModulesWithBasis(R))
         M.degree_on_basis = lambda _: 1
@@ -326,84 +321,78 @@ class TestFreeOperadAlgebraAxioms:
 
     # -- d² = 0 --
 
-    def test_d_squared_zero_leaf(self, R):
+    def test_d_squared_zero_leaf(self, free_ass):
         """d²=0 on a leaf element in Free_Ass(k)."""
-        alg = self._make_free_ass(R)
-        mod = alg.module
+        mod = free_ass.module
         leaf = mod(((1,), ((),)))
         assert mod.boundary(mod.boundary(leaf)) == mod.zero()
 
-    def test_d_squared_zero_corolla(self, R):
+    def test_d_squared_zero_corolla(self, free_ass):
         """d²=0 on a corolla element in Free_Ass(k)."""
-        alg = self._make_free_ass(R)
-        mod = alg.module
+        mod = free_ass.module
         corolla = mod(((1, 2), ((), ())))
         assert mod.boundary(mod.boundary(corolla)) == mod.zero()
 
-    def test_d_squared_zero_surjection_basis(self, R):
+    def test_d_squared_zero_surjection_basis(self, R, free_surj):
         """d²=0 for all degree-1 basis elements in Free_Surj(k)."""
-        alg = self._make_free_surj(R)
-        mod = alg.module
+        mod = free_surj.module
         for elem in mod.basis_iter(1):
             dd = mod.boundary(mod.boundary(elem))
             assert dd == mod.zero(), f"d²≠0 for {elem}"
 
-    def test_d_squared_zero_surjection_degree2(self, R):
+    def test_d_squared_zero_surjection_degree2(self, R, free_surj):
         """d²=0 for all degree-2 basis elements in Free_Surj(k)."""
-        alg = self._make_free_surj(R)
-        mod = alg.module
+        mod = free_surj.module
         for elem in mod.basis_iter(2):
             dd = mod.boundary(mod.boundary(elem))
             assert dd == mod.zero(), "d²≠0 at degree 2"
 
     # -- Unit axiom --
 
-    def test_unit_action(self, R):
+    def test_unit_action(self, R, free_ass):
         """γ(id; a) = a (unit action)."""
-        alg = self._make_free_ass(R)
+        alg = free_ass
         mod = alg.module
+        # R = mod.base_ring()
         a = mod(((1,), ((),)))
         unit = Associative.unit(R)
         result = alg.act(unit, [a])
         assert _as_dict(result) == _as_dict(a)
 
-    def test_unit_action_surjection(self, R):
+    def test_unit_action_surjection(self, R, free_surj):
         """γ(id; a) = a for Surjection operad."""
-        alg = self._make_free_surj(R)
-        mod = alg.module
+        mod = free_surj.module
         a = mod(((1, 2), ((), ())))
         unit = Surjection.unit(R)
-        result = alg.act(unit, [a])
+        result = free_surj.act(unit, [a])
         assert _as_dict(result) == _as_dict(a)
 
     # -- Arity mismatch --
 
-    def test_arity_mismatch(self, R):
+    def test_arity_mismatch(self, R, free_ass):
         """act() raises ValueError when len(inputs) != arity."""
-        alg = self._make_free_ass(R)
-        mod = alg.module
+        mod = free_ass.module
         a = mod(((1,), ((),)))
         p = Associative(2, R)((1, 2))
         with pytest.raises(ValueError):
-            alg.act(p, [a])
+            free_ass.act(p, [a])
 
     # -- Equivariance --
 
-    def test_equivariance_ass(self, R):
+    def test_equivariance_ass(self, R, free_ass):
         """Equivariance: γ(p·σ; a_{σ(1)},...,a_{σ(n)}) = γ(p; a_1,...,a_n).
 
         For Associative operad, the action must be equivariant under
         simultaneous permutation of the operad element and inputs.
         We test this by checking that γ(μ; a, b) = γ(μ·σ; b, a) when σ=(2,1).
         """
-        alg = self._make_free_ass(R)
-        mod = alg.module
+        mod = free_ass.module
         a = mod(((1,), ((),)))
         p = Associative(2, R)((1, 2))
-        result1 = alg.act(p, [a, a])
+        result1 = free_ass.act(p, [a, a])
         # Permute p by (2,1) and reverse inputs
         p_sigma = p.permute([2, 1])
-        result2 = alg.act(p_sigma, [a, a])
+        result2 = free_ass.act(p_sigma, [a, a])
         # Since both inputs are equal, both results should be equal
         assert _as_dict(result1) == _as_dict(result2)
 
@@ -459,11 +448,8 @@ class TestHadamardTensorAlgebraAxioms:
     Tests with both degree-0 (Ass⊗Ass) and nontrivial-degree algebras.
     """
 
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
-
-    def _make_had_ass(self, R):
+    @pytest.fixture
+    def had_ass(self, R):
         """Hadamard tensor algebra for Ass⊗Ass."""
         left = TrivialAssAlgebra(R)
         right = TrivialAssAlgebra(R)
@@ -471,45 +457,42 @@ class TestHadamardTensorAlgebraAxioms:
 
     # -- d² = 0 --
 
-    def test_d_squared_zero_degree0(self, R):
+    def test_d_squared_zero_degree0(self, R, had_ass):
         """d²=0 on tensor elements (trivial boundary, so trivially true)."""
         from sage.all import tensor
 
-        had_alg = self._make_had_ass(R)
-        left_mod = had_alg.left_module
-        right_mod = had_alg.right_module
+        left_mod = had_ass.left_module
+        right_mod = had_ass.right_module
         x = tensor((left_mod(()), right_mod(())))
-        dd = had_alg.boundary(had_alg.boundary(x))
+        dd = had_ass.boundary(had_ass.boundary(x))
         assert _as_dict(dd) == {}
 
     # -- Unit action --
 
-    def test_unit_action(self, R):
+    def test_unit_action(self, R, had_ass):
         """Unit: γ(id⊗id; x) = x."""
         from sage.all import tensor
 
-        had_alg = self._make_had_ass(R)
-        left_mod = had_alg.left_module
-        right_mod = had_alg.right_module
+        left_mod = had_ass.left_module
+        right_mod = had_ass.right_module
         x = tensor((left_mod(()), right_mod(())))
-        unit = had_alg.operad_cls.unit(R)
-        result = had_alg.act(unit, [x])
+        unit = had_ass.operad_cls.unit(R)
+        result = had_ass.act(unit, [x])
         assert _as_dict(result) == _as_dict(x)
 
     # -- Binary action --
 
-    def test_binary_action(self, R):
+    def test_binary_action(self, R, had_ass):
         """Binary action: γ(p⊗q; x, y) is well-defined."""
         from sage.all import tensor
 
-        had_alg = self._make_had_ass(R)
-        had = had_alg.operad_cls
-        left_mod = had_alg.left_module
-        right_mod = had_alg.right_module
+        had = had_ass.operad_cls
+        left_mod = had_ass.left_module
+        right_mod = had_ass.right_module
         x = tensor((left_mod(()), right_mod(())))
         p = had(2, R)(((1, 2), (1, 2)))
-        result = had_alg.act(p, [x, x])
-        assert result != had_alg.module.zero()
+        result = had_ass.act(p, [x, x])
+        assert result != had_ass.module.zero()
 
 
 # ---------------------------------------------------------------------------
@@ -523,19 +506,24 @@ class TestTwistedBarComplexGF2:
     _MU = (1, 2)
     _MU3 = (1, 2, 3)
 
-    def _make_bar(self, R, trivial=True):
-        if trivial:
-            alg = TrivialAssAlgebra(R)
-        else:
-            from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+    @pytest.fixture
+    def trivial_bar_gf2(self):
+        """TwistedBarComplex of the trivial Ass-algebra over GF(2)."""
+        return TwistedBarComplex(canonical_projection(Associative), TrivialAssAlgebra(GF(2)))
 
-            simple_module = CombinatorialFreeModule(R, [()], category=GradedModulesWithBasis(R))
-            simple_module.degree_on_basis = lambda _: 1
-            simple_module.boundary = lambda x: simple_module.zero()
-            simple_module.connectivity = 0
-            simple_module.rename("K[1]")
-            alg = FreeOperadAlgebra(Associative, simple_module)
-        return TwistedBarComplex(canonical_projection(Associative), alg)
+    @pytest.fixture
+    def free_algebra_bar_gf2(self):
+        """TwistedBarComplex of the free Ass-algebra Free_Ass(k[1]) over GF(2)."""
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
+        simple_module = CombinatorialFreeModule(GF(2), [()], category=GradedModulesWithBasis(GF(2)))
+        simple_module.degree_on_basis = lambda _: 1
+        simple_module.boundary = lambda x: simple_module.zero()
+        simple_module.connectivity = 0
+        simple_module.rename("K[1]")
+        return TwistedBarComplex(
+            canonical_projection(Associative), FreeOperadAlgebra(Associative, simple_module)
+        )
 
     @pytest.mark.parametrize(
         "tree,a_tuple",
@@ -546,11 +534,10 @@ class TestTwistedBarComplexGF2:
             ((_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
-    def test_d_squared_zero_trivial_gf2(self, tree, a_tuple):
+    def test_d_squared_zero_trivial_gf2(self, trivial_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for trivial algebra bar complex."""
-        B = self._make_bar(GF(2), trivial=True)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        elem = trivial_bar_gf2((tree, a_tuple))
+        assert elem.boundary().boundary() == trivial_bar_gf2.zero()
 
     _GEN1 = ((1,), ((),))
 
@@ -563,11 +550,10 @@ class TestTwistedBarComplexGF2:
             ((_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
         ],
     )
-    def test_d_squared_zero_free_algebra_gf2(self, tree, a_tuple):
+    def test_d_squared_zero_free_algebra_gf2(self, free_algebra_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for free algebra bar complex."""
-        B = self._make_bar(GF(2), trivial=False)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        elem = free_algebra_bar_gf2((tree, a_tuple))
+        assert elem.boundary().boundary() == free_algebra_bar_gf2.zero()
 
 
 # ---------------------------------------------------------------------------
@@ -575,23 +561,24 @@ class TestTwistedBarComplexGF2:
 # ---------------------------------------------------------------------------
 
 
-def _make_trivial_omega_bar_ass_algebra(R):
-    """Trivial ΩB(Ass)-algebra for testing."""
-    bar_ass = BarConstruction(Associative)
-    cobar_bar_ass = CobarConstruction(bar_ass)
-    module = Commutative(1, base_ring=R)
-
-    def trivial_structure_map(p_elem, a_list):
-        return module.zero()
-
-    return OperadAlgebra(module, cobar_bar_ass, trivial_structure_map)
-
-
 class TestTwistedBarComplexIotaGF2:
     """d²=0 for B_ι(A) over GF(2)."""
 
     _MU = (1, 2)
     _MU3 = (1, 2, 3)
+
+    @pytest.fixture
+    def trivial_iota_bar_gf2(self):
+        """TwistedBarComplex of the trivial ΩB(Ass)-algebra over GF(2)."""
+        bar_ass = BarConstruction(Associative)
+        cobar_bar_ass = CobarConstruction(bar_ass)
+        module = Commutative(1, base_ring=GF(2))
+
+        def trivial_structure_map(p_elem, a_list):
+            return module.zero()
+
+        alg = OperadAlgebra(module, cobar_bar_ass, trivial_structure_map)
+        return TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
 
     @pytest.mark.parametrize(
         "tree,a_tuple",
@@ -602,12 +589,10 @@ class TestTwistedBarComplexIotaGF2:
             ((_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
-    def test_d_squared_zero_gf2(self, tree, a_tuple):
+    def test_d_squared_zero_gf2(self, trivial_iota_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for the trivial ΩB(Ass)-algebra bar complex."""
-        alg = _make_trivial_omega_bar_ass_algebra(GF(2))
-        B = TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        elem = trivial_iota_bar_gf2((tree, a_tuple))
+        assert elem.boundary().boundary() == trivial_iota_bar_gf2.zero()
 
 
 # ---------------------------------------------------------------------------
@@ -646,21 +631,22 @@ def _trivial_coass_coaction(R, v_element, n):
     return result
 
 
-def _make_cobar_complex_for_test(R):
-    """Build Ω_ι(k) -- cobar complex of the trivial CoAss-coalgebra."""
-    from uconf.algebraic.coalgebra import CooperadCoalgebra
-
-    module = Commutative(1, base_ring=R)
-
-    def coaction_map(v_element, n):
-        return _trivial_coass_coaction(R, v_element, n)
-
-    coalg = CooperadCoalgebra(module, CoAssociative, coaction_map)
-    return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
-
-
 class TestTwistedCobarComplexGF2:
     """d²=0 tests for TwistedCobarComplex over GF(2)."""
+
+    @pytest.fixture
+    def cobar_complex_gf2(self):
+        """Cobar complex Ω_ι(k) with trivial CoAss-coalgebra over GF(2)."""
+        from uconf.algebraic.coalgebra import CooperadCoalgebra
+
+        R = GF(2)
+        module = Commutative(1, base_ring=R)
+
+        def coaction_map(v_element, n):
+            return _trivial_coass_coaction(R, v_element, n)
+
+        coalg = CooperadCoalgebra(module, CoAssociative, coaction_map)
+        return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
 
     @pytest.mark.parametrize(
         "key",
@@ -673,11 +659,10 @@ class TestTwistedCobarComplexGF2:
         reason="Pre-existing sign issue in TwistedCobarComplex._dalpha_on_basis.",
         strict=True,
     )
-    def test_d_squared_zero_gf2(self, key):
+    def test_d_squared_zero_gf2(self, cobar_complex_gf2, key):
         """d²=0 over GF(2) for cobar complex elements."""
-        C = _make_cobar_complex_for_test(GF(2))
-        elem = C(key)
-        assert elem.boundary().boundary() == C.zero()
+        elem = cobar_complex_gf2(key)
+        assert elem.boundary().boundary() == cobar_complex_gf2.zero()
 
 
 # ---------------------------------------------------------------------------
@@ -691,10 +676,6 @@ class TestShiftedLieAxioms:
     Since Lie has zero differential, d²=0 is trivially satisfied, but the
     shifted composition signs must still be correct.
     """
-
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
 
     def test_d_squared_zero_arity2(self, R):
         """d²=0 for sLie(2) (trivially zero since Lie has no differential)."""
@@ -738,10 +719,6 @@ class TestShiftedLieAxioms:
 
 class TestHadamardProductSurjSurj:
     """Tests for HadamardProduct(Surjection, Surjection) -- full nontrivial differential."""
-
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
 
     def _had(self):
         return HadamardProduct(Surjection, Surjection)
@@ -809,32 +786,26 @@ class TestTwistedBarComplexSurjection:
     This tests d²=0 when the cooperad B(Surj) has nontrivial internal diff.
     """
 
-    @pytest.fixture(params=[QQ, GF(2)])
-    def R(self, request):
-        return request.param
+    @pytest.fixture
+    def surjection_bar(self, R):
+        """TwistedBarComplex with the Surjection operad and trivial algebra."""
+        return TwistedBarComplex(canonical_projection(Surjection), TrivialSurjAlgebra(R))
 
-    def _make_bar(self, R):
-        alg = TrivialSurjAlgebra(R)
-        return TwistedBarComplex(canonical_projection(Surjection), alg)
-
-    def test_d_squared_zero_weight1_binary(self, R):
+    def test_d_squared_zero_weight1_binary(self, R, surjection_bar):
         """d²=0 on a weight-1 binary tree with Surjection decorations."""
-        B = self._make_bar(R)
         # Surjection(2, R) identity: (1, 2)
         tree = ((1, 2), 1, 2)
-        elem = B((tree, ((), ())))
-        assert elem.boundary().boundary() == B.zero()
+        elem = surjection_bar((tree, ((), ())))
+        assert elem.boundary().boundary() == surjection_bar.zero()
 
-    def test_d_squared_zero_weight1_binary_deg1(self, R):
+    def test_d_squared_zero_weight1_binary_deg1(self, R, surjection_bar):
         """d²=0 on weight-1 binary tree with degree-1 Surjection decoration."""
-        B = self._make_bar(R)
         tree = ((1, 2, 1), 1, 2)
-        elem = B((tree, ((), ())))
-        assert elem.boundary().boundary() == B.zero()
+        elem = surjection_bar((tree, ((), ())))
+        assert elem.boundary().boundary() == surjection_bar.zero()
 
-    def test_d_squared_zero_weight2(self, R):
+    def test_d_squared_zero_weight2(self, R, surjection_bar):
         """d²=0 on a weight-2 right-nested tree."""
-        B = self._make_bar(R)
         tree = ((1, 2), 1, ((1, 2), 2, 3))
-        elem = B((tree, ((), (), ())))
-        assert elem.boundary().boundary() == B.zero()
+        elem = surjection_bar((tree, ((), (), ())))
+        assert elem.boundary().boundary() == surjection_bar.zero()
