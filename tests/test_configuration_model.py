@@ -138,7 +138,7 @@ class TestConfigurationModelComodule:
         """e_comodule_on_generator satisfies the cooperad-level chain map at arity 3.
 
         For c ∈ C(3), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
-        where ν: C → E ⊗ C is the Berger–Fresse E-comodule structure map
+        where ν: C → E ⊗ C is the E-comodule structure map
         and ∂_C is the cooperad differential.
         """
 
@@ -165,7 +165,7 @@ class TestConfigurationModelComodule:
         """e_comodule_on_generator satisfies the cooperad-level chain map at arity 2.
 
         For c ∈ C(2), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
-        where ν: C → E ⊗ C is the Berger–Fresse E-comodule structure map
+        where ν: C → E ⊗ C is the E-comodule structure map
         and ∂_C is the cooperad differential.
         """
         from sage.all import tensor
