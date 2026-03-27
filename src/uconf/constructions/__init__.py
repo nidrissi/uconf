@@ -4,11 +4,17 @@ from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
+from uconf.constructions.bar_algebra import BarAlgebra, BarAlgebraModule
+from uconf.constructions.cobar_coalgebra import CobarCoalgebra, CobarCoalgebraModule
 
 __all__ = [
     "BarConstruction",
     "CobarConstruction",
     "TwistedBarComplex",
     "TwistedCobarComplex",
+    "BarAlgebra",
+    "BarAlgebraModule",
+    "CobarCoalgebra",
+    "CobarCoalgebraModule",
     "e_comodule_on_generator",
 ]
