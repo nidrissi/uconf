@@ -1,6 +1,7 @@
 from random import Random
 
 import pytest
+from sage.all import GF, QQ, tensor
 
 from uconf import (
     BarConstruction,
@@ -11,12 +12,10 @@ from uconf import (
     ShiftedOperad,
     Surjection,
     compute_chain_complex,
+    e_comodule_on_generator,
     euclidean_unordered_configuration_model,
 )
 from uconf.algebraic.configuration import _make_surjection_comodule_morphism
-
-
-from sage.all import GF, QQ
 
 
 class TestConfigurationModelCore:
@@ -142,9 +141,6 @@ class TestConfigurationModelComodule:
         where ν: C → E ⊗ C is the Berger–Fresse E-comodule structure map
         and ∂_C is the cooperad differential.
         """
-        from sage.all import tensor
-
-        from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
