@@ -293,7 +293,9 @@ class TreeModule(CombinatorialFreeModule):
                 return self.zero()
             return self.term(k)
 
-        return super()._element_constructor_(x)
+        raise TypeError(
+            f"Cannot construct element from {x!r}. Expected a dict of basis keys to coefficients, or a single basis key tuple (tree, m_tuple)."
+        )
 
     @property
     def connectivity(self) -> int:
