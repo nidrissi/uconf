@@ -655,10 +655,6 @@ class TestTwistedCobarComplexGF2:
             (((1, 2), 1, 2), ((), ())),
         ],
     )
-    @pytest.mark.xfail(
-        reason="Pre-existing sign issue in TwistedCobarComplex._dalpha_on_basis.",
-        strict=True,
-    )
     def test_d_squared_zero_gf2(self, cobar_complex_gf2, key):
         """d²=0 over GF(2) for cobar complex elements."""
         elem = cobar_complex_gf2(key)
