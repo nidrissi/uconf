@@ -87,10 +87,10 @@ def _module_basis_keys_in_degree(module, d: int) -> Iterator:
     if basis_it_fn is not None:
         for elem in basis_it_fn(d):
             yield from elem.support()
-        return
-    for key in module.basis():
-        if module.degree_on_basis(key) == d:
-            yield key
+    else:
+        for elem in module.basis():
+            if module.degree_on_basis(elem) == d:
+                yield from elem.support() if hasattr(elem, "support") else [elem]
 
 
 def _inner_weight_on_key(module, m_key) -> int:

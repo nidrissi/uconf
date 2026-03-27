@@ -103,9 +103,7 @@ class TestShiftedOperadAxioms:
             dy = y.boundary()
             x_deg = x.degree()
             expected = sS.compose(dx, i, y) + sign_from_exponent(x_deg) * sS.compose(x, i, dy)
-            assert _as_dict(d_composed) == _as_dict(expected), (
-                f"Derivation fails for ∘_{i}"
-            )
+            assert _as_dict(d_composed) == _as_dict(expected), f"Derivation fails for ∘_{i}"
 
     def test_derivation_arity2_degree_zero(self, R):
         """Derivation for degree-0 inputs (should be structurally correct over GF(2))."""
@@ -373,7 +371,7 @@ class TestFreeOperadAlgebraAxioms:
         """γ(id; a) = a for Surjection operad."""
         alg = self._make_free_surj(R)
         mod = alg.module
-        a = mod(((1, 2), ((),)))
+        a = mod(((1, 2), ((), ())))
         unit = Surjection.unit(R)
         result = alg.act(unit, [a])
         assert _as_dict(result) == _as_dict(a)
@@ -476,6 +474,7 @@ class TestHadamardTensorAlgebraAxioms:
     def test_d_squared_zero_degree0(self, R):
         """d²=0 on tensor elements (trivial boundary, so trivially true)."""
         from sage.all import tensor
+
         had_alg = self._make_had_ass(R)
         left_mod = had_alg.left_module
         right_mod = had_alg.right_module
@@ -488,6 +487,7 @@ class TestHadamardTensorAlgebraAxioms:
     def test_unit_action(self, R):
         """Unit: γ(id⊗id; x) = x."""
         from sage.all import tensor
+
         had_alg = self._make_had_ass(R)
         left_mod = had_alg.left_module
         right_mod = had_alg.right_module
@@ -501,6 +501,7 @@ class TestHadamardTensorAlgebraAxioms:
     def test_binary_action(self, R):
         """Binary action: γ(p⊗q; x, y) is well-defined."""
         from sage.all import tensor
+
         had_alg = self._make_had_ass(R)
         had = had_alg.operad_cls
         left_mod = had_alg.left_module
@@ -527,9 +528,8 @@ class TestTwistedBarComplexGF2:
             alg = TrivialAssAlgebra(R)
         else:
             from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
-            simple_module = CombinatorialFreeModule(
-                R, [()], category=GradedModulesWithBasis(R)
-            )
+
+            simple_module = CombinatorialFreeModule(R, [()], category=GradedModulesWithBasis(R))
             simple_module.degree_on_basis = lambda _: 1
             simple_module.boundary = lambda x: simple_module.zero()
             simple_module.connectivity = 0
@@ -613,7 +613,6 @@ class TestTwistedBarComplexIotaGF2:
 # ---------------------------------------------------------------------------
 # TwistedCobarComplex -- GF(2) and QQ tests
 # ---------------------------------------------------------------------------
-
 
 
 def _trivial_coass_coaction(R, v_element, n):
