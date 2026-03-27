@@ -255,24 +255,26 @@ class TestCobarCoalgebra:
     """Tests for CobarCoalgebra (cobar construction Ω_ι(V))."""
 
     @pytest.fixture
-    def cobar_gf2(self):
-        return CobarCoalgebra(
-            canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(GF(2))
-        )
-
-    @pytest.fixture
-    def cobar_qq(self):
+    def cobar(self):
+        """Cobar construction over QQ (default)."""
         return CobarCoalgebra(
             canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(QQ)
         )
 
-    def test_construction(self, cobar_gf2):
-        assert cobar_gf2.module is not None
-        assert cobar_gf2.operad_cls is not None
+    @pytest.fixture
+    def cobar_gf2(self):
+        """Cobar construction over GF(2)."""
+        return CobarCoalgebra(
+            canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(GF(2))
+        )
 
-    def test_single_leaf_degree(self, cobar_gf2):
-        P = cobar_gf2.operad_cls
-        elem = cobar_gf2.module((P.unit_key(), ((),)))
+    def test_construction(self, cobar):
+        assert cobar.module is not None
+        assert cobar.operad_cls is not None
+
+    def test_single_leaf_degree(self, cobar):
+        P = cobar.operad_cls
+        elem = cobar.module((P.unit_key(), ((),)))
         assert elem.degree() == 0
 
     def test_d_alpha_on_leaf_gf2(self, cobar_gf2):
@@ -289,16 +291,16 @@ class TestCobarCoalgebra:
         dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
         assert dd == cobar_gf2.module.zero()
 
-    def test_d_alpha_nonzero_on_leaf_qq(self, cobar_qq):
+    def test_d_alpha_nonzero_on_leaf_qq(self, cobar):
         """d_α on leaf over QQ is nonzero (2·(arity-2 corolla))."""
-        P = cobar_qq.operad_cls
-        elem = cobar_qq.module((P.unit_key(), ((),)))
-        d_alpha = cobar_qq.module.d_alpha(elem)
-        assert d_alpha != cobar_qq.module.zero()
+        P = cobar.operad_cls
+        elem = cobar.module((P.unit_key(), ((),)))
+        d_alpha = cobar.module.d_alpha(elem)
+        assert d_alpha != cobar.module.zero()
 
-    def test_include(self, cobar_gf2):
+    def test_include(self, cobar):
         """The inclusion η: V → Ω_α(V) works."""
-        elem = cobar_gf2.include(())
-        P = cobar_gf2.operad_cls
-        expected = cobar_gf2.module.term((P.unit_key(), ((),)))
+        elem = cobar.include(())
+        P = cobar.operad_cls
+        expected = cobar.module.term((P.unit_key(), ((),)))
         assert elem == expected
