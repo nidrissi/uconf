@@ -109,8 +109,8 @@ class TestFreeAlgebraModule:
         mod = FreeAlgebraModule(Associative, M)
         with pytest.raises(ValueError):
             mod._validate_basis_key("bad")
-        # 2 m-keys for arity-1 P-key (1,) -- wrong
-        assert mod._validate_basis_key(((1,), ((), ()))) is None
+            # 2 m-keys for arity-1 P-key (1,) -- wrong
+            assert mod._validate_basis_key(((1,), ((), ()))) is None
 
 
 # ===========================================================================
