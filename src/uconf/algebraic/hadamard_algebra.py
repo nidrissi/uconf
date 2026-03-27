@@ -7,9 +7,16 @@ Hadamard product of operads.
 For homogeneous pure tensors, the action is
 
     (p ⊗ q) · ((a_1 ⊗ b_1), ..., (a_n ⊗ b_n))
-      = (p·(a_1,...,a_n)) ⊗ (q·(b_1,...,b_n)),
+      = ε · (p·(a_1,...,a_n)) ⊗ (q·(b_1,...,b_n)),
 
-extended multilinearly.  The differential on ``A ⊗ B`` is the tensor one:
+where ``ε`` is the Koszul sign from the graded interchange
+
+    p ⊗ q ⊗ a_1 ⊗ b_1 ⊗ … ⊗ a_n ⊗ b_n
+    ↦ p ⊗ a_1 ⊗ … ⊗ a_n ⊗ q ⊗ b_1 ⊗ … ⊗ b_n:
+
+    ε = (-1)^{ |q| Σ_i |a_i|  +  Σ_{i<j} |b_i| · |a_j| }.
+
+The differential on ``A ⊗ B`` is the tensor one:
 
     d(a ⊗ b) = da ⊗ b + (-1)^|a| a ⊗ db.
 """
@@ -27,6 +34,7 @@ from uconf.algebraic.tree_module import (
     _module_basis_keys_in_degree,
     _module_basis_keys_in_weight_and_degree,
 )
+from uconf.core.signs import sign_from_exponent
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -132,20 +140,37 @@ class HadamardTensorAlgebra(OperadAlgebra):
             left_basis, right_basis = had_basis
             left_op = left_operad_parent.term(left_basis)
             right_op = right_operad_parent.term(right_basis)
+            right_op_deg = right_operad_parent.degree_on_basis(right_basis)
 
             for selected_terms in itertools.product(*arg_expansions):
                 scalar = had_coeff
                 left_inputs = []
                 right_inputs = []
+                left_degs = []
+                right_degs = []
 
                 for tensor_basis, tensor_coeff in selected_terms:
                     left_key, right_key = tensor_basis
                     left_inputs.append(self.left_module.term(left_key))
                     right_inputs.append(self.right_module.term(right_key))
+                    left_degs.append(self.left_module.degree_on_basis(left_key))
+                    right_degs.append(self.right_module.degree_on_basis(right_key))
                     scalar *= tensor_coeff
 
                 if scalar == 0:
                     continue
+
+                # Koszul sign from graded interchange:
+                #   p ⊗ q ⊗ a₁ ⊗ b₁ ⊗ … ⊗ aₙ ⊗ bₙ
+                #   → p ⊗ a₁ ⊗ … ⊗ aₙ ⊗ q ⊗ b₁ ⊗ … ⊗ bₙ
+                #
+                # ε = (-1)^{ |q| Σᵢ |aᵢ|  +  Σᵢ<ⱼ |bᵢ| · |aⱼ| }
+                n = len(left_degs)
+                sign_exponent = right_op_deg * sum(left_degs)
+                for i in range(n):
+                    for j in range(i + 1, n):
+                        sign_exponent += right_degs[i] * left_degs[j]
+                koszul_sign = sign_from_exponent(sign_exponent)
 
                 left_value = self.left_algebra.act(left_op, left_inputs)
                 right_value = self.right_algebra.act(right_op, right_inputs)
@@ -153,7 +178,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 for left_out_basis, left_out_coeff in left_value:
                     for right_out_basis, right_out_coeff in right_value:
                         result += self.module.term((left_out_basis, right_out_basis)) * (
-                            scalar * left_out_coeff * right_out_coeff
+                            koszul_sign * scalar * left_out_coeff * right_out_coeff
                         )
 
         return result

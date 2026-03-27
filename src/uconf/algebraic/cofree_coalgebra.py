@@ -149,10 +149,12 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         Does **not** planarize; use :meth:`_normalized_corolla_sum` for that.
         """
         if not isinstance(key, (tuple, list)) or len(key) != 2:
-            return None
+            raise TypeError(
+                f"Basis key must be a tuple/list of length 2: (c_key, m_tuple). Got {key!r}."
+            )
         c_key_raw, m_tuple_raw = key[0], key[1]
         if not isinstance(m_tuple_raw, (tuple, list)):
-            return None
+            raise TypeError(f"m_tuple must be a tuple/list of leaf keys. Got {m_tuple_raw!r}.")
         n = len(m_tuple_raw)
         if n == 0:
             return None
@@ -163,12 +165,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # and should propagate, not be silently ignored.
         comp = self._cooperad_cls(n, self.base_ring())
         if hasattr(comp, "_validate_basis_key"):
-            try:
-                c_key = comp._validate_basis_key(c_key_raw)
-            except (TypeError, ValueError):
-                # The c_key is invalid for arity n (wrong type, wrong length,
-                # out-of-range values, etc.); treat the composite key as invalid.
-                return None
+            c_key = comp._validate_basis_key(c_key_raw)
             if c_key is None:
                 return None
         else:
