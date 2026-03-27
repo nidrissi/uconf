@@ -31,6 +31,7 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.4.
 
 from __future__ import annotations
 
+import itertools
 from typing import ClassVar
 
 
@@ -253,8 +254,6 @@ class CobarCoalgebra(OperadAlgebra):
         cobar_module = CobarCoalgebraModule(alpha, coalgebra)
         self._alpha = alpha
         self._coalgebra = coalgebra
-
-        import itertools
 
         def _act_impl(p_element, algebra_elements):
             """P-algebra action via full operad substitution (same as FreeOperadAlgebra)."""
