@@ -174,7 +174,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             )
         n = len(m_tuple_raw)
         if n == 0:
-            return None
+            raise ValueError(
+                f"Invalid basis key {key!r}: m_tuple cannot be empty (arity must be ≥ 1)."
+            )
 
         # Validate p_key against P(n)
         # NOTE: Component construction P(n, R) must never fail—all operads
@@ -275,11 +277,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Leibniz rule: d(p ⊗ m_1 ⊗…⊗ m_n) = d_P(p) ⊗ m_… + Σ_i (−1)^{…} p ⊗…⊗ d_M(m_i) ⊗….
 
         Koszul sign at leaf i: ``(−1)^{deg_P(p_key) + Σ_{j<i} deg_M(m_j)}``.
-
-        Non-planar keys produced by ``d_P`` are **not** normalised here so that
-        cancellations in ``d² = 0`` are preserved exactly.  Normalisation to
-        planar representatives happens at module boundaries (e.g.
-        :meth:`normalize_to_planar`, :meth:`graded_basis`) instead.
         """
         p_key, m_tuple = key
         n = len(m_tuple)
@@ -287,9 +284,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         result = self.zero()
 
         # d_P term: keep raw operad keys (may be non-planar)
-        dp_elem = comp.boundary(comp.term(p_key))
+        dp_elem = comp.boundary(comp(p_key))
         for dp_key, dp_coeff in dp_elem:
-            result += dp_coeff * self.term((dp_key, m_tuple))
+            result += dp_coeff * self((dp_key, m_tuple))
 
         # d_M terms with Koszul signs
         p_deg = comp.degree_on_basis(p_key)
@@ -299,7 +296,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             m_elem = self._inner_module.term(mk)
             for new_mk, m_coeff in self._inner_module.boundary(m_elem):
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self.term((p_key, new_m))
+                result += sign * m_coeff * self((p_key, new_m))
             cumulative += self._inner_module.degree_on_basis(mk)
 
         return result
