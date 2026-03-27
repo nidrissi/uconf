@@ -42,6 +42,10 @@ from uconf.constructions import (
     CobarConstruction,
     TwistedBarComplex,
     TwistedCobarComplex,
+    BarAlgebra,
+    BarAlgebraModule,
+    CobarCoalgebra,
+    CobarCoalgebraModule,
 )
 from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, TwistingMorphism
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
@@ -98,6 +102,10 @@ __all__ = [
     "CobarConstruction",
     "TwistedBarComplex",
     "TwistedCobarComplex",
+    "BarAlgebra",
+    "BarAlgebraModule",
+    "CobarCoalgebra",
+    "CobarCoalgebraModule",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSimplicialChainCoalgebra",
     "ReducedSphereCochains",
