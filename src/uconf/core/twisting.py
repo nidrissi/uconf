@@ -238,10 +238,11 @@ class TwistingMorphism:
 
         trivial_alg = OperadAlgebra(module, self.operad, _trivial_structure_map)
 
-        # Build twisted bar complex
-        from uconf.constructions.twisted_complex import TwistedBarComplex
+        # Build bar construction
+        from uconf.constructions.bar_algebra import BarAlgebra
 
-        B = TwistedBarComplex(self, trivial_alg)
+        bar = BarAlgebra(self, trivial_alg)
+        B = bar.module
 
         # Check d² = 0 on all basis elements of weight 1..max_arity.
         # Each leaf carries one Commutative(1) key (weight 1), so weight
