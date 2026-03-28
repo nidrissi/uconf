@@ -169,9 +169,7 @@ class TestBarAlgebra:
                         m_tuple = tuple([()] * n)
                         elem = bar.module((c_key, m_tuple))
                         dd = bar.module.boundary(bar.module.boundary(elem))
-                        assert dd == bar.module.zero(), (
-                            f"d² ≠ 0 at arity {n}, degree {d}"
-                        )
+                        assert dd == bar.module.zero(), f"d² ≠ 0 at arity {n}, degree {d}"
 
     def test_d_squared_zero_all_weight1_qq(self, bar):
         """d² = 0 for all weight-1 elements over QQ up to degree 4."""
@@ -248,18 +246,43 @@ class TestBarAlgebraFreeAlgebra:
         elem = bar.module((C.unit_key(), (inner_key,)))
         assert elem.degree() == 1
 
-    def test_weight1_d_squared_zero(self, bar):
+    def test_weight2_d_squared_zero(self, bar):
         C = bar.cooperad_cls
         P = bar._algebra.operad_cls
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp2 = C(2, QQ)
         for p_elem in comp2.planar_basis_iter(1):
-            for c_key in p_elem.support():
-                elem = bar.module((c_key, (inner_key, inner_key)))
+            c_key = p_elem.support()[0]
+            elem = bar.module((c_key, (inner_key,) * 2))
+            dd = bar.module.boundary(bar.module.boundary(elem))
+            assert dd == bar.module.zero()
+
+    def test_weight3_d_squared_zero(self, bar):
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp3 = C(3, QQ)
+        for d in [1, 2]:
+            for p_elem in comp3.planar_basis_iter(d):
+                c_key = p_elem.support()[0]
+                elem = bar.module((c_key, (inner_key,) * 3))
                 dd = bar.module.boundary(bar.module.boundary(elem))
                 assert dd == bar.module.zero()
-                return
+
+    def test_weight4_d_squared_zero(self, bar):
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp4 = C(4, QQ)
+        for d in [1, 2, 3]:
+            for p_elem in comp4.planar_basis_iter(d):
+                c_key = p_elem.support()[0]
+                elem = bar.module((c_key, (inner_key,) * 4))
+                dd = bar.module.boundary(bar.module.boundary(elem))
+                assert dd == bar.module.zero()
 
     def test_weight4_d_squared_zero(self, bar):
         """d² = 0 for all arity-4 elements with generator leaves over QQ."""
@@ -307,16 +330,12 @@ class TestCobarCoalgebra:
     @pytest.fixture
     def cobar(self):
         """Cobar construction over QQ (default)."""
-        return CobarCoalgebra(
-            canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(QQ)
-        )
+        return CobarCoalgebra(canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(QQ))
 
     @pytest.fixture
     def cobar_gf2(self):
         """Cobar construction over GF(2)."""
-        return CobarCoalgebra(
-            canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(GF(2))
-        )
+        return CobarCoalgebra(canonical_inclusion(CoAssociative), TrivialCoassCoalgebra(GF(2)))
 
     def test_construction(self, cobar):
         assert cobar.module is not None
