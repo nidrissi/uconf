@@ -173,6 +173,22 @@ class TestBarAlgebra:
                             f"d² ≠ 0 at arity {n}, degree {d}"
                         )
 
+    def test_d_squared_zero_all_weight1_qq(self, bar):
+        """d² = 0 for all weight-1 elements over QQ up to degree 4."""
+        C = bar.cooperad_cls
+        R = QQ
+        for n in range(2, 6):
+            comp_n = C(n, R)
+            for d in range(5):
+                for p_elem in comp_n.planar_basis_iter(d):
+                    for c_key in p_elem.support():
+                        m_tuple = tuple([()] * n)
+                        elem = bar.module((c_key, m_tuple))
+                        dd = bar.module.boundary(bar.module.boundary(elem))
+                        assert dd == bar.module.zero(), (
+                            f"d² ≠ 0 at arity {n}, degree {d}, c_key={c_key}"
+                        )
+
     def test_commutative_bar(self):
         """Bar construction with Commutative operad requires quasi-planar cooperad."""
         R = QQ
@@ -245,6 +261,40 @@ class TestBarAlgebraFreeAlgebra:
                 assert dd == bar.module.zero()
                 return
 
+    def test_weight4_d_squared_zero(self, bar):
+        """d² = 0 for all arity-4 elements with generator leaves over QQ."""
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp4 = C(4, QQ)
+        m_tuple = (inner_key,) * 4
+        for d in range(5):
+            for p_elem in comp4.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    elem = bar.module((c_key, m_tuple))
+                    dd = bar.module.boundary(bar.module.boundary(elem))
+                    assert dd == bar.module.zero(), (
+                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
+                    )
+
+    def test_weight5_d_squared_zero(self, bar):
+        """d² = 0 for all arity-5 elements over QQ (up to degree 4)."""
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp5 = C(5, QQ)
+        m_tuple = (inner_key,) * 5
+        for d in range(5):
+            for p_elem in comp5.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    elem = bar.module((c_key, m_tuple))
+                    dd = bar.module.boundary(bar.module.boundary(elem))
+                    assert dd == bar.module.zero(), (
+                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
+                    )
+
 
 # ===========================================================================
 # CobarCoalgebra tests
@@ -304,3 +354,36 @@ class TestCobarCoalgebra:
         P = cobar.operad_cls
         expected = cobar.module.term((P.unit_key(), ((),)))
         assert elem == expected
+
+    def test_d_squared_zero_weight2_gf2(self, cobar_gf2):
+        """d² = 0 on all arity-2 elements over GF(2)."""
+        cobar = cobar_gf2
+        P = cobar.operad_cls
+        R = GF(2)
+        for n in range(2, 4):
+            comp_n = P(n, R)
+            m_tuple = ((),) * n
+            for d in range(4):
+                for p_elem in comp_n.planar_basis_iter(d):
+                    for p_key in p_elem.support():
+                        elem = cobar.module.term((p_key, m_tuple))
+                        dd = cobar.module.boundary(cobar.module.boundary(elem))
+                        assert dd == cobar.module.zero(), (
+                            f"d² ≠ 0 at arity {n}, degree {d}"
+                        )
+
+    def test_d_squared_zero_weight4_gf2(self, cobar_gf2):
+        """d² = 0 on all arity-4 elements over GF(2) up to degree 3."""
+        cobar = cobar_gf2
+        P = cobar.operad_cls
+        R = GF(2)
+        comp4 = P(4, R)
+        m_tuple = ((),) * 4
+        for d in range(4):
+            for p_elem in comp4.planar_basis_iter(d):
+                for p_key in p_elem.support():
+                    elem = cobar.module.term((p_key, m_tuple))
+                    dd = cobar.module.boundary(cobar.module.boundary(elem))
+                    assert dd == cobar.module.zero(), (
+                        f"d² ≠ 0 at arity 4, degree {d}, p_key={p_key}"
+                    )

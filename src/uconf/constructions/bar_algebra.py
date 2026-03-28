@@ -105,18 +105,18 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         For a basis key ``(c_key, (a_1, …, a_n))`` with n = m + n_r - 1:
 
-            d_α(c ⊗ a_1 ⊗ … ⊗ a_n) = Σ_{i,m,n_r} (-1)^ε
+            d_α(c ⊗ a_1 ⊗ … ⊗ a_n) = Σ_{i,m,n_r} (-1)^{|c_L|}
                 (c_L ⊗ a_1 ⊗ … ⊗ γ(α(c_R); a_i,…,a_{i+n_r-1}) ⊗ … ⊗ a_n)
 
         where Δ^{i;m,n_r}(c) = Σ c_L ⊗ c_R is the cooperad's infinitesimal
         cocomposition, α(c_R) ∈ P(n_r) is the twisting morphism, and
         γ is the algebra action.
 
-        The Koszul sign is:
-            ε = |α|·|c_L| + |α|·(|a_1| + … + |a_{i-1}|)
-              = |c_L| + |a_1| + … + |a_{i-1}|
-
-        since |α| = -1 (so (-1)^{-x} = (-1)^x).
+        The Koszul sign ``(-1)^{|c_L|}`` comes from commuting d_α (which has
+        degree -1) past the cooperad element c_L in the cofree coalgebra
+        decomposition.  The algebra elements a_i do *not* contribute to the
+        sign because the cofree coalgebra decomposition Δ_{(1)} preserves the
+        left-to-right ordering of the A-factors.
 
         Reference: Loday-Vallette, Section 6.3 and 11.2.
         """
@@ -157,11 +157,10 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     if not action_result:
                         continue
 
-                    # Koszul sign: (-1)^{|c_L| + |a_1| + … + |a_{i-1}|}
+                    # Koszul sign: (-1)^{|c_L|}
                     c_L_comp = C(m, base_ring)
                     c_L_deg = c_L_comp.degree_on_basis(c_L_key)
-                    a_prefix_deg = sum(M.degree_on_basis(m_tuple[j]) for j in range(i - 1))
-                    sign = sign_from_exponent(c_L_deg + a_prefix_deg)
+                    sign = sign_from_exponent(c_L_deg)
 
                     # Build the new m_tuple: replace a_i,...,a_{i+n_r-1}
                     # with the single action result
