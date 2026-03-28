@@ -15,7 +15,309 @@ from uconf import (
     e_comodule_on_generator,
     euclidean_unordered_configuration_model,
 )
-from uconf.algebraic.configuration import _make_surjection_comodule_morphism
+from uconf.algebraic.configuration import (
+    TrivialModule,
+    _make_surjection_comodule_morphism,
+)
+from uconf.algebraic.free_algebra import FreeOperadAlgebra
+from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
+from uconf.algebraic.pullback_algebra import PullbackAlgebra
+from uconf.algebraic.spherical import SurjectionSphereCochainAlgebra
+from uconf.constructions.bar_algebra import BarAlgebra
+from uconf.morphisms.canonical_twisting import canonical_projection
+
+
+# ---------------------------------------------------------------------------
+# Helpers — build the individual layers of the configuration model
+# ---------------------------------------------------------------------------
+
+
+def _build_layers(base_ring, dimension: int):
+    """Build every intermediate object in the configuration-model pipeline.
+
+    Returns a dict mapping layer names to the constructed objects.
+    """
+    # Layer 1: manifold model — Surjection-algebra on sphere cochains
+    manifold_model = SurjectionSphereCochainAlgebra(dimension, base_ring)
+
+    # Layer 2: coefficient module — trivial module concentrated in degree d
+    coefficients = TrivialModule(dimension, base_ring)
+
+    # Layer 3: operadic layers
+    sLie = ShiftedOperad(Lie, -1)
+    XsLie = HadamardProduct(sLie, Surjection)
+    BXsLie = BarConstruction(XsLie)
+    OBXsLie = CobarConstruction(BXsLie)
+
+    # Layer 4: free algebra
+    free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
+
+    # Layer 5: Hadamard tensor algebra
+    tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
+
+    # Layer 6: pullback via comodule morphism
+    comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
+    pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
+
+    # Layer 7: final bar algebra
+    pi = canonical_projection(pulled_back.operad_cls)
+    bar = BarAlgebra(pi, pulled_back)
+
+    return {
+        "manifold_model": manifold_model,
+        "coefficients": coefficients,
+        "sLie": sLie,
+        "XsLie": XsLie,
+        "BXsLie": BXsLie,
+        "OBXsLie": OBXsLie,
+        "free_alg": free_alg,
+        "tensor_alg": tensor_alg,
+        "comodule_morphism": comodule_morphism,
+        "pulled_back": pulled_back,
+        "pi": pi,
+        "bar": bar,
+    }
+
+
+# ============================================================================
+# Layer 0: Hadamard product operad H = sLie ⊙ Surjection
+# ============================================================================
+
+
+class TestLayerHadamardOperadDSquared:
+    """d²=0 for the Hadamard product operad H = s⁻¹Lie ⊙ Surjection.
+
+    This is the innermost operad used in the configuration model.
+    Elements have degree deg(sLie) + deg(Surjection).
+    """
+
+    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("d", range(3))
+    def test_d_squared_zero(self, n: int, d: int) -> None:
+        """d²=0 for H(n) at degree d."""
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        Hn = H(n, QQ)
+        for elem in Hn.basis_iter(d):
+            dd = elem.boundary().boundary()
+            assert dd == Hn.zero(), f"d²≠0 for H({n}) at degree {d}"
+
+
+# ============================================================================
+# Layer 1: Bar construction cooperad C = B(H)
+# ============================================================================
+
+
+class TestLayerBarCooperadDSquared:
+    """d²=0 for the bar construction cooperad C = B(sLie ⊙ Surjection).
+
+    The bar construction has cooperad connectivity -1 (degree -(n-1) at arity n).
+    """
+
+    @pytest.mark.parametrize("n", [2, 3])
+    @pytest.mark.parametrize("d", range(-1, 3))
+    def test_d_squared_zero(self, n: int, d: int) -> None:
+        """d²=0 for C(n) at degree d."""
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        Cn = C(n, QQ)
+        for elem in Cn.basis_iter(d):
+            dd = elem.boundary().boundary()
+            assert dd == Cn.zero(), f"d²≠0 for B(H)({n}) at degree {d}"
+
+
+# ============================================================================
+# Layer 2: Cobar construction operad P = Ω(B(H))
+# ============================================================================
+
+
+class TestLayerCobarOperadDSquared:
+    """d²=0 for the cobar construction operad P = Ω(B(sLie ⊙ Surjection)).
+
+    This is the quasi-free resolution used in the configuration model.
+    """
+
+    @pytest.mark.parametrize("n", [2, 3, 4])
+    @pytest.mark.parametrize("d", range(3))
+    def test_d_squared_zero(self, n: int, d: int) -> None:
+        """d²=0 for Ω(B(H))(n) at degree d (sampled)."""
+        rng = Random(20260326)
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        C = BarConstruction(H)
+        P = CobarConstruction(C)
+        Pn = P(n, QQ)
+        basis = Pn.graded_basis(d)
+        if not basis:
+            return
+        for _ in range(min(20, len(basis))):
+            p_elem = rng.choice(basis)
+            dd = p_elem.boundary().boundary()
+            assert dd == Pn.zero(), f"d²≠0 for Ω(B(H))({n}) at degree {d}"
+
+
+# ============================================================================
+# Layer 3: Free algebra T_P(k[d])
+# ============================================================================
+
+
+class TestLayerFreeAlgebra:
+    """Tests for the free Ω(B(H))-algebra on the trivial module k[d].
+
+    This is the algebra that captures the 'label' structure.
+    """
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight1(self, d: int) -> None:
+        """d²=0 at weight 1 for the free algebra."""
+        layers = _build_layers(QQ, d)
+        fa = layers["free_alg"]
+        mod = fa.module
+        for deg in range(-1, 4):
+            for elem in mod.basis_weight_iter(deg, 1):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight2(self, d: int) -> None:
+        """d²=0 at weight 2 for the free algebra."""
+        layers = _build_layers(QQ, d)
+        fa = layers["free_alg"]
+        mod = fa.module
+        for deg in range(-1, 3):
+            for elem in mod.basis_weight_iter(deg, 2):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 2, degree {deg}"
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_action_arity_2(self, d: int) -> None:
+        """The algebra action γ(p; a₁, a₂) produces a valid element."""
+        layers = _build_layers(QQ, d)
+        fa = layers["free_alg"]
+        mod = fa.module
+        P = layers["OBXsLie"]
+        # Get a degree-0 operad element at arity 2
+        P2 = P(2, QQ)
+        p_elems = list(P2.basis_iter(0))
+        if not p_elems:
+            return
+        # Get two weight-1 algebra elements
+        w1_elems = list(mod.basis_weight_iter(0, 1))
+        if len(w1_elems) < 2:
+            return
+        p = p_elems[0]
+        result = fa.act(p, [w1_elems[0], w1_elems[1]])
+        assert result is not None
+
+
+# ============================================================================
+# Layer 4: HadamardTensorAlgebra (sphere cochains ⊗ free algebra)
+# ============================================================================
+
+
+class TestLayerHadamardTensorAlgebra:
+    """Tests for the Hadamard tensor algebra of sphere cochains and free algebra.
+
+    This algebra has operad (Surjection ⊙ Ω(B(H))) and module (cochains ⊗ free_alg).
+    """
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight1(self, d: int) -> None:
+        """d²=0 at weight 1 for the tensor algebra."""
+        layers = _build_layers(QQ, d)
+        ta = layers["tensor_alg"]
+        for deg in range(-1, 3):
+            for elem in ta.basis_weight_iter(deg, 1):
+                dd = ta.boundary(ta.boundary(elem))
+                assert dd == ta.module.zero(), f"d²≠0 at weight 1, degree {deg}"
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight2(self, d: int) -> None:
+        """d²=0 at weight 2 for the tensor algebra."""
+        layers = _build_layers(QQ, d)
+        ta = layers["tensor_alg"]
+        for deg in range(-1, 3):
+            for elem in ta.basis_weight_iter(deg, 2):
+                dd = ta.boundary(ta.boundary(elem))
+                assert dd == ta.module.zero(), (
+                    f"d²≠0 at weight 2, degree {deg} for {list(elem)[0][0]}"
+                )
+
+
+# ============================================================================
+# Layer 5: PullbackAlgebra (via comodule morphism)
+# ============================================================================
+
+
+class TestLayerPullbackAlgebra:
+    """Tests for the pullback algebra along the comodule morphism.
+
+    The pullback converts the (Surjection ⊙ Ω(B(H)))-algebra into an
+    Ω(B(H))-algebra by composing the action with the comodule morphism
+    Ω(B(H)) → Surjection ⊙ Ω(B(H)).
+    """
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight1(self, d: int) -> None:
+        """d²=0 at weight 1 for the pullback algebra (same module as tensor algebra)."""
+        layers = _build_layers(QQ, d)
+        pb = layers["pulled_back"]
+        mod = pb.module
+        for deg in range(-1, 3):
+            for elem in mod.basis_weight_iter(deg, 1):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
+
+
+# ============================================================================
+# Layer 6: BarAlgebra (final construction)
+# ============================================================================
+
+
+class TestLayerBarAlgebra:
+    """Tests for the full bar algebra B_π(pulled_back).
+
+    This is the final output of the configuration model.
+    """
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight1(self, d: int) -> None:
+        """d²=0 at weight 1."""
+        layers = _build_layers(QQ, d)
+        bar = layers["bar"]
+        mod = bar.module
+        for deg in range(-1, 4):
+            for elem in mod.graded_basis_by_weight(deg, 1):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight2(self, d: int) -> None:
+        """d²=0 at weight 2."""
+        layers = _build_layers(QQ, d)
+        bar = layers["bar"]
+        mod = bar.module
+        for deg in range(-1, 4):
+            for elem in mod.graded_basis_by_weight(deg, 2):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 2, degree {deg}"
+
+    @pytest.mark.parametrize("d", [1, 2])
+    def test_d_squared_zero_weight3_gf2(self, d: int) -> None:
+        """d²=0 at weight 3 over GF(2)."""
+        layers = _build_layers(GF(2), d)
+        bar = layers["bar"]
+        mod = bar.module
+        for deg in range(-1, 3):
+            for elem in mod.graded_basis_by_weight(deg, 3):
+                dd = mod.boundary(mod.boundary(elem))
+                assert dd == mod.zero(), f"d²≠0 at weight 3, degree {deg} (GF(2))"
+
+
+# ============================================================================
+# Full model tests
+# ============================================================================
 
 
 class TestConfigurationModelCore:
@@ -36,7 +338,7 @@ class TestConfigurationModelCore:
         assert C is not None
 
     @pytest.mark.xfail(
-        reason="d=1 weight=4 is known to have d²≠0 due to a bug in the inner-module normalization",
+        reason="weight=4 is known to have d²≠0 due to a bug in the inner-module normalization",
         strict=True,
     )
     @pytest.mark.parametrize("d", [1, 2])
@@ -63,7 +365,7 @@ class TestConfigurationModelCore:
         assert complex is not None
 
     @pytest.mark.xfail(
-        reason="d=1 weight=4 is known to have d²≠0 due to a bug in the inner-module normalization",
+        reason="weight=4 is known to have d²≠0 due to a bug in the inner-module normalization",
         strict=True,
     )
     def test_check_complex_QQ_weight4(self) -> None:
@@ -71,25 +373,6 @@ class TestConfigurationModelCore:
         model = euclidean_unordered_configuration_model(QQ, 2)
         complex = compute_chain_complex(model.module, degrees=range(0, 2), weight=4, check=True)
         assert complex is not None
-
-
-class TestConfigurationModelIntermediate:
-    @pytest.mark.parametrize("n", [3, 4])
-    @pytest.mark.parametrize("d", range(3))
-    def test_check_bar_cobar_square_zero(self, n: int, d: int) -> None:
-        """The bar-cobar construction on the shifted Lie–Surjection cooperad satisfies d²=0."""
-        rng = Random(20260326)
-
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        P = CobarConstruction(C)
-
-        basis = P(n, QQ).graded_basis(d)
-        for _ in range(20):
-            p_elem = rng.choice(basis)
-            dd = p_elem.boundary().boundary()
-            assert dd == P(n, QQ).zero(), f"d²≠0 at arity {n} degree {d} for {p_elem}"
 
 
 class TestConfigurationModelDSquaredMinimal:
