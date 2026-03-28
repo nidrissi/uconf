@@ -434,33 +434,38 @@ class TestFreeAlgebraBarComplex:
 
     def test_bar_of_free_ass_d_squared_zero_2(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M)) (second variant)."""
-        from uconf.constructions.twisted_complex import TwistedBarComplex
+        from uconf.constructions.bar_algebra import BarAlgebra
         from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M)
-        B = TwistedBarComplex(canonical_projection(Associative), F)
+        bar = BarAlgebra(canonical_projection(Associative), F)
+        B = bar.module
 
-        mu = (1, 2)
-        # Outer tree: weight-1 binary tree with two single-leaf inner trees
-        outer_tree = (mu, 1, 2)
-        # a_tuple: two Free_Ass(M) leaf basis keys; Ass(1) key is (1,)
-        a_tuple = (((1,), ((),)), ((1,), ((),)))
-        elem = B((outer_tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        C = bar.cooperad_cls
+        comp2 = C(2, QQ)
+        id_key = Associative.unit_key()
+        inner_key = (id_key, ((),))
+        for p_elem in comp2.planar_basis_iter(1):
+            c_key = p_elem.support()[0]
+            elem = B((c_key, (inner_key, inner_key)))
+            assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_bar_of_free_ass_d_squared_zero(self):
         """d² = 0 on a weight-1 element of B(Ass; Free_Ass(M))."""
-        from uconf.constructions.twisted_complex import TwistedBarComplex
+        from uconf.constructions.bar_algebra import BarAlgebra
         from uconf.morphisms.canonical_twisting import canonical_projection
 
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M)
-        B = TwistedBarComplex(canonical_projection(Associative), F)
+        bar = BarAlgebra(canonical_projection(Associative), F)
+        B = bar.module
 
-        mu = (1, 2)
-        outer_tree = (mu, 1, 2)
-        # a_tuple: two Free_Ass(M) leaf basis keys; Ass(1) key is (1,)
-        a_tuple = (((1,), ((),)), ((1,), ((),)))
-        elem = B((outer_tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        C = bar.cooperad_cls
+        comp2 = C(2, QQ)
+        id_key = Associative.unit_key()
+        inner_key = (id_key, ((),))
+        for p_elem in comp2.planar_basis_iter(1):
+            c_key = p_elem.support()[0]
+            elem = B((c_key, (inner_key, inner_key)))
+            assert B.boundary(B.boundary(elem)) == B.zero()

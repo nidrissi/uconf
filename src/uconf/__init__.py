@@ -40,8 +40,6 @@ from uconf.algebraic import (
 from uconf.constructions import (
     BarConstruction,
     CobarConstruction,
-    TwistedBarComplex,
-    TwistedCobarComplex,
     BarAlgebra,
     BarAlgebraModule,
     CobarCoalgebra,
@@ -100,8 +98,6 @@ __all__ = [
     "CofreeConilpotentCoalgebra",
     "BarConstruction",
     "CobarConstruction",
-    "TwistedBarComplex",
-    "TwistedCobarComplex",
     "BarAlgebra",
     "BarAlgebraModule",
     "CobarCoalgebra",

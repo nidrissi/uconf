@@ -39,7 +39,13 @@ from sage.all import (
 )
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
-from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
+from uconf.algebraic.tree_module import (
+    _inner_weight_on_key,
+    _module_basis_keys_in_degree,
+    _module_basis_keys_in_weight_and_degree,
+    _tuples_in_degree,
+    _tuples_in_degree_and_weight,
+)
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
@@ -354,9 +360,80 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                         for m_tuple in m_tuples:
                             yield self.term((c_key, m_tuple))
 
+    def _weight_on_basis(self, key) -> int:
+        """Weight of a basis key ``(c_key, m_tuple)``.
+
+        The weight is the sum of weights of the leaf-module elements in
+        ``m_tuple``.  Each leaf element's weight is obtained from the inner
+        module's ``_weight_on_basis``; modules without this attribute
+        default to weight 1 per key.
+        """
+        _c_key, m_tuple = key
+        return sum(_inner_weight_on_key(self._inner_module, m) for m in m_tuple)
+
+    def basis_weight_iter(self, d: int, w: int) -> Iterator[Any]:
+        """Iterate over basis elements of total degree ``d`` and weight ``w``.
+
+        Weight is additive: the weight of ``(c_key, m_tuple)`` is the sum of
+        the weights of its leaf-module elements.
+
+        Unlike :meth:`basis_iter`, this method is always finite (``w``
+        bounds the arity).
+        """
+        if w < 1:
+            return
+
+        M = self._inner_module
+        C = self._cooperad_cls
+        R = self.base_ring()
+
+        connectivity = int(getattr(C, "connectivity", 0))
+
+        # Max arity: each leaf has weight >= 1, so n <= w.
+        max_n = w
+
+        # Collect inner-module keys by (degree, weight)
+        keys_by_dw: dict[tuple, list] = {}
+        for d_m in range(d + 1):
+            for w_m in range(1, w + 1):
+                keys = list(_module_basis_keys_in_weight_and_degree(M, d_m, w_m))
+                if keys:
+                    keys_by_dw[(d_m, w_m)] = keys
+
+        # n = 1: single leaf
+        comp_1 = C(1, R)
+        id_key = C.unit_key()
+        for mk in keys_by_dw.get((d, w), []):
+            yield self.term((id_key, (mk,)))
+
+        # n >= 2
+        for n in range(2, max_n + 1):
+            comp_n = C(n, R)
+            for d_c in range(d + 1):
+                d_m_needed = d - d_c
+                if d_m_needed < 0:
+                    continue
+                c_elems = list(comp_n.planar_basis_iter(d_c))
+                if not c_elems:
+                    continue
+                m_tuples = list(
+                    _tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w)
+                )
+                if not m_tuples:
+                    continue
+                for c_elem in c_elems:
+                    for c_key in c_elem.support():
+                        for m_tuple in m_tuples:
+                            yield self.term((c_key, m_tuple))
+
     @cached_method
     def graded_basis(self, d: int):
         return Family(self.basis_iter(d))
+
+    @cached_method
+    def graded_basis_by_weight(self, d: int, w: int):
+        """Return a :class:`Family` of basis elements at degree ``d`` and weight ``w``."""
+        return Family(self.basis_weight_iter(d, w))
 
     # ------------------------------------------------------------------
     # Element class
