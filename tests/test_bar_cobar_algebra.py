@@ -12,11 +12,13 @@ import itertools
 import pytest
 from sage.all import GF, QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
 
-from uconf import Associative, CoAssociative, Commutative
+from uconf import Associative, CoAssociative, Commutative, Surjection
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.algebraic.cofree_coalgebra import CofreeConilpotentCoalgebra
 from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.constructions.bar_algebra import BarAlgebra
+from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
@@ -92,6 +94,31 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
                     right_full = right_full.tensor(right_parent(()))
                 result += v_coeff * left_elem.tensor(right_full)
         return result
+
+
+class DiffModule(CombinatorialFreeModule):
+    """Module with two generators x (deg 1) and y (deg 0), dx = y."""
+
+    def __init__(self, base_ring):
+        super().__init__(base_ring, ["x", "y"], category=GradedModulesWithBasis(base_ring))
+        self.connectivity = 0
+        self._boundary = self.module_morphism(
+            on_basis=self._bdry_on_basis,
+            codomain=self,
+        )
+        self.boundary = self._boundary
+        self.rename("k{x,y}")
+
+    def degree_on_basis(self, key):
+        return 1 if key == "x" else 0
+
+    def _bdry_on_basis(self, key):
+        if key == "x":
+            return self.term("y")
+        return self.zero()
+
+    def _repr_term(self, key):
+        return key
 
 
 # ===========================================================================
@@ -385,3 +412,249 @@ class TestCobarCoalgebra:
                     assert dd == cobar.module.zero(), (
                         f"d² ≠ 0 at arity 4, degree {d}, p_key={p_key}"
                     )
+
+
+# ===========================================================================
+# BarAlgebra with nontrivial differential: Ass-algebra on k{x,y}, dx=y
+# ===========================================================================
+
+
+class TestBarAlgebraNontrivialDifferential:
+    """BarAlgebra with an Ass-algebra whose underlying module has dx=y."""
+
+    @pytest.fixture
+    def bar(self):
+        M = DiffModule(QQ)
+
+        def structure_map(p_elem, a_list):
+            n = p_elem.arity()
+            if n == 1:
+                result = M.zero()
+                for _key, p_coeff in p_elem:
+                    for _ak, a_coeff in a_list[0]:
+                        result += p_coeff * a_coeff * M.term(_ak)
+                return result
+            return M.zero()
+
+        alg = OperadAlgebra(M, Associative, structure_map)
+        return BarAlgebra(canonical_projection(Associative), alg)
+
+    def test_d_squared_zero_weight1_all_generators(self, bar):
+        """d² = 0 on all weight-1 elements decorated by x or y."""
+        C = bar.cooperad_cls
+        comp2 = C(2, QQ)
+        for d in range(3):
+            for p_elem in comp2.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    for a1 in ["x", "y"]:
+                        for a2 in ["x", "y"]:
+                            elem = bar.module((c_key, (a1, a2)))
+                            dd = bar.module.boundary(bar.module.boundary(elem))
+                            assert dd == bar.module.zero(), (
+                                f"d² ≠ 0 at degree {d}, c_key={c_key}, a=({a1},{a2})"
+                            )
+
+    def test_d_squared_zero_weight1_ternary(self, bar):
+        """d² = 0 on arity-3 weight-1 elements."""
+        C = bar.cooperad_cls
+        comp3 = C(3, QQ)
+        for d in range(3):
+            for p_elem in comp3.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    for a1 in ["x", "y"]:
+                        for a2 in ["x", "y"]:
+                            for a3 in ["x", "y"]:
+                                elem = bar.module((c_key, (a1, a2, a3)))
+                                dd = bar.module.boundary(bar.module.boundary(elem))
+                                assert dd == bar.module.zero(), (
+                                    f"d² ≠ 0 at degree {d}, c_key={c_key}, a=({a1},{a2},{a3})"
+                                )
+
+    def test_boundary_uses_module_differential(self, bar):
+        """The cofree differential should include d_M terms (dx=y)."""
+        C = bar.cooperad_cls
+        elem = bar.module((C.unit_key(), ("x",)))
+        d = bar.module.boundary(elem)
+        # d((id, (x,))) should include (id, (y,)) from d_M(x)=y
+        assert d != bar.module.zero()
+        expected = bar.module((C.unit_key(), ("y",)))
+        assert d == expected
+
+
+# ===========================================================================
+# BarAlgebra with free Surjection algebra
+# ===========================================================================
+
+
+class TestBarAlgebraFreeSurjection:
+    """BarAlgebra with FreeOperadAlgebra(Surjection, k[0]).
+
+    This exercises B(Surjection) as the cooperad, which has nontrivial
+    internal differential, making it a more rigorous test of d² = 0.
+    """
+
+    @pytest.fixture
+    def bar(self):
+        M = TrivialModule(0, QQ)
+        free_alg = FreeOperadAlgebra(Surjection, M)
+        return BarAlgebra(canonical_projection(Surjection), free_alg)
+
+    @pytest.fixture
+    def bar_gf2(self):
+        M = TrivialModule(0, GF(2))
+        free_alg = FreeOperadAlgebra(Surjection, M)
+        return BarAlgebra(canonical_projection(Surjection), free_alg)
+
+    def test_construction(self, bar):
+        assert bar.module is not None
+
+    def test_d_squared_zero_weight2(self, bar):
+        """d² = 0 on weight-2 elements with B(Surjection) cooperad."""
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp2 = C(2, QQ)
+        for d in range(3):
+            for p_elem in comp2.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    elem = bar.module((c_key, (inner_key, inner_key)))
+                    dd = bar.module.boundary(bar.module.boundary(elem))
+                    assert dd == bar.module.zero(), (
+                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
+                    )
+
+    def test_d_squared_zero_weight3(self, bar):
+        """d² = 0 on weight-3 elements with B(Surjection) cooperad."""
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp3 = C(3, QQ)
+        for d in range(3):
+            for p_elem in comp3.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    elem = bar.module((c_key, (inner_key,) * 3))
+                    dd = bar.module.boundary(bar.module.boundary(elem))
+                    assert dd == bar.module.zero(), (
+                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
+                    )
+
+    def test_d_squared_zero_weight2_gf2(self, bar_gf2):
+        """d² = 0 over GF(2)."""
+        bar = bar_gf2
+        C = bar.cooperad_cls
+        P = bar._algebra.operad_cls
+        id_key = P.unit_key()
+        inner_key = (id_key, ((),))
+        comp2 = C(2, GF(2))
+        for d in range(3):
+            for p_elem in comp2.planar_basis_iter(d):
+                for c_key in p_elem.support():
+                    elem = bar.module((c_key, (inner_key, inner_key)))
+                    dd = bar.module.boundary(bar.module.boundary(elem))
+                    assert dd == bar.module.zero(), (
+                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
+                    )
+
+
+# ===========================================================================
+# CobarCoalgebra with nontrivial differential: CoAss-coalgebra on k{x,y}, dx=y
+# ===========================================================================
+
+
+class TestCobarCoalgebraNontrivialDifferential:
+    """CobarCoalgebra with a CoAss-coalgebra whose underlying module has dx=y."""
+
+    @pytest.fixture
+    def cobar_gf2(self):
+        R = GF(2)
+        M = DiffModule(R)
+
+        def zero_coaction(v_element, n):
+            left_parent = CoAssociative(n, base_ring=R)
+            if n == 1:
+                target = tensor([left_parent, M])
+                result = target.zero()
+                for v_key, v_coeff in v_element:
+                    result += v_coeff * left_parent.term((1,)).tensor(M.term(v_key))
+                return result
+            right_factors = [M] * n
+            right_tensor = tensor(right_factors)
+            target = tensor([left_parent, right_tensor])
+            return target.zero()
+
+        coalg = CooperadCoalgebra(M, CoAssociative, zero_coaction)
+        return CobarCoalgebra(canonical_inclusion(CoAssociative), coalg)
+
+    def test_d_squared_zero_leaves_gf2(self, cobar_gf2):
+        """d² = 0 on leaf elements (x and y) over GF(2)."""
+        P = cobar_gf2.operad_cls
+        p_unit = P.unit_key()
+        for v in ["x", "y"]:
+            elem = cobar_gf2.module((p_unit, (v,)))
+            dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
+            assert dd == cobar_gf2.module.zero(), f"d² ≠ 0 on leaf {v}"
+
+    def test_d_squared_zero_weight2_gf2(self, cobar_gf2):
+        """d² = 0 on weight-2 elements over GF(2)."""
+        P = cobar_gf2.operad_cls
+        R = GF(2)
+        comp2 = P(2, R)
+        for d in range(3):
+            for p_elem in comp2.planar_basis_iter(d):
+                for p_key in p_elem.support():
+                    for v1 in ["x", "y"]:
+                        for v2 in ["x", "y"]:
+                            elem = cobar_gf2.module.term((p_key, (v1, v2)))
+                            dd = cobar_gf2.module.boundary(
+                                cobar_gf2.module.boundary(elem)
+                            )
+                            assert dd == cobar_gf2.module.zero(), (
+                                f"d² ≠ 0 at degree {d}, p_key={p_key}, v=({v1},{v2})"
+                            )
+
+    def test_boundary_uses_module_differential(self, cobar_gf2):
+        """The free differential should include d_M terms (dx=y)."""
+        P = cobar_gf2.operad_cls
+        p_unit = P.unit_key()
+        elem = cobar_gf2.module((p_unit, ("x",)))
+        d = cobar_gf2.module.boundary(elem)
+        # d should include (id, (y,)) from d_M(x)=y
+        assert d != cobar_gf2.module.zero()
+        expected = cobar_gf2.module((p_unit, ("y",)))
+        assert d == expected
+
+
+# ===========================================================================
+# CobarCoalgebra with cofree B(Surjection)-coalgebra
+# ===========================================================================
+
+
+class TestCobarCoalgebraCofreeBarSurjection:
+    """CobarCoalgebra with the cofree B(Surjection)-coalgebra on k.
+
+    Uses canonical inclusion ι: B(Surj) → Ω(B(Surj)). The cooperad
+    B(Surjection) has a nontrivial internal differential, making this
+    a thorough test of the cobar construction.
+    """
+
+    @pytest.fixture
+    def cobar_gf2(self):
+        R = GF(2)
+        BSurj = BarConstruction(Surjection)
+        M = TrivialModule(0, R)
+        cofree_coalg = CofreeConilpotentCoalgebra(BSurj, M)
+        return CobarCoalgebra(canonical_inclusion(BSurj), cofree_coalg)
+
+    def test_construction(self, cobar_gf2):
+        assert cobar_gf2.module is not None
+
+    def test_d_squared_zero_leaf_gf2(self, cobar_gf2):
+        """d² = 0 on a single-leaf element over GF(2)."""
+        BSurj = BarConstruction(Surjection)
+        inner_key = (BSurj.unit_key(), ((),))
+        P = cobar_gf2.operad_cls
+        elem = cobar_gf2.module((P.unit_key(), (inner_key,)))
+        dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
+        assert dd == cobar_gf2.module.zero()
