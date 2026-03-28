@@ -9,8 +9,8 @@ Structures tested:
 - HadamardProduct (with nontrivial degrees: HadamardProduct(sLie, Surjection))
 - FreeOperadAlgebra (with Associative and Surjection operads)
 - HadamardTensorAlgebra
-- TwistedBarComplex (canonical projection)
-- TwistedCobarComplex (canonical inclusion)
+- BarAlgebra (canonical projection)
+- CobarCoalgebra (canonical inclusion)
 """
 
 import itertools
@@ -29,10 +29,12 @@ from uconf import (
     Surjection,
 )
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import FreeOperadAlgebra
+from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.bar_construction import BarConstruction
+from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
 from uconf.core.signs import sign_from_exponent
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
@@ -496,24 +498,25 @@ class TestHadamardTensorAlgebraAxioms:
 
 
 # ---------------------------------------------------------------------------
-# TwistedBarComplex -- additional GF(2) tests
+# BarAlgebra -- additional GF(2) tests
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedBarComplexGF2:
-    """d²=0 tests for TwistedBarComplex over GF(2) (structural correctness)."""
+class TestBarAlgebraGF2:
+    """d²=0 tests for BarAlgebra over GF(2) (structural correctness)."""
 
     _MU = (1, 2)
     _MU3 = (1, 2, 3)
 
     @pytest.fixture
     def trivial_bar_gf2(self):
-        """TwistedBarComplex of the trivial Ass-algebra over GF(2)."""
-        return TwistedBarComplex(canonical_projection(Associative), TrivialAssAlgebra(GF(2)))
+        """BarAlgebra of the trivial Ass-algebra over GF(2)."""
+        bar = BarAlgebra(canonical_projection(Associative), TrivialAssAlgebra(GF(2)))
+        return bar.module
 
     @pytest.fixture
     def free_algebra_bar_gf2(self):
-        """TwistedBarComplex of the free Ass-algebra Free_Ass(k[1]) over GF(2)."""
+        """BarAlgebra of the free Ass-algebra Free_Ass(k[1]) over GF(2)."""
         from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
         simple_module = CombinatorialFreeModule(GF(2), [()], category=GradedModulesWithBasis(GF(2)))
@@ -521,9 +524,10 @@ class TestTwistedBarComplexGF2:
         simple_module.boundary = lambda x: simple_module.zero()
         simple_module.connectivity = 0
         simple_module.rename("K[1]")
-        return TwistedBarComplex(
+        bar = BarAlgebra(
             canonical_projection(Associative), FreeOperadAlgebra(Associative, simple_module)
         )
+        return bar.module
 
     @pytest.mark.parametrize(
         "tree,a_tuple",
@@ -536,8 +540,9 @@ class TestTwistedBarComplexGF2:
     )
     def test_d_squared_zero_trivial_gf2(self, trivial_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for trivial algebra bar complex."""
-        elem = trivial_bar_gf2((tree, a_tuple))
-        assert elem.boundary().boundary() == trivial_bar_gf2.zero()
+        B = trivial_bar_gf2
+        elem = B((tree, a_tuple))
+        assert B.boundary(B.boundary(elem)) == B.zero()
 
     _GEN1 = ((1,), ((),))
 
@@ -552,16 +557,17 @@ class TestTwistedBarComplexGF2:
     )
     def test_d_squared_zero_free_algebra_gf2(self, free_algebra_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for free algebra bar complex."""
-        elem = free_algebra_bar_gf2((tree, a_tuple))
-        assert elem.boundary().boundary() == free_algebra_bar_gf2.zero()
+        B = free_algebra_bar_gf2
+        elem = B((tree, a_tuple))
+        assert B.boundary(B.boundary(elem)) == B.zero()
 
 
 # ---------------------------------------------------------------------------
-# TwistedBarComplex (canonical inclusion ι) -- additional GF(2) tests
+# BarAlgebra (canonical inclusion ι) -- additional GF(2) tests
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedBarComplexIotaGF2:
+class TestBarAlgebraIotaGF2:
     """d²=0 for B_ι(A) over GF(2)."""
 
     _MU = (1, 2)
@@ -569,7 +575,7 @@ class TestTwistedBarComplexIotaGF2:
 
     @pytest.fixture
     def trivial_iota_bar_gf2(self):
-        """TwistedBarComplex of the trivial ΩB(Ass)-algebra over GF(2)."""
+        """BarAlgebra of the trivial ΩB(Ass)-algebra over GF(2)."""
         bar_ass = BarConstruction(Associative)
         cobar_bar_ass = CobarConstruction(bar_ass)
         module = Commutative(1, base_ring=GF(2))
@@ -578,7 +584,8 @@ class TestTwistedBarComplexIotaGF2:
             return module.zero()
 
         alg = OperadAlgebra(module, cobar_bar_ass, trivial_structure_map)
-        return TwistedBarComplex(canonical_inclusion(BarConstruction(Associative)), alg)
+        bar = BarAlgebra(canonical_inclusion(BarConstruction(Associative)), alg)
+        return bar.module
 
     @pytest.mark.parametrize(
         "tree,a_tuple",
@@ -591,12 +598,13 @@ class TestTwistedBarComplexIotaGF2:
     )
     def test_d_squared_zero_gf2(self, trivial_iota_bar_gf2, tree, a_tuple):
         """d²=0 over GF(2) for the trivial ΩB(Ass)-algebra bar complex."""
-        elem = trivial_iota_bar_gf2((tree, a_tuple))
-        assert elem.boundary().boundary() == trivial_iota_bar_gf2.zero()
+        B = trivial_iota_bar_gf2
+        elem = B((tree, a_tuple))
+        assert B.boundary(B.boundary(elem)) == B.zero()
 
 
 # ---------------------------------------------------------------------------
-# TwistedCobarComplex -- GF(2) and QQ tests
+# CobarCoalgebra -- GF(2) tests
 # ---------------------------------------------------------------------------
 
 
@@ -631,14 +639,12 @@ def _trivial_coass_coaction(R, v_element, n):
     return result
 
 
-class TestTwistedCobarComplexGF2:
-    """d²=0 tests for TwistedCobarComplex over GF(2)."""
+class TestCobarCoalgebraGF2:
+    """d²=0 tests for CobarCoalgebra over GF(2)."""
 
     @pytest.fixture
     def cobar_complex_gf2(self):
         """Cobar complex Ω_ι(k) with trivial CoAss-coalgebra over GF(2)."""
-        from uconf.algebraic.coalgebra import CooperadCoalgebra
-
         R = GF(2)
         module = Commutative(1, base_ring=R)
 
@@ -646,7 +652,8 @@ class TestTwistedCobarComplexGF2:
             return _trivial_coass_coaction(R, v_element, n)
 
         coalg = CooperadCoalgebra(module, CoAssociative, coaction_map)
-        return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
+        cobar = CobarCoalgebra(canonical_inclusion(CoAssociative), coalg)
+        return cobar.module
 
     @pytest.mark.parametrize(
         "key",
@@ -657,8 +664,9 @@ class TestTwistedCobarComplexGF2:
     )
     def test_d_squared_zero_gf2(self, cobar_complex_gf2, key):
         """d²=0 over GF(2) for cobar complex elements."""
-        elem = cobar_complex_gf2(key)
-        assert elem.boundary().boundary() == cobar_complex_gf2.zero()
+        O = cobar_complex_gf2
+        elem = O(key)
+        assert O.boundary(O.boundary(elem)) == O.zero()
 
 
 # ---------------------------------------------------------------------------
@@ -772,36 +780,39 @@ class TestHadamardProductSurjSurj:
 
 
 # ---------------------------------------------------------------------------
-# TwistedBarComplex with Surjection operad (nontrivial internal differential)
+# BarAlgebra with Surjection operad (nontrivial internal differential)
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedBarComplexSurjection:
-    """TwistedBarComplex with the Surjection operad and trivial algebra.
+class TestBarAlgebraSurjection:
+    """BarAlgebra with the Surjection operad and trivial algebra.
 
     This tests d²=0 when the cooperad B(Surj) has nontrivial internal diff.
     """
 
     @pytest.fixture
     def surjection_bar(self, R):
-        """TwistedBarComplex with the Surjection operad and trivial algebra."""
-        return TwistedBarComplex(canonical_projection(Surjection), TrivialSurjAlgebra(R))
+        """BarAlgebra with the Surjection operad and trivial algebra."""
+        bar = BarAlgebra(canonical_projection(Surjection), TrivialSurjAlgebra(R))
+        return bar.module
 
     def test_d_squared_zero_weight1_binary(self, R, surjection_bar):
         """d²=0 on a weight-1 binary tree with Surjection decorations."""
-        # Surjection(2, R) identity: (1, 2)
+        B = surjection_bar
         tree = ((1, 2), 1, 2)
-        elem = surjection_bar((tree, ((), ())))
-        assert elem.boundary().boundary() == surjection_bar.zero()
+        elem = B((tree, ((), ())))
+        assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight1_binary_deg1(self, R, surjection_bar):
         """d²=0 on weight-1 binary tree with degree-1 Surjection decoration."""
+        B = surjection_bar
         tree = ((1, 2, 1), 1, 2)
-        elem = surjection_bar((tree, ((), ())))
-        assert elem.boundary().boundary() == surjection_bar.zero()
+        elem = B((tree, ((), ())))
+        assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight2(self, R, surjection_bar):
         """d²=0 on a weight-2 right-nested tree."""
+        B = surjection_bar
         tree = ((1, 2), 1, ((1, 2), 2, 3))
-        elem = surjection_bar((tree, ((), (), ())))
-        assert elem.boundary().boundary() == surjection_bar.zero()
+        elem = B((tree, ((), (), ())))
+        assert B.boundary(B.boundary(elem)) == B.zero()
