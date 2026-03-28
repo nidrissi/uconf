@@ -1,13 +1,13 @@
-from uconf.algebraic.algebra import OperadAlgebra
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
 
+from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.algebraic.spherical import SurjectionSphereCochainAlgebra
+from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.constructions.twisted_complex import TwistedBarComplex
 from uconf.core.display import latex_linear_combination
 from uconf.core.morphism import OperadMorphism
 from uconf.models.lie import Lie
@@ -77,7 +77,7 @@ def labelled_configuration_model(
     comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     pi = canonical_projection(pulled_back.operad_cls)
-    bar = TwistedBarComplex(pi, pulled_back)
+    bar = BarAlgebra(pi, pulled_back)
 
     return bar
 
