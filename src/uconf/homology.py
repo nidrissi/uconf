@@ -78,10 +78,19 @@ def _boundary_matrix(
 
 
 def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
-    """Return (basis_elements, basis_keys)."""
-    connectivity = getattr(module, "connectivity", None)
-    if isinstance(connectivity, int) and d < connectivity:
-        return [], []
+    """Return (basis_elements, basis_keys).
+
+    When *weight* is ``None``, we apply a ``connectivity`` short-circuit:
+    if *d* is below the module's reported connectivity, the result is
+    trivially empty.  When a *weight* filter is active we skip this check,
+    because ``connectivity`` only captures the weight-1 minimum degree —
+    higher-weight terms can reach lower degrees (e.g. when the cooperad in
+    a cofree coalgebra has negative connectivity).
+    """
+    if weight is None:
+        connectivity = getattr(module, "connectivity", None)
+        if isinstance(connectivity, int) and d < connectivity:
+            return [], []
 
     seen: set = set()
     elems: list = []
