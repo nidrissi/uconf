@@ -336,10 +336,13 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 "degree-0 generators (connectivity=0, min_m_deg=0)."
             )
 
-        # Collect inner-module keys at degrees 0..max_possible_d_m
-        # d_m can be up to d - connectivity*(n-1) for arity n.
-        max_d_m = d - connectivity * max(1, max_n - 1) if connectivity < 0 else d
-        max_d_m = max(max_d_m, d)  # at least d (for n=1 case already handled)
+        # Collect inner-module keys at degrees 0..max_possible_d_m.
+        # d_m = d - d_c, and d_c can be as low as connectivity*(n-1) < 0 for
+        # negative-connectivity cooperads, so max_d_m can exceed d.
+        if connectivity < 0:
+            max_d_m = d - connectivity * max(1, max_n - 1)
+        else:
+            max_d_m = d
 
         m_keys_by_deg: dict[int, list] = {}
         for d_m in range(max(0, max_d_m) + 1):
