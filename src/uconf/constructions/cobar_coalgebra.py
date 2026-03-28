@@ -93,10 +93,7 @@ class CobarCoalgebraModule(FreeAlgebraModule):
 
     def _twisted_boundary_on_basis(self, key):
         """Total differential d = d_{T_P} + d_α."""
-        return (
-            FreeAlgebraModule._boundary_on_basis(self, key)
-            + self._dalpha_on_basis(key)
-        )
+        return FreeAlgebraModule._boundary_on_basis(self, key) + self._dalpha_on_basis(key)
 
     def _dalpha_on_basis(self, key):
         r"""Twisting differential d_α.
@@ -160,12 +157,10 @@ class CobarCoalgebraModule(FreeAlgebraModule):
                     composed = P.compose(p_elem, i + 1, alpha_c)
 
                     # Build new m_tuple: replace v_i with v'_1, …, v'_k
-                    new_m = m_tuple[:i] + tuple(new_v_keys) + m_tuple[i + 1:]
+                    new_m = m_tuple[:i] + tuple(new_v_keys) + m_tuple[i + 1 :]
 
                     # Add to result via _normalized_corolla_sum for planarization
-                    result += sign * coact_coeff * self._normalized_corolla_sum(
-                        composed, new_m
-                    )
+                    result += sign * coact_coeff * self._normalized_corolla_sum(composed, new_m)
 
             cumulative += leaf_degs[i]
 
@@ -211,6 +206,13 @@ class CobarCoalgebraModule(FreeAlgebraModule):
     def d_alpha(self, elem):
         """Apply only the twisting differential d_α."""
         return self._d_alpha(elem)
+
+    # Representation
+    def _repr_term(self, basis_element) -> str:
+        return super()._repr_term(basis_element) + "_Ω"
+
+    def _latex_term(self, basis_element) -> str:
+        return super()._latex_term(basis_element) + "_Ω"
 
     # ------------------------------------------------------------------
     # Element class
@@ -285,9 +287,7 @@ class CobarCoalgebra(OperadAlgebra):
                         composed_elem = P.compose(composed_elem, pos, p_j_elem)
 
                     m_concat = tuple(mk for ik in input_keys for mk in ik[1])
-                    result += coeff * cobar_module._normalized_corolla_sum(
-                        composed_elem, m_concat
-                    )
+                    result += coeff * cobar_module._normalized_corolla_sum(composed_elem, m_concat)
 
             return result
 

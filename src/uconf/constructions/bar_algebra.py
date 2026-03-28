@@ -95,10 +95,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
     def _twisted_boundary_on_basis(self, key):
         """Total differential d = d_{T^c} + d_α."""
-        return (
-            CofreeCoalgebraModule._boundary_on_basis(self, key)
-            + self._dalpha_on_basis(key)
-        )
+        return CofreeCoalgebraModule._boundary_on_basis(self, key) + self._dalpha_on_basis(key)
 
     def _dalpha_on_basis(self, key):
         r"""Twisting differential d_α (coderivation).
@@ -165,16 +162,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # Build the new m_tuple: replace a_i,...,a_{i+n_r-1}
                     # with the single action result
                     for a_new_key, a_coeff in action_result:
-                        new_m = (
-                            m_tuple[:i - 1]
-                            + (a_new_key,)
-                            + m_tuple[i + n_r - 1:]
-                        )
+                        new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
                         result += (
-                            sign * coeff * a_coeff
-                            * self._normalized_corolla_sum(
-                                c_L_comp.term(c_L_key), new_m
-                            )
+                            sign
+                            * coeff
+                            * a_coeff
+                            * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
                         )
 
         return result
@@ -190,6 +183,13 @@ class BarAlgebraModule(CofreeCoalgebraModule):
     def d_alpha(self, elem):
         """Apply only the twisting differential d_α."""
         return self._d_alpha(elem)
+
+    # Representation
+    def _repr_term(self, basis_element) -> str:
+        return super()._repr_term(basis_element) + "_B"
+
+    def _latex_term(self, basis_element) -> str:
+        return super()._latex_term(basis_element) + "_B"
 
     # ------------------------------------------------------------------
     # Element class
