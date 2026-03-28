@@ -426,6 +426,8 @@ class BarConstruction(UniqueRepresentation):
                     return self.sum_of_terms((basis, coeff) for basis, coeff in x)
                 raise TypeError("Element from different bar construction")
 
+            R = self.base_ring()
+
             if isinstance(x, dict):
                 clean_dict = {}
                 for key, coeff in x.items():
@@ -435,7 +437,7 @@ class BarConstruction(UniqueRepresentation):
                     # Normalize to shuffle form (may produce multiple terms)
                     for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
                         clean_dict[shuffle_key] = (
-                            clean_dict.get(shuffle_key, 0) + coeff * shuffle_coeff
+                            clean_dict.get(shuffle_key, R.zero()) + R(coeff) * R(shuffle_coeff)
                         )
                 return super()._element_constructor_(clean_dict)
 
@@ -443,8 +445,11 @@ class BarConstruction(UniqueRepresentation):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                # Normalize to shuffle form (may produce multiple terms)
-                return self.sum_of_terms(self._normalize_to_shuffle(clean_key))
+                # Normalize to shuffle form — coerce coefficients to the base ring
+                # to prevent integer accumulation (e.g. 1+1=2 instead of 0 in GF(2))
+                return self.sum_of_terms(
+                    (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(clean_key)
+                )
 
             if isinstance(x, int) and self._arity == 1 and x == 1:
                 # Special case: allow integer 1 to represent the single-leaf tree in arity 1
