@@ -308,33 +308,26 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         C = self._cooperad_cls
         R = self.base_ring()
 
-        m_keys_by_deg: dict[int, list] = {}
-        for d_m in range(d + 1):
-            keys = list(_module_basis_keys_in_degree(M, d_m))
-            if keys:
-                m_keys_by_deg[d_m] = keys
+        connectivity = int(getattr(C, "connectivity", 0))
 
-        # n = 1
-        comp_1 = C(1, R)
-        comp_1_list = list(comp_1.basis_iter(0))
-        assert len(comp_1_list) == 1, (
-            f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
-        )
+        # n = 1: C(1) is the unit, degree 0 → need module keys at degree d
         c_key_1 = C.unit_key()
-        for mk in m_keys_by_deg.get(d, []):
+        for mk in _module_basis_keys_in_degree(M, d):
             yield self.term((c_key_1, (mk,)))
 
-        if not m_keys_by_deg:
-            return
-
-        min_m_deg = min(m_keys_by_deg.keys())
-        connectivity = getattr(C, "connectivity", 0)
-
-        if d < connectivity:
-            return
-
-        if min_m_deg > 0:
-            max_n = d // min_m_deg
+        # Determine max arity for n >= 2.
+        # Need: d_c + d_m = d with d_c >= connectivity*(n-1), d_m >= 0
+        # So d >= connectivity*(n-1), giving n <= d/connectivity + 1 (if connectivity > 0)
+        # or n <= d - connectivity*(n-1) / min_m_deg (general case).
+        # We need a finite bound — either positive cooperad connectivity or positive
+        # minimum module degree provides one.
+        m_conn = int(getattr(M, "connectivity", 0))
+        if m_conn > 0:
+            # Each leaf contributes at least m_conn to the total module degree.
+            # d_m >= n * m_conn, so n <= (d - min_d_c) / m_conn.
+            # For n >= 2, min_d_c = connectivity*(n-1).
+            # Solving: n <= d / (m_conn + max(0, -connectivity)) + 2 (generous bound).
+            max_n = max(1, (d + 2 * abs(connectivity)) // max(1, m_conn) + 2)
         elif connectivity > 0:
             max_n = d // connectivity + 1
         else:
@@ -343,9 +336,24 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 "degree-0 generators (connectivity=0, min_m_deg=0)."
             )
 
+        # Collect inner-module keys at degrees 0..max_possible_d_m
+        # d_m can be up to d - connectivity*(n-1) for arity n.
+        max_d_m = d - connectivity * max(1, max_n - 1) if connectivity < 0 else d
+        max_d_m = max(max_d_m, d)  # at least d (for n=1 case already handled)
+
+        m_keys_by_deg: dict[int, list] = {}
+        for d_m in range(max(0, max_d_m) + 1):
+            keys = list(_module_basis_keys_in_degree(M, d_m))
+            if keys:
+                m_keys_by_deg[d_m] = keys
+
+        if not m_keys_by_deg:
+            return
+
         for n in range(2, max_n + 1):
             comp_n = C(n, R)
-            for d_c in range(d + 1):
+            min_d_c = connectivity * (n - 1) if connectivity < 0 else 0
+            for d_c in range(min_d_c, d + 1):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
@@ -392,16 +400,20 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # Max arity: each leaf has weight >= 1, so n <= w.
         max_n = w
 
+        # Maximum module degree: d_m = d - d_c, and d_c can be as low as
+        # connectivity*(n-1) for the largest arity n.
+        min_d_c = connectivity * max(1, max_n - 1) if connectivity < 0 else 0
+        max_d_m = max(0, d - min_d_c)
+
         # Collect inner-module keys by (degree, weight)
         keys_by_dw: dict[tuple, list] = {}
-        for d_m in range(d + 1):
+        for d_m in range(max_d_m + 1):
             for w_m in range(1, w + 1):
                 keys = list(_module_basis_keys_in_weight_and_degree(M, d_m, w_m))
                 if keys:
                     keys_by_dw[(d_m, w_m)] = keys
 
         # n = 1: single leaf
-        comp_1 = C(1, R)
         id_key = C.unit_key()
         for mk in keys_by_dw.get((d, w), []):
             yield self.term((id_key, (mk,)))
@@ -409,7 +421,8 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # n >= 2
         for n in range(2, max_n + 1):
             comp_n = C(n, R)
-            for d_c in range(d + 1):
+            min_dc_n = connectivity * (n - 1) if connectivity < 0 else 0
+            for d_c in range(min_dc_n, d + 1):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
