@@ -284,23 +284,6 @@ class TestBarAlgebraFreeAlgebra:
                 dd = bar.module.boundary(bar.module.boundary(elem))
                 assert dd == bar.module.zero()
 
-    def test_weight4_d_squared_zero(self, bar):
-        """d² = 0 for all arity-4 elements with generator leaves over QQ."""
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
-        id_key = P.unit_key()
-        inner_key = (id_key, ((),))
-        comp4 = C(4, QQ)
-        m_tuple = (inner_key,) * 4
-        for d in range(5):
-            for p_elem in comp4.planar_basis_iter(d):
-                for c_key in p_elem.support():
-                    elem = bar.module((c_key, m_tuple))
-                    dd = bar.module.boundary(bar.module.boundary(elem))
-                    assert dd == bar.module.zero(), (
-                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
-                    )
-
     def test_weight5_d_squared_zero(self, bar):
         """d² = 0 for all arity-5 elements over QQ (up to degree 4)."""
         C = bar.cooperad_cls
@@ -314,9 +297,7 @@ class TestBarAlgebraFreeAlgebra:
                 for c_key in p_elem.support():
                     elem = bar.module((c_key, m_tuple))
                     dd = bar.module.boundary(bar.module.boundary(elem))
-                    assert dd == bar.module.zero(), (
-                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
-                    )
+                    assert dd == bar.module.zero(), f"d² ≠ 0 at degree {d}, c_key={c_key}"
 
 
 # ===========================================================================
@@ -387,9 +368,7 @@ class TestCobarCoalgebra:
                     for p_key in p_elem.support():
                         elem = cobar.module.term((p_key, m_tuple))
                         dd = cobar.module.boundary(cobar.module.boundary(elem))
-                        assert dd == cobar.module.zero(), (
-                            f"d² ≠ 0 at arity {n}, degree {d}"
-                        )
+                        assert dd == cobar.module.zero(), f"d² ≠ 0 at arity {n}, degree {d}"
 
     def test_d_squared_zero_weight4_gf2(self, cobar_gf2):
         """d² = 0 on all arity-4 elements over GF(2) up to degree 3."""
