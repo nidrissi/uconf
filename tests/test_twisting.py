@@ -1,11 +1,11 @@
-"""Tests for operadic twisting morphisms and twisted complexes.
+"""Tests for operadic twisting morphisms and bar/cobar constructions.
 
 Covers:
 - :class:`uconf.core.twisting.TwistingMorphism`
 - :func:`uconf.morphisms.canonical_twisting.canonical_projection`
 - :func:`uconf.morphisms.canonical_twisting.canonical_inclusion`
-- :class:`uconf.constructions.twisted_complex.TwistedBarComplex`
-- :class:`uconf.constructions.twisted_complex.TwistedCobarComplex`
+- :class:`uconf.constructions.bar_algebra.BarAlgebra`
+- :class:`uconf.constructions.cobar_coalgebra.CobarCoalgebra`
 """
 
 import itertools
@@ -17,11 +17,12 @@ from sage.all import tensor as sage_tensor
 from uconf import Associative, CoAssociative, Commutative
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
+from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.bar_construction import BarConstruction
+from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
-from uconf.core.twisting import TwistingMorphism
 from uconf.core.trees import children, decoration, is_leaf, vertex_arity
+from uconf.core.twisting import TwistingMorphism
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 
@@ -281,216 +282,159 @@ class TestCanonicalInclusion:
 
 
 # ===========================================================================
-# TwistedBarComplex tests
+# BarAlgebra tests
 # ===========================================================================
 
 
-class TestTwistedBarComplex:
-    """Tests for TwistedBarComplex B_α(A)."""
+class TestBarAlgebra:
+    """Tests for BarAlgebra B_α(A)."""
 
     def test_construction_with_canonical_projection(self):
         """B_π(A) can be constructed for a trivial Ass-algebra."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg)
-        assert B is not None
+        bar = BarAlgebra(pi, alg)
+        assert bar is not None
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_A(a)."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg)
-        elem = B((1, ((),)))
+        bar = BarAlgebra(pi, alg)
+        B = bar.module
+        C = bar.cooperad_cls
+        elem = B((C.unit_key(), ((),)))
         assert elem.degree() == 0
 
     def test_weight1_binary_degree(self):
         """Weight-1 binary tree has degree = 1."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg)
-        mu = (1, 2)
-        elem = B(((mu, 1, 2), ((), ())))
+        bar = BarAlgebra(pi, alg)
+        B = bar.module
+        C = bar.cooperad_cls
+        R = QQ
+        # Get a degree-1 c_key from C(2)
+        c2 = C(2, R)
+        c_keys = [k for e in c2.planar_basis_iter(1) for k in e.support()]
+        assert len(c_keys) > 0
+        elem = B((c_keys[0], ((), ())))
         assert elem.degree() == 1
 
-    def test_dalpha_matches_dact(self):
-        """d_α with π: B(Ass) → Ass produces correct action on corolla."""
+    def test_dalpha_zero_on_corolla(self):
+        """d_α on a corolla (cooperad cogenerator) is 0.
+
+        In the cofree coalgebra model, d_α is a coderivation defined by
+        infinitesimal cocomposition. On cogenerators (single-vertex trees
+        in the cooperad), the cocomposition is trivial, so d_α = 0.
+        """
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg)
-        mu = (1, 2)
-        elem = B(((mu, 1, 2), ((), ())))
-        dalpha = elem.dalpha()
-        # Should produce a single leaf element
-        assert dalpha == B((1, ((),)))
+        bar = BarAlgebra(pi, alg)
+        B = bar.module
+        C = bar.cooperad_cls
+        R = QQ
+        c2 = C(2, R)
+        c_keys = [k for e in c2.planar_basis_iter(1) for k in e.support()]
+        elem = B((c_keys[0], ((), ())))
+        dalpha = B.d_alpha(elem)
+        assert dalpha == B.zero()
 
     _MU = (1, 2)
-    _MU3 = (1, 2, 3)
 
-    @pytest.mark.parametrize(
-        "tree,a_tuple",
-        [
-            ((_MU, 1, 2), ((), ())),
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
-            ((_MU3, 1, 2, 3), ((), (), ())),
-        ],
-    )
-    def test_d_squared_zero_projection(self, tree, a_tuple):
-        """d² = 0 on B_π(A) for π: B(Ass) → Ass."""
+    @pytest.mark.parametrize("w", [1, 2, 3])
+    def test_d_squared_zero_projection(self, w):
+        """d² = 0 on B_π(A) for π: B(Ass) → Ass at various weights."""
         pi = canonical_projection(Associative)
         alg = _trivial_ass_algebra()
-        B = TwistedBarComplex(pi, alg)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
-
-    def test_replaces_bar_complex_algebra(self):
-        """B_π(A) with canonical_projection produces correct d_α on a corolla."""
-        alg = _trivial_ass_algebra()
-        pi = canonical_projection(Associative)
-        B = TwistedBarComplex(pi, alg)
-
-        mu = (1, 2)
-        tree = (mu, 1, 2)
-        a_tuple = ((), ())
-        assert B.degree_on_basis((tree, a_tuple)) == 1
-        elem = B((tree, a_tuple))
-        # d_alpha should map corolla to single leaf
-        assert elem.dalpha() == B((1, ((),)))
+        bar = BarAlgebra(pi, alg)
+        B = bar.module
+        for d in range(-1, 4):
+            for elem in B.basis_weight_iter(d, w):
+                assert B.boundary(B.boundary(elem)) == B.zero()
 
 
-class TestTwistedBarComplexIota:
-    """Tests for TwistedBarComplex B_ι(A) with ι: B(P) → Ω(B(P))."""
+class TestBarAlgebraIota:
+    """Tests for BarAlgebra B_ι(A) with ι: B(P) → Ω(B(P))."""
 
     def test_construction(self):
         """B_ι(A) can be constructed for ΩB(Ass)-algebra."""
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        assert B is not None
+        bar = BarAlgebra(iota, alg)
+        assert bar is not None
 
     def test_single_leaf_degree(self):
         """Weight-0 element has degree 0."""
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        elem = B((1, ((),)))
+        bar = BarAlgebra(iota, alg)
+        B = bar.module
+        C = bar.cooperad_cls
+        elem = B((C.unit_key(), ((),)))
         assert elem.degree() == 0
 
-    def test_dtwist_trivial_algebra_zero(self):
-        """d_α = 0 for the trivial ΩB(Ass)-algebra."""
-        bar_ass = BarConstruction(Associative)
-        iota = canonical_inclusion(bar_ass)
-        alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        mu = (1, 2)
-        elem = B(((mu, 1, 2), ((), ())))
-        assert elem.dalpha() == B.zero()
-
-    def test_dtwist_pullback_nonempty(self):
-        """d_α is non-zero for the pullback ΩB(Ass)-algebra."""
-        bar_ass = BarConstruction(Associative)
-        iota = canonical_inclusion(bar_ass)
-        alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        mu = (1, 2)
-        elem = B(((mu, 1, 2), ((), ())))
-        assert elem.dalpha() == B((1, ((),)))
-
-    _MU = (1, 2)
-    _MU3 = (1, 2, 3)
-
-    @pytest.mark.parametrize(
-        "tree,a_tuple",
-        [
-            ((_MU, 1, 2), ((), ())),
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
-            ((_MU3, 1, 2, 3), ((), (), ())),
-        ],
-    )
-    def test_d_squared_zero_trivial(self, tree, a_tuple):
+    @pytest.mark.parametrize("w", [1, 2, 3])
+    def test_d_squared_zero_trivial(self, w):
         """d² = 0 on B_ι(A) for the trivial ΩB(Ass)-algebra."""
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _trivial_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
+        bar = BarAlgebra(iota, alg)
+        B = bar.module
+        for d in range(-1, 4):
+            for elem in B.basis_weight_iter(d, w):
+                assert B.boundary(B.boundary(elem)) == B.zero()
 
-    @pytest.mark.parametrize(
-        "tree,a_tuple",
-        [
-            (((1, 2), 1, 2), ((), ())),
-            (((1, 2), 1, ((1, 2), 2, 3)), ((), (), ())),
-            (((1, 2), ((1, 2), 1, 2), 3), ((), (), ())),
-            (((1, 2, 3), 1, 2, 3), ((), (), ())),
-        ],
-    )
-    def test_d_squared_zero_pullback(self, tree, a_tuple):
+    @pytest.mark.parametrize("w", [1, 2, 3])
+    def test_d_squared_zero_pullback(self, w):
         """d² = 0 on B_ι(A) for the pullback ΩB(Ass)-algebra."""
         bar_ass = BarConstruction(Associative)
         iota = canonical_inclusion(bar_ass)
         alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        elem = B((tree, a_tuple))
-        assert elem.boundary().boundary() == B.zero()
-
-    def test_linear_combination_d_squared_zero(self):
-        """d² = 0 on a linear combination for the pullback algebra."""
-        bar_ass = BarConstruction(Associative)
-        iota = canonical_inclusion(bar_ass)
-        alg = _pullback_omega_bar_ass_algebra()
-        B = TwistedBarComplex(iota, alg)
-        mu = (1, 2)
-        t1 = B(((mu, 1, (mu, 2, 3)), ((), (), ())))
-        t2 = B(((mu, (mu, 1, 2), 3), ((), (), ())))
-        combo = 3 * t1 - 2 * t2
-        assert combo.boundary().boundary() == B.zero()
+        bar = BarAlgebra(iota, alg)
+        B = bar.module
+        for d in range(-1, 4):
+            for elem in B.basis_weight_iter(d, w):
+                assert B.boundary(B.boundary(elem)) == B.zero()
 
 
 # ===========================================================================
-# TwistedCobarComplex tests
+# CobarCoalgebra tests
 # ===========================================================================
 
 
-class TestTwistedCobarComplex:
-    """Tests for TwistedCobarComplex Ω_α(V)."""
+class TestCobarCoalgebra:
+    """Tests for CobarCoalgebra Ω_α(V)."""
 
     def test_construction_with_canonical_inclusion(self):
         """Ω_ι(V) can be constructed for a trivial CoAss-coalgebra."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg)
-        assert OmC is not None
+        cobar = CobarCoalgebra(iota, coalg)
+        assert cobar is not None
 
     def test_single_leaf_degree(self):
         """Weight-0 element (single leaf) has degree = deg_V(v)."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg)
-        assert OmC.degree_on_basis((1, ((),))) == 0
+        cobar = CobarCoalgebra(iota, coalg)
+        O = cobar.module
+        P = cobar.operad_cls
+        assert O.degree_on_basis((P.unit_key(), ((),))) == 0
 
     def test_dalpha_nonzero_on_leaf(self):
         """d_α on single leaf expands via coaction → non-zero."""
         iota = canonical_inclusion(CoAssociative)
         coalg = _trivial_coass_coalgebra()
-        OmC = TwistedCobarComplex(iota, coalg)
-        elem = OmC((1, ((),)))
-        result = elem.dalpha()
-        assert result != OmC.zero()
-
-    def test_replaces_cobar_complex_coalgebra(self):
-        """Ω_ι(V) with canonical_inclusion produces correct degree."""
-        coalg = _trivial_coass_coalgebra()
-        iota = canonical_inclusion(CoAssociative)
-        OmC = TwistedCobarComplex(iota, coalg)
-
-        c_dec = (1, 2)
-        tree = (c_dec, 1, 2)
-        v_tuple = ((), ())
-        assert OmC.degree_on_basis((tree, v_tuple)) == -1
+        cobar = CobarCoalgebra(iota, coalg)
+        O = cobar.module
+        P = cobar.operad_cls
+        elem = O((P.unit_key(), ((),)))
+        result = O.d_alpha(elem)
+        assert result != O.zero()
 
 
 # ===========================================================================

@@ -112,18 +112,24 @@ attribute on concrete models, property on wrappers) representing the constant
     Works for any connected cooperad, including those with negative-degree elements (e.g.
     `CoAssociative`).
 
-- `constructions/twisted_complex.py` — `TwistedBarComplex(alpha, alg)` and
-  `TwistedCobarComplex(alpha, coalg)`
-  - General twisted bar/cobar constructions for an operadic twisting morphism `α: C → P`.
-  - `TwistedBarComplex(α, A)`: Given `α: C → P` and a P-algebra `A`, produces the
-    twisted bar complex `B_α(A) = (T^c_C(A), d_internal + d_2 + d_α)`, a dg-C-coalgebra.
-    Exposes `cooperad_cls` and `module` for use as a coalgebra.
-  - `TwistedCobarComplex(α, V)`: Given `α: C → P` and a C-coalgebra `V`, produces the
-    twisted cobar complex `Ω_α(V) = (T_P(V), d_internal + d_2 + d_α)`, a dg-P-algebra.
-    Exposes `operad_cls` and `module` for use as an algebra.
-  - Standard bar complex: `TwistedBarComplex(canonical_projection(P), alg)`
-  - Standard cobar complex: `TwistedCobarComplex(canonical_inclusion(C), coalg)`
-  - Twisted bar complex B_ι(A): `TwistedBarComplex(canonical_inclusion(B(P)), alg)`
+- `constructions/bar_algebra.py` — `BarAlgebra(alpha, alg)`
+  - Given a twisting morphism `α: C → P` and a P-algebra `A`, constructs the
+    bar construction `B_α(A) = T^c_C(A)` with differential `d = d_cofree + d_α`.
+  - Basis keys are pairs `(c_key, (a_1, …, a_n))` where `c_key ∈ C(n)` is a cooperad
+    basis key and `a_i` are algebra module basis keys.
+  - Wraps `CofreeCoalgebraModule` and adds the `d_α` coderivation.
+  - Exposes C-coalgebra coaction via `bar.coact(elem, n)`.
+  - Standard bar complex: `BarAlgebra(canonical_projection(P), alg)`
+  - Twisted bar complex B_ι(A): `BarAlgebra(canonical_inclusion(B(P)), alg)`
+
+- `constructions/cobar_coalgebra.py` — `CobarCoalgebra(alpha, coalg)`
+  - Given a twisting morphism `α: C → P` and a C-coalgebra `V`, constructs the
+    cobar construction `Ω_α(V) = T_P(V)` with differential `d = d_free + d_α`.
+  - Basis keys are pairs `(p_key, (v_1, …, v_n))` where `p_key ∈ P(n)` is an operad
+    basis key and `v_i` are coalgebra module basis keys.
+  - Wraps `FreeAlgebraModule` and adds the `d_α` derivation.
+  - Exposes P-algebra action via `cobar.act(p_elem, elems)`.
+  - Standard cobar complex: `CobarCoalgebra(canonical_inclusion(C), coalg)`
 
 - `constructions/comodule.py` — `e_comodule_on_generator`
   - Implements the `E_ν`-comodule structure `Δ: Ω(C) → E_ν ⊗ Ω(C)` on planar generators of
@@ -187,7 +193,7 @@ attribute on concrete models, property on wrappers) representing the constant
   - `enumerate_shuffle_trees_free_in_degree(arity, weight_bound, P, R, d)` — free degree `Σ deg_P`.
     Used by `FreeAlgebraModule.basis_iter` and `CofreeCoalgebraModule.basis_iter`.
   - `enumerate_shuffle_trees_cobar_in_degree(arity, weight_bound, C, R, d)` — cobar degree `Σ(deg_C-1)`.
-    Used by `CobarConstruction.Component.basis_iter` and `TwistedCobarComplex.basis_iter`.
+    Used by `CobarConstruction.Component.basis_iter`.
 
 ### Chain complexes and homology (`homology.py`)
 

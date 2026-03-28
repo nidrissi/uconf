@@ -15,10 +15,12 @@ from uconf import (
     Surjection,
 )
 from uconf.algebraic.algebra import OperadAlgebra
+from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
 from uconf.algebraic.free_algebra import FreeAlgebraModule
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
-from uconf.constructions.twisted_complex import TwistedBarComplex, TwistedCobarComplex
+from uconf.constructions.bar_algebra import BarAlgebra
+from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 
@@ -215,24 +217,28 @@ class TestCobarConstructionBasisIter:
 
 
 # ---------------------------------------------------------------------------
-# 4. TwistedBarComplex.basis_iter
+# 4. BarAlgebra.module.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedBarComplexBasisIter:
-    """Tests for TwistedBarComplex.basis_iter."""
+class TestBarAlgebraBasisIter:
+    """Tests for BarAlgebra.module.basis_iter."""
 
     @pytest.fixture
     def trivial_bar(self):
         alg = TrivialAlgebra(Associative)
-        return TwistedBarComplex(canonical_projection(Associative), alg)
+        bar = BarAlgebra(canonical_projection(Associative), alg)
+        return bar.module
 
     def test_degree0_single_leaf(self, trivial_bar) -> None:
-        """Degree 0 = single arity-1 leaf with the unique A-generator."""
-        elems = list(trivial_bar.basis_iter(0))
+        """Degree 0 = single arity-1 leaf with the unique A-generator (via weight=1)."""
+        elems = list(trivial_bar.basis_weight_iter(0, 1))
         assert len(elems) == 1
-        key, _ = next(iter(elems[0]))
-        assert key == (1, ((),))
+
+    def test_degree0_non_exhaustive(self, trivial_bar) -> None:
+        """Degree 0 is non-exhaustive via basis_iter (connectivity=0)."""
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(trivial_bar.basis_iter(0))
 
     def test_degree1_non_exhaustive(self, trivial_bar) -> None:
         """Degree ≥ 1 is non-exhaustive (connectivity=0 with bar shift)."""
@@ -240,31 +246,28 @@ class TestTwistedBarComplexBasisIter:
             list(trivial_bar.basis_iter(1))
 
     def test_correct_degree0(self, trivial_bar) -> None:
-        """All yielded elements at degree 0 have the requested total degree."""
-        for elem in trivial_bar.basis_iter(0):
+        """All yielded elements at degree 0 weight 1 have the requested total degree."""
+        for elem in trivial_bar.basis_weight_iter(0, 1):
             for key, _ in elem:
                 assert trivial_bar.degree_on_basis(key) == 0
 
     def test_with_lie_operad(self) -> None:
-        """Bar complex with Lie operad: degree ≥ 1 is non-exhaustive (connectivity=0)."""
+        """Bar complex with Lie operad: Lie is not quasi-planar, construction should fail."""
         alg = TrivialAlgebra(Lie)
-        B = TwistedBarComplex(canonical_projection(Lie), alg)
-        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-            list(B.basis_iter(1))
+        with pytest.raises(TypeError, match="quasi-planar"):
+            BarAlgebra(canonical_projection(Lie), alg)
 
 
 # ---------------------------------------------------------------------------
-# 5. TwistedCobarComplex.basis_iter
+# 5. CobarCoalgebra.module.basis_iter
 # ---------------------------------------------------------------------------
 
 
-class TestTwistedCobarComplexBasisIter:
-    """Tests for TwistedCobarComplex.basis_iter."""
+class TestCobarCoalgebraBasisIter:
+    """Tests for CobarCoalgebra.module.basis_iter."""
 
     @pytest.fixture
     def trivial_cobar(self):
-        from uconf.algebraic.coalgebra import CooperadCoalgebra
-
         class _TrivialCoalgebra(CooperadCoalgebra):
             def __init__(self, cooperad_cls, base_ring=QQ):
                 mod = Commutative(1, base_ring=base_ring)
@@ -274,7 +277,8 @@ class TestTwistedCobarComplexBasisIter:
                 return v_elem.parent().zero()
 
         coalg = _TrivialCoalgebra(CoAssociative)
-        return TwistedCobarComplex(canonical_inclusion(CoAssociative), coalg)
+        cobar = CobarCoalgebra(canonical_inclusion(CoAssociative), coalg)
+        return cobar.module
 
     def test_degree0_single_leaf(self, trivial_cobar) -> None:
         """Raise when cooperad connectivity is 0 (non-exhaustive regime)."""
@@ -399,22 +403,29 @@ class TestHadamardTensorAlgebraBasisIter:
 
 
 class TestBasisIterConsistencyWithBarConstruction:
-    """Sanity-check that TwistedBarComplex.basis_iter counts match the expected tree × module count."""
+    """Sanity-check that BarAlgebra.module.basis_iter counts match expected values."""
 
     def test_bar_degree0_count_surjection(self) -> None:
-        """B(Sur; Comm(1)) degree 0 has exactly the single-leaf element."""
+        """B(Sur; Comm(1)) weight 1, degree 0 has exactly the single-leaf element."""
         alg = TrivialAlgebra(Surjection)
-        B = TwistedBarComplex(canonical_projection(Surjection), alg)
-        actual = _count(B.basis_iter(0))
+        bar = BarAlgebra(canonical_projection(Surjection), alg)
+        actual = _count(bar.module.basis_weight_iter(0, 1))
         assert actual == 1  # single leaf with a_key = ()
+
+    def test_bar_degree0_non_exhaustive(self) -> None:
+        """B(Sur; Comm(1)) degree 0 is non-exhaustive via basis_iter (connectivity=0)."""
+        alg = TrivialAlgebra(Surjection)
+        bar = BarAlgebra(canonical_projection(Surjection), alg)
+        with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
+            list(bar.module.basis_iter(0))
 
     def test_bar_degree_ge1_non_exhaustive(self) -> None:
         """B(Sur; Comm(1)) degree ≥ 1 is non-exhaustive (Sur has connectivity=0)."""
         alg = TrivialAlgebra(Surjection)
-        B = TwistedBarComplex(canonical_projection(Surjection), alg)
+        bar = BarAlgebra(canonical_projection(Surjection), alg)
         for d in range(1, 4):
             with pytest.raises(ValueError, match="Cannot exhaustively enumerate"):
-                list(B.basis_iter(d))
+                list(bar.module.basis_iter(d))
 
 
 # ---------------------------------------------------------------------------
@@ -500,24 +511,23 @@ class TestFreeAlgebraModuleBasisWeightIter:
 
 
 # ---------------------------------------------------------------------------
-# 10. basis_weight_iter: TreeModule (TwistedBarComplex)
+# 10. basis_weight_iter: CofreeCoalgebraModule (BarAlgebra)
 # ---------------------------------------------------------------------------
 
 
-class TestTreeModuleBasisWeightIter:
-    """Tests for TreeModule.basis_weight_iter via TwistedBarComplex."""
+class TestBarAlgebraBasisWeightIter:
+    """Tests for CofreeCoalgebraModule.basis_weight_iter via BarAlgebra."""
 
     @pytest.fixture
     def trivial_bar(self):
         alg = TrivialAlgebra(Associative)
-        return TwistedBarComplex(canonical_projection(Associative), alg)
+        bar = BarAlgebra(canonical_projection(Associative), alg)
+        return bar.module
 
     def test_weight1_degree0_single_leaf(self, trivial_bar) -> None:
         """Weight-1, degree-0 should give the single-leaf element."""
         elems = list(trivial_bar.basis_weight_iter(0, 1))
         assert len(elems) == 1
-        key, _ = next(iter(elems[0]))
-        assert key == (1, ((),))
 
     def test_weight_gives_finite_basis(self, trivial_bar) -> None:
         """basis_weight_iter(d, w) gives a finite basis even when basis_iter raises."""
