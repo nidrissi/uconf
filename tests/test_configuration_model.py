@@ -25,14 +25,14 @@ class TestConfigurationModelCore:
         """chain_complex for euclidean configuration model over GF(2) succeeds."""
 
         model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = compute_chain_complex(model, degrees=range(3), weight=1)
+        C = compute_chain_complex(model.module, degrees=range(3), weight=1)
         assert C is not None
 
     @pytest.mark.parametrize("d", [1, 2])
     def test_check_complex_GF2_weight3(self, d: int) -> None:
         """chain_complex over GF(2) with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(GF(2), d)
-        C = compute_chain_complex(model, degrees=range(-1, 3), weight=3, check=True)
+        C = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
         assert C is not None
 
     @pytest.mark.xfail(
@@ -43,14 +43,14 @@ class TestConfigurationModelCore:
     def test_check_complex_GF2_weight4(self, d: int) -> None:
         """chain_complex over GF(2) with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(GF(2), d)
-        C = compute_chain_complex(model, degrees=range(-1, 2), weight=4, check=True)
+        C = compute_chain_complex(model.module, degrees=range(-1, 2), weight=4, check=True)
         assert C is not None
 
     @pytest.mark.parametrize("d", [1, 2])
     def test_check_complex_QQ_weight2(self, d: int) -> None:
         """chain_complex over QQ at weight=2 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, d)
-        complex = compute_chain_complex(model, degrees=range(-1, 3), weight=2, check=True)
+        complex = compute_chain_complex(model.module, degrees=range(-1, 3), weight=2, check=True)
         assert complex is not None
 
     @pytest.mark.parametrize("d", [1, 2])
@@ -59,7 +59,7 @@ class TestConfigurationModelCore:
         if d == 1:
             pytest.xfail("d=1 weight=3 is known to have d²≠0")
         model = euclidean_unordered_configuration_model(QQ, d)
-        complex = compute_chain_complex(model, degrees=range(-1, 3), weight=3, check=True)
+        complex = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
         assert complex is not None
 
     @pytest.mark.xfail(
@@ -69,7 +69,7 @@ class TestConfigurationModelCore:
     def test_check_complex_QQ_weight4(self) -> None:
         """chain_complex over QQ at weight=4 with check=True does not raise an error."""
         model = euclidean_unordered_configuration_model(QQ, 2)
-        complex = compute_chain_complex(model, degrees=range(0, 2), weight=4, check=True)
+        complex = compute_chain_complex(model.module, degrees=range(0, 2), weight=4, check=True)
         assert complex is not None
 
 
@@ -105,17 +105,17 @@ class TestConfigurationModelDSquaredMinimal:
         """d²=0 at weight=2 for d=1 (all degrees up to 4)."""
         model = euclidean_unordered_configuration_model(QQ, 1)
         for deg in range(-1, 5):
-            for elem in model.graded_basis_by_weight(deg, 2):
+            for elem in model.module.graded_basis_by_weight(deg, 2):
                 dd = model.boundary(model.boundary(elem))
-                assert dd == model.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
+                assert dd == model.module.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
 
     def test_dsquared_weight2_d2(self) -> None:
         """d²=0 at weight=2 for d=2 (all degrees up to 4)."""
         model = euclidean_unordered_configuration_model(QQ, 2)
         for deg in range(-1, 5):
-            for elem in model.graded_basis_by_weight(deg, 2):
+            for elem in model.module.graded_basis_by_weight(deg, 2):
                 dd = model.boundary(model.boundary(elem))
-                assert dd == model.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
+                assert dd == model.module.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
 
 
 class TestConfigurationModelBasis:
@@ -127,7 +127,7 @@ class TestConfigurationModelBasis:
         model = euclidean_unordered_configuration_model(QQ, d)
         for k in range(-2, 3):
             for w in range(1, 4):
-                basis = model.graded_basis_by_weight(k, w)
+                basis = model.module.graded_basis_by_weight(k, w)
                 assert len(basis) == len(set(basis)), (
                     f"Basis at degree {k} weight {w} contains duplicates"
                 )
