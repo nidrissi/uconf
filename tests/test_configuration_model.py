@@ -112,13 +112,26 @@ def layers(dim: int, ring):
 # ===========================================================================
 
 
-class TestLayer0:
+class TestLayer0_H:
     """Operad axioms for H = s⁻¹Lie ⊙ Surjection."""
 
     class TestDSquared:
         @pytest.mark.parametrize(
             "n,d",
-            [(2, -1), (2, 0), (2, 1), (2, 2), (3, -2), (3, -1), (3, 0), (3, 1)],
+            [
+                (2, -1),
+                (2, 0),
+                (2, 1),
+                (2, 2),
+                (3, -2),
+                (3, -1),
+                (3, 0),
+                (3, 1),
+                (4, -3),
+                (4, -2),
+                (4, -1),
+                (4, 0),
+            ],
         )
         def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring):
             Hn = layers.XsLie(n, ring)
@@ -143,6 +156,15 @@ class TestLayer0:
                 for i in [1, 2]:
                     assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
 
+        @pytest.mark.parametrize("d", [-2, -1, 0])
+        def test_right_arity3(self, d: int, layers: ConfigurationLayers, ring):
+            H = layers.XsLie
+            unit = H.unit(ring)
+            rng = Random(_SEED)
+            for elem in _sample(list(H(3, ring).basis_iter(d)), 10, rng):
+                for i in [1, 2, 3]:
+                    assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
+
     class TestSeqAssociativity:
         """(x ∘_i y) ∘_{i+j-1} z = x ∘_i (y ∘_j z)."""
 
@@ -160,6 +182,25 @@ class TestLayer0:
                 for y in _sample(ys, 2, rng):
                     for z in _sample(zs, 2, rng):
                         for i in [1, 2]:
+                            for j in [1, 2]:
+                                lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
+                                rhs = H.compose(x, i, H.compose(y, j, z))
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("d_x", [-2, -1])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+            """x ∈ H(3), y,z ∈ H(2)."""
+            H = layers.XsLie
+            rng = Random(_SEED)
+            xs = list(H(3, ring).basis_iter(d_x))
+            ys = list(H(2, ring).basis_iter(d_y))
+            zs = list(H(2, ring).basis_iter(d_z))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for z in _sample(zs, 2, rng):
+                        for i in [1, 2, 3]:
                             for j in [1, 2]:
                                 lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
                                 rhs = H.compose(x, i, H.compose(y, j, z))
@@ -183,6 +224,27 @@ class TestLayer0:
                         rhs = sign * H.compose(H.compose(x, j, z), i, y)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
+        @pytest.mark.parametrize("d_x", [-2, -1])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+            """x ∈ H(3), y,z ∈ H(2): par-assoc for i < j ≤ arity(x)."""
+            H = layers.XsLie
+            m = 2  # arity of y
+            rng = Random(_SEED)
+            xs = list(H(3, ring).basis_iter(d_x))
+            ys = list(H(2, ring).basis_iter(d_y))
+            zs = list(H(2, ring).basis_iter(d_z))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for z in _sample(zs, 2, rng):
+                        for i in range(1, 4):
+                            for j in range(i + 1, 4):
+                                lhs = H.compose(H.compose(x, i, y), j + m - 1, z)
+                                sign = sign_from_exponent(y.degree() * z.degree())
+                                rhs = sign * H.compose(H.compose(x, j, z), i, y)
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
     class TestLeibniz:
         """d(x ∘_i y) = dx ∘_i y + (-1)^{|x|} x ∘_i dy."""
 
@@ -194,6 +256,23 @@ class TestLayer0:
             for x in H2.basis_iter(d_x):
                 for y in H2.basis_iter(d_y):
                     for i in [1, 2]:
+                        lhs = H.compose(x, i, y).boundary()
+                        rhs = H.compose(x.boundary(), i, y) + sign_from_exponent(
+                            x.degree()
+                        ) * H.compose(x, i, y.boundary())
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("d_x", [-2, -1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0, 1])
+        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring):
+            """x ∈ H(3), y ∈ H(2)."""
+            H = layers.XsLie
+            rng = Random(_SEED)
+            xs = list(H(3, ring).basis_iter(d_x))
+            ys = list(H(2, ring).basis_iter(d_y))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for i in [1, 2, 3]:
                         lhs = H.compose(x, i, y).boundary()
                         rhs = H.compose(x.boundary(), i, y) + sign_from_exponent(
                             x.degree()
@@ -246,13 +325,13 @@ class TestLayer0:
 # ===========================================================================
 
 
-class TestLayer1:
+class TestLayer1_BH:
     """Cooperad axioms for B(H)."""
 
     class TestDSquared:
         @pytest.mark.parametrize(
             "n,d",
-            [(2, 0), (2, 1), (2, 2), (2, 3), (3, -1), (3, 0), (3, 1)],
+            [(2, 0), (2, 1), (2, 2), (2, 3), (3, -1), (3, 0), (3, 1), (4, -2), (4, -1), (4, 0)],
         )
         def test_d_squared(self, n, d, layers: ConfigurationLayers, ring):
             C = layers.BXsLie
@@ -335,7 +414,7 @@ class TestLayer1:
     class TestCoderivation:
         """d is a coderivation: Δ(dx) = (d⊗1 + (-1)^|a| 1⊗d)(Δ(x))."""
 
-        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("n", [2, 3, 4])
         @pytest.mark.parametrize("d", [0, 1, 2])
         def test_coderivation(self, n, d, layers: ConfigurationLayers, ring):
             C = layers.BXsLie
@@ -411,13 +490,26 @@ class TestLayer1:
 # ===========================================================================
 
 
-class TestLayer2:
+class TestLayer2_ΩBH:
     """Operad axioms for Ω(B(H))."""
 
     class TestDSquared:
         @pytest.mark.parametrize(
             "n,d",
-            [(2, -1), (2, 0), (2, 1), (2, 2), (3, -2), (3, -1), (3, 0), (3, 1)],
+            [
+                (2, -1),
+                (2, 0),
+                (2, 1),
+                (2, 2),
+                (3, -2),
+                (3, -1),
+                (3, 0),
+                (3, 1),
+                (4, -3),
+                (4, -2),
+                (4, -1),
+                (4, 0),
+            ],
         )
         def test_d_squared(self, n, d, layers: ConfigurationLayers, ring):
             P = layers.OBXsLie
@@ -444,6 +536,15 @@ class TestLayer2:
                 for i in [1, 2]:
                     assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
 
+        @pytest.mark.parametrize("d", [-2, -1, 0])
+        def test_right_arity3(self, d, layers: ConfigurationLayers, ring):
+            P = layers.OBXsLie
+            unit = P.unit(ring)
+            rng = Random(_SEED)
+            for elem in _sample(list(P(3, ring).basis_iter(d)), 10, rng):
+                for i in [1, 2, 3]:
+                    assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
+
     class TestSeqAssociativity:
         """(x ∘_i y) ∘_{i+j-1} z = x ∘_i (y ∘_j z)."""
 
@@ -457,6 +558,25 @@ class TestLayer2:
                 for y in P2.basis_iter(d_y):
                     for z in P2.basis_iter(d_z):
                         for i in [1, 2]:
+                            for j in [1, 2]:
+                                lhs = P.compose(P.compose(x, i, y), i + j - 1, z)
+                                rhs = P.compose(x, i, P.compose(y, j, z))
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("d_x", [-2, -1])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+            """x ∈ P(3), y,z ∈ P(2)."""
+            P = layers.OBXsLie
+            rng = Random(_SEED)
+            xs = list(P(3, ring).basis_iter(d_x))
+            ys = list(P(2, ring).basis_iter(d_y))
+            zs = list(P(2, ring).basis_iter(d_z))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for z in _sample(zs, 2, rng):
+                        for i in [1, 2, 3]:
                             for j in [1, 2]:
                                 lhs = P.compose(P.compose(x, i, y), i + j - 1, z)
                                 rhs = P.compose(x, i, P.compose(y, j, z))
@@ -480,6 +600,27 @@ class TestLayer2:
                         rhs = sign * P.compose(P.compose(x, j, z), i, y)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
+        @pytest.mark.parametrize("d_x", [-2, -1])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+            """x ∈ P(3), y,z ∈ P(2): par-assoc for i < j ≤ arity(x)."""
+            P = layers.OBXsLie
+            m = 2  # arity of y
+            rng = Random(_SEED)
+            xs = list(P(3, ring).basis_iter(d_x))
+            ys = list(P(2, ring).basis_iter(d_y))
+            zs = list(P(2, ring).basis_iter(d_z))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for z in _sample(zs, 2, rng):
+                        for i in range(1, 4):
+                            for j in range(i + 1, 4):
+                                lhs = P.compose(P.compose(x, i, y), j + m - 1, z)
+                                sign = sign_from_exponent(y.degree() * z.degree())
+                                rhs = sign * P.compose(P.compose(x, j, z), i, y)
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
     class TestLeibniz:
         """d(x ∘_i y) = dx ∘_i y + (-1)^{|x|} x ∘_i dy."""
 
@@ -491,6 +632,23 @@ class TestLayer2:
             for x in P2.basis_iter(d_x):
                 for y in P2.basis_iter(d_y):
                     for i in [1, 2]:
+                        lhs = P.compose(x, i, y).boundary()
+                        rhs = P.compose(x.boundary(), i, y) + sign_from_exponent(
+                            x.degree()
+                        ) * P.compose(x, i, y.boundary())
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("d_x", [-2, -1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0, 1])
+        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring):
+            """x ∈ P(3), y ∈ P(2)."""
+            P = layers.OBXsLie
+            rng = Random(_SEED)
+            xs = list(P(3, ring).basis_iter(d_x))
+            ys = list(P(2, ring).basis_iter(d_y))
+            for x in _sample(xs, 3, rng):
+                for y in _sample(ys, 2, rng):
+                    for i in [1, 2, 3]:
                         lhs = P.compose(x, i, y).boundary()
                         rhs = P.compose(x.boundary(), i, y) + sign_from_exponent(
                             x.degree()
@@ -548,11 +706,11 @@ class TestLayer2:
 # ===========================================================================
 
 
-class TestLayer3:
+class TestLayer3_ΩBH_Kd:
     """Free Ω(B(H))-algebra on the trivial module k[d]."""
 
     class TestDSquared:
-        @pytest.mark.parametrize("weight", [1, 2, 3])
+        @pytest.mark.parametrize("weight", [1, 2, 3, 4])
         def test_d_squared(self, dim, ring, layers: ConfigurationLayers, weight):
             mod = layers.free_alg.module
             rng = Random(_SEED)
@@ -575,13 +733,14 @@ class TestLayer3:
     class TestAssociativityAction:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-        def test_compatible(self, layers: ConfigurationLayers):
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_compatible(self, p_deg, layers: ConfigurationLayers):
             fa = layers.free_alg
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P2 = P(2, R)
-            p_elems = list(P2.basis_iter(0))
+            p_elems = list(P2.basis_iter(p_deg))
             if not p_elems:
                 pytest.skip("No P(2) elements at degree 0")
             # Weight-1 module has exactly 1 generator per dimension,
@@ -610,13 +769,14 @@ class TestLayer3:
         """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
-        def test_leibniz(self, layers: ConfigurationLayers):
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
             fa = layers.free_alg
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P2 = P(2, R)
-            p_elems = list(P2.basis_iter(0))
+            p_elems = list(P2.basis_iter(p_deg))
             if not p_elems:
                 pytest.skip("No P(2) elements at degree 0")
             w1 = []
@@ -641,7 +801,7 @@ class TestLayer3:
 # ===========================================================================
 
 
-class TestLayer4:
+class TestLayer4_S_ΩBH_Kd:
     """Hadamard tensor algebra (sphere cochains ⊗ free algebra)."""
 
     class TestDSquared:
@@ -664,13 +824,74 @@ class TestLayer4:
                 for elem in ta.basis_weight_iter(deg, 1):
                     assert _as_dict(ta.act(unit, [elem])) == _as_dict(elem)
 
+    class TestAssociativityAction:
+        """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_compatible(self, p_deg, layers: ConfigurationLayers):
+            ta = layers.tensor_alg
+            R = layers.bar.module.base_ring()
+            Q = ta.operad_cls
+            Q2 = Q(2, R)
+            p_elems = list(Q2.basis_iter(p_deg))
+            if not p_elems:
+                pytest.skip(f"No Q(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(ta.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = ta.act(Q.compose(p, 1, q), [a, a, a])
+                    rhs = ta.act(p, [ta.act(q, [a, a]), a])
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = ta.act(Q.compose(p, 2, q), [a, a, a])
+                    rhs = ta.act(p, [a, ta.act(q, [a, a])])
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestLeibnizAction:
+        """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
+        + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
+            ta = layers.tensor_alg
+            R = layers.bar.module.base_ring()
+            Q = ta.operad_cls
+            Q2 = Q(2, R)
+            p_elems = list(Q2.basis_iter(p_deg))
+            if not p_elems:
+                pytest.skip(f"No Q(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(ta.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                lhs = ta.boundary(ta.act(p, [a, a]))
+                rhs = ta.act(p.boundary(), [a, a])
+                p_deg_val = p.degree()
+                da = ta.boundary(a)
+                a_deg = ta.module.degree_on_basis(next(iter(a.monomial_coefficients())))
+                rhs += sign_from_exponent(p_deg_val) * ta.act(p, [da, a])
+                rhs += sign_from_exponent(p_deg_val + a_deg) * ta.act(p, [a, da])
+                assert _as_dict(lhs) == _as_dict(rhs)
+
 
 # ===========================================================================
 # Layer 5: PullbackAlgebra
 # ===========================================================================
 
 
-class TestLayer5:
+class TestLayer5_pb_S_ΩBH_Kd:
     """Pullback algebra (same module as tensor algebra, different action)."""
 
     class TestDSquared:
@@ -695,13 +916,76 @@ class TestLayer5:
                 for elem in mod.basis_weight_iter(deg, 1):
                     assert _as_dict(pb.act(unit, [elem])) == _as_dict(elem)
 
+    class TestAssociativityAction:
+        """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_compatible(self, p_deg, layers: ConfigurationLayers):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P2 = P(2, R)
+            p_elems = list(P2.basis_iter(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = pb.act(P.compose(p, 1, q), [a, a, a])
+                    rhs = pb.act(p, [pb.act(q, [a, a]), a])
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = pb.act(P.compose(p, 2, q), [a, a, a])
+                    rhs = pb.act(p, [a, pb.act(q, [a, a])])
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestLeibnizAction:
+        """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
+        + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P2 = P(2, R)
+            p_elems = list(P2.basis_iter(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                lhs = mod.boundary(pb.act(p, [a, a]))
+                rhs = pb.act(p.boundary(), [a, a])
+                p_deg_val = p.degree()
+                da = mod.boundary(a)
+                a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+                rhs += sign_from_exponent(p_deg_val) * pb.act(p, [da, a])
+                rhs += sign_from_exponent(p_deg_val + a_deg) * pb.act(p, [a, da])
+                assert _as_dict(lhs) == _as_dict(rhs)
+
 
 # ===========================================================================
 # Layer 6: BarAlgebra (final construction)
 # ===========================================================================
 
 
-class TestLayer6:
+class TestLayer6_Bπ_pb_S_ΩBH_Kd:
     """Bar algebra B_π(pulled_back) — final output of the configuration model."""
 
     class TestDSquared:
