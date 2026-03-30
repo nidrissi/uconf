@@ -76,13 +76,12 @@ def test_sphere_surjection_matches_top_cochain_action() -> None:
     """Compare with μ_u on the top cochain of Δ^d."""
     rng = Random(20260317)
 
+    count = 0
     for _ in range(40):
         d = rng.randint(1, 3)
         k = rng.randint(2, 4)
         e = rng.randint(0, 5)
         basis = list(Surjection(k, QQ).basis_iter(e))
-        if not basis:
-            continue
         u = rng.choice(basis)
 
         alg = SurjectionSphereCochainAlgebra(d=d, base_ring=QQ)
@@ -94,7 +93,11 @@ def test_sphere_surjection_matches_top_cochain_action() -> None:
 
         sphere_val = alg.act(u, [g] * k)
         simplex_val = surjection_cochain_action(u, (top,) * k)
-        assert _sphere_coeff(sphere_val, d) == _top_coeff(simplex_val, top_key)
+        coeff = _sphere_coeff(sphere_val, d)
+        assert coeff == _top_coeff(simplex_val, top_key)
+        if coeff:
+            count += 1
+    assert count, "All coefficients were zero"
 
 
 def test_sphere_surjection_degree_mismatch_gives_zero() -> None:
