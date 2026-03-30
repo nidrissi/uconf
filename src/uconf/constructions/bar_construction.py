@@ -520,9 +520,14 @@ class BarConstruction(UniqueRepresentation):
             """Internal differential: apply operad boundary to each vertex.
 
             For each vertex v_j in DFS order (pre-order), the sign is:
-                (-1)^{sum_{l < j} (deg_P(p_l) + 1)}
+                (-1)^{1 + sum_{l < j} (deg_P(p_l) + 1)}
 
             where deg_P(p_l) + 1 is the uniformly suspended degree of vertex l.
+
+            The extra factor of (-1) (the ``1 +``) comes from the suspension:
+            the transferred differential on sP̄ is d_{sP̄}(sp) = -s·d_P(p),
+            because s has degree +1 and anticommutes with the degree -1
+            differential.
 
             This is the coderivation extending the internal differential on
             vertex decorations.
@@ -545,8 +550,9 @@ class BarConstruction(UniqueRepresentation):
                 # Degree of this vertex in sP̄
                 vertex_sp_degree = operad_parent.degree_on_basis(dec) + 1
 
-                # Sign: (-1)^{cumulative}
-                sign = sign_from_exponent(cumulative_degree)
+                # Sign: (-1)^{1 + cumulative}
+                # The "1 +" comes from the suspension sign: d_{sP̄} = -s∘d_P∘s⁻¹
+                sign = -sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration
                 dec_elem = operad_parent(dec)

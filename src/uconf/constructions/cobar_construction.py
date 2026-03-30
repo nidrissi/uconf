@@ -500,7 +500,12 @@ class CobarConstruction(UniqueRepresentation):
 
             For vertices in DFS order, the sign at vertex ``v_j`` is
 
-                ``(-1)^{\\sum_{l < j} (deg_C(v_l) - 1)}``.
+                ``(-1)^{1 + \\sum_{l < j} (deg_C(v_l) - 1)}``.
+
+            The extra ``1 +`` comes from the desuspension: the transferred
+            differential on s⁻¹C̄ is d_{s⁻¹C̄}(s⁻¹c) = -s⁻¹·d_C(c),
+            because s⁻¹ has degree -1 and anticommutes with the degree -1
+            differential.
             """
             if is_leaf(tree):
                 return self.zero()
@@ -519,7 +524,8 @@ class CobarConstruction(UniqueRepresentation):
                 # Degree of this vertex in s⁻¹C̄
                 vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - 1
 
-                sign = sign_from_exponent(cumulative_degree)
+                # The "1 +" comes from the desuspension sign: d_{s⁻¹C̄} = -s⁻¹∘d_C∘s
+                sign = -sign_from_exponent(cumulative_degree)
 
                 # Apply boundary to this vertex's decoration.
                 # Use __call__ instead of term() to normalise through the

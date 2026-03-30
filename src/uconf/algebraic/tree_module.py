@@ -549,19 +549,12 @@ class TreeModule(CombinatorialFreeModule):
         return Family(self.basis_weight_iter(d, w))
 
     def _boundary_on_basis(self, key) -> Any:
-        """Differential using interleaved DFS Koszul sign rule.
-
-        Inner-module boundary terms are normalised to planar form (when
-        the inner module exposes ``normalize_to_planar``) so that the
-        output lives in the same basis as the structure-map outputs
-        produced by ``_dalpha_on_basis`` and similar methods.
-        """
+        """Differential using interleaved DFS Koszul sign rule."""
         tree, m_tuple = key
         result = self.zero()
         base_ring = self.base_ring()
         shift = self._vertex_degree_shift
         cumulative = 0
-        inner_normalize = getattr(self._inner_module, "normalize_to_planar", None)
 
         for node, leaf_0idx in _dfs_all_iter(tree):
             sign = sign_from_exponent(cumulative)
@@ -570,8 +563,6 @@ class TreeModule(CombinatorialFreeModule):
                 m_key = m_tuple[leaf_0idx]
                 m_elem = self._inner_module.term(m_key)
                 bdry = self._inner_module.boundary(m_elem)
-                if inner_normalize is not None:
-                    bdry = inner_normalize(bdry)
                 for new_m_key, coeff in bdry:
                     new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
                     result += sign * coeff * self.term((tree, new_m))
@@ -601,54 +592,6 @@ class TreeModule(CombinatorialFreeModule):
     # ------------------------------------------------------------------
     # Planar normalisation
     # ------------------------------------------------------------------
-
-    def normalize_to_planar(self, elem: "TreeModule.Element") -> "TreeModule.Element":
-        """Rewrite *elem* so every vertex decoration is planar.
-
-        For each basis key ``(tree, m_tuple)`` whose tree contains a non-planar
-        vertex decoration, ``planarize`` is applied to obtain a planar
-        representative ``(planar_dec, σ)``.  The children of the vertex are
-        permuted by ``σ⁻¹`` (matching the graded ``S_n``-coinvariant relation),
-        leaves are relabeled to canonical DFS order, ``m_tuple`` is permuted to
-        match, and a Koszul sign ``ε(σ⁻¹; degrees)`` is included to account
-        for the permutation of graded leaf-module elements.
-
-        If the inner module also exposes ``normalize_to_planar``, it is applied
-        recursively to each leaf value so that nested tree-decorated structures
-        (e.g. ``FreeAlgebraModule`` keys used as inner-module values) are fully
-        normalised.
-        """
-        result = self.zero()
-        for key, coeff in elem:
-            for norm_coeff, norm_key in self._normalize_key(key):
-                result += coeff * norm_coeff * self.term(norm_key)
-        # Recursively normalise inner-module keys if possible.
-        inner_normalize = getattr(self._inner_module, "normalize_to_planar", None)
-        if inner_normalize is not None:
-            result = self._normalize_inner_keys(result, inner_normalize)
-        return result
-
-    def _normalize_inner_keys(self, elem, inner_normalize):
-        """Apply inner-module normalisation to every leaf value."""
-        result = self.zero()
-        for (tree, m_tuple), coeff in elem:
-            # Build a temporary inner-module element for each leaf key,
-            # normalise it, and rebuild the outer key.
-            new_parts: list[list[tuple]] = []
-            for mk in m_tuple:
-                normed = inner_normalize(self._inner_module.term(mk))
-                new_parts.append(list(normed))
-            # Form all combinations (usually just 1 term per leaf)
-            from itertools import product as iprod
-
-            for combo in iprod(*new_parts):
-                inner_coeff = coeff
-                new_m_keys = []
-                for new_mk, mk_c in combo:
-                    inner_coeff *= mk_c
-                    new_m_keys.append(new_mk)
-                result += inner_coeff * self.term((tree, tuple(new_m_keys)))
-        return result
 
     def _normalize_key(self, key):
         """Normalize a single ``(tree, m_tuple)`` key to canonical form.
