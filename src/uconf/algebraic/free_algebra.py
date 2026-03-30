@@ -303,21 +303,6 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         return result
 
-    def normalize_to_planar(self, elem: "FreeAlgebraModule.Element") -> "FreeAlgebraModule.Element":
-        """Rewrite *elem* so every P-key is in the planar basis.
-
-        For each basis key ``(p_key, m_tuple)`` whose ``p_key`` is not yet
-        planar, ``_normalized_corolla_sum`` applies the operad's ``planarize``
-        and permutes the ``m_tuple`` accordingly, including the Koszul sign for
-        the graded permutation of leaf-module elements.
-        """
-        result = self.zero()
-        for (p_key, m_tuple), coeff in elem:
-            result += coeff * self._normalized_corolla_sum(
-                self._operad_cls(len(m_tuple), self.base_ring()).term(p_key), m_tuple
-            )
-        return result
-
     # ------------------------------------------------------------------
     # Basis iteration
     # ------------------------------------------------------------------

@@ -87,36 +87,6 @@ class HadamardTensorAlgebra(OperadAlgebra):
             + _inner_weight_on_key(self.right_module, key[1])
         )
 
-        # Planar normalisation: delegate to any factor that supports it.
-        self.module.normalize_to_planar = self._normalize_tensor_to_planar
-
-    def _normalize_tensor_to_planar(self, elem):
-        """Normalise tensor-module elements via each factor's ``normalize_to_planar``.
-
-        For a tensor element ``Σ c_i · (l_i ⊗ r_i)``, normalise each factor
-        independently when its parent module exposes ``normalize_to_planar``.
-        """
-        left_norm = getattr(self.left_module, "normalize_to_planar", None)
-        right_norm = getattr(self.right_module, "normalize_to_planar", None)
-        if left_norm is None and right_norm is None:
-            return elem
-        result = self.module.zero()
-        for (left_key, right_key), coeff in elem:
-            # Normalise left factor
-            if left_norm is not None:
-                left_normed = left_norm(self.left_module.term(left_key))
-            else:
-                left_normed = self.left_module.term(left_key)
-            # Normalise right factor
-            if right_norm is not None:
-                right_normed = right_norm(self.right_module.term(right_key))
-            else:
-                right_normed = self.right_module.term(right_key)
-            for new_lk, lc in left_normed:
-                for new_rk, rc in right_normed:
-                    result += coeff * lc * rc * self.module.term((new_lk, new_rk))
-        return result
-
     def _act_impl(self, p_element, algebra_elements):
         if p_element.parent().factory is not self.operad_cls:
             raise TypeError("p_element must belong to this Hadamard operad.")

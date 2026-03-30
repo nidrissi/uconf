@@ -267,28 +267,19 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
 
-        Non-planar cooperad keys produced by ``d_C`` are kept as raw keys
-        (via ``self.term()``) rather than normalised via ``planarize``.
-        This is essential for d² = 0: the cooperad differential squares
-        to zero, and the cancellation relies on matching cooperad keys
-        exactly.  Normalisation (planarizing and permuting the m_tuple)
-        can break this cancellation when the m_tuple has repeated entries,
-        because two-step planarization does not commute with the
-        differential.
-
-        The :func:`~uconf.homology._boundary_matrix` function handles
-        the conversion of boundary output to the planar basis via
-        :meth:`normalize_to_planar`.
+        Non-planar cooperad keys produced by ``d_C`` are normalised to the
+        planar basis via ``_normalized_corolla_sum``.  This uses the same
+        normalising constructor as ``_element_constructor_``, so boundary
+        output lives directly in the planar basis.
         """
         c_key, m_tuple = key
         n = len(m_tuple)
         comp = self._cooperad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_C term: keep raw cooperad keys to preserve d_C² = 0 cancellation.
+        # d_C term: normalise to planar basis immediately.
         dc_elem = comp.boundary(comp.term(c_key))
-        for dc_key, dc_coeff in dc_elem:
-            result += dc_coeff * self.term((dc_key, m_tuple))
+        result += self._normalized_corolla_sum(dc_elem, m_tuple)
 
         # d_M terms with Koszul signs
         c_deg = comp.degree_on_basis(c_key)
@@ -301,25 +292,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 result += sign * m_coeff * self.term((c_key, new_m))
             cumulative += self._inner_module.degree_on_basis(mk)
 
-        return result
-
-    def normalize_to_planar(self, elem) -> "CofreeCoalgebraModule.Element":
-        """Rewrite *elem* in the planar basis.
-
-        The boundary may produce elements with non-planar cooperad keys
-        (to preserve d² = 0 cancellation).  This method maps each term
-        ``(c_key, m_tuple)`` to its planar representative via
-        ``_normalized_corolla_sum``, so that the result lives in the span
-        of the planar basis enumerated by ``basis_iter``.
-
-        Used by :func:`~uconf.homology._boundary_matrix` to express
-        boundary output in the planar basis for matrix construction.
-        """
-        result = self.zero()
-        for (c_key, m_tuple), coeff in elem:
-            n = len(m_tuple)
-            comp = self._cooperad_cls(n, self.base_ring())
-            result += coeff * self._normalized_corolla_sum(comp.term(c_key), m_tuple)
         return result
 
     # ------------------------------------------------------------------
