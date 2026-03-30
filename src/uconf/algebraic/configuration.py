@@ -192,7 +192,7 @@ class TrivialModule(CombinatorialFreeModule):
     """
 
     def __init__(self, dimension: int, base_ring):
-        super().__init__(base_ring, ["*"], category=GradedModulesWithBasis(base_ring))
+        super().__init__(base_ring, ["★"], category=GradedModulesWithBasis(base_ring))
         self._dimension = dimension
         self.boundary = lambda _: self.zero()
         self.connectivity = 0
@@ -202,10 +202,10 @@ class TrivialModule(CombinatorialFreeModule):
         return self._dimension
 
     def _repr_term(self, basis_key):
-        return f"*[{self._dimension}]"
+        return f"★{self._dimension}"
 
     def _repr_latex(self, basis_key):
-        return f"\\ast^{{{self._dimension}}}"
+        return f"\\star_{{{self._dimension}}}"
 
     class Element(CombinatorialFreeModule.Element):
         def _repr_latex_(self) -> str:
