@@ -786,6 +786,82 @@ class BarConstruction(UniqueRepresentation):
                 total += coeff * _on_basis(tree)
             return total
 
+        def _iter_all_splits(self, tree_key):
+            """Iterate over ALL non-root internal vertices and yield splits.
+
+            Unlike ``infinitesimal_cocompose`` (which only handles contiguous
+            leaf sets ``{i, ..., i+n-1}``), this method finds splits at
+            **every** internal edge of the bar tree—including subtrees whose
+            leaf set is non-contiguous after shuffle normalisation.
+
+            Yields ``(child_positions, top_key, bot_key, koszul_sign)`` where:
+
+            - ``child_positions`` is a sorted tuple of 1-based leaf positions
+              that belong to the bottom subtree.
+            - ``top_key`` / ``bot_key`` are bar-tree basis keys with leaves
+              relabelled to ``{1, ..., m}`` and ``{1, ..., n}`` respectively
+              (order-preserving).
+            - ``koszul_sign`` is the cofree-cooperad Koszul sign from the
+              DFS tensor-product reordering (same convention as
+              ``infinitesimal_cocompose``).
+            """
+            base_ring = self.base_ring()
+            operad_cls = self._operad_cls
+            k = self._arity
+
+            all_verts = vertices_dfs(tree_key)
+            for vertex in all_verts:
+                vertex_leaf_set = leaves(vertex)
+                n = len(vertex_leaf_set)
+                m = k - n + 1
+                if n < 2 or m < 1:
+                    continue
+
+                split = split_at_vertex(tree_key, vertex)
+                if split is None:
+                    continue
+                tree_top, placeholder, tree_bot = split
+
+                # Order-preserving relabelling --------------------------------
+                sorted_S = sorted(vertex_leaf_set)
+
+                # Bottom: S → {1, ..., n}
+                bot_relabel = {s: j + 1 for j, s in enumerate(sorted_S)}
+
+                # Top: (full_leaves – S) ∪ {placeholder} → {1, ..., m}
+                S_set = set(sorted_S)
+                top_leaf_set = sorted((set(range(1, k + 1)) - S_set) | {placeholder})
+                top_relabel = {lf: j + 1 for j, lf in enumerate(top_leaf_set)}
+
+                relabeled_top = relabel_leaves(tree_top, top_relabel)
+                relabeled_bot = relabel_leaves(tree_bot, bot_relabel)
+
+                # Validate
+                left_parent = self.factory(m, base_ring)
+                right_parent = self.factory(n, base_ring)
+                if left_parent._validate_basis_key(relabeled_top) is None:
+                    continue
+                if right_parent._validate_basis_key(relabeled_bot) is None:
+                    continue
+
+                # Koszul sign (same convention as infinitesimal_cocompose) -----
+                bottom_deg = subtree_degree(vertex, operad_cls, base_ring)
+                vertex_idx = next(j for j, v in enumerate(all_verts) if v is vertex)
+                bottom_verts = vertices_dfs(vertex)
+                n_bottom = len(bottom_verts)
+                after_deg = sum(
+                    operad_cls(vertex_arity(v), base_ring).degree_on_basis(decoration(v)) + 1
+                    for v in all_verts[vertex_idx + n_bottom :]
+                )
+                koszul_sign = sign_from_exponent(after_deg * bottom_deg)
+
+                yield (
+                    tuple(sorted_S),
+                    relabeled_top,
+                    relabeled_bot,
+                    koszul_sign,
+                )
+
     class Element(
         ParentedElementMixin["BarConstruction.Component"],
         CombinatorialFreeModule.Element,
