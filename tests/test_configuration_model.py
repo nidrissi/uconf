@@ -1,7 +1,42 @@
+"""Systematic operadic/cooperadic axiom tests for the configuration model.
+
+Tests fundamental algebraic axioms at each intermediate layer:
+
+Layer 0: H = s⁻¹Lie ⊙ Surjection (Hadamard product operad)
+Layer 1: C = B(H) (Bar construction cooperad)
+Layer 2: P = Ω(C) = Ω(B(H)) (Cobar construction operad)
+Layer 3: Free_P(k[d]) (Free algebra)
+Layer 4: HadamardTensorAlgebra (sphere cochains ⊗ free algebra)
+Layer 5: PullbackAlgebra
+Layer 6: BarAlgebra (bar algebra)
+
+Axioms per operad layer: d²=0, unit, sequential/parallel associativity,
+Leibniz rule, equivariance, d-σ commutativity.
+
+Axioms per cooperad layer: d²=0, counit, sequential/parallel coassociativity,
+coderivation, equivariance, d-σ commutativity.
+
+Axioms per algebra layer: d²=0, unit action, associativity, Leibniz.
+
+Basis sizes (for reference):
+  H(2): 2 per deg (deg ≥ -1)
+  H(3): 12/-2, 36/-1, 84/0, 180/1
+  B(H)(2): 2 per deg (deg ≥ 0)
+  B(H)(3): 12/-1, 48/0, 108/1
+  Ω(B(H))(2): 2 per deg (deg ≥ -1)
+  Ω(B(H))(3): 24/-2, 72/-1, 144/0, 264/1
+  FreeAlg dim=1: w1 d1:1 | w2 d1+:1 | w3 d1:4..d5:80
+  FreeAlg dim=2: w1 d2:1 | w2 d3+:1 | w3 d4:4..d5:12
+  TensorAlg dim=1: w1 d0:1 | w2 d0+:1 | w3 d0:4...
+  TensorAlg dim=2: w1 d0:1 | w2 d1+:1 | w3 d2:4...
+  Bar dim=1: w1 d0:1 | w2 d0+:2 | w3 d-1:4..d7:1628 | w4 d-2:21..d0:534
+  Bar dim=2: w1 d0:1 | w2 d0:1,d1+:2 | w3 d-1:4..d7:1234 | w4 d-2:21..d0:462
+"""
+
 from random import Random
 
 import pytest
-from sage.all import GF, QQ, tensor
+from sage.all import GF, QQ, SymmetricGroup, tensor
 
 from uconf import (
     BarConstruction,
@@ -19,417 +54,863 @@ from uconf.algebraic.configuration import (
     _build_layers,
     _make_surjection_comodule_morphism,
 )
+from uconf.core.signs import sign_from_exponent
 
-# ============================================================================
-# Layer 0: Hadamard product operad H = sLie ⊙ Surjection
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-
-class TestLayerHadamardOperadDSquared:
-    """d²=0 for the Hadamard product operad H = s⁻¹Lie ⊙ Surjection.
-
-    This is the innermost operad used in the configuration model.
-    Elements have degree deg(sLie) + deg(Surjection).
-    """
-
-    @pytest.mark.parametrize("n", [2, 3])
-    @pytest.mark.parametrize("d", range(3))
-    def test_d_squared_zero(self, n: int, d: int) -> None:
-        """d²=0 for H(n) at degree d."""
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        Hn = H(n, QQ)
-        for elem in Hn.basis_iter(d):
-            dd = elem.boundary().boundary()
-            assert dd == Hn.zero(), f"d²≠0 for H({n}) at degree {d}"
+_SEED = 20260330
 
 
-# ============================================================================
-# Layer 1: Bar construction cooperad C = B(H)
-# ============================================================================
+def _as_dict(x):
+    """Convert a SageMath element to {basis_key: coeff}, dropping zeros."""
+    return {basis: coeff for basis, coeff in x if coeff != 0}
 
 
-class TestLayerBarCooperadDSquared:
-    """d²=0 for the bar construction cooperad C = B(sLie ⊙ Surjection).
-
-    The bar construction has cooperad connectivity -1 (degree -(n-1) at arity n).
-    """
-
-    @pytest.mark.parametrize("n", [2, 3])
-    @pytest.mark.parametrize("d", range(-1, 3))
-    def test_d_squared_zero(self, n: int, d: int) -> None:
-        """d²=0 for C(n) at degree d."""
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        Cn = C(n, QQ)
-        for elem in Cn.basis_iter(d):
-            dd = elem.boundary().boundary()
-            assert dd == Cn.zero(), f"d²≠0 for B(H)({n}) at degree {d}"
+def _sample(population, k, rng):
+    """Sample min(k, len(population)) without replacement."""
+    if len(population) <= k:
+        return list(population)
+    return rng.sample(list(population), k)
 
 
-# ============================================================================
-# Layer 2: Cobar construction operad P = Ω(B(H))
-# ============================================================================
+def _all_decompositions(total_arity):
+    """Yield all (i, m, n) with m + n - 1 = total_arity, m ≥ 2, n ≥ 2."""
+    for m in range(2, total_arity):
+        n = total_arity - m + 1
+        if n < 2:
+            continue
+        for i in range(1, m + 1):
+            yield (i, m, n)
 
 
-class TestLayerCobarOperadDSquared:
-    """d²=0 for the cobar construction operad P = Ω(B(sLie ⊙ Surjection)).
-
-    This is the quasi-free resolution used in the configuration model.
-    """
-
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.parametrize("d", range(3))
-    def test_d_squared_zero(self, n: int, d: int) -> None:
-        """d²=0 for Ω(B(H))(n) at degree d (sampled)."""
-        rng = Random(20260326)
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        P = CobarConstruction(C)
-        Pn = P(n, QQ)
-        basis = Pn.graded_basis(d)
-        if not basis:
-            return
-        for _ in range(min(20, len(basis))):
-            p_elem = rng.choice(basis)
-            dd = p_elem.boundary().boundary()
-            assert dd == Pn.zero(), f"d²≠0 for Ω(B(H))({n}) at degree {d}"
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 
-# ============================================================================
+@pytest.fixture(params=[QQ, GF(2)], ids=["QQ", "GF2"])
+def ring(request):
+    return request.param
+
+
+@pytest.fixture(params=[1, 2], ids=["dim1", "dim2"])
+def dim(request):
+    return request.param
+
+
+@pytest.fixture
+def H():
+    """Layer 0: Hadamard product operad H = s⁻¹Lie ⊙ Surjection."""
+    return HadamardProduct(ShiftedOperad(Lie, -1), Surjection)
+
+
+@pytest.fixture
+def C(H):
+    """Layer 1: Bar construction cooperad C = B(H)."""
+    return BarConstruction(H)
+
+
+@pytest.fixture
+def P(C):
+    """Layer 2: Cobar construction operad P = Ω(B(H))."""
+    return CobarConstruction(C)
+
+
+@pytest.fixture
+def layers(dim, ring):
+    """All configuration model layers at given dimension and ring."""
+    return _build_layers(ring, dim)
+
+
+# ===========================================================================
+# Layer 0: H = s⁻¹Lie ⊙ Surjection
+# ===========================================================================
+
+
+class TestLayer0:
+    """Operad axioms for H = s⁻¹Lie ⊙ Surjection."""
+
+    class TestDSquared:
+        @pytest.mark.parametrize(
+            "n,d",
+            [(2, -1), (2, 0), (2, 1), (2, 2), (3, -2), (3, -1), (3, 0), (3, 1)],
+        )
+        def test_d_squared(self, n, d, H, ring):
+            Hn = H(n, ring)
+            rng = Random(_SEED)
+            for elem in _sample(list(Hn.basis_iter(d)), 30, rng):
+                assert elem.boundary().boundary() == Hn.zero()
+
+    class TestUnit:
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_left(self, n, d, H):
+            unit = H.unit(QQ)
+            for elem in H(n, QQ).basis_iter(d):
+                assert _as_dict(H.compose(unit, 1, elem)) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_right(self, d, H):
+            unit = H.unit(QQ)
+            for elem in H(2, QQ).basis_iter(d):
+                for i in [1, 2]:
+                    assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
+
+    class TestSeqAssociativity:
+        """(x ∘_i y) ∘_{i+j-1} z = x ∘_i (y ∘_j z)."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity2(self, d_x, d_y, d_z, H):
+            H2 = H(2, QQ)
+            xs = list(H2.basis_iter(d_x))
+            ys = list(H2.basis_iter(d_y))
+            zs = list(H2.basis_iter(d_z))
+            rng = Random(_SEED)
+            for x in _sample(xs, 2, rng):
+                for y in _sample(ys, 2, rng):
+                    for z in _sample(zs, 2, rng):
+                        for i in [1, 2]:
+                            for j in [1, 2]:
+                                lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
+                                rhs = H.compose(x, i, H.compose(y, j, z))
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestParAssociativity:
+        """(x ∘_i y) ∘_{j+m-1} z = (-1)^{|y||z|} (x ∘_j z) ∘_i y, i < j."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity2(self, d_x, d_y, d_z, H):
+            H2 = H(2, QQ)
+            i, j, m = 1, 2, 2
+            for x in H2.basis_iter(d_x):
+                for y in H2.basis_iter(d_y):
+                    for z in H2.basis_iter(d_z):
+                        lhs = H.compose(H.compose(x, i, y), j + m - 1, z)
+                        sign = sign_from_exponent(y.degree() * z.degree())
+                        rhs = sign * H.compose(H.compose(x, j, z), i, y)
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestLeibniz:
+        """d(x ∘_i y) = dx ∘_i y + (-1)^{|x|} x ∘_i dy."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0, 1])
+        @pytest.mark.parametrize("d_y", [-1, 0, 1])
+        def test_arity2(self, d_x, d_y, H):
+            H2 = H(2, QQ)
+            for x in H2.basis_iter(d_x):
+                for y in H2.basis_iter(d_y):
+                    for i in [1, 2]:
+                        lhs = H.compose(x, i, y).boundary()
+                        rhs = H.compose(x.boundary(), i, y) + sign_from_exponent(
+                            x.degree()
+                        ) * H.compose(x, i, y.boundary())
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestEquivariance:
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_d_commutes(self, n, d, H):
+            Hn = H(n, QQ)
+            rng = Random(_SEED)
+            basis = list(Hn.basis_iter(d))
+            for elem in _sample(basis, 10, rng):
+                for sigma in SymmetricGroup(n):
+                    sl = list(sigma.tuple())
+                    assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
+                        elem.boundary().permute(sl)
+                    )
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_identity(self, d, H):
+            for elem in H(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([1, 2])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_involution_arity2(self, d, H):
+            for elem in H(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-2, -1, 0])
+        def test_group_action_arity3(self, d, H):
+            basis = list(H(3, QQ).basis_iter(d))
+            rng = Random(_SEED)
+            perms = list(SymmetricGroup(3))
+            for elem in _sample(basis, 5, rng):
+                for sigma in _sample(perms, 3, rng):
+                    for tau in _sample(perms, 3, rng):
+                        sl, tl = list(sigma.tuple()), list(tau.tuple())
+                        cl = list((sigma * tau).tuple())
+                        assert _as_dict(elem.permute(sl).permute(tl)) == _as_dict(elem.permute(cl))
+
+
+# ===========================================================================
+# Layer 1: C = B(H) (cooperad)
+# ===========================================================================
+
+
+class TestLayer1:
+    """Cooperad axioms for B(H)."""
+
+    class TestDSquared:
+        @pytest.mark.parametrize(
+            "n,d",
+            [(2, 0), (2, 1), (2, 2), (2, 3), (3, -1), (3, 0), (3, 1)],
+        )
+        def test_d_squared(self, n, d, C, ring):
+            Cn = C(n, ring)
+            rng = Random(_SEED)
+            for elem in _sample(list(Cn.basis_iter(d)), 30, rng):
+                assert elem.boundary().boundary() == Cn.zero()
+
+    class TestCounit:
+        def test_on_generator(self, C):
+            assert C.counit(C.counit_element(QQ)) == 1
+
+        def test_zero_arity2(self, C):
+            for elem in C(2, QQ).basis_iter(0):
+                assert C.counit(elem) == 0
+
+        def test_reduced_kills_counit(self, C):
+            C1 = C(1, QQ)
+            assert C.reduced(C.counit_element(QQ)) == C1.zero()
+
+        def test_Delta_1_1_2_is_zero(self, C):
+            """Δ_{1;1,2}(x) = 0 for the reduced cooperad structure."""
+            C2 = C(2, QQ)
+            tgt = tensor([C(1, QQ), C2])
+            for elem in C2.basis_iter(0):
+                assert C.infinitesimal_cocompose(elem, 1, 1, 2) == tgt.zero()
+
+    class TestSeqCoassociativity:
+        """(id⊗Δ) ∘ Δ = (Δ⊗id) ∘ Δ on B(H)(4), m=n=p=2, i=j=1."""
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_arity4(self, d, C):
+            C3 = C(3, QQ)
+            rng = Random(_SEED)
+            for x in _sample(list(C(4, QQ).basis_iter(d)), 10, rng):
+                lhs = {}
+                for (a, dk), c1 in C.infinitesimal_cocompose(x, 1, 2, 3):
+                    for (b, c), c2 in C.infinitesimal_cocompose(C3(dk), 1, 2, 2):
+                        k = (a, b, c)
+                        lhs[k] = lhs.get(k, 0) + c1 * c2
+                lhs = {k: v for k, v in lhs.items() if v}
+                rhs = {}
+                for (e, c), c1 in C.infinitesimal_cocompose(x, 1, 3, 2):
+                    for (a, b), c2 in C.infinitesimal_cocompose(C3(e), 1, 2, 2):
+                        k = (a, b, c)
+                        rhs[k] = rhs.get(k, 0) + c1 * c2
+                rhs = {k: v for k, v in rhs.items() if v}
+                assert lhs == rhs
+
+    class TestParCoassociativity:
+        """Parallel coassociativity on B(H)(4): i=1, j=2, m=n=p=2."""
+
+        @pytest.mark.parametrize("d", [-1, 0])
+        def test_arity4(self, d, C):
+            C3 = C(3, QQ)
+            C2 = C(2, QQ)
+            rng = Random(_SEED)
+            for x in _sample(list(C(4, QQ).basis_iter(d)), 10, rng):
+                lhs = {}
+                for (e, ck), c1 in C.infinitesimal_cocompose(x, 3, 3, 2):
+                    for (a, b), c2 in C.infinitesimal_cocompose(C3(e), 1, 2, 2):
+                        k = (a, b, ck)
+                        lhs[k] = lhs.get(k, 0) + c1 * c2
+                lhs = {k: v for k, v in lhs.items() if v}
+                rhs = {}
+                for (f, bk), c1 in C.infinitesimal_cocompose(x, 1, 3, 2):
+                    for (a, ck), c2 in C.infinitesimal_cocompose(C3(f), 2, 2, 2):
+                        sign = sign_from_exponent(C2.degree_on_basis(bk) * C2.degree_on_basis(ck))
+                        k = (a, bk, ck)
+                        rhs[k] = rhs.get(k, 0) + sign * c1 * c2
+                rhs = {k: v for k, v in rhs.items() if v}
+                assert lhs == rhs
+
+    class TestCoderivation:
+        """d is a coderivation: Δ(dx) = (d⊗1 + (-1)^|a| 1⊗d)(Δ(x))."""
+
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("d", [0, 1, 2])
+        def test_coderivation(self, n, d, C):
+            Cn = C(n, QQ)
+            rng = Random(_SEED)
+            for x in _sample(list(Cn.basis_iter(d)), 15, rng):
+                dx = x.boundary()
+                for i, m, k in _all_decompositions(n):
+                    Cm, Ck = C(m, QQ), C(k, QQ)
+                    lhs = {}
+                    for (l, r), c in C.infinitesimal_cocompose(dx, i, m, k):
+                        lhs[(l, r)] = lhs.get((l, r), 0) + c
+                    lhs = {k: v for k, v in lhs.items() if v}
+                    rhs = {}
+                    for (l, r), c in C.infinitesimal_cocompose(x, i, m, k):
+                        l_deg = Cm.degree_on_basis(l)
+                        for dl, dc in Cm(l).boundary():
+                            rhs[(dl, r)] = rhs.get((dl, r), 0) + c * dc
+                        sgn = sign_from_exponent(l_deg)
+                        for dr, dc in Ck(r).boundary():
+                            rhs[(l, dr)] = rhs.get((l, dr), 0) + sgn * c * dc
+                    rhs = {k: v for k, v in rhs.items() if v}
+                    assert lhs == rhs
+
+    class TestEquivariance:
+        @pytest.mark.parametrize("d", [0, 1, 2])
+        def test_d_commutes_arity2(self, d, C):
+            for elem in C(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([2, 1]).boundary()) == _as_dict(
+                    elem.boundary().permute([2, 1])
+                )
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_d_commutes_arity3(self, d, C):
+            rng = Random(_SEED)
+            for elem in _sample(list(C(3, QQ).basis_iter(d)), 8, rng):
+                for sigma in SymmetricGroup(3):
+                    sl = list(sigma.tuple())
+                    assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
+                        elem.boundary().permute(sl)
+                    )
+
+        @pytest.mark.parametrize("d", [0, 1, 2])
+        def test_identity_arity2(self, d, C):
+            for elem in C(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([1, 2])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [0, 1])
+        def test_involution_arity2(self, d, C):
+            for elem in C(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-1, 0])
+        def test_group_action_arity3(self, d, C):
+            rng = Random(_SEED)
+            basis = list(C(3, QQ).basis_iter(d))
+            perms = list(SymmetricGroup(3))
+            for elem in _sample(basis, 5, rng):
+                for sigma in _sample(perms, 3, rng):
+                    for tau in _sample(perms, 3, rng):
+                        sl, tl = list(sigma.tuple()), list(tau.tuple())
+                        cl = list((sigma * tau).tuple())
+                        assert _as_dict(elem.permute(sl).permute(tl)) == _as_dict(elem.permute(cl))
+
+
+# ===========================================================================
+# Layer 2: P = Ω(B(H)) (cobar operad)
+# ===========================================================================
+
+
+class TestLayer2:
+    """Operad axioms for Ω(B(H))."""
+
+    class TestDSquared:
+        @pytest.mark.parametrize(
+            "n,d",
+            [(2, -1), (2, 0), (2, 1), (2, 2), (3, -2), (3, -1), (3, 0), (3, 1)],
+        )
+        def test_d_squared(self, n, d, P, ring):
+            Pn = P(n, ring)
+            rng = Random(_SEED)
+            for elem in _sample(list(Pn.basis_iter(d)), 30, rng):
+                assert elem.boundary().boundary() == Pn.zero()
+
+    class TestUnit:
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_left(self, n, d, P):
+            unit = P.unit(QQ)
+            rng = Random(_SEED)
+            for elem in _sample(list(P(n, QQ).basis_iter(d)), 20, rng):
+                assert _as_dict(P.compose(unit, 1, elem)) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_right(self, d, P):
+            unit = P.unit(QQ)
+            for elem in P(2, QQ).basis_iter(d):
+                for i in [1, 2]:
+                    assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
+
+    class TestSeqAssociativity:
+        """(x ∘_i y) ∘_{i+j-1} z = x ∘_i (y ∘_j z)."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity2(self, d_x, d_y, d_z, P):
+            P2 = P(2, QQ)
+            for x in P2.basis_iter(d_x):
+                for y in P2.basis_iter(d_y):
+                    for z in P2.basis_iter(d_z):
+                        for i in [1, 2]:
+                            for j in [1, 2]:
+                                lhs = P.compose(P.compose(x, i, y), i + j - 1, z)
+                                rhs = P.compose(x, i, P.compose(y, j, z))
+                                assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestParAssociativity:
+        """(x ∘_i y) ∘_{j+m-1} z = (-1)^{|y|·|z|} (x ∘_j z) ∘_i y."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0])
+        @pytest.mark.parametrize("d_y", [-1, 0])
+        @pytest.mark.parametrize("d_z", [-1, 0])
+        def test_arity2(self, d_x, d_y, d_z, P):
+            P2 = P(2, QQ)
+            i, j, m = 1, 2, 2
+            for x in P2.basis_iter(d_x):
+                for y in P2.basis_iter(d_y):
+                    for z in P2.basis_iter(d_z):
+                        lhs = P.compose(P.compose(x, i, y), j + m - 1, z)
+                        sign = sign_from_exponent(y.degree() * z.degree())
+                        rhs = sign * P.compose(P.compose(x, j, z), i, y)
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestLeibniz:
+        """d(x ∘_i y) = dx ∘_i y + (-1)^{|x|} x ∘_i dy."""
+
+        @pytest.mark.parametrize("d_x", [-1, 0, 1])
+        @pytest.mark.parametrize("d_y", [-1, 0, 1])
+        def test_arity2(self, d_x, d_y, P):
+            P2 = P(2, QQ)
+            for x in P2.basis_iter(d_x):
+                for y in P2.basis_iter(d_y):
+                    for i in [1, 2]:
+                        lhs = P.compose(x, i, y).boundary()
+                        rhs = P.compose(x.boundary(), i, y) + sign_from_exponent(
+                            x.degree()
+                        ) * P.compose(x, i, y.boundary())
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestEquivariance:
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_d_commutes_arity2(self, d, P):
+            for elem in P(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([2, 1]).boundary()) == _as_dict(
+                    elem.boundary().permute([2, 1])
+                )
+
+        @pytest.mark.parametrize("d", [-2, -1, 0])
+        def test_d_commutes_arity3(self, d, P):
+            rng = Random(_SEED)
+            for elem in _sample(list(P(3, QQ).basis_iter(d)), 8, rng):
+                for sigma in SymmetricGroup(3):
+                    sl = list(sigma.tuple())
+                    assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
+                        elem.boundary().permute(sl)
+                    )
+
+        @pytest.mark.parametrize("d", [-1, 0, 1])
+        def test_identity_arity2(self, d, P):
+            for elem in P(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([1, 2])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-1, 0])
+        def test_involution_arity2(self, d, P):
+            for elem in P(2, QQ).basis_iter(d):
+                assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
+
+        @pytest.mark.parametrize("d", [-2, -1])
+        def test_group_action_arity3(self, d, P):
+            rng = Random(_SEED)
+            basis = list(P(3, QQ).basis_iter(d))
+            perms = list(SymmetricGroup(3))
+            for elem in _sample(basis, 5, rng):
+                for sigma in _sample(perms, 3, rng):
+                    for tau in _sample(perms, 3, rng):
+                        sl, tl = list(sigma.tuple()), list(tau.tuple())
+                        cl = list((sigma * tau).tuple())
+                        assert _as_dict(elem.permute(sl).permute(tl)) == _as_dict(elem.permute(cl))
+
+
+# ===========================================================================
 # Layer 3: Free algebra T_P(k[d])
-# ============================================================================
+# ===========================================================================
 
 
-class TestLayerFreeAlgebra:
-    """Tests for the free Ω(B(H))-algebra on the trivial module k[d].
+class TestLayer3:
+    """Free Ω(B(H))-algebra on the trivial module k[d]."""
 
-    This is the algebra that captures the 'label' structure.
-    """
+    class TestDSquared:
+        @pytest.mark.parametrize("weight", [1, 2, 3])
+        def test_d_squared(self, dim, ring, weight):
+            mod = _build_layers(ring, dim)["free_alg"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 6):
+                basis = list(mod.basis_weight_iter(deg, weight))
+                for elem in _sample(basis, 30, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
 
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight1(self, d: int) -> None:
-        """d²=0 at weight 1 for the free algebra."""
-        layers = _build_layers(QQ, d)
-        fa = layers["free_alg"]
-        mod = fa.module
-        for deg in range(-1, 4):
-            for elem in mod.basis_weight_iter(deg, 1):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
+    class TestUnitAction:
+        def test_unit(self, layers):
+            fa = layers["free_alg"]
+            mod = fa.module
+            unit = layers["OBXsLie"].unit(layers["bar"].module.base_ring())
+            for deg in range(-1, 6):
+                for elem in mod.basis_weight_iter(deg, 1):
+                    assert _as_dict(fa.act(unit, [elem])) == _as_dict(elem)
 
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight2(self, d: int) -> None:
-        """d²=0 at weight 2 for the free algebra."""
-        layers = _build_layers(QQ, d)
-        fa = layers["free_alg"]
-        mod = fa.module
-        for deg in range(-1, 3):
-            for elem in mod.basis_weight_iter(deg, 2):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 2, degree {deg}"
+    class TestAssociativityAction:
+        """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_action_arity_2(self, d: int) -> None:
-        """The algebra action γ(p; a₁, a₂) produces a valid element."""
-        layers = _build_layers(QQ, d)
-        fa = layers["free_alg"]
-        mod = fa.module
-        P = layers["OBXsLie"]
-        # Get a degree-0 operad element at arity 2
-        P2 = P(2, QQ)
-        p_elems = list(P2.basis_iter(0))
-        if not p_elems:
-            return
-        # Get two weight-1 algebra elements
-        w1_elems = list(mod.basis_weight_iter(0, 1))
-        if len(w1_elems) < 2:
-            return
-        p = p_elems[0]
-        result = fa.act(p, [w1_elems[0], w1_elems[1]])
-        assert result is not None
+        def test_compatible(self, layers):
+            fa = layers["free_alg"]
+            mod = fa.module
+            R = layers["bar"].module.base_ring()
+            P = layers["OBXsLie"]
+            P2 = P(2, R)
+            p_elems = list(P2.basis_iter(0))
+            if not p_elems:
+                pytest.skip("No P(2) elements at degree 0")
+            # Weight-1 module has exactly 1 generator per dimension,
+            # so use repeated copies which is algebraically valid.
+            w1 = []
+            for d_try in range(-1, 6):
+                w1.extend(mod.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = fa.act(P.compose(p, 1, q), [a, a, a])
+                    rhs = fa.act(p, [fa.act(q, [a, a]), a])
+                    assert _as_dict(lhs) == _as_dict(rhs)
 
+            # Also test with the second insertion position: p ∘_2 q
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(p_elems, 2, rng):
+                    lhs = fa.act(P.compose(p, 2, q), [a, a, a])
+                    rhs = fa.act(p, [a, fa.act(q, [a, a])])
+                    assert _as_dict(lhs) == _as_dict(rhs)
 
-# ============================================================================
-# Layer 4: HadamardTensorAlgebra (sphere cochains ⊗ free algebra)
-# ============================================================================
+    class TestLeibnizAction:
+        """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
+        + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
-
-class TestLayerHadamardTensorAlgebra:
-    """Tests for the Hadamard tensor algebra of sphere cochains and free algebra.
-
-    This algebra has operad (Surjection ⊙ Ω(B(H))) and module (cochains ⊗ free_alg).
-    """
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight1(self, d: int) -> None:
-        """d²=0 at weight 1 for the tensor algebra."""
-        layers = _build_layers(QQ, d)
-        ta = layers["tensor_alg"]
-        for deg in range(-1, 3):
-            for elem in ta.basis_weight_iter(deg, 1):
-                dd = ta.boundary(ta.boundary(elem))
-                assert dd == ta.module.zero(), f"d²≠0 at weight 1, degree {deg}"
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight2(self, d: int) -> None:
-        """d²=0 at weight 2 for the tensor algebra."""
-        layers = _build_layers(QQ, d)
-        ta = layers["tensor_alg"]
-        for deg in range(-1, 3):
-            for elem in ta.basis_weight_iter(deg, 2):
-                dd = ta.boundary(ta.boundary(elem))
-                assert dd == ta.module.zero(), (
-                    f"d²≠0 at weight 2, degree {deg} for {list(elem)[0][0]}"
-                )
-
-
-# ============================================================================
-# Layer 5: PullbackAlgebra (via comodule morphism)
-# ============================================================================
-
-
-class TestLayerPullbackAlgebra:
-    """Tests for the pullback algebra along the comodule morphism.
-
-    The pullback converts the (Surjection ⊙ Ω(B(H)))-algebra into an
-    Ω(B(H))-algebra by composing the action with the comodule morphism
-    Ω(B(H)) → Surjection ⊙ Ω(B(H)).
-    """
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight1(self, d: int) -> None:
-        """d²=0 at weight 1 for the pullback algebra (same module as tensor algebra)."""
-        layers = _build_layers(QQ, d)
-        pb = layers["pulled_back"]
-        mod = pb.module
-        for deg in range(-1, 3):
-            for elem in mod.basis_weight_iter(deg, 1):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
+        def test_leibniz(self, layers):
+            fa = layers["free_alg"]
+            mod = fa.module
+            R = layers["bar"].module.base_ring()
+            P = layers["OBXsLie"]
+            P2 = P(2, R)
+            p_elems = list(P2.basis_iter(0))
+            if not p_elems:
+                pytest.skip("No P(2) elements at degree 0")
+            w1 = []
+            for d_try in range(-1, 6):
+                w1.extend(mod.basis_weight_iter(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            rng = Random(_SEED)
+            for p in _sample(p_elems, 2, rng):
+                lhs = mod.boundary(fa.act(p, [a, a]))
+                rhs = fa.act(p.boundary(), [a, a])
+                p_deg = p.degree()
+                da = mod.boundary(a)
+                rhs += sign_from_exponent(p_deg) * fa.act(p, [da, a])
+                rhs += sign_from_exponent(p_deg + a.degree()) * fa.act(p, [a, da])
+                assert _as_dict(lhs) == _as_dict(rhs)
 
 
-# ============================================================================
+# ===========================================================================
+# Layer 4: HadamardTensorAlgebra
+# ===========================================================================
+
+
+class TestLayer4:
+    """Hadamard tensor algebra (sphere cochains ⊗ free algebra)."""
+
+    class TestDSquared:
+        @pytest.mark.parametrize("weight", [1, 2, 3])
+        def test_d_squared(self, dim, ring, weight):
+            ta = _build_layers(ring, dim)["tensor_alg"]
+            rng = Random(_SEED)
+            for deg in range(-1, 6):
+                basis = list(ta.basis_weight_iter(deg, weight))
+                for elem in _sample(basis, 30, rng):
+                    assert ta.boundary(ta.boundary(elem)) == ta.module.zero(), (
+                        f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+    class TestUnitAction:
+        def test_unit(self, layers):
+            ta = layers["tensor_alg"]
+            unit = ta.operad_cls.unit(layers["bar"].module.base_ring())
+            for deg in range(-1, 4):
+                for elem in ta.basis_weight_iter(deg, 1):
+                    assert _as_dict(ta.act(unit, [elem])) == _as_dict(elem)
+
+
+# ===========================================================================
+# Layer 5: PullbackAlgebra
+# ===========================================================================
+
+
+class TestLayer5:
+    """Pullback algebra (same module as tensor algebra, different action)."""
+
+    class TestDSquared:
+        @pytest.mark.parametrize("weight", [1, 2, 3])
+        def test_d_squared(self, dim, ring, weight):
+            mod = _build_layers(ring, dim)["pulled_back"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 6):
+                basis = list(mod.basis_weight_iter(deg, weight))
+                for elem in _sample(basis, 30, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+    class TestUnitAction:
+        def test_unit(self, layers):
+            pb = layers["pulled_back"]
+            mod = pb.module
+            R = layers["bar"].module.base_ring()
+            unit = layers["OBXsLie"].unit(R)
+            for deg in range(-1, 4):
+                for elem in mod.basis_weight_iter(deg, 1):
+                    assert _as_dict(pb.act(unit, [elem])) == _as_dict(elem)
+
+
+# ===========================================================================
 # Layer 6: BarAlgebra (final construction)
-# ============================================================================
+# ===========================================================================
 
 
-class TestLayerBarAlgebra:
-    """Tests for the full bar algebra B_π(pulled_back).
+class TestLayer6:
+    """Bar algebra B_π(pulled_back) — final output of the configuration model."""
 
-    This is the final output of the configuration model.
+    class TestDSquared:
+        @pytest.mark.parametrize("weight", [1, 2])
+        def test_d_squared(self, dim, ring, weight):
+            mod = _build_layers(ring, dim)["bar"].module
+            for deg in range(-1, 6):
+                for elem in mod.graded_basis_by_weight(deg, weight):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+    class TestDSquaredWeight3:
+        """d²=0 at weight 3 — where the sign bug first manifests (QQ only)."""
+
+        def test_d_squared(self, dim, ring):
+            mod = _build_layers(ring, dim)["bar"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(mod.graded_basis_by_weight(deg, 3))
+                for elem in _sample(basis, 30, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"d²≠0 w=3 deg={deg} dim={dim} ring={ring}"
+                    )
+
+    class TestDSquaredWeight4:
+        """d²=0 at weight 4."""
+
+        def test_d_squared(self, dim, ring):
+            mod = _build_layers(ring, dim)["bar"].module
+            rng = Random(_SEED)
+            for deg in range(-2, 2):
+                basis = list(mod.graded_basis_by_weight(deg, 4))
+                for elem in _sample(basis, 20, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
+                    )
+
+    class TestDecomposedDSquared:
+        """Test the two components of d separately: d_cofree and d_alpha.
+
+        d = d_cofree + d_alpha,  so d² = d_cofree² + d_alpha²
+        + (d_cofree ∘ d_alpha + d_alpha ∘ d_cofree) = 0.
+
+        This decomposes d²=0 into three independent identities:
+        1. d_cofree² = 0
+        2. d_alpha² = 0
+        3. d_cofree ∘ d_alpha + d_alpha ∘ d_cofree = 0 (cross term)
+        """
+
+        @pytest.mark.parametrize("weight", [2, 3])
+        def test_d_cofree_squared(self, dim, ring, weight):
+            """d_cofree² = 0."""
+            mod = _build_layers(ring, dim)["bar"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(mod.graded_basis_by_weight(deg, weight))
+                for elem in _sample(basis, 20, rng):
+                    dd = mod.d_cofree(mod.d_cofree(elem))
+                    assert dd == mod.zero(), (
+                        f"d_cofree²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+        @pytest.mark.parametrize("weight", [2, 3])
+        def test_d_alpha_squared(self, dim, ring, weight):
+            """d_alpha² = 0."""
+            mod = _build_layers(ring, dim)["bar"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(mod.graded_basis_by_weight(deg, weight))
+                for elem in _sample(basis, 20, rng):
+                    dd = mod.d_alpha(mod.d_alpha(elem))
+                    assert dd == mod.zero(), (
+                        f"d_alpha²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+        @pytest.mark.parametrize("weight", [2, 3])
+        def test_cross_term(self, dim, ring, weight):
+            """d_cofree ∘ d_alpha + d_alpha ∘ d_cofree = 0."""
+            mod = _build_layers(ring, dim)["bar"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(mod.graded_basis_by_weight(deg, weight))
+                for elem in _sample(basis, 20, rng):
+                    cross = mod.d_cofree(mod.d_alpha(elem)) + mod.d_alpha(mod.d_cofree(elem))
+                    assert cross == mod.zero(), (
+                        f"cross term ≠ 0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    )
+
+
+# ===========================================================================
+# Full model / chain complex tests
+# ===========================================================================
+
+
+class TestFullModel:
+    class TestChainComplex:
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_QQ_weight2(self, d):
+            model = euclidean_unordered_configuration_model(QQ, d)
+            C = compute_chain_complex(model.module, degrees=range(-1, 3), weight=2, check=True)
+            assert C is not None
+
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_QQ_weight3(self, d):
+            model = euclidean_unordered_configuration_model(QQ, d)
+            C = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
+            assert C is not None
+
+        def test_QQ_weight4(self):
+            model = euclidean_unordered_configuration_model(QQ, 2)
+            C = compute_chain_complex(model.module, degrees=range(0, 2), weight=4, check=True)
+            assert C is not None
+
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_GF2_weight3(self, d):
+            model = euclidean_unordered_configuration_model(GF(2), d)
+            C = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
+            assert C is not None
+
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_GF2_weight4(self, d):
+            model = euclidean_unordered_configuration_model(GF(2), d)
+            C = compute_chain_complex(model.module, degrees=range(-1, 2), weight=4, check=True)
+            assert C is not None
+
+    class TestDSquaredMinimal:
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_weight2(self, d):
+            model = euclidean_unordered_configuration_model(QQ, d)
+            for deg in range(-1, 5):
+                for elem in model.module.graded_basis_by_weight(deg, 2):
+                    dd = model.boundary(model.boundary(elem))
+                    assert dd == model.module.zero()
+
+    class TestBasis:
+        @pytest.mark.parametrize("d", [1, 2])
+        def test_no_duplicates(self, d):
+            model = euclidean_unordered_configuration_model(QQ, d)
+            for k in range(-2, 3):
+                for w in range(1, 4):
+                    basis = model.module.graded_basis_by_weight(k, w)
+                    assert len(basis) == len(set(basis))
+
+    class TestComodule:
+        @pytest.mark.parametrize("n", [2, 3])
+        def test_generator_chain_map(self, n):
+            """ν(∂c) = (d_E⊗1 + 1⊗∂_C)(ν(c))."""
+            sLie = ShiftedOperad(Lie, -1)
+            H_op = HadamardProduct(sLie, Surjection)
+            C_cop = BarConstruction(H_op)
+            Cn = C_cop(n, QQ)
+            BEn = BarrattEccles(n, QQ)
+            for d in range(3):
+                for elem in Cn.basis_iter(d):
+                    lhs = e_comodule_on_generator(elem.boundary())
+                    rhs = tensor([BEn, Cn]).zero()
+                    for (b, u), coeff in e_comodule_on_generator(elem):
+                        b_elem = BEn.term(b)
+                        u_elem = Cn.term(u)
+                        rhs += coeff * b_elem.boundary().tensor(u_elem)
+                        rhs += (
+                            coeff
+                            * (-1) ** BEn.degree_on_basis(b)
+                            * b_elem.tensor(Cn.boundary(u_elem))
+                        )
+                    assert lhs == rhs
+
+        @pytest.mark.parametrize("n", [2, 3])
+        def test_comodule_chain_map(self, n):
+            """φ(dp) = d(φ(p)) — composed morphism is a chain map."""
+            sLie = ShiftedOperad(Lie, -1)
+            H_op = HadamardProduct(sLie, Surjection)
+            C_cop = BarConstruction(H_op)
+            P_op = CobarConstruction(C_cop)
+            phi = _make_surjection_comodule_morphism(C_cop)
+            Pn = P_op(n, QQ)
+            for p_elem in Pn.basis_iter(0):
+                phi_dp = phi(Pn.boundary(p_elem))
+                d_phi_p = phi(p_elem).parent().boundary(phi(p_elem))
+                assert phi_dp == d_phi_p
+
+
+# ===========================================================================
+# Weight 3/4: systematic layer-by-layer d²=0 to pinpoint bug location
+# ===========================================================================
+
+
+class TestWeightIsolation:
+    """Layer-by-layer d²=0 at higher weights.
+
+    The bug first appears at Layer 6 weight 3 over QQ. These tests
+    confirm each preceding layer is clean, isolating the issue to
+    the bar algebra's sign convention.
     """
 
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight1(self, d: int) -> None:
-        """d²=0 at weight 1."""
-        layers = _build_layers(QQ, d)
-        bar = layers["bar"]
-        mod = bar.module
-        for deg in range(-1, 4):
-            for elem in mod.graded_basis_by_weight(deg, 1):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 1, degree {deg}"
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight2(self, d: int) -> None:
-        """d²=0 at weight 2."""
-        layers = _build_layers(QQ, d)
-        bar = layers["bar"]
-        mod = bar.module
-        for deg in range(-1, 4):
-            for elem in mod.graded_basis_by_weight(deg, 2):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 2, degree {deg}"
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_d_squared_zero_weight3_gf2(self, d: int) -> None:
-        """d²=0 at weight 3 over GF(2)."""
-        layers = _build_layers(GF(2), d)
-        bar = layers["bar"]
-        mod = bar.module
-        for deg in range(-1, 3):
-            for elem in mod.graded_basis_by_weight(deg, 3):
-                dd = mod.boundary(mod.boundary(elem))
-                assert dd == mod.zero(), f"d²≠0 at weight 3, degree {deg} (GF(2))"
-
-
-# ============================================================================
-# Full model tests
-# ============================================================================
-
-
-class TestConfigurationModelCore:
-    """Tests for the configuration model and its homology."""
-
-    def test_configuration_model_GF2(self) -> None:
-        """chain_complex for euclidean configuration model over GF(2) succeeds."""
-
-        model = euclidean_unordered_configuration_model(GF(2), 2)
-        C = compute_chain_complex(model.module, degrees=range(3), weight=1)
-        assert C is not None
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_check_complex_GF2_weight3(self, d: int) -> None:
-        """chain_complex over GF(2) with check=True does not raise an error."""
-        model = euclidean_unordered_configuration_model(GF(2), d)
-        C = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
-        assert C is not None
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_check_complex_GF2_weight4(self, d: int) -> None:
-        """chain_complex over GF(2) with check=True does not raise an error."""
-        model = euclidean_unordered_configuration_model(GF(2), d)
-        C = compute_chain_complex(model.module, degrees=range(-1, 2), weight=4, check=True)
-        assert C is not None
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_check_complex_QQ_weight2(self, d: int) -> None:
-        """chain_complex over QQ at weight=2 with check=True does not raise an error."""
-        model = euclidean_unordered_configuration_model(QQ, d)
-        complex = compute_chain_complex(model.module, degrees=range(-1, 3), weight=2, check=True)
-        assert complex is not None
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_check_complex_QQ_weight3(self, d: int) -> None:
-        """chain_complex over QQ at weight=3 with check=True does not raise an error."""
-        model = euclidean_unordered_configuration_model(QQ, d)
-        complex = compute_chain_complex(model.module, degrees=range(-1, 3), weight=3, check=True)
-        assert complex is not None
-
-    def test_check_complex_QQ_weight4(self) -> None:
-        """chain_complex over QQ at weight=4 with check=True does not raise an error."""
-        model = euclidean_unordered_configuration_model(QQ, 2)
-        complex = compute_chain_complex(model.module, degrees=range(0, 2), weight=4, check=True)
-        assert complex is not None
-
-
-class TestConfigurationModelDSquaredMinimal:
-    """Minimal d²=0 regression tests at weight 2.
-
-    These verify that the inner-module normalization fix in
-    TreeModule._boundary_on_basis correctly resolves the d²≠0 bug
-    where non-planar free-algebra keys from d_internal failed to
-    cancel with the planar keys produced by d_alpha.
-    """
-
-    def test_dsquared_weight2_d1(self) -> None:
-        """d²=0 at weight=2 for d=1 (all degrees up to 4)."""
-        model = euclidean_unordered_configuration_model(QQ, 1)
-        for deg in range(-1, 5):
-            for elem in model.module.graded_basis_by_weight(deg, 2):
-                dd = model.boundary(model.boundary(elem))
-                assert dd == model.module.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
-
-    def test_dsquared_weight2_d2(self) -> None:
-        """d²=0 at weight=2 for d=2 (all degrees up to 4)."""
-        model = euclidean_unordered_configuration_model(QQ, 2)
-        for deg in range(-1, 5):
-            for elem in model.module.graded_basis_by_weight(deg, 2):
-                dd = model.boundary(model.boundary(elem))
-                assert dd == model.module.zero(), f"d²≠0 at deg={deg} for {list(elem)[0][0]}"
-
-
-class TestConfigurationModelBasis:
-    """Tests for the graded basis on the configuration model."""
-
-    @pytest.mark.parametrize("d", [1, 2])
-    def test_homology_basis_weight1(self, d: int) -> None:
-        """homology_basis for euclidean configuration model at weight 1 returns a non-empty basis."""
-        model = euclidean_unordered_configuration_model(QQ, d)
-        for k in range(-2, 3):
-            for w in range(1, 4):
-                basis = model.module.graded_basis_by_weight(k, w)
-                assert len(basis) == len(set(basis)), (
-                    f"Basis at degree {k} weight {w} contains duplicates"
-                )
-
-
-class TestConfigurationModelComodule:
-    def test_e_comodule_generator_chain_map_arity3(self) -> None:
-        """e_comodule_on_generator satisfies the cooperad-level chain map at arity 3.
-
-        For c ∈ C(3), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
-        where ν: C → E ⊗ C is the E-comodule structure map
-        and ∂_C is the cooperad differential.
-        """
-
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        C3 = C(3, QQ)
-        BE3 = BarrattEccles(3, QQ)
-
-        for d in range(3):
-            for elem in C3.basis_iter(d):
-                nu_dc = e_comodule_on_generator(elem.boundary())
-                d_nu_c = tensor([BE3, C3]).zero()
-                for (b, u), coeff in e_comodule_on_generator(elem):
-                    b_elem = BE3.term(b)
-                    u_elem = C3.term(u)
-                    d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
-                    d_nu_c += (
-                        coeff * (-1) ** BE3.degree_on_basis(b) * b_elem.tensor(C3.boundary(u_elem))
+    class TestFreeAlgWeight4:
+        def test_d_squared(self, dim, ring):
+            mod = _build_layers(ring, dim)["free_alg"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 6):
+                basis = list(mod.basis_weight_iter(deg, 4))
+                for elem in _sample(basis, 20, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"free_alg d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
                     )
-                assert nu_dc == d_nu_c, f"generator chain map failed at arity 3 deg {d}: {elem}"
 
-    def test_e_comodule_generator_chain_map_arity2(self) -> None:
-        """e_comodule_on_generator satisfies the cooperad-level chain map at arity 2.
-
-        For c ∈ C(2), checks ν(∂_C c) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(c))
-        where ν: C → E ⊗ C is the E-comodule structure map
-        and ∂_C is the cooperad differential.
-        """
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        C2 = C(2, QQ)
-        BE2 = BarrattEccles(2, QQ)
-
-        for d in range(3):
-            for elem in C2.basis_iter(d):
-                nu_dc = e_comodule_on_generator(elem.boundary())
-                d_nu_c = tensor([BE2, C2]).zero()
-                for (b, u), coeff in e_comodule_on_generator(elem):
-                    b_elem = BE2.term(b)
-                    u_elem = C2.term(u)
-                    d_nu_c += coeff * b_elem.boundary().tensor(u_elem)
-                    d_nu_c += (
-                        coeff * (-1) ** BE2.degree_on_basis(b) * b_elem.tensor(C2.boundary(u_elem))
+    class TestTensorAlgWeight4:
+        def test_d_squared(self, dim, ring):
+            ta = _build_layers(ring, dim)["tensor_alg"]
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(ta.basis_weight_iter(deg, 4))
+                for elem in _sample(basis, 20, rng):
+                    assert ta.boundary(ta.boundary(elem)) == ta.module.zero(), (
+                        f"tensor_alg d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
                     )
-                assert nu_dc == d_nu_c, f"generator chain map failed at arity 2 deg {d}: {elem}"
 
-    def test_e_comodule_chain_map(self) -> None:
-        """The composed morphism Ω(B(H)) → S⊙Ω(B(H)) should be a chain map.
-
-        Checks φ(d(p)) = d(φ(p)) for all degree-0 generators at arity 2.
-        """
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        P = CobarConstruction(C)
-        phi = _make_surjection_comodule_morphism(C)
-
-        P2 = P(2, QQ)
-        for p_elem in P2.basis_iter(0):
-            phi_dp = phi(P2.boundary(p_elem))
-            phi_p = phi(p_elem)
-            d_phi_p = phi_p.parent().boundary(phi_p)
-            assert phi_dp == d_phi_p, f"chain map failed at arity 2 for {p_elem}"
-
-    def test_e_comodule_chain_map_arity3(self) -> None:
-        """Chain map property at arity 3 degree 0."""
-        sLie = ShiftedOperad(Lie, -1)
-        H = HadamardProduct(sLie, Surjection)
-        C = BarConstruction(H)
-        P = CobarConstruction(C)
-        phi = _make_surjection_comodule_morphism(C)
-
-        P3 = P(3, QQ)
-        for p_elem in P3.basis_iter(0):
-            phi_dp = phi(P3.boundary(p_elem))
-            phi_p = phi(p_elem)
-            d_phi_p = phi_p.parent().boundary(phi_p)
-            assert phi_dp == d_phi_p, f"chain map failed at arity 3 for {p_elem}"
+    class TestPullbackWeight4:
+        def test_d_squared(self, dim, ring):
+            mod = _build_layers(ring, dim)["pulled_back"].module
+            rng = Random(_SEED)
+            for deg in range(-1, 5):
+                basis = list(mod.basis_weight_iter(deg, 4))
+                for elem in _sample(basis, 20, rng):
+                    assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
+                        f"pulled_back d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
+                    )
