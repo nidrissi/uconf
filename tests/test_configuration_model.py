@@ -16,67 +16,9 @@ from uconf import (
     euclidean_unordered_configuration_model,
 )
 from uconf.algebraic.configuration import (
-    TrivialModule,
+    _build_layers,
     _make_surjection_comodule_morphism,
 )
-from uconf.algebraic.free_algebra import FreeOperadAlgebra
-from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
-from uconf.algebraic.pullback_algebra import PullbackAlgebra
-from uconf.algebraic.spherical import SurjectionSphereCochainAlgebra
-from uconf.constructions.bar_algebra import BarAlgebra
-from uconf.morphisms.canonical_twisting import canonical_projection
-
-
-# ---------------------------------------------------------------------------
-# Helpers — build the individual layers of the configuration model
-# ---------------------------------------------------------------------------
-
-
-def _build_layers(base_ring, dimension: int):
-    """Build every intermediate object in the configuration-model pipeline.
-
-    Returns a dict mapping layer names to the constructed objects.
-    """
-    # Layer 1: manifold model — Surjection-algebra on sphere cochains
-    manifold_model = SurjectionSphereCochainAlgebra(dimension, base_ring)
-
-    # Layer 2: coefficient module — trivial module concentrated in degree d
-    coefficients = TrivialModule(dimension, base_ring)
-
-    # Layer 3: operadic layers
-    sLie = ShiftedOperad(Lie, -1)
-    XsLie = HadamardProduct(sLie, Surjection)
-    BXsLie = BarConstruction(XsLie)
-    OBXsLie = CobarConstruction(BXsLie)
-
-    # Layer 4: free algebra
-    free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
-
-    # Layer 5: Hadamard tensor algebra
-    tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
-
-    # Layer 6: pullback via comodule morphism
-    comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
-    pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
-
-    # Layer 7: final bar algebra
-    pi = canonical_projection(pulled_back.operad_cls)
-    bar = BarAlgebra(pi, pulled_back)
-
-    return {
-        "manifold_model": manifold_model,
-        "coefficients": coefficients,
-        "sLie": sLie,
-        "XsLie": XsLie,
-        "BXsLie": BXsLie,
-        "OBXsLie": OBXsLie,
-        "free_alg": free_alg,
-        "tensor_alg": tensor_alg,
-        "comodule_morphism": comodule_morphism,
-        "pulled_back": pulled_back,
-        "pi": pi,
-        "bar": bar,
-    }
 
 
 # ============================================================================
