@@ -143,11 +143,23 @@ def labelled_configuration_model(
     assert manifold_model.module.base_ring() == base_ring, (
         "Coefficient module must have the same base ring as the manifold model."
     )
+    return _build_labelled_layers(manifold_model, coefficients)["bar"]
+
+
+def _build_labelled_layers(manifold_model: OperadAlgebra, coefficients: CombinatorialFreeModule):
+    """Build all intermediate layers for the labelled configuration model."""
+    assert manifold_model.operad_cls == Surjection, "Manifold model must be a surjection algebra."
+
+    base_ring = coefficients.base_ring()
+    assert manifold_model.module.base_ring() == base_ring, (
+        "Coefficient module must have the same base ring as the manifold model."
+    )
 
     sLie = ShiftedOperad(Lie, -1)
     XsLie = HadamardProduct(sLie, Surjection)
     BXsLie = BarConstruction(XsLie)
     OBXsLie = CobarConstruction(BXsLie)
+
     free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
 
     # The e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) is postcomposed with
@@ -161,7 +173,20 @@ def labelled_configuration_model(
     pi = canonical_projection(pulled_back.operad_cls)
     bar = BarAlgebra(pi, pulled_back)
 
-    return bar
+    return {
+        "manifold_model": manifold_model,
+        "coefficients": coefficients,
+        "sLie": sLie,
+        "XsLie": XsLie,
+        "BXsLie": BXsLie,
+        "OBXsLie": OBXsLie,
+        "free_alg": free_alg,
+        "tensor_alg": tensor_alg,
+        "comodule_morphism": comodule_morphism,
+        "pulled_back": pulled_back,
+        "pi": pi,
+        "bar": bar,
+    }
 
 
 class TrivialModule(CombinatorialFreeModule):
@@ -211,8 +236,15 @@ def unordered_configuration_model(manifold_model: OperadAlgebra, dimension: int)
         The bar construction ``B_π(pulled_back)`` with coefficients in k[d].
     """
     assert dimension >= 0, "Dimension must be non-negative."
-    R = manifold_model.module.base_ring()
-    return labelled_configuration_model(manifold_model, TrivialModule(dimension, R))
+    return _build_unordered_layers(manifold_model, dimension)["bar"]
+
+
+def _build_unordered_layers(manifold_model: OperadAlgebra, dimension: int):
+    """Build all intermediate layers for the unordered configuration model."""
+    assert dimension >= 0, "Dimension must be non-negative."
+    base_ring = manifold_model.module.base_ring()
+    coefficients = TrivialModule(dimension, base_ring)
+    return _build_labelled_layers(manifold_model, coefficients)
 
 
 def euclidean_unordered_configuration_model(base_ring, dimension: int):
@@ -236,5 +268,19 @@ def euclidean_unordered_configuration_model(base_ring, dimension: int):
         to build a chain complex for homology computation.
     """
     assert dimension >= 0, "Dimension must be non-negative."
-    alg = SurjectionSphereCochainAlgebra(dimension, base_ring)
-    return unordered_configuration_model(alg, dimension)
+    return _build_euclidean_layers(base_ring, dimension)["bar"]
+
+
+def _build_euclidean_layers(base_ring, dimension: int):
+    """Build all intermediate layers for the Euclidean unordered model."""
+    assert dimension >= 0, "Dimension must be non-negative."
+    manifold_model = SurjectionSphereCochainAlgebra(dimension, base_ring)
+    return _build_unordered_layers(manifold_model, dimension)
+
+
+def _build_layers(base_ring, dimension: int):
+    """Build every intermediate object in the Euclidean configuration pipeline.
+
+    Returns a dict mapping layer names to the constructed objects.
+    """
+    return _build_euclidean_layers(base_ring, dimension)
