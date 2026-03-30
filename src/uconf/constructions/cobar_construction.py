@@ -41,12 +41,14 @@ from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
+    after_cobar_deg,
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_cobar_in_degree,
     expand_vertex,
     graft,
+    is_internal,
     is_leaf,
     relabel_leaves,
     subtree_degree_cobar,
@@ -122,8 +124,14 @@ class CobarConstruction(UniqueRepresentation):
     ) -> "CobarConstruction.Element":
         """Free operad composition: graft y onto leaf i of x.
 
-        In the free operad ``T(s⁻¹C̄)``, composition is tree grafting; no
-        additional composition sign is introduced here.
+        In the free operad ``T(s⁻¹C̄)``, composition is tree grafting with a
+        Koszul sign from inserting y's vertex factors into x's DFS
+        linearisation:
+
+            x ∘_i y = (-1)^{|y| · A(x, i)} · graft(x, i, y)
+
+        where ``A(x, i)`` is the total cobar degree of internal vertices
+        of x that come **after** leaf i in DFS order.
         """
         x_parent = x.parent()
         y_parent = y.parent()
@@ -140,13 +148,16 @@ class CobarConstruction(UniqueRepresentation):
             raise ValueError(f"Index i must satisfy 1 <= i <= {m}. Got i={i}.")
 
         target = self(m + n - 1, x_parent.base_ring())
+        base_ring = x_parent.base_ring()
         result = target.zero()
 
         for x_tree, x_coeff in x:
             for y_tree, y_coeff in y:
-                # Graft y_tree onto leaf i of x_tree
+                y_deg = subtree_degree_cobar(y_tree, self.cooperad_cls, base_ring)
+                a_deg = after_cobar_deg(x_tree, i, self.cooperad_cls, base_ring)
+                sign = sign_from_exponent(y_deg * a_deg)
                 grafted = graft(x_tree, i, y_tree)
-                result += x_coeff * y_coeff * target.term(grafted)
+                result += sign * x_coeff * y_coeff * target(grafted)
 
         return result
 
@@ -528,14 +539,35 @@ class CobarConstruction(UniqueRepresentation):
         def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
             """Structural differential: expand vertices using cocomposition.
 
-            For each expanded vertex ``c`` and split ``Δ^{i;m,n}(c) = Σ c_L ⊗ c_R``,
-            the exponent used here is:
+            For each vertex *c* of the cobar tree, d₂ inserts a new internal
+            edge by splitting *c* via the cooperad cocomposition.
 
-                global_accum + deg_C(c_L) + (deg_C(c_R) - 1) * before_deg
+            When the cooperad component provides ``_iter_all_splits`` (e.g.
+            bar-construction cooperads), we iterate over **all** internal
+            edges of the cooperad element—including splits whose leaf set is
+            non-contiguous in the shuffle-tree representation.  Otherwise we
+            fall back to the standard contiguous-position iteration
+            ``Δ_{i;m,n}`` for ``i = 1, …, m``.
 
-            where ``global_accum`` sums ``deg_C(v) - 1`` over DFS-preceding vertices,
-            and ``before_deg`` is the total cobar degree of child subtrees in slots
-            ``1, ..., i-1``.
+            Sign convention
+            ~~~~~~~~~~~~~~~
+            The exponent used for a split ``c → c_L ⊗ c_R`` is
+
+                global_accum + deg_C(c_L) + (deg_C(c_R) − 1) · before_deg
+                             + gathering_exp
+
+            where
+
+            - ``global_accum`` sums ``deg_C(v) − 1`` over DFS-preceding
+              cobar vertices,
+            - ``deg_C(c_L)`` is the cooperad degree of the top part (from the
+              desuspension sign ``s⁻¹``),
+            - ``before_deg`` is the total cobar degree of child subtrees at
+              cobar positions before the bottom vertex,
+            - ``gathering_exp`` is the Koszul sign exponent from permuting
+              the cobar children from their original order to the
+              ``(S^c-before, S, S^c-after)`` DFS order of the expanded tree.
+              For contiguous splits this is 0.
             """
             if is_leaf(tree):
                 return self.zero()
@@ -548,7 +580,6 @@ class CobarConstruction(UniqueRepresentation):
                 curr_arity = vertex_arity(curr_vertex)
                 curr_dec = decoration(curr_vertex)
                 curr_parent = self._cooperad_cls(curr_arity, base_ring)
-                curr_elem = curr_parent.term(curr_dec)
 
                 # Cumulative s^{-1}C-degree of DFS vertices before current
                 global_accum = 0
@@ -561,34 +592,208 @@ class CobarConstruction(UniqueRepresentation):
                     )
                     global_accum += v_deg - 1
 
-                for m in range(2, curr_arity):
-                    n = curr_arity - m + 1
-                    for i in range(1, m + 1):
-                        cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
-                        for (dec_left, dec_right), coeff in cocomp:
-                            right_parent = self._cooperad_cls(n, base_ring)
-                            right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
-
-                            left_parent = self._cooperad_cls(m, base_ring)
-                            left_degree = left_parent.degree_on_basis(dec_left)
-
-                            # Cobar-degree of subtrees at positions 1, ..., i-1
-                            before_deg = sum(
-                                subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
-                                for j, ch in enumerate(children(curr_vertex), start=1)
-                                if j < i
-                            )
-
-                            koszul_exp = right_sinv_deg * before_deg
-                            total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
-
-                            new_tree = expand_vertex(
-                                tree, curr_vertex, i, dec_left, dec_right, m, n
-                            )
-                            # Use _element_constructor_ (via __call__) so that
-                            # the expanded tree is normalised to shuffle form.
-                            result += total_sign * coeff * self(new_tree)
+                # Use _iter_all_splits when available (bar cooperad) so that
+                # non-contiguous leaf subsets are not silently skipped.
+                if hasattr(curr_parent, "_iter_all_splits"):
+                    self._d2_all_splits(
+                        result,
+                        tree,
+                        curr_vertex,
+                        curr_arity,
+                        curr_dec,
+                        curr_parent,
+                        global_accum,
+                        verts,
+                        base_ring,
+                    )
+                else:
+                    self._d2_contiguous(
+                        result,
+                        tree,
+                        curr_vertex,
+                        curr_arity,
+                        curr_dec,
+                        curr_parent,
+                        global_accum,
+                        base_ring,
+                    )
             return result
+
+        # -- d₂ helpers --------------------------------------------------------
+
+        def _d2_contiguous(
+            self,
+            result,
+            tree,
+            curr_vertex,
+            curr_arity,
+            curr_dec,
+            curr_parent,
+            global_accum,
+            base_ring,
+        ):
+            """Original d₂ path: iterate over contiguous positions only."""
+            curr_elem = curr_parent.term(curr_dec)
+            for m in range(2, curr_arity):
+                n = curr_arity - m + 1
+                for i in range(1, m + 1):
+                    cocomp = curr_parent.infinitesimal_cocompose(curr_elem, i, m, n)
+                    for (dec_left, dec_right), coeff in cocomp:
+                        right_parent = self._cooperad_cls(n, base_ring)
+                        right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
+
+                        left_parent = self._cooperad_cls(m, base_ring)
+                        left_degree = left_parent.degree_on_basis(dec_left)
+
+                        before_deg = sum(
+                            subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                            for j, ch in enumerate(children(curr_vertex), start=1)
+                            if j < i
+                        )
+
+                        koszul_exp = right_sinv_deg * before_deg
+                        total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
+
+                        new_tree = expand_vertex(tree, curr_vertex, i, dec_left, dec_right, m, n)
+                        result += total_sign * coeff * self(new_tree)
+
+        def _d2_all_splits(
+            self,
+            result,
+            tree,
+            curr_vertex,
+            curr_arity,
+            curr_dec,
+            curr_parent,
+            global_accum,
+            verts,
+            base_ring,
+        ):
+            """General d₂ path: iterate over all cooperad splits."""
+            orig_children = children(curr_vertex)
+
+            for child_positions, dec_left, dec_right, coop_sign in curr_parent._iter_all_splits(
+                curr_dec
+            ):
+                n = len(child_positions)
+                m = curr_arity - n + 1
+                pos_set = set(child_positions)
+                min_pos = child_positions[0]
+
+                right_parent = self._cooperad_cls(n, base_ring)
+                right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
+
+                left_parent = self._cooperad_cls(m, base_ring)
+                left_degree = left_parent.degree_on_basis(dec_left)
+
+                # before_deg: cobar-degree of children in S^c before min(S)
+                before_deg = sum(
+                    subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                    for j, ch in enumerate(orig_children, start=1)
+                    if j < min_pos and j not in pos_set
+                )
+
+                # Gathering Koszul sign: permuting children from original
+                # order (1, 2, …, k) to expanded DFS order
+                # (S^c<min, S, S^c>min) introduces inversions.
+                gathering_exp = self._gathering_exponent(
+                    child_positions,
+                    orig_children,
+                    base_ring,
+                )
+
+                koszul_exp = right_sinv_deg * before_deg
+                total_sign = sign_from_exponent(
+                    global_accum + left_degree + koszul_exp + gathering_exp
+                )
+
+                new_tree = self._expand_vertex_nc(
+                    tree,
+                    curr_vertex,
+                    child_positions,
+                    dec_left,
+                    dec_right,
+                )
+                result += total_sign * coop_sign * self(new_tree)
+
+        def _gathering_exponent(self, child_positions, orig_children, base_ring):
+            """Koszul sign exponent from gathering non-contiguous children.
+
+            When the bottom's child positions S are non-contiguous, the
+            expanded tree's DFS visits children in a different order than
+            the original.  The gathering permutation maps the original
+            order ``(1, 2, …, k)`` to
+            ``(S^c < min(S), S elements, S^c > min(S))``,
+            and the sign is ``(-1)^{Σ inversions weighted by cobar degrees}``.
+
+            For contiguous S this returns 0.
+            """
+            k = len(orig_children)
+            S_set = set(child_positions)
+            min_s = child_positions[0]
+
+            # Build the expanded DFS order of children
+            before = [j for j in range(1, k + 1) if j not in S_set and j < min_s]
+            middle = list(child_positions)  # S children in original order
+            after = [j for j in range(1, k + 1) if j not in S_set and j >= min_s]
+            expanded = before + middle + after
+
+            # Quick check: if expanded == [1, 2, ..., k], no sign
+            if expanded == list(range(1, k + 1)):
+                return 0
+
+            # Compute weighted inversions
+            degrees = [
+                subtree_degree_cobar(c, self._cooperad_cls, base_ring) for c in orig_children
+            ]
+            exponent = 0
+            for i_idx in range(len(expanded)):
+                for j_idx in range(i_idx + 1, len(expanded)):
+                    a, b = expanded[i_idx], expanded[j_idx]
+                    if a > b:
+                        exponent += degrees[a - 1] * degrees[b - 1]
+            return exponent
+
+        def _expand_vertex_nc(self, tree, target_vertex, child_positions, dec_left, dec_right):
+            """Expand a cobar vertex with (possibly non-contiguous) children.
+
+            ``child_positions`` is a sorted tuple of 1-based child indices
+            that go to the bottom vertex.  The bottom vertex is inserted at
+            position ``min(child_positions)`` among the top's children.
+            """
+            if is_leaf(tree):
+                return tree
+            if tree is target_vertex:
+                orig = children(tree)
+                pos_set = set(child_positions)
+
+                bot_children = tuple(orig[j - 1] for j in child_positions)
+                bot_vertex = (dec_right,) + bot_children
+
+                top_children = []
+                bot_inserted = False
+                for j in range(1, len(orig) + 1):
+                    if j in pos_set:
+                        if not bot_inserted:
+                            top_children.append(bot_vertex)
+                            bot_inserted = True
+                    else:
+                        top_children.append(orig[j - 1])
+                return (dec_left,) + tuple(top_children)
+            # Recurse into subtrees
+            new_children = tuple(
+                self._expand_vertex_nc(
+                    c,
+                    target_vertex,
+                    child_positions,
+                    dec_left,
+                    dec_right,
+                )
+                if is_internal(c)
+                else c
+                for c in children(tree)
+            )
+            return (decoration(tree),) + new_children
 
         def _replace_vertex_decoration_by_index(
             self, tree, vertices: list, index: int, new_decoration: tuple

@@ -108,6 +108,38 @@ def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     return vertex_deg + child_deg
 
 
+def after_cobar_deg(tree, leaf_i: int, cooperad_cls, base_ring) -> int:
+    """Total cobar degree of internal vertices after *leaf_i* in DFS order.
+
+    In the DFS of a shuffle tree, the root vertex is visited first, then
+    children are recursed left-to-right.  A leaf is visited in place.
+    ``after_cobar_deg`` returns the sum of ``(deg_C(v) - 1)`` for every
+    internal vertex ``v`` whose DFS visit occurs **after** the visit of
+    *leaf_i*.
+
+    For a corolla (single internal vertex) this is always 0, since the
+    root is visited before any leaf.
+    """
+    if is_leaf(tree):
+        return 0
+    kids = children(tree)
+    # Find which child subtree contains leaf_i
+    for p, child in enumerate(kids):
+        if is_leaf(child):
+            child_leaves = {child}
+        else:
+            child_leaves = leaves(child)
+        if leaf_i in child_leaves:
+            # Vertices after leaf_i:
+            # 1. vertices after leaf_i within child p (recursion)
+            # 2. all internal vertices in children p+1, ..., k-1
+            result = after_cobar_deg(child, leaf_i, cooperad_cls, base_ring)
+            for later_child in kids[p + 1 :]:
+                result += subtree_degree_cobar(later_child, cooperad_cls, base_ring)
+            return result
+    raise ValueError(f"Leaf {leaf_i} not found in tree")
+
+
 def internal_edges_dfs(tree) -> list[tuple[tuple, int, tuple]]:
     """Enumerate all internal edges (parent-child pairs between internal vertices).
 
