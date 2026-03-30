@@ -51,12 +51,6 @@ Key classes used
 - :class:`~uconf.algebraic.hadamard_algebra.HadamardTensorAlgebra` — tensor product algebra.
 - :class:`~uconf.algebraic.pullback_algebra.PullbackAlgebra` — pullback along operad morphism.
 - :class:`~uconf.constructions.bar_algebra.BarAlgebra` — twisted bar construction.
-
-References
-----------
-
-.. [Idrissi2022] N. Idrissi, *Real Homotopy of Configuration Spaces*,
-   Lecture Notes in Mathematics, vol. 2303, Springer, 2022.
 """
 
 from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
