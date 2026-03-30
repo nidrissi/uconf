@@ -166,12 +166,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # deferred to normalize_to_planar().
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += (
-                            sign
-                            * coeff
-                            * a_coeff
-                            * self.term((c_L_key, new_m))
-                        )
+                        result += sign * coeff * a_coeff * self.term((c_L_key, new_m))
 
         return result
 

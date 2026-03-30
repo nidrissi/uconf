@@ -520,9 +520,7 @@ class TestBarAlgebraFreeSurjection:
                 for c_key in p_elem.support():
                     elem = bar.module((c_key, (inner_key, inner_key)))
                     dd = bar.module.boundary(bar.module.boundary(elem))
-                    assert dd == bar.module.zero(), (
-                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
-                    )
+                    assert dd == bar.module.zero(), f"d² ≠ 0 at degree {d}, c_key={c_key}"
 
     def test_d_squared_zero_weight3(self, bar):
         """d² = 0 on weight-3 elements with B(Surjection) cooperad."""
@@ -536,9 +534,7 @@ class TestBarAlgebraFreeSurjection:
                 for c_key in p_elem.support():
                     elem = bar.module((c_key, (inner_key,) * 3))
                     dd = bar.module.boundary(bar.module.boundary(elem))
-                    assert dd == bar.module.zero(), (
-                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
-                    )
+                    assert dd == bar.module.zero(), f"d² ≠ 0 at degree {d}, c_key={c_key}"
 
     def test_d_squared_zero_weight2_gf2(self, bar_gf2):
         """d² = 0 over GF(2)."""
@@ -553,9 +549,7 @@ class TestBarAlgebraFreeSurjection:
                 for c_key in p_elem.support():
                     elem = bar.module((c_key, (inner_key, inner_key)))
                     dd = bar.module.boundary(bar.module.boundary(elem))
-                    assert dd == bar.module.zero(), (
-                        f"d² ≠ 0 at degree {d}, c_key={c_key}"
-                    )
+                    assert dd == bar.module.zero(), f"d² ≠ 0 at degree {d}, c_key={c_key}"
 
 
 # ===========================================================================
@@ -607,9 +601,7 @@ class TestCobarCoalgebraNontrivialDifferential:
                     for v1 in ["x", "y"]:
                         for v2 in ["x", "y"]:
                             elem = cobar_gf2.module.term((p_key, (v1, v2)))
-                            dd = cobar_gf2.module.boundary(
-                                cobar_gf2.module.boundary(elem)
-                            )
+                            dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
                             assert dd == cobar_gf2.module.zero(), (
                                 f"d² ≠ 0 at degree {d}, p_key={p_key}, v=({v1},{v2})"
                             )

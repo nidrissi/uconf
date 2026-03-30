@@ -436,9 +436,9 @@ class BarConstruction(UniqueRepresentation):
                         continue
                     # Normalize to shuffle form (may produce multiple terms)
                     for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
-                        clean_dict[shuffle_key] = (
-                            clean_dict.get(shuffle_key, R.zero()) + R(coeff) * R(shuffle_coeff)
-                        )
+                        clean_dict[shuffle_key] = clean_dict.get(shuffle_key, R.zero()) + R(
+                            coeff
+                        ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, tuple):

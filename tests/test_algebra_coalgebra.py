@@ -489,7 +489,9 @@ class TestCobarCoalgebra:
         c_dec = (1, 2)
         t2 = cobar_gf2.module(((c_dec, 1, 2), ((), ())))
         combo = t1 + t2
-        assert cobar_gf2.module.boundary(cobar_gf2.module.boundary(combo)) == cobar_gf2.module.zero()
+        assert (
+            cobar_gf2.module.boundary(cobar_gf2.module.boundary(combo)) == cobar_gf2.module.zero()
+        )
 
 
 # ===========================================================================
