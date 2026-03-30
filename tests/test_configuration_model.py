@@ -714,7 +714,7 @@ class TestLayer3_ΩBH_Kd:
         def test_d_squared(self, dim, ring, layers: ConfigurationLayers, weight):
             mod = layers.free_alg.module
             rng = Random(_SEED)
-            for deg in range(-1, 6):
+            for deg in range(-3, 7):
                 basis = list(mod.basis_weight_iter(deg, weight))
                 for elem in _sample(basis, 30, rng):
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
