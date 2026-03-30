@@ -267,19 +267,22 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
 
-        Non-planar cooperad keys produced by ``d_C`` are normalised to the
-        planar basis via ``_normalized_corolla_sum``.  This uses the same
-        normalising constructor as ``_element_constructor_``, so boundary
-        output lives directly in the planar basis.
+        Cooperad keys are kept in their raw (possibly non-planar) form.
+        Planarising inside the boundary would break d² = 0 because the
+        coinvariant identification permutes the m_tuple, and applying
+        the boundary a second time sees a different ordering.  Use
+        :meth:`normalize_to_planar` to convert to the planar basis when
+        building matrices or comparing with ``basis_iter`` output.
         """
         c_key, m_tuple = key
         n = len(m_tuple)
         comp = self._cooperad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_C term: normalise to planar basis immediately.
+        # d_C term: keep raw cooperad keys (do NOT planarize).
         dc_elem = comp.boundary(comp.term(c_key))
-        result += self._normalized_corolla_sum(dc_elem, m_tuple)
+        for dc_key, dc_coeff in dc_elem:
+            result += dc_coeff * self.term((dc_key, m_tuple))
 
         # d_M terms with Koszul signs
         c_deg = comp.degree_on_basis(c_key)
@@ -292,6 +295,23 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 result += sign * m_coeff * self.term((c_key, new_m))
             cumulative += self._inner_module.degree_on_basis(mk)
 
+        return result
+
+    def normalize_to_planar(self, elem):
+        """Rewrite *elem* in the planar basis.
+
+        The boundary may produce non-planar cooperad keys.  This method
+        applies ``_normalized_corolla_sum`` to each term, mapping every
+        ``(c_key, m_tuple)`` to its planar representative.
+
+        Used by :func:`~uconf.homology._boundary_matrix` to express
+        boundary output in the planar basis for matrix construction.
+        """
+        result = self.zero()
+        for (c_key, m_tuple), coeff in elem:
+            n = len(m_tuple)
+            comp = self._cooperad_cls(n, self.base_ring())
+            result += coeff * self._normalized_corolla_sum(comp.term(c_key), m_tuple)
         return result
 
     # ------------------------------------------------------------------
