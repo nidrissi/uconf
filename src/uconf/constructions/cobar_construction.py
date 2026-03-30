@@ -41,6 +41,7 @@ from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import (
+    _koszul_sign_of_permutation,
     after_cobar_deg,
     children,
     decoration,
@@ -252,10 +253,27 @@ class CobarConstruction(UniqueRepresentation):
                 planarized = coop_parent.planarize(dec_elem)
 
                 old_ch = children(node)
+                # Cobar-degrees of the original children (needed for Koszul
+                # signs when children are reordered by the vertex planarize).
+                old_ch_degrees = [
+                    subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                    if not is_leaf(ch)
+                    else 0
+                    for ch in old_ch
+                ]
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    sigma_v = SymmetricGroup(k)(sigma_key)
+                    sigma_v_tuple = sigma_v.tuple()
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+
+                    # Koszul sign from permuting children of cobar-degrees
+                    # d_1, …, d_k by sigma_v.
+                    if sigma_v != SymmetricGroup(k).identity():
+                        perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
+                        reorder_sign = _koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
+                    else:
+                        reorder_sign = 1
 
                     child_term_lists = []
                     for ch in new_ch:
@@ -272,7 +290,7 @@ class CobarConstruction(UniqueRepresentation):
                             new_ch_planarized.append(p_ch)
                             leaf_order.extend(lo_ch)
 
-                        total_coeff = dec_coeff * total_child_coeff
+                        total_coeff = dec_coeff * total_child_coeff * reorder_sign
                         node_result = (planar_dec_key,) + tuple(new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
