@@ -20,7 +20,6 @@ from uconf.algebraic.configuration import (
     _make_surjection_comodule_morphism,
 )
 
-
 # ============================================================================
 # Layer 0: Hadamard product operad H = sLie ⊙ Surjection
 # ============================================================================
@@ -383,10 +382,6 @@ class TestConfigurationModelComodule:
         where ν: C → E ⊗ C is the E-comodule structure map
         and ∂_C is the cooperad differential.
         """
-        from sage.all import tensor
-
-        from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
-
         sLie = ShiftedOperad(Lie, -1)
         H = HadamardProduct(sLie, Surjection)
         C = BarConstruction(H)

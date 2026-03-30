@@ -463,9 +463,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 c_elems = list(comp_n.planar_basis_iter(d_c))
                 if not c_elems:
                     continue
-                m_tuples = list(
-                    _tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w)
-                )
+                m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w))
                 if not m_tuples:
                     continue
                 for c_elem in c_elems:

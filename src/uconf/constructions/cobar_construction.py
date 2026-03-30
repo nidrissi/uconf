@@ -369,9 +369,9 @@ class CobarConstruction(UniqueRepresentation):
                     if clean_key is None:
                         continue
                     for shuffle_key, shuffle_coeff in self._normalize_to_shuffle(clean_key):
-                        clean_dict[shuffle_key] = (
-                            clean_dict.get(shuffle_key, R.zero()) + R(coeff) * R(shuffle_coeff)
-                        )
+                        clean_dict[shuffle_key] = clean_dict.get(shuffle_key, R.zero()) + R(
+                            coeff
+                        ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
             if isinstance(x, (tuple, int)):
