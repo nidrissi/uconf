@@ -2,7 +2,7 @@ r"""Euclidean configuration model via operadic bar construction.
 
 This module implements the *configuration model* for computing the real
 homotopy type of the ordered/unordered configuration spaces of a smooth
-closed manifold, following Idrissi's construction [Idrissi2022]_.
+closed manifold, following the construction in `article.tex`.
 
 Overview
 --------
