@@ -48,6 +48,7 @@ from uconf.algebraic.tree_module import (
 )
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import _koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
@@ -114,34 +115,44 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # ------------------------------------------------------------------
 
     def _normalized_corolla_sum(self, c_elem, m_tuple) -> "CofreeCoalgebraModule.Element":
-        """Return the sum of canonical corollas for ``c_elem x m_tuple``.
+        """Return the sum of canonical corollas for ``c_elem ⊗ m_tuple``.
 
-        For each basis term ``(c_key, coeff)`` of ``c_elem in C(n)``, applies
-        ``planarize`` to obtain ``(c_planar_key x sigma) * cf`` and returns::
+        For each basis term ``(c_key, coeff)`` of ``c_elem ∈ C(n)``, applies
+        ``planarize`` to obtain ``Σ (c_planar_key ⊗ σ) * c`` and returns::
 
-            sum coeff * cf * self.term((c_planar_key, sigma . m_tuple))
+            Σ coeff * c * ε(σ; degrees) * self.term((c_planar_key, σ · m_tuple))
 
-        where ``sigma . m_tuple = (m_tuple[sigma^{-1}(1)-1], ..., m_tuple[sigma^{-1}(n)-1])``.
+        where ``σ · m_tuple = (m_tuple[σ(1)−1], ..., m_tuple[σ(n)−1])``
+        and ``ε(σ; degrees)`` is the Koszul sign for the graded permutation
+        of the leaf-module elements.
+
+        This ensures all stored C-keys are in the planar basis.
 
         Args:
             c_elem: An element of ``C(n)`` (any arity, may be non-planar).
-            m_tuple: A tuple of ``n`` objects.
+            m_tuple: A tuple of ``n`` objects (basis keys or module elements).
 
         Returns:
             An element of ``self`` with planar C-keys.
-
         """
         n = len(m_tuple)
         comp = c_elem.parent()
         S_n = SymmetricGroup(n)
+        M = self._inner_module
         result = self.zero()
         for c_key, c_coeff in c_elem:
             planarized = comp.planarize(comp.term(c_key))
             for (c_planar_key, sigma_key), pl_coeff in planarized:
                 sigma = S_n(sigma_key)
-                sigma_inv = sigma.inverse()
-                permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
-                result += c_coeff * pl_coeff * self.term((c_planar_key, permuted_m))
+                permuted_m = tuple(m_tuple[sigma(i) - 1] for i in range(1, n + 1))
+                # Koszul sign for permuting graded leaf-module elements.
+                if n > 1 and sigma != S_n.identity():
+                    perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
+                    degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                else:
+                    koszul = 1
+                result += c_coeff * pl_coeff * koszul * self.term((c_planar_key, permuted_m))
         return result
 
     # ------------------------------------------------------------------

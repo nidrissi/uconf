@@ -118,10 +118,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         For each basis term ``(p_key, coeff)`` of ``p_elem ∈ P(n)``, applies
         ``planarize`` to obtain ``Σ (p_planar_key ⊗ σ) * c`` and returns::
 
-            Σ coeff * c * ε(σ⁻¹; degrees) * self.term((p_planar_key, σ⁻¹ · m_tuple))
+            Σ coeff * c * ε(σ; degrees) * self.term((p_planar_key, σ · m_tuple))
 
-        where ``σ⁻¹ · m_tuple = (m_tuple[σ⁻¹(1)−1], ..., m_tuple[σ⁻¹(n)−1])``
-        and ``ε(σ⁻¹; degrees)`` is the Koszul sign for the graded permutation
+        where ``σ · m_tuple = (m_tuple[σ(1)−1], ..., m_tuple[σ(n)−1])``
+        and ``ε(σ; degrees)`` is the Koszul sign for the graded permutation
         of the leaf-module elements.
 
         This ensures all stored P-keys are in the planar basis.
@@ -143,11 +143,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             planarized = comp.planarize(comp.term(p_key))
             for (p_planar_key, sigma_key), pl_coeff in planarized:
                 sigma = S_n(sigma_key)
-                sigma_inv = sigma.inverse()
-                permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
+                permuted_m = tuple(m_tuple[sigma(i) - 1] for i in range(1, n + 1))
                 # Koszul sign for permuting graded leaf-module elements.
                 if n > 1 and sigma != S_n.identity():
-                    perm_0idx = [sigma_inv(i) - 1 for i in range(1, n + 1)]
+                    perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
                     degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
                     koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
