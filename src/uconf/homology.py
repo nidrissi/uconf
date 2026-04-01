@@ -57,14 +57,8 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
-    # If the module supports planar normalisation (CofreeCoalgebraModule and
-    # subclasses), apply it so that boundary terms with non-planar cooperad
-    # keys are rewritten in the planar basis used by basis_iter / graded_basis.
-    normalize = getattr(module, "normalize_to_planar", None)
     for j, elem in enumerate(basis_source):
         bdry = module.boundary(elem)
-        if normalize is not None:
-            bdry = normalize(bdry)
         for key, coeff in bdry:
             i = key_to_idx_target.get(key)
             if i is not None:

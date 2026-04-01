@@ -297,23 +297,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         return result
 
-    def normalize_to_planar(self, elem):
-        """Rewrite *elem* in the planar basis.
-
-        The boundary may produce non-planar cooperad keys.  This method
-        applies ``_normalized_corolla_sum`` to each term, mapping every
-        ``(c_key, m_tuple)`` to its planar representative.
-
-        Used by :func:`~uconf.homology._boundary_matrix` to express
-        boundary output in the planar basis for matrix construction.
-        """
-        result = self.zero()
-        for (c_key, m_tuple), coeff in elem:
-            n = len(m_tuple)
-            comp = self._cooperad_cls(n, self.base_ring())
-            result += coeff * self._normalized_corolla_sum(comp.term(c_key), m_tuple)
-        return result
-
     # ------------------------------------------------------------------
     # Basis iteration
     # ------------------------------------------------------------------
