@@ -36,7 +36,7 @@ Basis sizes (for reference):
 from random import Random
 
 import pytest
-from sage.all import GF, QQ, SymmetricGroup, tensor
+from sage.all import GF, QQ, Partitions, SymmetricGroup, tensor
 
 from uconf import (
     BarConstruction,
@@ -1207,3 +1207,26 @@ class TestFullModel:
                 phi_dp = phi(p_elem.boundary())
                 d_phi_p = phi(p_elem).boundary()
                 assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) for p={p_elem}"
+
+
+class TestExpectedDimension:
+    @staticmethod
+    def _count(d: int, k: int):
+        """Count the expected dimension of the weight-k part of the model in degree d, based on the result of Fuks."""
+        S = k - d
+        if S < 0:
+            return 0
+
+        mersenne_parts = [2**i - 1 for i in range(1, d.bit_length() + 1)]
+        P = Partitions(d, parts_in=mersenne_parts)
+
+        return sum(1 for p in P if len(p) <= S)
+
+    @pytest.mark.parametrize("w", [1, 2, 3, 4])
+    def test_expected_dimension(self, w: int):
+        model = euclidean_unordered_configuration_model(GF(2), 2)
+        cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
+        for deg in range(-1, 3):
+            assert cc.betti(deg) == self._count(deg, w), (
+                f"Betti number mismatch at deg={deg}, weight={w}"
+            )
