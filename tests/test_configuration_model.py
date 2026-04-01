@@ -938,8 +938,9 @@ class TestLayer5_pb_S_ΩBH_Kd:
     class TestAssociativityAction:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-        @pytest.mark.parametrize("p_deg", [-1, 0])
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         def test_compatible(self, p_deg, layers: ConfigurationLayers):
+            rng = Random(_SEED)
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -953,18 +954,19 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 w1.extend(mod.graded_basis_by_weight(d_try, 1))
             if not w1:
                 pytest.skip("No weight-1 elements")
-            a = w1[0]
-            rng = Random(_SEED)
+            a, b, c = rng.choices(w1, k=3)
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
-                    lhs = pb.act(P.compose(p, 1, q), [a, a, a])
-                    rhs = pb.act(p, [pb.act(q, [a, a]), a])
+                    lhs = pb.act(P.compose(p, 1, q), [a, b, c])
+                    rhs = pb.act(p, [pb.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
-                    lhs = pb.act(P.compose(p, 2, q), [a, a, a])
-                    rhs = pb.act(p, [a, pb.act(q, [a, a])])
+                    lhs = pb.act(P.compose(p, 2, q), [a, b, c])
+                    rhs = pb.act(p, [a, pb.act(q, [b, c])])
+                    rhs_sign = sign_from_exponent(mod.degree_on_basis(a.support()[0]) * q.degree())
+                    rhs *= rhs_sign
                     assert _as_dict(lhs) == _as_dict(rhs)
 
     class TestLeibnizAction:
