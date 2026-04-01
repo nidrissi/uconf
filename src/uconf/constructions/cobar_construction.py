@@ -462,6 +462,11 @@ class CobarConstruction(UniqueRepresentation):
             ):
                 yield self(tree)
 
+        @cached_method
+        def graded_basis(self, d: int) -> Family:
+            """Return the ``Family`` of all basis elements in degree ``d``."""
+            return Family(self.basis_iter(d))
+
         def _repr_term(self, basis_element) -> str:
             """String representation of one cobar basis tree."""
             if is_leaf(basis_element):
@@ -479,15 +484,10 @@ class CobarConstruction(UniqueRepresentation):
                 decoration_formatter=_dec_fmt,
             )
 
-        @cached_method
-        def graded_basis(self, d: int) -> Family:
-            """Return the ``Family`` of all basis elements in degree ``d``."""
-            return Family(self.basis_iter(d))
-
         def _latex_term(self, basis_element) -> str:
             """LaTeX representation of one cobar basis tree."""
             if is_leaf(basis_element):
-                return f"\\eta_{{{self.factory.cooperad_cls.name}}}"
+                return "\\eta"
 
             def _dec_fmt(dec, arity):
                 parent = self.factory.cooperad_cls(arity, self.base_ring())
