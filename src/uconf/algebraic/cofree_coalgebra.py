@@ -266,13 +266,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         r"""Leibniz rule: d(c ⊗ m_1 ⊗ … ⊗ m_n) = d_C(c) ⊗ m_… + Σ_i (−1)^{…} c ⊗ … ⊗ d_M(m_i) ⊗ ….
 
         Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
-
-        Cooperad keys are kept in their raw (possibly non-planar) form.
-        Planarising inside the boundary would break d² = 0 because the
-        coinvariant identification permutes the m_tuple, and applying
-        the boundary a second time sees a different ordering.  Use
-        :meth:`normalize_to_planar` to convert to the planar basis when
-        building matrices or comparing with ``basis_iter`` output.
         """
         c_key, m_tuple = key
         n = len(m_tuple)
@@ -280,19 +273,19 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         result = self.zero()
 
         # d_C term: keep raw cooperad keys (do NOT planarize).
-        dc_elem = comp.boundary(comp.term(c_key))
+        dc_elem = comp.boundary(comp(c_key))
         for dc_key, dc_coeff in dc_elem:
-            result += dc_coeff * self.term((dc_key, m_tuple))
+            result += dc_coeff * self((dc_key, m_tuple))
 
         # d_M terms with Koszul signs
         c_deg = comp.degree_on_basis(c_key)
         cumulative = c_deg
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            m_elem = self._inner_module.term(mk)
+            m_elem = self._inner_module(mk)
             for new_mk, m_coeff in self._inner_module.boundary(m_elem):
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self.term((c_key, new_m))
+                result += sign * m_coeff * self((c_key, new_m))
             cumulative += self._inner_module.degree_on_basis(mk)
 
         return result
@@ -319,7 +312,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # n = 1: C(1) is the unit, degree 0 → need module keys at degree d
         c_key_1 = C.unit_key()
         for mk in _module_basis_keys_in_degree(M, d):
-            yield self.term((c_key_1, (mk,)))
+            yield self((c_key_1, (mk,)))
 
         # Determine max arity for n >= 2.
         # Need: d_c + d_m = d with d_c >= connectivity*(n-1), d_m >= 0
@@ -375,7 +368,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 for c_elem in c_elems:
                     for c_key in c_elem.support():
                         for m_tuple in m_tuples:
-                            yield self.term((c_key, m_tuple))
+                            yield self((c_key, m_tuple))
 
     def _weight_on_basis(self, key) -> int:
         """Weight of a basis key ``(c_key, m_tuple)``.
@@ -425,7 +418,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # n = 1: single leaf
         id_key = C.unit_key()
         for mk in keys_by_dw.get((d, w), []):
-            yield self.term((id_key, (mk,)))
+            yield self((id_key, (mk,)))
 
         # n >= 2
         for n in range(2, max_n + 1):
@@ -444,7 +437,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 for c_elem in c_elems:
                     for c_key in c_elem.support():
                         for m_tuple in m_tuples:
-                            yield self.term((c_key, m_tuple))
+                            yield self((c_key, m_tuple))
 
     @cached_method
     def graded_basis(self, d: int):
@@ -488,7 +481,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     Examples::
 
         cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M)
-        elem = cofree_coass.module.term(((1, 2), (m1, m2)))
+        elem = cofree_coass.modul(((1, 2), (m1, m2)))
         cofree_coass.coact(elem, 2)
 
     """
@@ -534,8 +527,8 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 continue  # arity mismatch
 
             # Build flat tensor: c_key x (id_key,(m_1,)) x ... x (id_key,(m_n,))
-            coop_elem = coop_parent.term(c_key)
-            leaf_elems = [cofree_mod.term((id_key, (mk,))) for mk in m_tuple]
+            coop_elem = coop_parent(c_key)
+            leaf_elems = [cofree_mod((id_key, (mk,))) for mk in m_tuple]
             term = tensor([coop_elem] + leaf_elems)
             result += v_coeff * term
 
@@ -581,7 +574,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 continue
 
             comp = self.cooperad_cls(k, base_ring)
-            c_elem = comp.term(c_key)
+            c_elem = comp(c_key)
             cocomp = comp.infinitesimal_cocompose(c_elem, i, m, n)
 
             # Split M-labels (1-indexed positions):
@@ -594,8 +587,8 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
                 # Normalise each factor via planarize
                 left_comp = self.cooperad_cls(m, base_ring)
                 right_comp = self.cooperad_cls(n, base_ring)
-                left_elem = cofree_mod._normalized_corolla_sum(left_comp.term(c_L_key), left_m)
-                right_elem = cofree_mod._normalized_corolla_sum(right_comp.term(c_R_key), right_m)
+                left_elem = cofree_mod._normalized_corolla_sum(left_comp(c_L_key), left_m)
+                right_elem = cofree_mod._normalized_corolla_sum(right_comp(c_R_key), right_m)
                 result += coeff * tensor_coeff * left_elem.tensor(right_elem)
 
         return result
@@ -621,5 +614,5 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:
-                result += coeff * inner.term(m_tuple[0])
+                result += coeff * inner(m_tuple[0])
         return result
