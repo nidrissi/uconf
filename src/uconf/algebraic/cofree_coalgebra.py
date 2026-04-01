@@ -49,7 +49,7 @@ from uconf.algebraic.tree_module import (
 )
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
-from uconf.core.trees import _koszul_sign_of_permutation
+from uconf.core.signs import koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
@@ -150,7 +150,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 if n > 1 and sigma != S_n.identity():
                     perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
                     degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-                    koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                    koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
                 result += c_coeff * pl_coeff * koszul * self.term((c_planar_key, permuted_m))

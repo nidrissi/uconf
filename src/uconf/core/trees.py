@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterator, Literal
 
+from uconf.core.signs import koszul_sign_of_permutation
+
 
 def is_leaf(node) -> bool:
     """Return True if ``node`` is a leaf (an integer)."""
@@ -644,25 +646,6 @@ def is_shuffle_tree(tree) -> bool:
     return all(is_shuffle_tree(c) for c in kids if is_internal(c))
 
 
-def _koszul_sign_of_permutation(perm: list[int], degrees: list[int]) -> int:
-    """Compute the Koszul sign of a permutation acting on graded elements.
-
-    Given a permutation perm and degrees [d_1, ..., d_k], compute the sign
-    incurred by permuting elements of degrees d_{perm[0]}, d_{perm[1]}, ...
-    back to their original order.
-
-    The sign is (-1)^{sum of d_i * d_j for all inversions (i,j) in perm}.
-    """
-    n = len(perm)
-    exponent = 0
-    for i in range(n):
-        for j in range(i + 1, n):
-            # Inversion: perm[i] > perm[j]
-            if perm[i] > perm[j]:
-                exponent += degrees[perm[i]] * degrees[perm[j]]
-    return 1 if exponent % 2 == 0 else -1
-
-
 def to_shuffle_tree_bar(tree, operad_cls, base_ring):
     """Normalize a tree to shuffle form for the bar construction B(P).
 
@@ -717,7 +700,7 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
             results.append((new_tree, child_coeff))
             continue
 
-        koszul_sign = _koszul_sign_of_permutation(perm, bar_degrees)
+        koszul_sign = koszul_sign_of_permutation(perm, bar_degrees)
 
         # Compute σ^{-1} for the sorting permutation
         sigma_list = [p + 1 for p in perm]
@@ -1523,7 +1506,7 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
             results.append((new_tree, child_coeff))
             continue
 
-        koszul_sign = _koszul_sign_of_permutation(perm, cobar_degrees)
+        koszul_sign = koszul_sign_of_permutation(perm, cobar_degrees)
 
         sigma_list = [p + 1 for p in perm]
         sigma_inv = [0] * k

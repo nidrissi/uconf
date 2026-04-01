@@ -39,9 +39,8 @@ from sage.all import (
 from uconf.core.cooperad import CooperadLike
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.trees import (
-    _koszul_sign_of_permutation,
     after_cobar_deg,
     children,
     decoration,
@@ -271,7 +270,7 @@ class CobarConstruction(UniqueRepresentation):
                     # d_1, …, d_k by sigma_v.
                     if sigma_v != SymmetricGroup(k).identity():
                         perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
-                        reorder_sign = _koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
+                        reorder_sign = koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
                     else:
                         reorder_sign = 1
 

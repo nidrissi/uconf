@@ -1203,10 +1203,11 @@ class TestFullModel:
             P_op = CobarConstruction(C_cop)
             phi = _make_surjection_comodule_morphism(C_cop)
             Pn = P_op(n, QQ)
-            for p_elem in Pn.graded_basis(0):
-                phi_dp = phi(p_elem.boundary())
-                d_phi_p = phi(p_elem).boundary()
-                assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) for p={p_elem}"
+            for d in range(3):
+                for p_elem in Pn.graded_basis(d):
+                    phi_dp = phi(p_elem.boundary())
+                    d_phi_p = phi(p_elem).boundary()
+                    assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) for p={p_elem}"
 
 
 class TestExpectedDimension:

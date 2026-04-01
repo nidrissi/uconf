@@ -22,9 +22,8 @@ from sage.all import (
 )
 
 from uconf.core.display import latex_linear_combination
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.trees import (
-    _koszul_sign_of_permutation,
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
@@ -644,7 +643,7 @@ class TreeModule(CombinatorialFreeModule):
             if n_leaves > 1:
                 degrees = [self._inner_module.degree_on_basis(m_tuple[i]) for i in range(n_leaves)]
                 perm_0idx = [old - 1 for old in new_leaf_order]
-                koszul = _koszul_sign_of_permutation(perm_0idx, degrees)
+                koszul = koszul_sign_of_permutation(perm_0idx, degrees)
             else:
                 koszul = 1
 
