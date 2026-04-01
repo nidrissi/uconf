@@ -1223,10 +1223,20 @@ class TestExpectedDimension:
         return sum(1 for p in P if len(p) <= S)
 
     @pytest.mark.parametrize("w", [1, 2, 3, 4])
-    def test_expected_dimension(self, w: int):
+    def test_expected_dimension_gf2(self, w: int):
         model = euclidean_unordered_configuration_model(GF(2), 2)
         cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
         for deg in range(-1, 3):
             assert cc.betti(deg) == self._count(deg, w), (
                 f"Betti number mismatch at deg={deg}, weight={w}"
             )
+
+    @pytest.mark.parametrize("w", [1, 2, 3, 4])
+    def test_expected_dimension_QQ(self, w: int):
+        model = euclidean_unordered_configuration_model(QQ, 2)
+        cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
+        for deg in range(-1, 3):
+            if deg == 0 or (w > 1 and deg == 1):
+                assert cc.betti(deg) == 1, f"Betti number mismatch at deg={deg}, weight={w}"
+            else:
+                assert cc.betti(deg) == 0, f"Betti number mismatch at deg={deg}, weight={w}"
