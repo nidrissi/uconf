@@ -6,6 +6,7 @@ import pytest
 
 from uconf import ShiftedCooperad, SurjectionDual
 from sage.all import QQ
+from tests.planarize_helpers import planarize_round_trip_ok
 
 
 def _as_dict(x):
@@ -69,3 +70,13 @@ def test_shifted_cooperad_right_action(n: int, d: int) -> None:
             lhs = x.permute(sigma).permute(tau)
             rhs = x.permute(sigma * tau)
             assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(-2, 1))
+def test_shifted_cooperad_planarize_round_trip(n: int, d: int) -> None:
+    """Planarize round-trip holds for shifted cooperad basis elements."""
+    shifted = ShiftedCooperad(SurjectionDual, 1)
+    comp = shifted(n, QQ)
+    for x in comp.basis_iter(d):
+        assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"

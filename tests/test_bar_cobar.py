@@ -37,6 +37,7 @@ from uconf.core.trees import (
     vertices_dfs,
     weight,
 )
+from tests.planarize_helpers import planarize_round_trip_ok
 
 
 class TestTrees:
@@ -879,23 +880,6 @@ class TestCobarSignFix:
 class TestBarPlanarize:
     """Tests for the quasi-planar structure on B(P)."""
 
-    def _round_trip_ok(self, component, tree):
-        """Check that T_pl.permute(σ) normalizes to T for every term."""
-        from sage.all import SymmetricGroup
-
-        elem = component(tree)
-        if elem == component.zero():
-            return True
-        result = elem.planarize()
-        n = component.arity()
-        Sn = SymmetricGroup(n)
-        total = component.zero()
-        for (pl_tree, sigma_key), coeff in result:
-            T_pl = component(pl_tree)
-            sigma = Sn(sigma_key)
-            total += coeff * T_pl.permute(sigma)
-        return total == elem
-
     # ------------------------------------------------------------------
     # Surjection
     # ------------------------------------------------------------------
@@ -939,7 +923,9 @@ class TestBarPlanarize:
         BS = BarConstruction(Surjection)
         B4 = BS(4, QQ)
         tree = ((2, 1, 2, 3), ((1, 2), 1, 2), 3, 4)
-        assert self._round_trip_ok(B4, tree)
+        elem = B4(tree)
+        assert elem != B4.zero()
+        assert planarize_round_trip_ok(elem)
 
     def test_planarize_surjection_roundtrip_weight1(self):
         """Round-trip holds for various weight-1 Surjection trees."""
@@ -950,7 +936,25 @@ class TestBarPlanarize:
             ((2, 1, 2, 3), 1, 2, 3),
             ((1, 3, 2, 1), 1, 2, 3),
         ]:
-            assert self._round_trip_ok(B3, tree), f"Round-trip failed for {tree}"
+            elem = B3(tree)
+            assert elem != B3.zero()
+            assert planarize_round_trip_ok(elem), f"Round-trip failed for {tree}"
+
+    def test_planarize_surjection_roundtrip_higher_weights(self):
+        """Round-trip holds on higher-weight Surjection bar trees."""
+        BS = BarConstruction(Surjection)
+
+        B5 = BS(5, QQ)
+        weight3_tree = ((2, 1, 2, 3), ((1, 2, 1), 1, 2), ((2, 1), 3, 4), 5)
+        elem = B5(weight3_tree)
+        assert elem != B5.zero()
+        assert planarize_round_trip_ok(elem)
+
+        B6 = BS(6, QQ)
+        weight3_tree_arity6 = ((2, 1, 3, 4, 2), ((1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
+        elem2 = B6(weight3_tree_arity6)
+        assert elem2 != B6.zero()
+        assert planarize_round_trip_ok(elem2)
 
     # ------------------------------------------------------------------
     # Barratt–Eccles
@@ -991,7 +995,22 @@ class TestBarPlanarize:
             ((perm21, id2), 1, 2),
             ((id2, perm21), 1, 2),
         ]:
-            assert self._round_trip_ok(B2, tree), f"Round-trip failed for {tree}"
+            elem = B2(tree)
+            assert elem != B2.zero()
+            assert planarize_round_trip_ok(elem), f"Round-trip failed for {tree}"
+
+    def test_planarize_barratt_eccles_roundtrip_weight2(self):
+        """Round-trip holds for a weight-2 tree in B(BE)."""
+        BBE = BarConstruction(BarrattEccles)
+        B3 = BBE(3, QQ)
+        BE2 = BarrattEccles(2, QQ)
+        S2 = BE2._symmetric_group
+        id2 = S2.identity()
+        perm21 = S2([2, 1])
+        tree = ((perm21, id2), ((id2, perm21), 1, 2), 3)
+        elem = B3(tree)
+        assert elem != B3.zero()
+        assert planarize_round_trip_ok(elem)
 
     # ------------------------------------------------------------------
     # planar_basis_iter
@@ -1080,7 +1099,9 @@ class TestBarPlanarize:
         perm21 = S2([2, 1])
         id2 = S2.identity()
         had_tree = (((1, 2), (perm21, id2)), 1, 2)
-        assert self._round_trip_ok(B2, had_tree)
+        elem = B2(had_tree)
+        assert elem != B2.zero()
+        assert planarize_round_trip_ok(elem)
 
 
 class TestBasisIter:

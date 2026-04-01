@@ -85,6 +85,32 @@ class ShiftedCooperad(UniqueRepresentation):
                 codomain=self,
             )
 
+            if callable(getattr(self._base_parent, "planarize", None)):
+                from sage.all import SymmetricGroupAlgebra, tensor as sage_tensor
+
+                self._pz_sga = SymmetricGroupAlgebra(base_ring, n)
+                self._pz_codomain = sage_tensor([self, self._pz_sga])
+
+                self.planarize = self.module_morphism(
+                    on_basis=self._planarize_on_basis,
+                    codomain=self._pz_codomain,
+                )
+
+        @cached_method
+        def _planarize_on_basis(self, p_key):
+            """Planarize a shifted-cooperad basis key.
+
+            Applies the base cooperad's ``planarize`` and twists the resulting
+            permutation sign by ``sgn(σ)^shift``.
+            """
+            base_pz = self._base_parent.planarize(self._base_parent(p_key))
+            result = self._pz_codomain.zero()
+            for (p_pl_key, sigma_key), coeff in base_pz:
+                sigma = self._symmetric_group(sigma_key)
+                sign_twist = int(sigma.sign()) ** self.factory.shift_degree
+                result += (sign_twist * coeff) * self(p_pl_key).tensor(self._pz_sga(sigma))
+            return result
+
         def _validate_basis_key(self, basis_key):
             if hasattr(self._base_parent, "_validate_basis_key"):
                 return self._base_parent._validate_basis_key(basis_key)
@@ -232,6 +258,11 @@ class ShiftedCooperad(UniqueRepresentation):
         def boundary(self) -> "ShiftedCooperad.Element":
             parent = self.parent()
             return parent.boundary(self)
+
+        def planarize(self):
+            """Project to planar representative tensored with a group element."""
+            parent = self.parent()
+            return parent.planarize(self)
 
         def permute(self, sigma) -> "ShiftedCooperad.Element":
             parent = self.parent()
