@@ -164,7 +164,7 @@ class Surjection(CombinatorialFreeModule):
         sigma_inv = sigma.inverse()
         # Permute the basis element back into planar form
         planar_basis = tuple(sigma_inv(p) for p in basis_element)
-        planar_element = self.term(planar_basis)
+        planar_element = self(planar_basis)
         sigma_module = self._symmetric_group_algebra
         return planar_element.tensor(sigma_module(sigma))
 

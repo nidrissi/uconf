@@ -26,7 +26,7 @@ def _ass_to_com_on_element(element: Any) -> Any:
     total_coeff = sum(coeff for _, coeff in element)
     if total_coeff == 0:
         return target.zero()
-    return total_coeff * target.term(())
+    return total_coeff * target(())
 
 
 ass_to_com = OperadMorphism(Associative, Commutative, _ass_to_com_on_element)
@@ -46,7 +46,7 @@ def _lie_to_ass_on_element(element: Any) -> Any:
     for key, coeff in element:
         assoc_dict = parent._assoc_from_basis_key(key)
         for word, word_coeff in assoc_dict.items():
-            result += (coeff * word_coeff) * target.term(word)
+            result += (coeff * word_coeff) * target(word)
     return result
 
 

@@ -96,9 +96,9 @@ class ShiftedOperad(UniqueRepresentation):
         accumulated = target.zero()
 
         for x_basis, x_coeff in x:
-            x_term = x_parent.base_parent().term(x_basis)
+            x_term = x_parent.base_parent()(x_basis)
             for y_basis, y_coeff in y:
-                y_term = y_parent.base_parent().term(y_basis)
+                y_term = y_parent.base_parent()(y_basis)
                 y_degree = y_parent.base_parent().degree_on_basis(y_basis)
                 base_composed = self.operad_cls.compose(x_term, i, y_term)
                 sign = shifted_operadic_compose_sign(
@@ -182,12 +182,12 @@ class ShiftedOperad(UniqueRepresentation):
             permutation sign by ``sgn(σ)^shift``.  Cached per basis key so
             that repeated calls during basis enumeration are O(1).
             """
-            base_pz = self._base_parent.planarize(self._base_parent.term(p_key))
+            base_pz = self._base_parent.planarize(self._base_parent(p_key))
             result = self._pz_codomain.zero()
             for (p_pl_key, sigma_key), coeff in base_pz:
                 sigma = self._symmetric_group(sigma_key)
                 sign_twist = int(sigma.sign()) ** self.factory.shift_degree
-                result += (sign_twist * coeff) * self.term(p_pl_key).tensor(self._pz_sga(sigma))
+                result += (sign_twist * coeff) * self(p_pl_key).tensor(self._pz_sga(sigma))
             return result
 
         def _validate_basis_key(self, basis_key):
@@ -223,7 +223,7 @@ class ShiftedOperad(UniqueRepresentation):
 
         def _boundary_on_basis(self, basis_element):
             sign = shifted_boundary_sign(self.factory.shift_degree)
-            base_bdry = sign * self._base_parent.boundary(self._base_parent.term(basis_element))
+            base_bdry = sign * self._base_parent.boundary(self._base_parent(basis_element))
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
 
         def __call__(self, x) -> "ShiftedOperad.Element":
@@ -262,7 +262,7 @@ class ShiftedOperad(UniqueRepresentation):
             else:
                 for key in base_parent.basis():
                     if base_parent.degree_on_basis(key) == unshifted_degree:
-                        yield self.term(key)
+                        yield self(key)
 
         @cached_method
         def graded_basis(self, d: int) -> Family:

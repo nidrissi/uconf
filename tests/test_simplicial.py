@@ -157,28 +157,6 @@ class TestBoundary:
             x = SimplicialChains.fundamental_chain(n, QQ)
             assert x.boundary().boundary() == C.zero(), f"∂² ≠ 0 for Δ^{n}"
 
-    def test_boundary_squared_tensor(self):
-        """∂² = 0 on tensor products using tensor_boundary."""
-        SC = SimplicialChains(QQ)
-        T = tensor([SC, SC])
-        x = tensor([SC((0, 1, 2)), SC((0, 1))])
-        b = SimplicialChains.tensor_boundary
-        assert b(b(x)) == T.zero()
-
-    def test_boundary_tensor_product(self):
-        """∂([0,1] ⊗ [2,3]) = [1]⊗[2,3] - [0]⊗[2,3] - [0,1]⊗[3] + [0,1]⊗[2]."""
-        SC = SimplicialChains(QQ)
-        x = tensor([SC((0, 1)), SC((2, 3))])
-        bdry = SimplicialChains.tensor_boundary(x)
-        d = _as_dict(bdry)
-        expected = {
-            ((1,), (2, 3)): 1,
-            ((0,), (2, 3)): -1,
-            ((0, 1), (3,)): -1,
-            ((0, 1), (2,)): 1,
-        }
-        assert d == expected
-
 
 class TestAWDiagonal:
     def test_diagonal_edge(self):
@@ -210,15 +188,6 @@ class TestAWDiagonal:
         # Each basis key should be a 3-tuple of simplex tuples
         for k in diag.support():
             assert len(k) == 3
-
-    def test_diagonal_is_chain_map(self):
-        """∂∘Δ = Δ∘∂ (AW diagonal is a chain map)."""
-        b = SimplicialChains.tensor_boundary
-        for n in range(1, 4):
-            x = SimplicialChains.fundamental_chain(n, QQ)
-            lhs = b(x.iterated_diagonal(times=1))
-            rhs = x.boundary().iterated_diagonal(times=1)
-            assert _as_dict(lhs) == _as_dict(rhs), f"Diagonal not a chain map on Δ^{n}"
 
 
 # ===========================================================================

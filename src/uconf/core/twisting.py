@@ -128,13 +128,13 @@ class TwistingMorphism:
                     deg_c_L = left_parent.degree_on_basis(dec_left)
                     koszul_sign = sign_from_exponent(deg_c_L)
 
-                    alpha_left = self(left_parent.term(dec_left))
-                    beta_right = other(right_parent.term(dec_right))
+                    alpha_left = self(left_parent(dec_left))
+                    beta_right = other(right_parent(dec_right))
                     composed = self.operad.compose(alpha_left, i, beta_right)
                     # Extract basis keys and add in the target parent to avoid
                     # Sage coercion issues between different CombinatorialFreeModule instances
                     for p_key, p_coeff in composed:
-                        result += koszul_sign * coeff * p_coeff * p_parent.term(p_key)
+                        result += koszul_sign * coeff * p_coeff * p_parent(p_key)
 
         return result
 
@@ -174,9 +174,9 @@ class TwistingMorphism:
         # Combine in target parent to avoid coercion issues
         result = p_parent.zero()
         for key, coeff in d_P_alpha_c:
-            result += coeff * p_parent.term(key)
+            result += coeff * p_parent(key)
         for key, coeff in alpha_d_C_c:
-            result += coeff * p_parent.term(key)
+            result += coeff * p_parent(key)
 
         return result
 

@@ -238,7 +238,7 @@ class CobarConstruction(UniqueRepresentation):
 
             if is_leaf(tree):
                 identity = self._symmetric_group.identity()
-                return self.term(tree).tensor(sym_alg.term(identity))
+                return self(tree).tensor(sym_alg(identity))
 
             def _planarize_subtree(node):
                 """Return list of ``(coeff, planar_node, leaf_order)`` triples."""
@@ -249,7 +249,7 @@ class CobarConstruction(UniqueRepresentation):
                 dec = decoration(node)
                 coop_parent = self._cooperad_cls(k, base_ring)
 
-                dec_elem = coop_parent.term(dec)
+                dec_elem = coop_parent(dec)
                 planarized = coop_parent.planarize(dec_elem)
 
                 old_ch = children(node)
@@ -301,8 +301,8 @@ class CobarConstruction(UniqueRepresentation):
             for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
                 sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
                 canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
-                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
-                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
+                sigma_global = sym_alg(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self(canonical_tree).tensor(sigma_global)
 
             return result
 
@@ -341,7 +341,7 @@ class CobarConstruction(UniqueRepresentation):
                 vertex_offset=-1,
                 use_planar_decs=True,
             ):
-                yield self.term(tree)
+                yield self(tree)
 
         @cached_method
         def graded_planar_basis(self, d: int) -> Family:
@@ -460,7 +460,7 @@ class CobarConstruction(UniqueRepresentation):
             for tree in enumerate_shuffle_trees_cobar_in_degree(
                 n, self._max_weight, self._cooperad_cls, base_ring, d
             ):
-                yield self.term(tree)
+                yield self(tree)
 
         def _repr_term(self, basis_element) -> str:
             """String representation of one cobar basis tree."""
@@ -657,7 +657,7 @@ class CobarConstruction(UniqueRepresentation):
             base_ring,
         ):
             """Original d₂ path: iterate over contiguous positions only."""
-            curr_elem = curr_parent.term(curr_dec)
+            curr_elem = curr_parent(curr_dec)
             for m in range(2, curr_arity):
                 n = curr_arity - m + 1
                 for i in range(1, m + 1):

@@ -118,7 +118,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
 
     for (planar_key, sigma_key), pl_coeff in planarized:
         sigma = S_n(sigma_key)
-        planar_elem = cooperad_component.term(planar_key)
+        planar_elem = cooperad_component(planar_key)
 
         # Compute ν on the planar element via the recursive formula.
         planar_result = _nu_on_planar(
@@ -144,10 +144,16 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
                 # RIGHT action on BE: right-multiply each simplex element by σ.
                 be_right = tuple(p * sigma for p in be_key)
                 be_perm = be_component(be_right)
-                coop_perm = cooperad_component.term(coop_key).permute(sigma)
+                coop_perm = cooperad_component(coop_key).permute(sigma)
                 for be_k, be_c in be_perm:
                     for cp_k, cp_c in coop_perm:
-                        acted += t_coeff * be_c * cp_c * target.term((be_k, cp_k))
+                        acted += (
+                            t_coeff
+                            * be_c
+                            * cp_c
+                            # https://github.com/sagemath/sage/issues/41882
+                            * tensor([be_component(be_k), cooperad_component(cp_k)])
+                        )
             total_result += pl_coeff * acted
 
     return total_result

@@ -277,8 +277,8 @@ class TestFreeOperadAlgebra:
         mod.degree_on_basis = lambda _: 1
         mod.boundary_on_basis = lambda _: mod.zero()
         F = FreeOperadAlgebra(Associative, mod)
-        a = F.include(mod.term("a"))
-        b = F.include(mod.term("b"))
+        a = F.include(mod("a"))
+        b = F.include(mod("b"))
         sigma = Associative(2, QQ)((2, 1))
         result = F.act(sigma, [a, b])
         terms = list(result)
@@ -287,7 +287,7 @@ class TestFreeOperadAlgebra:
         # Must carry planar key (1, 2) ...
         assert p_key == (1, 2)
         # ... with M-entries swapped: (b, a)
-        assert m_tuple == (mod.term("b"), mod.term("a"))
+        assert m_tuple == (mod("b"), mod("a"))
         assert coeff == -1
 
     def test_boundary_zero_trivial(self):

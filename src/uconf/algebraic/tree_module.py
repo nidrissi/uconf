@@ -89,7 +89,7 @@ def _module_basis_keys_in_degree(module, d: int) -> Iterator:
             yield from elem.support()
     else:
         for elem in module.basis():
-            if module.degree_on_basis(elem) == d:
+            if elem.degree() == d:
                 yield from elem.support() if hasattr(elem, "support") else [elem]
 
 
@@ -364,7 +364,7 @@ class TreeModule(CombinatorialFreeModule):
                 m_keys_by_deg[d_m] = keys
 
         for m_key in m_keys_by_deg.get(d, []):
-            yield self.term((1, (m_key,)))
+            yield self((1, (m_key,)))
 
         if not m_keys_by_deg:
             return
@@ -443,7 +443,7 @@ class TreeModule(CombinatorialFreeModule):
                     use_planar_decs=True,
                 ):
                     for m_tuple in m_tuples:
-                        yield self.term((tree, m_tuple))
+                        yield self((tree, m_tuple))
 
     @cached_method
     def graded_basis(self, d: int):
@@ -508,7 +508,7 @@ class TreeModule(CombinatorialFreeModule):
 
         # Yield leaf elements: n=1, total weight=w, total degree=d
         for m_key in keys_by_dw.get((d, w), []):
-            yield self.term((1, (m_key,)))
+            yield self((1, (m_key,)))
 
         if not keys_by_dw:
             return
@@ -541,7 +541,7 @@ class TreeModule(CombinatorialFreeModule):
                     use_planar_decs=True,
                 ):
                     for m_tuple in m_tuples:
-                        yield self.term((tree, m_tuple))
+                        yield self((tree, m_tuple))
 
     @cached_method
     def graded_basis_by_weight(self, d: int, w: int):
@@ -561,21 +561,21 @@ class TreeModule(CombinatorialFreeModule):
 
             if leaf_0idx is not None:
                 m_key = m_tuple[leaf_0idx]
-                m_elem = self._inner_module.term(m_key)
+                m_elem = self._inner_module(m_key)
                 bdry = self._inner_module.boundary(m_elem)
                 for new_m_key, coeff in bdry:
                     new_m = m_tuple[:leaf_0idx] + (new_m_key,) + m_tuple[leaf_0idx + 1 :]
-                    result += sign * coeff * self.term((tree, new_m))
+                    result += sign * coeff * self((tree, new_m))
                 cumulative += self._inner_module.degree_on_basis(m_key)
             else:
                 v_arity = vertex_arity(node)
                 dec = decoration(node)
                 seq_parent = self._symmetric_sequence_cls(v_arity, base_ring)
-                seq_elem: Any = seq_parent.term(dec)
+                seq_elem = seq_parent(dec)
                 bdry = seq_parent.boundary(seq_elem)
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_dec(tree, node, new_dec)
-                    result += sign * coeff * self.term((new_tree, m_tuple))
+                    result += sign * coeff * self((new_tree, m_tuple))
                 cumulative += seq_parent.degree_on_basis(dec) + shift
 
         return result
@@ -699,7 +699,7 @@ class TreeModule(CombinatorialFreeModule):
                 results.append((child_coeff, (dec,) + tuple(new_kids)))
                 continue
 
-            planarized = seq_parent.planarize(seq_parent.term(dec))
+            planarized = seq_parent.planarize(seq_parent(dec))
             terms = list(planarized)
 
             S_k = SymmetricGroup(k)

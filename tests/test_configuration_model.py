@@ -1184,8 +1184,8 @@ class TestFullModel:
                     lhs = e_comodule_on_generator(elem.boundary())
                     rhs = tensor([BEn, Cn]).zero()
                     for (b, u), coeff in e_comodule_on_generator(elem):
-                        b_elem = BEn.term(b)
-                        u_elem = Cn.term(u)
+                        b_elem = BEn(b)
+                        u_elem = Cn(u)
                         rhs += coeff * b_elem.boundary().tensor(u_elem)
                         rhs += (
                             coeff
@@ -1204,9 +1204,9 @@ class TestFullModel:
             phi = _make_surjection_comodule_morphism(C_cop)
             Pn = P_op(n, QQ)
             for p_elem in Pn.graded_basis(0):
-                phi_dp = phi(Pn.boundary(p_elem))
-                d_phi_p = phi(p_elem).parent().boundary(phi(p_elem))
-                assert phi_dp == d_phi_p
+                phi_dp = phi(p_elem.boundary())
+                d_phi_p = phi(p_elem).boundary()
+                assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) for p={p_elem}"
 
 
 # ===========================================================================

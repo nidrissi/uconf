@@ -191,7 +191,7 @@ class BarrattEccles(CombinatorialFreeModule):
         perm = basis_element[0]
         perm_inverse = perm.inverse()
         permuted = tuple(perm_inverse * p for p in basis_element)
-        return self.term(permuted).tensor(self._symmetric_group_algebra(perm))
+        return self(permuted).tensor(self._symmetric_group_algebra(perm))
 
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
         """Standard simplicial boundary."""
@@ -204,7 +204,7 @@ class BarrattEccles(CombinatorialFreeModule):
             clean_face = self._validate_basis_key(face)
             if clean_face is None:
                 continue
-            res += (-1) ** i * self.term(clean_face)
+            res += (-1) ** i * self(clean_face)
         return res
 
     # 2. Implement the hook the Category expects

@@ -726,7 +726,7 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
             sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
         operad_parent = operad_cls(k, base_ring)
-        dec_elem = operad_parent.term(dec)
+        dec_elem = operad_parent(dec)
         permuted_dec_elem = dec_elem.permute(sigma_inv)
 
         sorted_kids = tuple(item[2] for item in indexed)
@@ -1531,7 +1531,7 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
             sigma_inv[old_pos_plus_one - 1] = new_pos + 1
 
         cooperad_parent = cooperad_cls(k, base_ring)
-        dec_elem = cooperad_parent.term(dec)
+        dec_elem = cooperad_parent(dec)
         permuted_dec_elem = dec_elem.permute(sigma_inv)
 
         sorted_kids = tuple(item[2] for item in indexed)

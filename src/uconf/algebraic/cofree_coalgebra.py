@@ -272,7 +272,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         comp = self._cooperad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_C term: keep raw cooperad keys (do NOT planarize).
         dc_elem = comp.boundary(comp(c_key))
         for dc_key, dc_coeff in dc_elem:
             result += dc_coeff * self((dc_key, m_tuple))
@@ -282,7 +281,12 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         cumulative = c_deg
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            m_elem = self._inner_module(mk)
+            # https://github.com/sagemath/sage/issues/41882 - cannot construct a tensor element directly from a tuple...
+            if hasattr(self._inner_module, "tensor_factors"):
+                factors = self._inner_module.tensor_factors()
+                m_elem = tensor(f(x) for f, x in zip(factors, mk, strict=True))
+            else:
+                m_elem = self._inner_module(mk)
             for new_mk, m_coeff in self._inner_module.boundary(m_elem):
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
                 result += sign * m_coeff * self((c_key, new_m))

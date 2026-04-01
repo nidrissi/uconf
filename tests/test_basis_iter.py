@@ -178,7 +178,7 @@ class TestCobarConstructionBasisIter:
         C1 = CobarConstruction(CoAssociative)(1, QQ)
         elems = list(C1.basis_iter(0))
         assert len(elems) == 1
-        assert elems[0] == C1.term(1)
+        assert elems[0] == C1(1)
 
     def test_arity1_nonzero_degree_empty(self) -> None:
         """Arity 1, non-zero degree: empty (unit has degree 0)."""

@@ -108,8 +108,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         for had_basis, had_coeff in p_element:
             left_basis, right_basis = had_basis
-            left_op = left_operad_parent.term(left_basis)
-            right_op = right_operad_parent.term(right_basis)
+            left_op = left_operad_parent(left_basis)
+            right_op = right_operad_parent(right_basis)
             right_op_deg = right_operad_parent.degree_on_basis(right_basis)
 
             for selected_terms in itertools.product(*arg_expansions):
@@ -121,8 +121,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
                 for tensor_basis, tensor_coeff in selected_terms:
                     left_key, right_key = tensor_basis
-                    left_inputs.append(self.left_module.term(left_key))
-                    right_inputs.append(self.right_module.term(right_key))
+                    left_inputs.append(self.left_module(left_key))
+                    right_inputs.append(self.right_module(right_key))
                     left_degs.append(self.left_module.degree_on_basis(left_key))
                     right_degs.append(self.right_module.degree_on_basis(right_key))
                     scalar *= tensor_coeff
@@ -147,9 +147,9 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
                 for left_out_basis, left_out_coeff in left_value:
                     for right_out_basis, right_out_coeff in right_value:
-                        result += self.module.term((left_out_basis, right_out_basis)) * (
-                            koszul_sign * scalar * left_out_coeff * right_out_coeff
-                        )
+                        result += tensor(
+                            [self.left_module(left_out_basis), self.right_module(right_out_basis)]
+                        ) * (koszul_sign * scalar * left_out_coeff * right_out_coeff)
 
         return result
 
@@ -253,14 +253,20 @@ class HadamardTensorAlgebra(OperadAlgebra):
         left_degree = self.left_module.degree_on_basis(left_basis)
         sign = -1 if left_degree % 2 else 1
 
-        left_boundary = self.left_algebra.boundary(self.left_module.term(left_basis))
-        right_boundary = self.right_algebra.boundary(self.right_module.term(right_basis))
+        left_boundary = self.left_algebra.boundary(self.left_module(left_basis))
+        right_boundary = self.right_algebra.boundary(self.right_module(right_basis))
 
         result = self.module.zero()
         for new_left_basis, left_coeff in left_boundary:
-            result += left_coeff * self.module.term((new_left_basis, right_basis))
+            result += left_coeff * tensor(
+                [self.left_module(new_left_basis), self.right_module(right_basis)]
+            )
         for new_right_basis, right_coeff in right_boundary:
-            result += sign * right_coeff * self.module.term((left_basis, new_right_basis))
+            result += (
+                sign
+                * right_coeff
+                * tensor([self.left_module(left_basis), self.right_module(new_right_basis)])
+            )
         return result
 
     def boundary(self, a):
@@ -280,10 +286,12 @@ class HadamardTensorAlgebra(OperadAlgebra):
             right_boundary = self.right_algebra.boundary(right_term)
 
             for new_left_basis, left_coeff in left_boundary:
-                result += self.module.term((new_left_basis, right_basis)) * (coeff * left_coeff)
+                result += tensor(
+                    [self.left_module(new_left_basis), self.right_module(right_basis)]
+                ) * (coeff * left_coeff)
             for new_right_basis, right_coeff in right_boundary:
-                result += self.module.term((left_basis, new_right_basis)) * (
-                    coeff * sign * right_coeff
-                )
+                result += tensor(
+                    [self.left_module(left_basis), self.right_module(new_right_basis)]
+                ) * (coeff * sign * right_coeff)
 
         return result

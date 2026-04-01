@@ -252,8 +252,6 @@ C.betti()
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data raises.
     - `SimplicialChains.fundamental_chain(n)` — the fundamental cycle `[0,…,n]`.
     - `SimplicialChains.basis_iter(N)` — iterator over all simplices in `Δ^N`.
-    - `SimplicialChains.tensor_boundary(x)` — Koszul tensor-product differential
-      on elements of `tensor([SimplicialChains()]*r)`.
     - `Element.boundary()` — simplicial boundary on arity-1 elements.
     - `Element.iterated_diagonal(times)` — AW diagonal; returns a native Sage
       `tensor([SimplicialChains()]*(times+1))` element.
@@ -295,7 +293,6 @@ x.iterated_diagonal(times=1) # Δ([0,1,2]) ∈ tensor([SC, SC])
 # Tensor-product boundary (for tensor([SC]*r) elements)
 T = tensor([SC, SC])
 y = x.iterated_diagonal(times=1)
-SimplicialChains.tensor_boundary(y)
 
 # Coalgebra (chain-side) wrapper
 coalg = SurjectionSimplicialChainCoalgebra(base_ring=SC.base_ring())

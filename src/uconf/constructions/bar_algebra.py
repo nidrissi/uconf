@@ -128,7 +128,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         result = self.zero()
 
         c_comp = C(n, base_ring)
-        c_elem = c_comp.term(c_key)
+        c_elem = c_comp(c_key)
 
         for n_r in range(2, n + 1):
             m = n - n_r + 1
@@ -141,14 +141,14 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 for (c_L_key, c_R_key), coeff in cocomp:
                     # Apply α to c_R
                     c_R_comp = C(n_r, base_ring)
-                    c_R_elem = c_R_comp.term(c_R_key)
+                    c_R_elem = c_R_comp(c_R_key)
                     alpha_c_R = self._alpha(c_R_elem)
 
                     if not alpha_c_R:
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    a_slice = [M.term(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
+                    a_slice = [M(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
                     action_result = self._algebra.act(alpha_c_R, a_slice)
 
                     if not action_result:
@@ -165,7 +165,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # Planarization inside the boundary breaks d²=0.
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += sign * coeff * a_coeff * self.term((c_L_key, new_m))
+                        result += sign * coeff * a_coeff * self((c_L_key, new_m))
 
         return result
 
@@ -256,8 +256,8 @@ class BarAlgebra(CooperadCoalgebra):
             k = len(m_tuple)
             if k != n:
                 continue
-            coop_elem = coop_parent.term(c_key)
-            leaf_elems = [cofree_mod.term((id_key, (mk,))) for mk in m_tuple]
+            coop_elem = coop_parent(c_key)
+            leaf_elems = [cofree_mod((id_key, (mk,))) for mk in m_tuple]
             term = tensor([coop_elem] + leaf_elems)
             result += v_coeff * term
 
@@ -274,5 +274,5 @@ class BarAlgebra(CooperadCoalgebra):
         result = inner.zero()
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:
-                result += coeff * inner.term(m_tuple[0])
+                result += coeff * inner(m_tuple[0])
         return result

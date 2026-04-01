@@ -375,7 +375,7 @@ class TestComoduleAxioms:
         d_nu = T.zero()
         for (be_key, ck), coeff in nu_x:
             be_elem = BE2(be_key)
-            coop_el = BH2.term(ck)
+            coop_el = BH2(ck)
             deg_e = BE2.degree_on_basis(be_key)
             d_nu += coeff * be_elem.boundary().tensor(coop_el)
             d_nu += coeff * (-1) ** deg_e * be_elem.tensor(BH2.boundary(coop_el))
@@ -408,7 +408,7 @@ class TestComoduleAxioms:
         d_nu = T.zero()
         for (be_key, ck), coeff in nu_x:
             be_elem = BE2(be_key)
-            coop_el = BH2.term(ck)
+            coop_el = BH2(ck)
             deg_e = BE2.degree_on_basis(be_key)
             d_nu += coeff * be_elem.boundary().tensor(coop_el)
             d_nu += coeff * (-1) ** deg_e * be_elem.tensor(BH2.boundary(coop_el))
@@ -432,7 +432,7 @@ class TestComoduleAxioms:
             d_nu = T.zero()
             for (be_key, ck), coeff in nu_x:
                 be_elem = BE2(be_key)
-                coop_el = BH2.term(ck)
+                coop_el = BH2(ck)
                 deg_e = BE2.degree_on_basis(be_key)
                 d_nu += coeff * be_elem.boundary().tensor(coop_el)
                 d_nu += coeff * (-1) ** deg_e * be_elem.tensor(BH2.boundary(coop_el))
@@ -462,13 +462,13 @@ class TestComoduleAxioms:
 
         for (be_key, ck), coeff in nu_x:
             be_elem = BE2(be_key)
-            coop_elem = BH2.term(ck)
+            coop_elem = BH2(ck)
 
             for (lk, rk), dc in be_elem.diagonal():
                 lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(coop_elem)
 
             for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, BE2):
-                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2.term(ck2))
+                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2(ck2))
 
         assert lhs == rhs, f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
 
@@ -491,13 +491,13 @@ class TestComoduleAxioms:
 
         for (be_key, ck), coeff in nu_x:
             be_elem = BE2(be_key)
-            coop_elem = BH2.term(ck)
+            coop_elem = BH2(ck)
 
             for (lk, rk), dc in be_elem.diagonal():
                 lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(coop_elem)
 
             for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, BE2):
-                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2.term(ck2))
+                rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2(ck2))
 
         assert lhs == rhs, f"Coassociativity failed:\n  LHS = {lhs}\n  RHS = {rhs}"
 
@@ -516,13 +516,13 @@ class TestComoduleAxioms:
 
             for (be_key, ck), coeff in nu_x:
                 be_elem = BE2(be_key)
-                coop_elem = BH2.term(ck)
+                coop_elem = BH2(ck)
 
                 for (lk, rk), dc in be_elem.diagonal():
                     lhs += coeff * dc * BE2(lk).tensor(BE2(rk)).tensor(coop_elem)
 
                 for (be2_key, ck2), d_coeff in _delta_equiv(ck, BH2, BE2):
-                    rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2.term(ck2))
+                    rhs += coeff * d_coeff * be_elem.tensor(BE2(be2_key)).tensor(BH2(ck2))
 
             assert lhs == rhs, f"Coassociativity failed for generator {dec_key}"
 

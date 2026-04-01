@@ -71,7 +71,7 @@ class CoCommutative(Commutative):
 
         result = target.zero()
         for _, coeff in x:
-            result += coeff * left_parent.term(()).tensor(right_parent.term(()))
+            result += coeff * left_parent(()).tensor(right_parent(()))
         return result
 
     class Element(Commutative.Element):

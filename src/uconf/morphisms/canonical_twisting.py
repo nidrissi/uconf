@@ -89,7 +89,7 @@ def canonical_projection(operad: OperadLike) -> TwistingMorphism:
                 continue
             # Single-vertex corolla: extract P-decoration
             dec = decoration(tree_key)
-            result += coeff * p_parent.term(dec)
+            result += coeff * p_parent(dec)
 
         return result
 
