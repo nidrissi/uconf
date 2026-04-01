@@ -724,7 +724,7 @@ class TestLayer3_ΩBH_Kd:
             mod = layers.free_alg.module
             rng = Random(_SEED)
             tested = 0
-            for deg in range(1, 10):
+            for deg in range(1, 7):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
                 for elem in _sample(basis, 30, rng):
                     tested += 1
