@@ -101,7 +101,7 @@ class Commutative(CombinatorialFreeModule):
         return 0
 
     def _repr_term(self, basis_element: tuple) -> str:
-        return f"μ([{self.arity}])"
+        return f"μ([{self.arity()}])"
 
     def _latex_term(self, basis_element: tuple) -> str:
         return "\\mu_{" + str(self.arity()) + "}"
