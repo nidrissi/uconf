@@ -134,3 +134,15 @@ def test_associative_differential_squared_zero(n: int) -> None:
     zero = Associative(n, QQ).zero()
     for elem in Associative(n, QQ).basis_iter(0):
         assert elem.boundary().boundary() == zero, f"d²({elem}) ≠ 0 in Ass({n})"
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+def test_associative_right_action(n: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Assn = Associative(n, QQ)
+    Sn = Assn._symmetric_group()
+    for x in Assn.basis_iter(0):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"

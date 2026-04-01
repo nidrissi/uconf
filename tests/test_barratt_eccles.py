@@ -1,5 +1,6 @@
 """Regression tests for the Barratt-Eccles operad."""
 
+import itertools
 import math
 from random import Random
 
@@ -190,3 +191,16 @@ def test_stress_barratt_eccles_boundary_squared_zero() -> None:
         d = rng.randint(0, 2)
         x = _random_homogeneous_be(rng, r, d)
         assert _as_dict(x.boundary().boundary()) == {}
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(0, 3))
+def test_barratt_eccles_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    BEn = BarrattEccles(n, QQ)
+    Sn = BEn._symmetric_group()
+    for x in BEn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"

@@ -31,6 +31,7 @@ The cooperad axioms tested here are:
 
 from random import Random
 
+import itertools
 import pytest
 from sage.all import QQ
 
@@ -414,3 +415,21 @@ def test_coderivation_property(x_tuple: tuple, i: int, m: int, n: int) -> None:
     assert lhs == rhs, (
         f"Coderivation failed for x={x_tuple}, i={i}, m={m}, n={n}\nLHS={lhs}\nRHS={rhs}"
     )
+
+
+# ===========================================================================
+# Right action:  (x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)
+# ===========================================================================
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(-2, 1))
+def test_surjection_dual_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Surjn = SurjectionDual(n, QQ)
+    Sn = Surjn._symmetric_group
+    for x in Surjn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
