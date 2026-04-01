@@ -78,7 +78,7 @@ class TrivialCoassCoalgebra(CooperadCoalgebra):
             target = tensor([left_parent, right_parent])
             result = target.zero()
             for _v_key, v_coeff in v_element:
-                result += v_coeff * left_parent.term((1,)).tensor(right_parent.term(()))
+                result += v_coeff * left_parent((1,)).tensor(right_parent(()))
             return result
 
         right_factors = [right_parent] * n
@@ -114,7 +114,7 @@ class DiffModule(CombinatorialFreeModule):
 
     def _bdry_on_basis(self, key):
         if key == "x":
-            return self.term("y")
+            return self("y")
         return self.zero()
 
     def _repr_term(self, key):
@@ -245,7 +245,7 @@ class TestBarAlgebra:
         C = bar.cooperad_cls
         elem = bar.module((C.unit_key(), ((),)))
         proj = bar.project(elem)
-        assert proj == bar._algebra.module.term(())
+        assert proj == bar._algebra.module(())
 
 
 # ===========================================================================
@@ -379,7 +379,7 @@ class TestCobarCoalgebra:
         """The inclusion η: V → Ω_α(V) works."""
         elem = cobar.include(())
         P = cobar.operad_cls
-        expected = cobar.module.term((P.unit_key(), ((),)))
+        expected = cobar.module((P.unit_key(), ((),)))
         assert elem == expected
 
     def test_d_squared_zero_weight2_gf2(self, cobar_gf2):
@@ -393,7 +393,7 @@ class TestCobarCoalgebra:
             for d in range(4):
                 for p_elem in comp_n.planar_basis_iter(d):
                     for p_key in p_elem.support():
-                        elem = cobar.module.term((p_key, m_tuple))
+                        elem = cobar.module((p_key, m_tuple))
                         dd = cobar.module.boundary(cobar.module.boundary(elem))
                         assert dd == cobar.module.zero(), f"d² ≠ 0 at arity {n}, degree {d}"
 
@@ -407,7 +407,7 @@ class TestCobarCoalgebra:
         for d in range(4):
             for p_elem in comp4.planar_basis_iter(d):
                 for p_key in p_elem.support():
-                    elem = cobar.module.term((p_key, m_tuple))
+                    elem = cobar.module((p_key, m_tuple))
                     dd = cobar.module.boundary(cobar.module.boundary(elem))
                     assert dd == cobar.module.zero(), (
                         f"d² ≠ 0 at arity 4, degree {d}, p_key={p_key}"
@@ -432,7 +432,7 @@ class TestBarAlgebraNontrivialDifferential:
                 result = M.zero()
                 for _key, p_coeff in p_elem:
                     for _ak, a_coeff in a_list[0]:
-                        result += p_coeff * a_coeff * M.term(_ak)
+                        result += p_coeff * a_coeff * M(_ak)
                 return result
             return M.zero()
 
@@ -571,7 +571,7 @@ class TestCobarCoalgebraNontrivialDifferential:
                 target = tensor([left_parent, M])
                 result = target.zero()
                 for v_key, v_coeff in v_element:
-                    result += v_coeff * left_parent.term((1,)).tensor(M.term(v_key))
+                    result += v_coeff * left_parent((1,)).tensor(M(v_key))
                 return result
             right_factors = [M] * n
             right_tensor = tensor(right_factors)
@@ -600,7 +600,7 @@ class TestCobarCoalgebraNontrivialDifferential:
                 for p_key in p_elem.support():
                     for v1 in ["x", "y"]:
                         for v2 in ["x", "y"]:
-                            elem = cobar_gf2.module.term((p_key, (v1, v2)))
+                            elem = cobar_gf2.module((p_key, (v1, v2)))
                             dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
                             assert dd == cobar_gf2.module.zero(), (
                                 f"d² ≠ 0 at degree {d}, p_key={p_key}, v=({v1},{v2})"

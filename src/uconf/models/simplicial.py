@@ -9,9 +9,6 @@ For tensor products of chain modules use the native Sage ``tensor()``
 function::
 
     T = tensor([SimplicialChains(), SimplicialChains()])
-
-The :meth:`SimplicialChains.tensor_boundary` static method computes the
-Koszul tensor-product differential on such elements.
 """
 
 from __future__ import annotations
@@ -150,7 +147,7 @@ class SimplicialChains(CombinatorialFreeModule):
             k = self._validate_basis_key(face)
             if k is not None:
                 sign = (-1) ** j
-                result += sign * self.term(k)
+                result += sign * self(k)
         return result
 
     # -- standard element ---------------------------------------------------
@@ -166,7 +163,7 @@ class SimplicialChains(CombinatorialFreeModule):
 
         """
         assert n >= 0
-        return SimplicialChains(base_ring).term(tuple(range(n + 1)))
+        return SimplicialChains(base_ring)(tuple(range(n + 1)))
 
     # -- basis enumeration on Delta^N ----------------------------------------
 
@@ -180,46 +177,7 @@ class SimplicialChains(CombinatorialFreeModule):
         parent = SimplicialChains(base_ring)
         for k in range(1, N + 2):
             for simplex in combinations(range(N + 1), k):
-                yield parent.term(simplex)
-
-    # -- tensor-product boundary --------------------------------------------
-
-    @staticmethod
-    def tensor_boundary(x):
-        r"""Koszul tensor-product differential on ``tensor([SC]*r)`` elements.
-
-        For `x = \sum x_1 \otimes \dots \otimes x_r` computes
-
-        .. math::
-            \partial x = \sum_i (-1)^{\deg x_1 + \dots + \deg x_{i-1}}
-                x_1 \otimes \dots \otimes \partial x_i \otimes \dots \otimes x_r.
-
-        Also works on plain :class:`SimplicialChains` elements (delegates
-        to ``parent().boundary()``).
-
-        Parameters
-        ----------
-        x : element of ``tensor([SimplicialChains()]*r)`` or
-            :class:`SimplicialChains`
-
-        """
-        parent = x.parent()
-        if isinstance(parent, SimplicialChains):
-            return parent.boundary(x)
-        # Native tensor product: parent._sets = (SC, SC, ...) – r factors.
-        # _sets is the standard Sage attribute for tensor product factor modules.
-        factors = parent._sets
-        result = parent.zero()
-        for tensor_key, coeff in x:
-            # tensor_key = (s_1, s_2, ..., s_r) where each s_i is a simplex tuple.
-            deg_acc = 0
-            for i, (SC_i, simplex) in enumerate(zip(factors, tensor_key)):
-                sign = (-1) ** (deg_acc % 2)
-                for new_simplex, bcoeff in SC_i.boundary(SC_i.term(simplex)):
-                    new_key = tensor_key[:i] + (new_simplex,) + tensor_key[i + 1 :]
-                    result += sign * coeff * bcoeff * parent.term(new_key)
-                deg_acc += len(simplex) - 1
-        return result
+                yield parent(simplex)
 
     # -----------------------------------------------------------------------
     # Element class
@@ -375,7 +333,7 @@ class SimplicialCochains(CombinatorialFreeModule):
             return
         k = 1 - d  # simplex length
         for simplex in combinations(range(self._N + 1), k):
-            yield self.term(simplex)
+            yield self(simplex)
 
     @cached_method
     def graded_basis(self, d: int):
@@ -412,7 +370,7 @@ class SimplicialCochains(CombinatorialFreeModule):
     @staticmethod
     def volume_form(N: int, base_ring) -> "SimplicialCochains.Element":
         """The cochain evaluating to 1 on the fundamental chain of `Δ^N`."""
-        return SimplicialCochains(N, base_ring).term(tuple(range(N + 1)))
+        return SimplicialCochains(N, base_ring)(tuple(range(N + 1)))
 
     # -- evaluation pairing -------------------------------------------------
 
@@ -438,7 +396,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         parent = SimplicialCochains(N, base_ring)
         for k in range(1, N + 2):
             for simplex in combinations(range(N + 1), k):
-                yield parent.term(simplex)
+                yield parent(simplex)
 
     # -- Element class ------------------------------------------------------
 

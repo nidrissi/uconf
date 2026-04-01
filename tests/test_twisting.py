@@ -165,7 +165,7 @@ class TestCanonicalProjection:
         bar_ass = BarConstruction(Associative)
         comp2 = bar_ass(2, QQ)
         # Bar corolla: ((1,2), 1, 2) in B(Ass)(2)
-        bar_elem = comp2.term(((1, 2), 1, 2))
+        bar_elem = comp2(((1, 2), 1, 2))
         result = pi(bar_elem)
         expected = Associative(2, QQ)((1, 2))
         assert result == expected
@@ -176,7 +176,7 @@ class TestCanonicalProjection:
         bar_ass = BarConstruction(Associative)
         comp3 = bar_ass(3, QQ)
         tree = ((1, 2), ((1, 2), 1, 2), 3)
-        bar_elem = comp3.term(tree)
+        bar_elem = comp3(tree)
         result = pi(bar_elem)
         assert result == Associative(3, QQ).zero()
 
@@ -185,7 +185,7 @@ class TestCanonicalProjection:
         pi = canonical_projection(Associative)
         bar_ass = BarConstruction(Associative)
         comp1 = bar_ass(1, QQ)
-        bar_elem = comp1.term(1)
+        bar_elem = comp1(1)
         result = pi(bar_elem)
         assert result == Associative(1, QQ).zero()
 
@@ -207,17 +207,17 @@ class TestCanonicalInclusion:
         """ι maps c ∈ C(n) to the single-vertex cobar tree (c, 1,...,n)."""
         iota = canonical_inclusion(CoAssociative)
         comp2 = CoAssociative(2, QQ)
-        c_elem = comp2.term((1, 2))
+        c_elem = comp2((1, 2))
         result = iota(c_elem)
         cobar_parent = CobarConstruction(CoAssociative)(2, QQ)
-        expected = cobar_parent.term(((1, 2), 1, 2))
+        expected = cobar_parent(((1, 2), 1, 2))
         assert result == expected
 
     def test_arity_1_maps_to_zero(self):
         """ι maps arity-1 elements to zero (coaugmentation coideal)."""
         iota = canonical_inclusion(CoAssociative)
         comp1 = CoAssociative(1, QQ)
-        c_elem = comp1.term(1)
+        c_elem = comp1((1,))
         result = iota(c_elem)
         cobar_parent = CobarConstruction(CoAssociative)(1, QQ)
         assert result == cobar_parent.zero()
@@ -239,17 +239,17 @@ class TestCanonicalInclusion:
         """ι maps c ∈ C(3) to a single-vertex cobar tree."""
         iota = canonical_inclusion(CoAssociative)
         comp3 = CoAssociative(3, QQ)
-        c_elem = comp3.term((1, 3, 2))
+        c_elem = comp3((1, 3, 2))
         result = iota(c_elem)
         cobar_parent = CobarConstruction(CoAssociative)(3, QQ)
-        expected = cobar_parent.term(((1, 3, 2), 1, 2, 3))
+        expected = cobar_parent(((1, 3, 2), 1, 2, 3))
         assert result == expected
 
     def test_inclusion_degree(self):
         """ι(c) has degree deg_C(c) - 1 in Ω(C)."""
         iota = canonical_inclusion(CoAssociative)
         comp2 = CoAssociative(2, QQ)
-        c_elem = comp2.term((1, 2))
+        c_elem = comp2((1, 2))
         result = iota(c_elem)
         cobar_parent = CobarConstruction(CoAssociative)(2, QQ)
         # CoAss elements have degree 0, so ι(c) has degree -1
@@ -260,8 +260,8 @@ class TestCanonicalInclusion:
         """ι is linear: ι(2c₁ + 3c₂) = 2·ι(c₁) + 3·ι(c₂)."""
         iota = canonical_inclusion(CoAssociative)
         comp2 = CoAssociative(2, QQ)
-        c1 = comp2.term((1, 2))
-        c2 = comp2.term((2, 1))
+        c1 = comp2((1, 2))
+        c2 = comp2((2, 1))
         result = iota(2 * c1 + 3 * c2)
         expected = 2 * iota(c1) + 3 * iota(c2)
         assert result == expected
@@ -273,11 +273,11 @@ class TestCanonicalInclusion:
         comp3 = bar_ass(3, QQ)
         # B(Ass)(3) corolla: ((1,2,3), 1, 2, 3)
         corolla_key = ((1, 2, 3), 1, 2, 3)
-        c_elem = comp3.term(corolla_key)
+        c_elem = comp3(corolla_key)
         result = iota(c_elem)
         # Result should be a single-vertex tree in ΩB(Ass)(3)
         cobar_parent = CobarConstruction(bar_ass)(3, QQ)
-        expected = cobar_parent.term((corolla_key, 1, 2, 3))
+        expected = cobar_parent((corolla_key, 1, 2, 3))
         assert result == expected
 
 
@@ -450,7 +450,7 @@ class TestPreLieProduct:
         pi = canonical_projection(Associative)
         bar_ass = BarConstruction(Associative)
         comp2 = bar_ass(2, QQ)
-        elem = comp2.term(((1, 2), 1, 2))
+        elem = comp2(((1, 2), 1, 2))
         # A corolla has no internal edges → cocomposition gives zero
         result = pi.star(pi, elem)
         assert result == Associative(2, QQ).zero()
@@ -462,7 +462,7 @@ class TestPreLieProduct:
         comp3 = bar_ass(3, QQ)
         # Two-vertex tree with contiguous leaves in child
         tree = ((1, 2), ((1, 2), 1, 2), 3)
-        elem = comp3.term(tree)
+        elem = comp3(tree)
         result = pi.star(pi, elem)
         # Should be non-zero: the cocomposition splits into two corollas
         assert result != Associative(3, QQ).zero()
@@ -472,7 +472,7 @@ class TestPreLieProduct:
         pi = canonical_projection(Associative)
         bar_ass = BarConstruction(Associative)
         comp2 = bar_ass(2, QQ)
-        elem = comp2.term(((1, 2), 1, 2))
+        elem = comp2(((1, 2), 1, 2))
         result = pi.partial_alpha(elem)
         # Both ∂_Ass and ∂_{B(Ass)} are zero for this element
         assert result == Associative(2, QQ).zero()

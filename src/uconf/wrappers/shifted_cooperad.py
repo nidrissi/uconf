@@ -118,7 +118,7 @@ class ShiftedCooperad(UniqueRepresentation):
 
         def _boundary_on_basis(self, basis_element):
             sign = shifted_boundary_sign(self.factory.shift_degree)
-            base_bdry = sign * self._base_parent.boundary(self._base_parent.term(basis_element))
+            base_bdry = sign * self._base_parent.boundary(self._base_parent(basis_element))
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
 
         def arity(self) -> int:
@@ -154,7 +154,7 @@ class ShiftedCooperad(UniqueRepresentation):
             else:
                 for key in base_parent.basis():
                     if base_parent.degree_on_basis(key) == unshifted_degree:
-                        yield self.term(key)
+                        yield self(key)
 
         @cached_method
         def graded_basis(self, d: int) -> Family:

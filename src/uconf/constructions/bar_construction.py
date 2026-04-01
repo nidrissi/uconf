@@ -134,7 +134,7 @@ class BarConstruction(UniqueRepresentation):
         """
         component = self(1, base_ring)
         # The single-leaf tree "1" (no internal vertices)
-        return component.term(1)
+        return component(1)
 
     def unit_key(self) -> int:
         """Return the basis key of the counit generator in arity ``1``.
@@ -228,7 +228,7 @@ class BarConstruction(UniqueRepresentation):
 
             if is_leaf(tree):
                 identity = self._symmetric_group.identity()
-                return self.term(tree).tensor(sym_alg.term(identity))
+                return self(tree).tensor(sym_alg(identity))
 
             def _planarize_subtree(node):
                 """Return list of ``(coeff, planar_node, leaf_order)`` triples.
@@ -246,7 +246,7 @@ class BarConstruction(UniqueRepresentation):
                 dec = decoration(node)
                 op_parent = self._operad_cls(k, base_ring)
 
-                dec_elem = op_parent.term(dec)
+                dec_elem = op_parent(dec)
                 planarized = op_parent.planarize(dec_elem)
 
                 old_ch = children(node)
@@ -283,8 +283,8 @@ class BarConstruction(UniqueRepresentation):
             for total_coeff, planar_with_orig, leaf_order in _planarize_subtree(tree):
                 sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
                 canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
-                sigma_global = sym_alg.term(self._symmetric_group(list(leaf_order)))
-                result += total_coeff * self.term(canonical_tree).tensor(sigma_global)
+                sigma_global = sym_alg(self._symmetric_group(list(leaf_order)))
+                result += total_coeff * self(canonical_tree).tensor(sigma_global)
 
             return result
 
@@ -304,7 +304,7 @@ class BarConstruction(UniqueRepresentation):
                 op_parent = self._operad_cls(k, base_ring)
                 if not hasattr(op_parent, "planarize"):
                     return False
-                planarized = op_parent.planarize(op_parent.term(dec))
+                planarized = op_parent.planarize(op_parent(dec))
                 Sk = SymmetricGroup(k)
                 identity_k = Sk.identity()
                 for (_pl_dec, sigma_key), _coeff in planarized:
@@ -340,7 +340,7 @@ class BarConstruction(UniqueRepresentation):
 
             if n < 2:
                 if n == 1 and d == 0:
-                    yield self.term(1)
+                    yield self(1)
                 return
 
             for tree in enumerate_planar_trees_generic_in_degree(
@@ -352,7 +352,7 @@ class BarConstruction(UniqueRepresentation):
                 vertex_offset=+1,
                 use_planar_decs=True,
             ):
-                yield self.term(tree)
+                yield self(tree)
 
         def basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
             """Iterate over shuffle-tree basis elements of degree ``d``.
@@ -375,13 +375,13 @@ class BarConstruction(UniqueRepresentation):
 
             if n == 1:
                 if d == 0:
-                    yield self.term(1)
+                    yield self(1)
                 return
 
             for tree in enumerate_shuffle_trees_in_degree(
                 n, self._max_weight, self._operad_cls, base_ring, d
             ):
-                yield self.term(tree)
+                yield self(tree)
 
         def _validate_basis_key(self, basis_key):
             """Validate a tree basis key."""
@@ -455,7 +455,7 @@ class BarConstruction(UniqueRepresentation):
                 # Special case: allow integer 1 to represent the single-leaf tree in arity 1
                 return self.term(1)
 
-            return super()._element_constructor_(x)
+            raise ValueError(f"Invalid input for {self.name} element: {x!r}")
 
         def arity(self) -> int:
             return self._arity
@@ -628,8 +628,8 @@ class BarConstruction(UniqueRepresentation):
                 total_sign = sign_from_exponent(global_accum + p_deg_P + koszul_exp)
 
                 # Compute composition p ∘_l c
-                p_elem = p_parent.term(p_dec)
-                c_elem = c_parent.term(c_dec)
+                p_elem = p_parent(p_dec)
+                c_elem = c_parent(c_dec)
                 composed = self._operad_cls.compose(p_elem, child_pos, c_elem)
 
                 # For each term in the composition, build the contracted tree
@@ -686,7 +686,7 @@ class BarConstruction(UniqueRepresentation):
             coeff = x[1]
             if coeff == 0:
                 return x
-            return x - coeff * x.parent().term(1)
+            return x - coeff * x.parent()(1)
 
         @staticmethod
         def unit_key() -> int:
@@ -781,8 +781,8 @@ class BarConstruction(UniqueRepresentation):
 
                         koszul_sign = sign_from_exponent(after_deg * bottom_deg)
 
-                        result += koszul_sign * left_parent.term(relabeled_top).tensor(
-                            right_parent.term(relabeled_bot)
+                        result += koszul_sign * left_parent(relabeled_top).tensor(
+                            right_parent(relabeled_bot)
                         )
 
                 return result
@@ -921,9 +921,6 @@ class BarConstruction(UniqueRepresentation):
             result = parent.zero()
             for tree, coeff in self:
                 new_tree = relabel_leaves(tree, relabel_map)
-                # Use parent(new_tree) rather than parent.term(new_tree) so that
-                # the shuffle normalization (and its Koszul sign) is applied: the
-                # relabeled tree may no longer be in shuffle order.
                 result += coeff * parent(new_tree)
             return result
 

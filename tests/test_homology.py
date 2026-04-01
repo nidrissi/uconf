@@ -197,7 +197,7 @@ class TestConnectivity:
         from uconf.models.simplicial import SimplicialCochains
 
         SC = SimplicialCochains(2, QQ)
-        vertex = SC.term((0,))
+        vertex = SC((0,))
         assert SC.boundary(vertex) == SC.coboundary(vertex)
 
     def test_free_algebra_connectivity(self) -> None:

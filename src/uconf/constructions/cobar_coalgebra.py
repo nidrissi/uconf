@@ -129,7 +129,7 @@ class CobarCoalgebraModule(FreeAlgebraModule):
         for i in range(n):  # 0-indexed leaf position
             sign = sign_from_exponent(cumulative)
             v_key = m_tuple[i]
-            v_elem = M.term(v_key)
+            v_elem = M(v_key)
 
             # Try all coaction arities k ≥ 2
             for k in range(2, n + 2):
@@ -145,7 +145,7 @@ class CobarCoalgebraModule(FreeAlgebraModule):
 
                     # Apply α to get P-element
                     c_comp = C(k, base_ring)
-                    c_elem = c_comp.term(c_key)
+                    c_elem = c_comp(c_key)
                     alpha_c = self._alpha(c_elem)
 
                     if not alpha_c:
@@ -153,7 +153,7 @@ class CobarCoalgebraModule(FreeAlgebraModule):
 
                     # Compose p ∘_{i+1} α(c) (1-indexed position)
                     p_comp = P(n, base_ring)
-                    p_elem = p_comp.term(p_key)
+                    p_elem = p_comp(p_key)
                     composed = P.compose(p_elem, i + 1, alpha_c)
 
                     # Build new m_tuple: replace v_i with v'_1, …, v'_k
@@ -277,12 +277,12 @@ class CobarCoalgebra(OperadAlgebra):
                         coeff = coeff * c
 
                     n_list = [len(ik[1]) for ik in input_keys]
-                    composed_elem = P(k, R).term(q_key)
+                    composed_elem = P(k, R)(q_key)
 
                     for j in range(k - 1, -1, -1):
                         p_j_key, m_j_tuple = input_keys[j]
                         n_j = n_list[j]
-                        p_j_elem = P(n_j, R).term(p_j_key)
+                        p_j_elem = P(n_j, R)(p_j_key)
                         pos = j + 1
                         composed_elem = P.compose(composed_elem, pos, p_j_elem)
 
@@ -303,4 +303,4 @@ class CobarCoalgebra(OperadAlgebra):
             The element (id_P, (v_key,)) in Ω_α(V).
         """
         id_key = self._alpha.operad.unit_key()
-        return self.module.term((id_key, (v_key,)))
+        return self.module((id_key, (v_key,)))

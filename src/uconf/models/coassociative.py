@@ -76,12 +76,12 @@ class CoAssociative(Associative):
             for left_key in itertools.permutations(range(1, m + 1)):
                 for right_key in itertools.permutations(range(1, n + 1)):
                     composed = Associative.compose(
-                        left_parent.term(left_key), i, right_parent.term(right_key)
+                        left_parent(left_key), i, right_parent(right_key)
                     )
                     for composed_basis, composed_coeff in composed:
                         if composed_basis == sigma:
-                            out += composed_coeff * left_parent.term(left_key).tensor(
-                                right_parent.term(right_key)
+                            out += composed_coeff * left_parent(left_key).tensor(
+                                right_parent(right_key)
                             )
             return out
 
