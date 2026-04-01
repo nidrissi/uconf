@@ -37,6 +37,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 
+from uconf.algebraic._util import _construct_possible_tensor
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
@@ -148,7 +149,9 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    a_slice = [M(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
+                    a_slice = [
+                        _construct_possible_tensor(M, m_tuple[j]) for j in range(i - 1, i + n_r - 1)
+                    ]
                     action_result = self._algebra.act(alpha_c_R, a_slice)
 
                     if not action_result:

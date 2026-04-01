@@ -38,6 +38,7 @@ from sage.all import (
     tensor,
 )
 
+from uconf.algebraic._util import _construct_possible_tensor
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import (
     _inner_weight_on_key,
@@ -292,12 +293,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         cumulative = c_deg
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            # https://github.com/sagemath/sage/issues/41882 - cannot construct a tensor element directly from a tuple...
-            if hasattr(self._inner_module, "tensor_factors"):
-                factors = self._inner_module.tensor_factors()
-                m_elem = tensor(f(x) for f, x in zip(factors, mk, strict=True))
-            else:
-                m_elem = self._inner_module(mk)
+            m_elem = _construct_possible_tensor(self._inner_module, mk)
             for new_mk, m_coeff in self._inner_module.boundary(m_elem):
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
                 result += sign * m_coeff * self((c_key, new_m))
