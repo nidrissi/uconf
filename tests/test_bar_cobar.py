@@ -1,5 +1,6 @@
 """Tests for bar and cobar constructions."""
 
+import itertools
 import pytest
 from sage.all import tensor, QQ
 
@@ -1234,5 +1235,34 @@ class TestBarConstructionNegativeDegree:
                     assert d2 == B.zero(), f"boundary^2 != 0 on {elem} in B(sLie)({n}) degree {d}"
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+# ===========================================================================
+# Right action:  (x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)
+# ===========================================================================
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(-1, 2))
+def test_bar_construction_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Bar = BarConstruction(Surjection)
+    Barn = Bar(n, QQ)
+    Sn = Barn._symmetric_group
+    for x in Barn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(-1, 2))
+def test_cobar_construction_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Cobar = CobarConstruction(BarConstruction(Surjection))
+    Cobarn = Cobar(n, QQ)
+    Sn = Cobarn._symmetric_group
+    for x in Cobarn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"

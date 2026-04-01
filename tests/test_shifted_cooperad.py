@@ -1,5 +1,9 @@
 """Tests for the shifted-cooperad wrapper."""
 
+import itertools
+
+import pytest
+
 from uconf import ShiftedCooperad, SurjectionDual
 from sage.all import QQ
 
@@ -46,3 +50,22 @@ def test_element_repr_latex_exists() -> None:
     x = shifted(2, QQ)((1, 2, 1))
     ltx = x._repr_latex_()
     assert ltx
+
+
+# ===========================================================================
+# Right action:  (x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)
+# ===========================================================================
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(-2, 1))
+def test_shifted_cooperad_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    shifted = ShiftedCooperad(SurjectionDual, 1)
+    Shiftedn = shifted(n, QQ)
+    Sn = Shiftedn._symmetric_group
+    for x in Shiftedn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"

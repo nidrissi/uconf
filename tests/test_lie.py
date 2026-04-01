@@ -5,6 +5,7 @@ Using tuples may be interpreted by Sage in cycle-style constructors and can lead
 to ambiguous behavior in tests.
 """
 
+import itertools
 import math
 import time
 from random import Random
@@ -389,3 +390,15 @@ def test_stress_lie_jacobi_random_linear(arity: int) -> None:
         i = rng.randint(1, 3)
         inserted = sum(Lie.compose(y, i, x) for y in jacobi)
         assert _as_dict(inserted) == {}
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+def test_lie_right_action(n: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Lien = Lie(n, QQ)
+    Sn = Lien._symmetric_group()
+    for x in Lien.basis_iter(0):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"

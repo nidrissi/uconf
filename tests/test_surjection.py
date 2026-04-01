@@ -1,5 +1,6 @@
 """Regression tests for the Surjection operad."""
 
+import itertools
 import math
 from random import Random
 
@@ -328,6 +329,19 @@ def test_surjection_equivariance(
         assert lhs == rhs, (
             f"Equivariance failed for x={x_tuple}, σ={sigma}, y={y_tuple}, τ={tau}, i={i}"
         )
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(0, 4))
+def test_surjection_right_action(n: int, d: int) -> None:
+    """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
+    Surjn = Surjection(n, QQ)
+    Sn = Surjn._symmetric_group()
+    for x in Surjn.basis_iter(d):
+        for sigma, tau in itertools.product(list(Sn), repeat=2):
+            lhs = x.permute(sigma).permute(tau)
+            rhs = x.permute(sigma * tau)
+            assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
 
 
 # ===========================================================================
