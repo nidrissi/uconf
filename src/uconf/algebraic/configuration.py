@@ -70,7 +70,7 @@ from uconf.core.morphism import OperadMorphism
 from uconf.core.twisting import TwistingMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
-from uconf.morphisms.canonical_twisting import canonical_projection
+from uconf.morphisms.canonical_twisting import canonical_inclusion
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
@@ -187,8 +187,8 @@ def _build_labelled_layers(
 
     comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
-    pi = canonical_projection(pulled_back.operad_cls)
-    bar = BarAlgebra(pi, pulled_back)
+    iota = canonical_inclusion(BXsLie)
+    bar = BarAlgebra(iota, pulled_back)
 
     return ConfigurationLayers(
         manifold_model=manifold_model,
@@ -201,7 +201,7 @@ def _build_labelled_layers(
         tensor_alg=tensor_alg,
         comodule_morphism=comodule_morphism,
         pulled_back=pulled_back,
-        pi=pi,
+        pi=iota,
         bar=bar,
     )
 
