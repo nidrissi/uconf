@@ -209,13 +209,13 @@ def _build_labelled_layers(
 class TrivialModule(CombinatorialFreeModule):
     """Rank-1 graded module concentrated in a single degree.
 
-    The module has a single basis element ``'*'`` with ``degree = dimension``
+    The module has a single basis element `β` with `degree = dimension`
     and trivial (zero) boundary.  Used as the coefficient module for
     unordered configuration models.
     """
 
     def __init__(self, dimension: int, base_ring):
-        super().__init__(base_ring, ["★"], category=GradedModulesWithBasis(base_ring))
+        super().__init__(base_ring, [f"β{dimension}"], category=GradedModulesWithBasis(base_ring))
         self._dimension = dimension
         self.boundary = lambda _: self.zero()
         self.connectivity = 0
@@ -225,10 +225,10 @@ class TrivialModule(CombinatorialFreeModule):
         return self._dimension
 
     def _repr_term(self, basis_key):
-        return f"★{self._dimension}"
+        return f"β{self._dimension}"
 
-    def _repr_latex(self, basis_key):
-        return f"\\star_{{{self._dimension}}}"
+    def _latex_term(self, basis_key):
+        return f"\\beta_{{{self._dimension}}}"
 
     class Element(CombinatorialFreeModule.Element):
         def _repr_latex_(self) -> str:
