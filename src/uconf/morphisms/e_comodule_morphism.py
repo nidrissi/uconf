@@ -28,6 +28,7 @@ from sage.all import SymmetricGroup, cached_function, tensor
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.cooperad import CooperadComponent, CooperadLike
 from uconf.core.morphism import OperadMorphism
+from uconf.core.signs import sign_from_exponent
 from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import children, decoration, is_leaf, vertex_arity
 from uconf.models.barratt_eccles import BarrattEccles
@@ -289,12 +290,17 @@ def make_e_comodule_morphism(
         cobar_k = cobar(k, base_ring)
         target_k = target_factory(k, base_ring)
         root_image = target_k.zero()
+        be_component = BarrattEccles(k, base_ring)
         for (be_key, coop_key), t_coeff in root_tensor:
             # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
             cobar_tree = (coop_key,) + tuple(range(1, k + 1))
             cobar_elem = cobar_k(cobar_tree)
+            # Koszul sign from commuting the BE element (degree |e|) past
+            # the desuspension s⁻¹ (degree −1) in the inclusion ι: C ↪ Ω(C):
+            #   e ⊗ c  ↦  (−1)^{|e|} e ⊙ s⁻¹c
+            koszul = sign_from_exponent(be_component.degree_on_basis(be_key))
             for cobar_key, c_coeff in cobar_elem:
-                root_image += t_coeff * c_coeff * target_k((be_key, cobar_key))
+                root_image += koszul * t_coeff * c_coeff * target_k((be_key, cobar_key))
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.
