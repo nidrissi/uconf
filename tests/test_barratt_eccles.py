@@ -8,6 +8,7 @@ import pytest
 from sage.all import ZZ, QQ
 
 from uconf import BarrattEccles
+from tests.planarize_helpers import planarize_round_trip_ok
 
 
 def _degree_matches(element, d: int) -> bool:
@@ -204,3 +205,12 @@ def test_barratt_eccles_right_action(n: int, d: int) -> None:
             lhs = x.permute(sigma).permute(tau)
             rhs = x.permute(sigma * tau)
             assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
+
+
+@pytest.mark.parametrize("n", range(2, 4))
+@pytest.mark.parametrize("d", range(0, 3))
+def test_barratt_eccles_planarize_round_trip(n: int, d: int) -> None:
+    """Planarize round-trip holds for homogeneous Barratt-Eccles elements."""
+    BEn = BarrattEccles(n, QQ)
+    for x in BEn.basis_iter(d):
+        assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"

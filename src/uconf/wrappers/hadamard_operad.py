@@ -455,6 +455,11 @@ class HadamardProduct(UniqueRepresentation):
             parent = self.parent()
             return parent.boundary(self)
 
+        def planarize(self):
+            """Project to planar representative tensored with a group element."""
+            parent = self.parent()
+            return parent.planarize(self)
+
         def permute(self, sigma) -> "HadamardProduct.Element":
             parent = self.parent()
             if isinstance(sigma, (list, tuple)):

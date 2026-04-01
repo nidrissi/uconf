@@ -6,6 +6,7 @@ import pytest
 from sage.all import ZZ, QQ
 
 from uconf import Associative
+from tests.planarize_helpers import planarize_round_trip_ok
 
 
 def _as_dict(x):
@@ -146,3 +147,11 @@ def test_associative_right_action(n: int) -> None:
             lhs = x.permute(sigma).permute(tau)
             rhs = x.permute(sigma * tau)
             assert lhs == rhs, f"Right action failed for x={x}, σ={sigma}, τ={tau}"
+
+
+@pytest.mark.parametrize("n", range(2, 5))
+def test_associative_planarize_round_trip(n: int) -> None:
+    """Planarize round-trip holds for all basis elements of Ass(n)."""
+    Assn = Associative(n, QQ)
+    for x in Assn.basis_iter(0):
+        assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"
