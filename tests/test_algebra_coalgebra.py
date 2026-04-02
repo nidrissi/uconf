@@ -20,6 +20,7 @@ from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.trees import RootedTree
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 # ===========================================================================
@@ -210,7 +211,7 @@ class TestBarAlgebra:
     def test_weight1_binary_degree(self, bar):
         """Weight-1 binary tree has degree = 1 (deg_P(μ)+1 = 0+1 = 1)."""
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         a_tuple = ((), ())
         elem = bar.module((tree, a_tuple))
         assert elem.degree() == 1
@@ -218,7 +219,7 @@ class TestBarAlgebra:
     def test_weight1_ternary_degree(self, bar):
         """Weight-1 ternary tree has degree = 1."""
         mu3 = (1, 2, 3)
-        tree = (mu3, 1, 2, 3)
+        tree = RootedTree(mu3, 1, 2, 3)
         a_tuple = ((), (), ())
         deg = bar.module.degree_on_basis((tree, a_tuple))
         assert deg == 1
@@ -226,7 +227,7 @@ class TestBarAlgebra:
     def test_dact_weight1_binary_gives_zero(self, bar):
         """d_α on weight-1 binary corolla is zero (cogenerator has trivial cocomposition)."""
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         a_tuple = ((), ())
         elem = bar.module((tree, a_tuple))
         result = bar.module.d_alpha(elem)
@@ -239,16 +240,16 @@ class TestBarAlgebra:
         "tree,a_tuple",
         [
             # weight-1 binary tree: (μ; 1, 2)
-            ((_MU, 1, 2), ((), ())),
+            (RootedTree(_MU, 1, 2), ((), ())),
             # weight-2 right-nested: (μ; 1, (μ; 2, 3))
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), ((), (), ())),
             # weight-2 left-nested: (μ; (μ; 1, 2), 3)
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), ((), (), ())),
             # weight-1 ternary tree: (μ₃; 1, 2, 3)
-            ((_MU3, 1, 2, 3), ((), (), ())),
+            (RootedTree(_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
-    def test_d_squared_zero(self, bar, tree: tuple, a_tuple: tuple):
+    def test_d_squared_zero(self, bar, tree, a_tuple: tuple):
         """d² = 0 on tree elements of the bar construction."""
         elem = bar.module((tree, a_tuple))
         assert bar.module.boundary(bar.module.boundary(elem)) == bar.module.zero()
@@ -256,21 +257,21 @@ class TestBarAlgebra:
     def test_linear_combination_d_squared_zero(self, bar):
         """d² = 0 on a linear combination of bar elements."""
         mu = (1, 2)
-        t1 = bar.module(((mu, 1, (mu, 2, 3)), ((), (), ())))
-        t2 = bar.module(((mu, (mu, 1, 2), 3), ((), (), ())))
+        t1 = bar.module(((RootedTree(mu, 1, RootedTree(mu, 2, 3))), ((), (), ())))
+        t2 = bar.module(((RootedTree(mu, RootedTree(mu, 1, 2), 3)), ((), (), ())))
         combo = 3 * t1 - 2 * t2
         assert bar.module.boundary(bar.module.boundary(combo)) == bar.module.zero()
 
     def test_d_cofree_connects_to_ternary(self, bar):
         """d_cofree on weight-2 binary tree produces weight-1 ternary term."""
         mu = (1, 2)
-        tree = (mu, 1, (mu, 2, 3))
+        tree = RootedTree(mu, 1, RootedTree(mu, 2, 3))
         elem = bar.module((tree, ((), (), ())))
         d_cofree_result = bar.module.d_cofree(elem)
         # A ternary cooperad key has 4 elements: (decoration, leaf1, leaf2, leaf3)
         has_ternary = False
         for (c_key, _m_tuple), _coeff in d_cofree_result:
-            if isinstance(c_key, tuple) and len(c_key) == 4:
+            if isinstance(c_key, RootedTree) and c_key._arity == 3:
                 has_ternary = True
         assert has_ternary
 
@@ -341,7 +342,7 @@ class TestBarAlgebraFreeAlgebra:
         """Weight-1 binary tree has degree = (deg_Ass(μ)+1) + 2*deg(_GEN1) = 3."""
         gen1 = ((1,), ((),))
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         elem = bar.module((tree, (gen1, gen1)))
         assert elem.degree() == 3
 
@@ -349,7 +350,7 @@ class TestBarAlgebraFreeAlgebra:
         """Weight-1 ternary tree has degree = 1 + 3*1 = 4."""
         gen1 = ((1,), ((),))
         mu3 = (1, 2, 3)
-        tree = (mu3, 1, 2, 3)
+        tree = RootedTree(mu3, 1, 2, 3)
         deg = bar.module.degree_on_basis((tree, (gen1, gen1, gen1)))
         assert deg == 4
 
@@ -357,7 +358,7 @@ class TestBarAlgebraFreeAlgebra:
         """Weight-2 right-nested binary tree has degree = 2 + 3*1 = 5."""
         gen1 = ((1,), ((),))
         mu = (1, 2)
-        tree = (mu, 1, (mu, 2, 3))
+        tree = RootedTree(mu, 1, RootedTree(mu, 2, 3))
         deg = bar.module.degree_on_basis((tree, (gen1, gen1, gen1)))
         assert deg == 5
 
@@ -369,7 +370,7 @@ class TestBarAlgebraFreeAlgebra:
         """
         gen1 = ((1,), ((),))
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         elem = bar.module((tree, (gen1, gen1)))
         result = bar.module.d_alpha(elem)
         assert result == bar.module.zero()
@@ -378,16 +379,16 @@ class TestBarAlgebraFreeAlgebra:
         "tree,a_tuple",
         [
             # weight-1 binary tree: (μ; 1, 2)
-            ((_MU, 1, 2), (_GEN1, _GEN1)),
+            (RootedTree(_MU, 1, 2), (_GEN1, _GEN1)),
             # weight-2 right-nested: (μ; 1, (μ; 2, 3))
-            ((_MU, 1, (_MU, 2, 3)), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), (_GEN1, _GEN1, _GEN1)),
             # weight-2 left-nested: (μ; (μ; 1, 2), 3)
-            ((_MU, (_MU, 1, 2), 3), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), (_GEN1, _GEN1, _GEN1)),
             # weight-1 ternary tree: (μ₃; 1, 2, 3)
-            ((_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
         ],
     )
-    def test_d_squared_zero(self, bar, tree: tuple, a_tuple: tuple):
+    def test_d_squared_zero(self, bar, tree, a_tuple: tuple):
         """d² = 0 on tree elements of the bar construction with the free algebra."""
         elem = bar.module((tree, a_tuple))
         assert bar.module.boundary(bar.module.boundary(elem)) == bar.module.zero()
@@ -396,8 +397,8 @@ class TestBarAlgebraFreeAlgebra:
         """d² = 0 on a linear combination of bar elements with the free algebra."""
         gen1 = ((1,), ((),))
         mu = (1, 2)
-        t1 = bar.module(((mu, 1, (mu, 2, 3)), (gen1, gen1, gen1)))
-        t2 = bar.module(((mu, (mu, 1, 2), 3), (gen1, gen1, gen1)))
+        t1 = bar.module(((RootedTree(mu, 1, RootedTree(mu, 2, 3))), (gen1, gen1, gen1)))
+        t2 = bar.module(((RootedTree(mu, RootedTree(mu, 1, 2), 3)), (gen1, gen1, gen1)))
         combo = 3 * t1 - 2 * t2
         assert bar.module.boundary(bar.module.boundary(combo)) == bar.module.zero()
 
@@ -405,13 +406,13 @@ class TestBarAlgebraFreeAlgebra:
         """d_cofree on weight-2 binary tree produces a weight-1 ternary term."""
         gen1 = ((1,), ((),))
         mu = (1, 2)
-        tree = (mu, 1, (mu, 2, 3))
+        tree = RootedTree(mu, 1, RootedTree(mu, 2, 3))
         elem = bar.module((tree, (gen1, gen1, gen1)))
         d_cofree_result = bar.module.d_cofree(elem)
         # A ternary cooperad key has 4 elements: (decoration, leaf1, leaf2, leaf3)
         has_ternary = False
         for (c_key, _m_tuple), _coeff in d_cofree_result:
-            if isinstance(c_key, tuple) and len(c_key) == 4:
+            if isinstance(c_key, RootedTree) and c_key._arity == 3:
                 has_ternary = True
         assert has_ternary
 
@@ -442,7 +443,7 @@ class TestCobarCoalgebra:
     def test_weight1_binary_degree(self, cobar):
         """Weight-1 binary tree in Ω_C(V) has degree = -1 (deg_C(c)-1 = 0-1)."""
         c_dec = (1, 2)
-        tree = (c_dec, 1, 2)
+        tree = RootedTree(c_dec, 1, 2)
         v_tuple = ((), ())
         deg = cobar.module.degree_on_basis((tree, v_tuple))
         assert deg == -1
@@ -450,7 +451,7 @@ class TestCobarCoalgebra:
     def test_d_free_zero_for_trivial(self, cobar):
         """d_free = 0 when the operad and module differentials are both zero."""
         c_dec = (1, 2)
-        tree = (c_dec, 1, 2)
+        tree = RootedTree(c_dec, 1, 2)
         elem = cobar.module((tree, ((), ())))
         assert cobar.module.d_free(elem) == cobar.module.zero()
 
@@ -464,7 +465,7 @@ class TestCobarCoalgebra:
     def test_d_free_on_weight1_zero(self, cobar):
         """d_free on a weight-1 (single-vertex) tree is zero (no edge to split)."""
         c_dec = (1, 2)
-        tree = (c_dec, 1, 2)
+        tree = RootedTree(c_dec, 1, 2)
         elem = cobar.module((tree, ((), ())))
         assert cobar.module.d_free(elem) == cobar.module.zero()
 
@@ -474,7 +475,7 @@ class TestCobarCoalgebra:
             # single leaf
             (1, ((),)),
             # weight-1 binary tree
-            (((1, 2), 1, 2), ((), ())),
+            (RootedTree((1, 2), 1, 2), ((), ())),
         ],
     )
     def test_d_squared_zero(self, cobar_gf2, key):
@@ -487,7 +488,7 @@ class TestCobarCoalgebra:
         P = cobar_gf2.operad_cls
         t1 = cobar_gf2.module((P.unit_key(), ((),)))
         c_dec = (1, 2)
-        t2 = cobar_gf2.module(((c_dec, 1, 2), ((), ())))
+        t2 = cobar_gf2.module((RootedTree(c_dec, 1, 2), ((), ())))
         combo = t1 + t2
         assert (
             cobar_gf2.module.boundary(cobar_gf2.module.boundary(combo)) == cobar_gf2.module.zero()
@@ -553,7 +554,7 @@ class TestBarAlgebraIota:
             for key, coeff in p_elem:
                 # Only single-vertex cobar trees with a bar-corolla decoration
                 # contribute (projecting through the augmentation ε: ΩB(Ass) → Ass).
-                if not isinstance(key, tuple):
+                if not isinstance(key, RootedTree):
                     if n == 1:
                         # Unit: ε(id) = id_Ass, act as identity
                         a_coeff = coeff
@@ -562,30 +563,32 @@ class TestBarAlgebraIota:
                                 a_coeff = a_coeff * ac
                         result += a_coeff * module(())
                 else:
-                    v_arity = len(key) - 1
+                    from uconf.core.trees import children, decoration, is_leaf, vertex_arity
+                    v_arity = vertex_arity(key)
                     if v_arity != n:
                         continue
-                    v_chs = key[1:]
-                    if not all(not isinstance(c, tuple) for c in v_chs):
+                    v_chs = children(key)
+                    if not all(is_leaf(c) for c in v_chs):
                         continue
                     # Single-vertex cobar tree: decoration is a B(Ass)(n) key.
-                    # A bar corolla key has the form (ass_key, 1,...,n).
-                    bar_dec = key[0]
-                    if not isinstance(bar_dec, tuple):
+                    # A bar corolla key has the form RootedTree(ass_key, 1,...,n).
+                    bar_dec = decoration(key)
+                    if not isinstance(bar_dec, RootedTree):
                         continue
-                    bar_v_arity = len(bar_dec) - 1
+                    bar_v_arity = vertex_arity(bar_dec)
                     if bar_v_arity != n:
                         continue
-                    bar_chs = bar_dec[1:]
-                    if not all(not isinstance(c, tuple) for c in bar_chs):
+                    bar_chs = children(bar_dec)
+                    if not all(is_leaf(c) for c in bar_chs):
                         continue
-                    # bar_dec = (ass_key, 1,...,n) is a bar corolla; ε maps it to
+                    # bar_dec = RootedTree(ass_key, 1,...,n) is a bar corolla; ε maps it to
                     # ass_key ∈ Ass(n).  Apply the trivial Ass-action.
                     a_coeff = coeff
                     for a_elem in a_list:
                         for _ak, ac in a_elem:
                             a_coeff = a_coeff * ac
                     result += a_coeff * module(())
+            return result
             return result
 
         alg = OperadAlgebra(module, cobar_bar_ass, pullback_structure_map)
@@ -603,21 +606,21 @@ class TestBarAlgebraIota:
     def test_weight1_binary_degree(self, trivial_iota_bar):
         """Weight-1 binary tree has degree = 1 (deg_P(μ)+1 = 0+1 = 1)."""
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         elem = trivial_iota_bar.module((tree, ((), ())))
         assert elem.degree() == 1
 
     def test_weight1_ternary_degree(self, trivial_iota_bar):
         """Weight-1 ternary tree has degree = 1."""
         mu3 = (1, 2, 3)
-        tree = (mu3, 1, 2, 3)
+        tree = RootedTree(mu3, 1, 2, 3)
         deg = trivial_iota_bar.module.degree_on_basis((tree, ((), (), ())))
         assert deg == 1
 
     def test_dalpha_trivial_algebra_zero(self, trivial_iota_bar):
         """d_alpha = 0 for the trivial ΩB(Ass)-algebra (all weights)."""
         mu = (1, 2)
-        tree = (mu, 1, 2)
+        tree = RootedTree(mu, 1, 2)
         elem = trivial_iota_bar.module((tree, ((), ())))
         assert trivial_iota_bar.module.d_alpha(elem) == trivial_iota_bar.module.zero()
 
@@ -628,7 +631,7 @@ class TestBarAlgebraIota:
         so d_alpha is always zero on them.  Test on a weight-2 element instead.
         """
         mu = (1, 2)
-        tree = (mu, 1, (mu, 2, 3))
+        tree = RootedTree(mu, 1, RootedTree(mu, 2, 3))
         elem = pullback_iota_bar.module((tree, ((), (), ())))
         twist_result = pullback_iota_bar.module.d_alpha(elem)
         assert twist_result != pullback_iota_bar.module.zero()
@@ -640,13 +643,13 @@ class TestBarAlgebraIota:
         "tree,a_tuple",
         [
             # weight-1 binary tree: (μ; 1, 2)
-            ((_MU, 1, 2), ((), ())),
+            (RootedTree(_MU, 1, 2), ((), ())),
             # weight-2 right-nested: (μ; 1, (μ; 2, 3))
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), ((), (), ())),
             # weight-2 left-nested: (μ; (μ; 1, 2), 3)
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), ((), (), ())),
             # weight-1 ternary tree: (μ₃; 1, 2, 3)
-            ((_MU3, 1, 2, 3), ((), (), ())),
+            (RootedTree(_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
     def test_d_squared_zero_trivial(self, trivial_iota_bar, tree: tuple, a_tuple: tuple):
@@ -661,13 +664,13 @@ class TestBarAlgebraIota:
         "tree,a_tuple",
         [
             # weight-1 binary tree: (μ; 1, 2)
-            ((_MU, 1, 2), ((), ())),
+            (RootedTree(_MU, 1, 2), ((), ())),
             # weight-2 right-nested: (μ; 1, (μ; 2, 3))
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), ((), (), ())),
             # weight-2 left-nested: (μ; (μ; 1, 2), 3)
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), ((), (), ())),
             # weight-1 ternary tree: (μ₃; 1, 2, 3)
-            ((_MU3, 1, 2, 3), ((), (), ())),
+            (RootedTree(_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
     def test_d_squared_zero_pullback(self, pullback_iota_bar, tree: tuple, a_tuple: tuple):
@@ -681,8 +684,8 @@ class TestBarAlgebraIota:
     def test_linear_combination_d_squared_zero(self, pullback_iota_bar):
         """d² = 0 on a linear combination of elements for the pullback algebra."""
         mu = (1, 2)
-        t1 = pullback_iota_bar.module(((mu, 1, (mu, 2, 3)), ((), (), ())))
-        t2 = pullback_iota_bar.module(((mu, (mu, 1, 2), 3), ((), (), ())))
+        t1 = pullback_iota_bar.module(((RootedTree(mu, 1, RootedTree(mu, 2, 3))), ((), (), ())))
+        t2 = pullback_iota_bar.module(((RootedTree(mu, RootedTree(mu, 1, 2), 3)), ((), (), ())))
         combo = 3 * t1 - 2 * t2
         assert (
             pullback_iota_bar.module.boundary(pullback_iota_bar.module.boundary(combo))

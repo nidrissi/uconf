@@ -122,7 +122,7 @@ class TestDSigmaOnHadamard:
             BarrattEccles(2, QQ)._symmetric_group([2, 1]),
         )
         had_key = ((1,), be_key)
-        tree = (had_key, 1, 2)
+        tree = RootedTree(had_key, 1, 2)
         elem = BH2(tree)
 
         if elem == BH2.zero():
@@ -253,7 +253,7 @@ class TestEComoduleMap:
         # Degree-2 bar tree: ((1,), (id, s21)) at HLE(2)
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
-        tree_key = (had_key, 1, 2)
+        tree_key = RootedTree(had_key, 1, 2)
         dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
@@ -274,7 +274,7 @@ class TestEComoduleMap:
 
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
-        tree_key = (had_key, 1, 2)
+        tree_key = RootedTree(had_key, 1, 2)
         dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
@@ -365,7 +365,7 @@ class TestComoduleAxioms:
         id2 = S2.identity()
 
         had_d0 = ((1,), (id2,))
-        bar_d0 = (had_d0, 1, 2)
+        bar_d0 = RootedTree(had_d0, 1, 2)
         dec_elem = BH2(bar_d0)
 
         # ν(x) ∈ E ⊗ C
@@ -399,7 +399,7 @@ class TestComoduleAxioms:
         s21 = S2([2, 1])
 
         had_d1 = ((1,), (id2, s21))
-        bar_d1 = (had_d1, 1, 2)
+        bar_d1 = RootedTree(had_d1, 1, 2)
         dec_elem = BH2(bar_d1)
 
         nu_x = e_comodule_on_generator(dec_elem)
@@ -452,7 +452,7 @@ class TestComoduleAxioms:
         id2 = S2.identity()
 
         had_d0 = ((1,), (id2,))
-        bar_d0 = (had_d0, 1, 2)
+        bar_d0 = RootedTree(had_d0, 1, 2)
         dec_elem = BH2(bar_d0)
 
         nu_x = e_comodule_on_generator(dec_elem)
@@ -481,7 +481,7 @@ class TestComoduleAxioms:
         s21 = S2([2, 1])
 
         had_d1 = ((1,), (id2, s21))
-        bar_d1 = (had_d1, 1, 2)
+        bar_d1 = RootedTree(had_d1, 1, 2)
         dec_elem = BH2(bar_d1)
 
         nu_x = e_comodule_on_generator(dec_elem)
