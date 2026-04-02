@@ -41,6 +41,7 @@ from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.trees import (
+    RootedTree,
     after_cobar_deg,
     children,
     decoration,
@@ -290,7 +291,7 @@ class CobarConstruction(UniqueRepresentation):
                             leaf_order.extend(lo_ch)
 
                         total_coeff = dec_coeff * total_child_coeff * reorder_sign
-                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        node_result = RootedTree(planar_dec_key, *new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
                 return results
@@ -402,7 +403,7 @@ class CobarConstruction(UniqueRepresentation):
                         ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
-            if isinstance(x, (tuple, int)):
+            if isinstance(x, (tuple, int, RootedTree)):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
@@ -791,7 +792,7 @@ class CobarConstruction(UniqueRepresentation):
                 pos_set = set(child_positions)
 
                 bot_children = tuple(orig[j - 1] for j in child_positions)
-                bot_vertex = (dec_right,) + bot_children
+                bot_vertex = RootedTree(dec_right, *bot_children)
 
                 top_children = []
                 bot_inserted = False
@@ -802,7 +803,7 @@ class CobarConstruction(UniqueRepresentation):
                             bot_inserted = True
                     else:
                         top_children.append(orig[j - 1])
-                return (dec_left,) + tuple(top_children)
+                return RootedTree(dec_left, *top_children)
             # Recurse into subtrees
             new_children = tuple(
                 self._expand_vertex_nc(
@@ -816,25 +817,25 @@ class CobarConstruction(UniqueRepresentation):
                 else c
                 for c in children(tree)
             )
-            return (decoration(tree),) + new_children
+            return RootedTree(decoration(tree), *new_children)
 
         def _replace_vertex_decoration_by_index(
             self, tree, vertices: list, index: int, new_decoration: tuple
-        ) -> tuple:
+        ):
             """Replace the decoration of the index-th vertex (DFS order)."""
             target_vertex = vertices[index]
             return self._replace_decoration_rec(tree, target_vertex, new_decoration)
 
-        def _replace_decoration_rec(self, node, target: tuple, new_decoration: tuple):
+        def _replace_decoration_rec(self, node, target, new_decoration: tuple):
             """Recursively replace decoration of target vertex."""
             if is_leaf(node):
                 return node
             if node is target:
-                return (new_decoration,) + children(node)
+                return RootedTree(new_decoration, *children(node))
             new_children = tuple(
                 self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
-            return (decoration(node),) + new_children
+            return RootedTree(decoration(node), *new_children)
 
         @staticmethod
         def unit() -> "CobarConstruction.Element":

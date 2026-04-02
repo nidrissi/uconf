@@ -44,6 +44,7 @@ from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
+    RootedTree,
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
@@ -273,7 +274,7 @@ class BarConstruction(UniqueRepresentation):
                             leaf_order.extend(lo_ch)
 
                         total_coeff = dec_coeff * total_child_coeff
-                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        node_result = RootedTree(planar_dec_key, *new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
                 return results
@@ -455,7 +456,7 @@ class BarConstruction(UniqueRepresentation):
                         ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
-            if isinstance(x, tuple):
+            if isinstance(x, (tuple, RootedTree)):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
@@ -660,16 +661,16 @@ class BarConstruction(UniqueRepresentation):
             target_vertex = vertices[index]
             return self._replace_decoration_rec(tree, target_vertex, new_decoration)
 
-        def _replace_decoration_rec(self, node, target: tuple, new_decoration: tuple) -> tuple:
+        def _replace_decoration_rec(self, node, target, new_decoration: tuple):
             """Recursively replace decoration of target vertex."""
             if is_leaf(node):
                 return node
             if node is target:
-                return (new_decoration,) + children(node)
+                return RootedTree(new_decoration, *children(node))
             new_children = tuple(
                 self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
-            return (decoration(node),) + new_children
+            return RootedTree(decoration(node), *new_children)
 
         @staticmethod
         def counit(x: "BarConstruction.Element"):

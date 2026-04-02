@@ -18,6 +18,7 @@ from uconf import (
     SurjectionDual,
 )
 from uconf.core.trees import (
+    RootedTree,
     children,
     contract_edge,
     is_shuffle_tree,

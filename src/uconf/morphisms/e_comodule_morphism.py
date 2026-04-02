@@ -30,7 +30,7 @@ from uconf.core.cooperad import CooperadComponent, CooperadLike
 from uconf.core.morphism import OperadMorphism
 from uconf.core.signs import sign_from_exponent
 from uconf.core.quasi_planar import QuasiPlanarMixin
-from uconf.core.trees import children, decoration, is_leaf, vertex_arity
+from uconf.core.trees import RootedTree, children, decoration, is_leaf, vertex_arity
 from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
@@ -293,7 +293,7 @@ def make_e_comodule_morphism(
         be_component = BarrattEccles(k, base_ring)
         for (be_key, coop_key), t_coeff in root_tensor:
             # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
-            cobar_tree = (coop_key,) + tuple(range(1, k + 1))
+            cobar_tree = RootedTree(coop_key, *range(1, k + 1))
             cobar_elem = cobar_k(cobar_tree)
             # Koszul sign from commuting the BE element (degree |e|) past
             # the desuspension s⁻¹ (degree −1) in the inclusion ι: C ↪ Ω(C):
