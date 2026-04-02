@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from sage.all import cached_method
 
 from uconf.algebraic._util import _construct_possible_tensor
 from uconf.algebraic.algebra import OperadAlgebra
@@ -94,10 +95,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
     # Twisted differential
     # ------------------------------------------------------------------
 
+    @cached_method
     def _twisted_boundary_on_basis(self, key):
         """Total differential d = d_{T^c} + d_α."""
         return CofreeCoalgebraModule._boundary_on_basis(self, key) + self._dalpha_on_basis(key)
 
+    @cached_method
     def _dalpha_on_basis(self, key):
         r"""Twisting differential d_α (coderivation).
 

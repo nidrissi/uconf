@@ -398,6 +398,20 @@ class BarConstruction(UniqueRepresentation):
             return Family(self.planar_basis_iter(d))
 
         @cached_method
+        def _permute_on_basis(self, tree_key, sigma_tuple) -> "BarConstruction.Element":
+            """Return the element obtained by permuting leaf labels of *tree_key* by *sigma_tuple*.
+
+            Cached per ``(tree_key, sigma_tuple)`` pair so that permuting the
+            same tree by the same permutation is computed only once regardless
+            of how many orbit-sum computations share this tree.  The cache is
+            stored on the component (a :class:`UniqueRepresentation`) and
+            therefore persists for the lifetime of the process.
+            """
+            relabel_map = {j: sigma_tuple[j - 1] for j in range(1, self._arity + 1)}
+            new_tree = relabel_leaves(tree_key, relabel_map)
+            return self(new_tree)
+
+        @cached_method
         def _normalize_to_shuffle(self, tree):
             """Normalize a tree to shuffle form for the bar construction.
 
@@ -908,20 +922,15 @@ class BarConstruction(UniqueRepresentation):
         def permute(self, sigma) -> "BarConstruction.Element":
             """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
-            n = parent.arity()
 
             if isinstance(sigma, (list, tuple)):
-                sigma_values = list(sigma)
+                sigma_tuple = tuple(sigma)
             else:
-                sigma_values = list(sigma.tuple())
-
-            # Build relabeling: leaf j -> sigma(j)
-            relabel_map = {j: sigma_values[j - 1] for j in range(1, n + 1)}
+                sigma_tuple = sigma.tuple()
 
             result = parent.zero()
             for tree, coeff in self:
-                new_tree = relabel_leaves(tree, relabel_map)
-                result += coeff * parent(new_tree)
+                result += coeff * parent._permute_on_basis(tree, sigma_tuple)
             return result
 
         def counit(self):
