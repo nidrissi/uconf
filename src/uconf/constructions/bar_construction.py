@@ -253,7 +253,7 @@ class BarConstruction(UniqueRepresentation):
                 old_ch = children(node)
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    sigma_v_tuple = tuple(sigma_key)
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
                     # Recursively planarize each (reordered) child, combining
@@ -306,10 +306,9 @@ class BarConstruction(UniqueRepresentation):
                 if not hasattr(op_parent, "planarize"):
                     return False
                 planarized = op_parent.planarize(op_parent(dec))
-                Sk = SymmetricGroup(k)
-                identity_k = Sk.identity()
+                identity_tuple = tuple(range(1, k + 1))
                 for (_pl_dec, sigma_key), _coeff in planarized:
-                    if Sk(sigma_key) != identity_k:
+                    if tuple(sigma_key) != identity_tuple:
                         return False
             return True
 
@@ -472,6 +471,18 @@ class BarConstruction(UniqueRepresentation):
 
             raise ValueError(f"Invalid input for {self.name} element: {x!r}")
 
+        def _from_validated_tree(self, tree):
+            """Build element from a tree known to be structurally valid.
+
+            Skips ``_validate_basis_key`` but still normalises to shuffle form.
+            Used by internal boundary computations where trees are produced from
+            known-valid trees by replacing decorations.
+            """
+            R = self.base_ring()
+            return self.sum_of_terms(
+                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            )
+
         def arity(self) -> int:
             return self._arity
 
@@ -577,7 +588,7 @@ class BarConstruction(UniqueRepresentation):
                 for new_dec, coeff in bdry:
                     # Replace decoration of this vertex
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self(new_tree)
+                    result += sign * coeff * self._from_validated_tree(new_tree)
 
                 cumulative_degree += vertex_sp_degree
 
@@ -650,7 +661,7 @@ class BarConstruction(UniqueRepresentation):
                 # For each term in the composition, build the contracted tree
                 for new_dec, coeff in composed:
                     new_tree = contract_edge(tree, parent_vertex, child_pos, new_dec)
-                    result += total_sign * coeff * self(new_tree)
+                    result += total_sign * coeff * self._from_validated_tree(new_tree)
 
             return result
 

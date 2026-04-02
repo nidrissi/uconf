@@ -229,10 +229,12 @@ class HadamardProduct(UniqueRepresentation):
                 raise TypeError("Basis key must be a pair (left_basis, right_basis).")
             left_basis, right_basis = basis_key
 
-            if hasattr(self._left_parent, "_validate_basis_key"):
-                left_basis = self._left_parent._validate_basis_key(left_basis)
-            if hasattr(self._right_parent, "_validate_basis_key"):
-                right_basis = self._right_parent._validate_basis_key(right_basis)
+            left_validate = getattr(self._left_parent, "_validate_basis_key", None)
+            right_validate = getattr(self._right_parent, "_validate_basis_key", None)
+            if left_validate is not None:
+                left_basis = left_validate(left_basis)
+            if right_validate is not None:
+                right_basis = right_validate(right_basis)
 
             if left_basis is None or right_basis is None:
                 return None

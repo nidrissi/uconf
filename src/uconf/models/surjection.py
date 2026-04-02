@@ -87,7 +87,7 @@ class Surjection(CombinatorialFreeModule):
         if not isinstance(basis_tuple, (tuple, list)):
             raise TypeError(f"Basis key must be a tuple or list, got {type(basis_tuple)}")
 
-        clean_tuple = tuple(basis_tuple)
+        clean_tuple = tuple(basis_tuple) if not isinstance(basis_tuple, tuple) else basis_tuple
 
         for p in clean_tuple:
             if not isinstance(p, (int, Integer)):
