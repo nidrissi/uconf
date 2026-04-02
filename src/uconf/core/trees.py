@@ -86,7 +86,7 @@ class RootedTree:
         for c in children:
             if isinstance(c, RootedTree):
                 w += c._weight
-                lv |= c._leaves
+                lv.update(c._leaves)
                 cml = c._min_leaf
             else:
                 lv.add(c)
@@ -494,21 +494,28 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> RootedTree | Liter
         dec = node._decoration
         parent = operad_cls(v_arity, base_ring)
 
-        if hasattr(parent, "_validate_basis_key"):
-            clean_dec = parent._validate_basis_key(dec)
+        validate_fn = getattr(parent, "_validate_basis_key", None)
+        if validate_fn is not None:
+            clean_dec = validate_fn(dec)
             if clean_dec is None:
                 return None
         else:
             clean_dec = dec
 
-        # Validate children
+        # Validate children, tracking whether anything changed
+        changed = clean_dec is not dec
         new_children = []
         for child in node._children:
             validated = validate_vertex(child)
             if validated is None:
                 return None
+            if validated is not child:
+                changed = True
             new_children.append(validated)
 
+        # Avoid reconstructing the tree if nothing changed
+        if not changed:
+            return node
         return RootedTree(clean_dec, *new_children)
 
     return validate_vertex(tree)

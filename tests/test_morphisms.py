@@ -26,6 +26,7 @@ from uconf import (
     make_e_comodule_morphism,
 )
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
+from uconf.core.trees import RootedTree
 
 
 def _as_dict(x):
@@ -311,7 +312,7 @@ class TestEComoduleMorphism:
         BH2 = BH(2, QQ)
         for elem in BH2.planar_basis_iter(1):
             tree_key = list(elem.support())[0]
-            cobar_tree = (tree_key,) + tuple(range(1, 3))
+            cobar_tree = RootedTree(tree_key, *range(1, 3))
             cobar_elem = OBHn(cobar_tree)
             result = Delta(cobar_elem)
             assert result.parent() == target_n or result.parent().arity() == 2
@@ -340,7 +341,7 @@ class TestEComoduleMorphism:
         for elem in planar_elems[:2]:
             dec_key = list(elem.support())[0]
             # Build single-vertex cobar tree
-            cobar_tree = (dec_key,) + tuple(range(1, 3))
+            cobar_tree = RootedTree(dec_key, *range(1, 3))
             cobar_elem = OBH2(cobar_tree)
 
             # e_comodule_on_generator returns E(n) ⊗ C(n) (cooperad level).
@@ -356,7 +357,7 @@ class TestEComoduleMorphism:
             for tensor_basis, coeff in tensor_result:
                 be_key, coop_key = tensor_basis
                 # Embed cooperad key as single-vertex cobar tree
-                cobar_key_raw = (coop_key,) + tuple(range(1, 3))
+                cobar_key_raw = RootedTree(coop_key, *range(1, 3))
                 # Normalize the cobar tree key
                 cobar_normalized = OBH2(cobar_key_raw)
                 for ck, cc in cobar_normalized:

@@ -263,13 +263,13 @@ class CobarConstruction(UniqueRepresentation):
                 ]
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
-                    sigma_v = SymmetricGroup(k)(sigma_key)
-                    sigma_v_tuple = sigma_v.tuple()
+                    sigma_v_tuple = tuple(sigma_key)
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
                     # Koszul sign from permuting children of cobar-degrees
                     # d_1, …, d_k by sigma_v.
-                    if sigma_v != SymmetricGroup(k).identity():
+                    identity_tuple = tuple(range(1, k + 1))
+                    if sigma_v_tuple != identity_tuple:
                         perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
                         reorder_sign = koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
                     else:
@@ -415,6 +415,16 @@ class CobarConstruction(UniqueRepresentation):
 
             return super()._element_constructor_(x)
 
+        def _from_validated_tree(self, tree):
+            """Build element from a tree known to be structurally valid.
+
+            Skips ``_validate_basis_key`` but still normalises to shuffle form.
+            """
+            R = self.base_ring()
+            return self.sum_of_terms(
+                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            )
+
         def arity(self) -> int:
             return self._arity
 
@@ -553,7 +563,7 @@ class CobarConstruction(UniqueRepresentation):
 
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self(new_tree)
+                    result += sign * coeff * self._from_validated_tree(new_tree)
 
                 cumulative_degree += vertex_sinv_degree
 
@@ -679,7 +689,7 @@ class CobarConstruction(UniqueRepresentation):
                         total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
 
                         new_tree = expand_vertex(tree, curr_vertex, i, dec_left, dec_right, m, n)
-                        result += total_sign * coeff * self(new_tree)
+                        result += total_sign * coeff * self._from_validated_tree(new_tree)
 
         def _d2_all_splits(
             self,
@@ -738,7 +748,7 @@ class CobarConstruction(UniqueRepresentation):
                     dec_left,
                     dec_right,
                 )
-                result += total_sign * coop_sign * self(new_tree)
+                result += total_sign * coop_sign * self._from_validated_tree(new_tree)
 
         def _gathering_exponent(self, child_positions, orig_children, base_ring):
             """Koszul sign exponent from gathering non-contiguous children.
