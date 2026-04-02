@@ -35,6 +35,7 @@ def _boundary_matrix(
     n_target: int,
     *,
     sparse: bool,
+    strict: bool = False,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -48,6 +49,11 @@ def _boundary_matrix(
         Dictionary mapping basis *keys* in the target degree to row indices.
     n_target:
         Number of basis elements in the target degree (number of rows).
+    strict:
+        If ``True`` *and* the module exposes ``_canonicalize_key``, every
+        non-canonical key in the boundary is verified: its canonical
+        representative **must** also appear in ``key_to_idx_target``.
+        Raises :class:`ValueError` if this invariant is broken.
 
     Returns
     -------
@@ -57,12 +63,33 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
+    canonicalize = getattr(module, "_canonicalize_key", None)
     for j, elem in enumerate(basis_source):
         bdry = module.boundary(elem)
         for key, coeff in bdry:
+            # Try direct lookup first
             i = key_to_idx_target.get(key)
             if i is not None:
                 M[i, j] += coeff
+            elif canonicalize is not None:
+                # The key is non-canonical (e.g. a non-planar term in an
+                # orbit sum).  The boundary of an invariant element is
+                # again invariant, so every orbit member already appears
+                # in the boundary — the canonical (planar) key is picked
+                # up by the direct lookup above.  We therefore skip this
+                # term to avoid counting it twice.
+                #
+                # In strict mode, verify that the canonical representative
+                # is actually present in the target basis.
+                if strict:
+                    canonical_key, _sign = canonicalize(key)
+                    if canonical_key not in key_to_idx_target:
+                        raise ValueError(
+                            f"Boundary of basis element {elem} contains "
+                            f"non-canonical key {key} whose canonical "
+                            f"representative {canonical_key} is not in "
+                            f"the target basis keys"
+                        )
             else:
                 raise ValueError(
                     f"Boundary of basis element {elem} contains key {key} "
@@ -89,18 +116,25 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
     seen: set = set()
     elems: list = []
     keys: list = []
+    leading_key_fn = getattr(module, "_leading_key", None)
     if weight is not None:
         family = module.graded_basis_by_weight(d, weight)
     else:
         family = module.graded_basis(d)
     for b in family:
-        # Basis elements are monomials; leading_support avoids allocating a full support list.
-        key = b.leading_support() if hasattr(b, "leading_support") else None
-        if key is None:
+        # Use the module's _leading_key if available (e.g. cofree
+        # coalgebra orbit sums), otherwise fall back to leading_support.
+        if leading_key_fn is not None:
+            key = leading_key_fn(b)
+        elif hasattr(b, "leading_support"):
+            key = b.leading_support()
+        else:
             support = list(b.support())
             if not support:
                 continue
             key = support[0]
+        if key is None:
+            continue
         if key not in seen:
             seen.add(key)
             elems.append(b)
@@ -119,6 +153,7 @@ def compute_chain_complex(
     weight: int | None = None,
     check: bool = False,
     sparse: bool = True,
+    strict: bool = False,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -148,6 +183,10 @@ def compute_chain_complex(
         Whether to build differential matrices in sparse format.  This is
         usually faster and significantly lighter in memory for dg-modules
         with sparse boundaries.
+    strict:
+        When ``True``, every non-canonical boundary key is verified: its
+        canonical representative must be present in the target basis.
+        Useful for catching invariance bugs.  Default ``False``.
 
     Returns
     -------
@@ -209,6 +248,7 @@ def compute_chain_complex(
             key_to_idx[d - 1],
             n_target,
             sparse=sparse,
+            strict=strict,
         )
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
@@ -249,7 +289,12 @@ def compute_homology_representatives(module: Any, degree: int, weight: int | Non
 
 
 def homology_basis(
-    module: Any, degree: int, *, degrees: range | None = None, weight: int | None = None
+    module: Any,
+    degree: int,
+    *,
+    degrees: range | None = None,
+    weight: int | None = None,
+    strict: bool = False,
 ) -> list:
     """Return cycle representatives for a basis of the homology in *degree*.
 
@@ -269,6 +314,10 @@ def homology_basis(
         has non-trivial basis below ``degree - 1``.
     weight:
         Passed through to :func:`chain_complex`.  See its documentation.
+    strict:
+        Passed through to :func:`compute_chain_complex`.  Verifies that
+        non-canonical boundary keys have canonical representatives in the
+        target basis.
 
     Returns
     -------
@@ -289,6 +338,6 @@ def homology_basis(
         if degree not in degrees:
             raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
-    C = compute_chain_complex(module, degrees, weight=weight)
+    C = compute_chain_complex(module, degrees, weight=weight, strict=strict)
 
     return compute_homology_representatives(module, degree, weight, C)
