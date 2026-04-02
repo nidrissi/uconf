@@ -66,6 +66,22 @@ class QuasiPlanarMixin(__quasi_planar_base):
     decomposition ``P(n) = P_pl(n) ⊗ k[S_n]``.
     """
 
+    def is_planar_key(self, key: Any) -> bool:
+        """Return ``True`` if ``key`` is a planar basis key.
+
+        A key is planar when ``planarize(term(key))`` yields only the
+        identity permutation factor.
+        """
+        from sage.all import SymmetricGroup
+
+        n = self.arity()
+        S_n = SymmetricGroup(n)
+        planarized = self.planarize(self.term(key))
+        for (_c_key, sigma_key), coeff in planarized:
+            if coeff != 0 and S_n(sigma_key) != S_n.identity():
+                return False
+        return True
+
     def d_sigma(self, x: Any, sigma: Any) -> Any:
         """Return the ``sigma``-component of ``boundary(x)``.
 

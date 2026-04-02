@@ -2,22 +2,26 @@
 
 The cofree conilpotent C-coalgebra on a dg-module M is
 
-    T^c_C(M) = \u2295_{n\u22651} C(n) \u2297_{S_n} M^{\u2297n}
+    T^c_C(M) = \u2295_{n\u22651} C(n) \u2297 M^{\u2297n}
 
 with:
 - Degree: deg(c_key, m_tuple) = deg_C(c_key) + \u03a3_i deg_M(m_i).
 - Differential d = d_C + d_M from the Koszul sign rule (Leibniz rule).
 - C-coalgebra costructure: the infinitesimal cocomposition \u0394^{i;m,n} applies
-  the cooperad\'s cocomposition to the C-decoration and splits the M-labels.
-
-**Quasi-planar requirement**: C must be a quasi-planar cooperad, i.e. each
-component ``C(n)`` exposes a ``planarize`` linear map.  Non-planar C-keys are
-normalised by permuting m_tuple accordingly.
+  the cooperad's cocomposition to the C-decoration and splits the M-labels.
 
 The basis keys are pairs ``(c_key, m_tuple)`` where:
 
-- ``c_key`` is a **planar** basis key of ``C(n)`` for ``n = len(m_tuple) >= 1``.
+- ``c_key`` is an **arbitrary** basis key of ``C(n)`` for ``n = len(m_tuple) >= 1``.
 - ``m_tuple`` is a tuple of ``n`` values.
+
+.. note::
+   The underlying module uses the full tensor product ``C(n) \u2297 M^{\u2297n}``
+   rather than the coinvariant quotient ``C(n) \u2297_{S_n} M^{\u2297n}``.
+   For quasi-planar cooperads (free S_n-action), elements arising from the
+   differential are naturally S_n-invariant, so this correctly computes
+   the invariant homology ``H_*(C(n) \u2297^{S_n} M^{\u2297n})`` in any
+   characteristic.
 
 The coprojection pi: T^c_C(M) -> M kills all elements with n >= 2 and maps
 ``(id_key, (m,)) |-> m``.
@@ -56,13 +60,17 @@ from uconf.core.vertex_decoration import QuasiPlanarLike
 class CofreeCoalgebraModule(CombinatorialFreeModule):
     """Underlying dg-module of the cofree conilpotent C-coalgebra ``T^c_C(M)``.
 
-    Basis keys are ``(c_key, m_tuple)`` pairs where ``c_key`` is a **planar**
-    basis key of ``C(n)`` and ``m_tuple`` has length ``n``.  The differential
-    is the Leibniz rule ``d = d_C + d_M`` with Koszul signs.  Non-planar keys
-    are automatically normalised via ``planarize`` (permuting the m_tuple).
+    Basis keys are ``(c_key, m_tuple)`` pairs where ``c_key`` is any basis
+    key of ``C(n)`` (planar **or** non-planar) and ``m_tuple`` has length
+    ``n``.
 
-    The cooperad ``C`` must be quasi-planar: each component ``C(n)`` must
-    expose a ``planarize`` linear map.
+    Unlike a coinvariant representation, keys are stored as-is: no
+    identification ``(c·σ, m) ~ (c, σ·m)`` is applied.  This preserves
+    S_n-invariant elements faithfully in every characteristic.
+
+    The cooperad ``C`` must be quasi-planar (free S_n-action) so that
+    ``basis_iter`` produces a finite, non-redundant enumeration via the
+    shuffle / full basis of each component.
 
     This class is normally not instantiated directly; use
     :class:`CofreeConilpotentCoalgebra` instead.
@@ -197,22 +205,14 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    c_key_raw, m_tuple_raw = k
-                    n = len(m_tuple_raw)
-                    comp = self._cooperad_cls(n, self.base_ring())
-                    result += coeff * self._normalized_corolla_sum(
-                        comp.term(c_key_raw), m_tuple_raw
-                    )
+                    result += coeff * self.term(k)
             return result
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             k = self._validate_basis_key(x)
             if k is None:
                 return self.zero()
-            c_key_raw, m_tuple_raw = k
-            n = len(m_tuple_raw)
-            comp = self._cooperad_cls(n, self.base_ring())
-            return self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
+            return self.term(k)
 
         raise TypeError(
             f"Cannot construct element from {x!r}. Expected a dict of basis keys to coefficients, or a single basis key tuple (c_key, m_tuple)."
@@ -308,8 +308,8 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     def basis_iter(self, d: int) -> Iterator[Any]:
         """Iterate over basis elements of total degree ``d``.
 
-        Uses the isomorphism ``C(n) x_{S_n} M^{xn} ~= C_pl(n) x M^{xn}``
-        and enumerates only planar C(n)-decorations.
+        Enumerates all C(n)-decorations (not just planar ones) paired
+        with all M-tuples of the correct total degree.
 
         Raises:
             ValueError: when arity is unbounded.
@@ -370,7 +370,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.planar_basis_iter(d_c))
+                c_elems = list(comp_n.basis_iter(d_c))
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
@@ -439,7 +439,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.planar_basis_iter(d_c))
+                c_elems = list(comp_n.basis_iter(d_c))
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w))
@@ -477,11 +477,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     """Cofree conilpotent C-coalgebra on a dg-module M.
 
-    Constructs ``T^c_C(M) = sum_{n>=1} C(n) x_{S_n} M^{xn}`` as a
+    Constructs ``T^c_C(M) = sum_{n>=1} C(n) x M^{xn}`` as a
     :class:`CofreeCoalgebraModule` and equips it with the canonical
     C-coalgebra coaction.
-
-    **Quasi-planar requirement**: C must be quasi-planar.
 
     Args:
         cooperad_cls: Quasi-planar cooperad provider C.
@@ -557,7 +555,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
           right subtree occupying positions i..i+n-1.
         - Right factor (arity n): ``(c_R_key, (mu_i,...,mu_{i+n-1}))``
 
-        Both factors are normalised via planarize.
+        Both factors are constructed directly (no coinvariant planarization).
 
         Args:
             x: An element of the cofree module.
@@ -595,11 +593,8 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
             right_m = m_tuple[i - 1 : i + n - 1]
 
             for (c_L_key, c_R_key), tensor_coeff in cocomp:
-                # Normalise each factor via planarize
-                left_comp = self.cooperad_cls(m, base_ring)
-                right_comp = self.cooperad_cls(n, base_ring)
-                left_elem = cofree_mod._normalized_corolla_sum(left_comp(c_L_key), left_m)
-                right_elem = cofree_mod._normalized_corolla_sum(right_comp(c_R_key), right_m)
+                left_elem = cofree_mod((c_L_key, left_m))
+                right_elem = cofree_mod((c_R_key, right_m))
                 result += coeff * tensor_coeff * left_elem.tensor(right_elem)
 
         return result
