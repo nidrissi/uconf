@@ -30,6 +30,8 @@ from __future__ import annotations
 from functools import total_ordering
 from typing import Any, Callable, Iterator, Literal
 
+from itertools import combinations, product as iter_product
+
 from uconf.core.signs import koszul_sign_of_permutation
 
 
@@ -860,7 +862,6 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
 
     # Recursively normalize children first.
     # Each child may expand into multiple terms.
-    from itertools import product as iter_product
 
     child_term_lists: list[list[tuple]] = []
     for c in kids:
@@ -877,8 +878,18 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
         for item in combo:
             child_coeff *= item[1]
 
-        # Compute min leaf and bar-degree for each normalized child (O(1) each)
+        # Compute min leaf for each child (O(1) via cached _min_leaf)
         min_leaves = [min_leaf(c) for c in normalized_kids]
+
+        # Check if children are already sorted by min leaf
+        already_sorted = all(min_leaves[i] < min_leaves[i + 1] for i in range(k - 1))
+
+        if already_sorted:
+            new_tree = RootedTree(dec, *normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
+
+        # Children need reordering — now compute bar-degrees for Koszul sign
         bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
 
         # Sort children by min leaf
@@ -886,11 +897,6 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
         indexed.sort(key=lambda x: x[0])
 
         perm = [item[1] for item in indexed]
-
-        if perm == list(range(k)):
-            new_tree = RootedTree(dec, *normalized_kids)
-            results.append((new_tree, child_coeff))
-            continue
 
         koszul_sign = koszul_sign_of_permutation(perm, bar_degrees)
 
@@ -1327,8 +1333,6 @@ def _consecutive_parts_iter(leaf_range: tuple, k: int) -> Iterator[list[tuple]]:
     Yields:
         Lists of *k* consecutive sub-tuples that together cover *leaf_range*.
     """
-    from itertools import combinations
-
     n = len(leaf_range)
     if k <= 0 or k > n:
         return
@@ -1669,7 +1673,6 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     k = len(kids)
 
     # Recursively normalize children first.
-    from itertools import product as iter_product
 
     child_term_lists: list[list[tuple]] = []
     for c in kids:
@@ -1686,17 +1689,22 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
             child_coeff *= item[1]
 
         min_leaves = [min_leaf(c) for c in normalized_kids]
+
+        # Check if children are already sorted by min leaf
+        already_sorted = all(min_leaves[i] < min_leaves[i + 1] for i in range(k - 1))
+
+        if already_sorted:
+            new_tree = RootedTree(dec, *normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
+
+        # Children need reordering — now compute cobar-degrees for Koszul sign
         cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
 
         indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
         indexed.sort(key=lambda x: x[0])
 
         perm = [item[1] for item in indexed]
-
-        if perm == list(range(k)):
-            new_tree = RootedTree(dec, *normalized_kids)
-            results.append((new_tree, child_coeff))
-            continue
 
         koszul_sign = koszul_sign_of_permutation(perm, cobar_degrees)
 
