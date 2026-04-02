@@ -915,7 +915,7 @@ class CobarConstruction(UniqueRepresentation):
                     new_tree = relabel_leaves(tree, relabel_map)
                 # Use parent(new_tree) so that shuffle normalization
                 # is applied — the relabeled tree may be out of order.
-                result += coeff * parent(new_tree)
+                result += coeff * parent._from_validated_tree(new_tree)
             return result
 
 
