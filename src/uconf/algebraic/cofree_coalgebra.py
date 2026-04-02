@@ -199,24 +199,26 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             return self.term((c_pl_key, m_tuple))
 
         comp = self._cooperad_cls(n, self.base_ring())
-        S_n = SymmetricGroup(n)
         M = self._inner_module
 
         c_pl_elem = comp.term(c_pl_key)
         result = self.zero()
+        identity_tuple = tuple(range(1, n + 1))
+        # Pre-compute degrees once
+        degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
 
         for sigma in _Sn_elements(n):
             # c_pl · σ — permuted cooperad element (may carry its own sign)
             c_sigma = c_pl_elem.permute(sigma)
 
-            # σ⁻¹ · m_tuple
+            # σ⁻¹ · m_tuple — use tuple() to avoid repeated sigma_inv(i) calls
             sigma_inv = sigma.inverse()
-            permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
+            sigma_inv_tuple = sigma_inv.tuple()
+            permuted_m = tuple(m_tuple[sigma_inv_tuple[i] - 1] for i in range(n))
 
             # Koszul sign from permuting graded module elements by σ⁻¹
-            if sigma != S_n.identity():
-                perm_0idx = [sigma_inv(i) - 1 for i in range(1, n + 1)]
-                degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+            if sigma_inv_tuple != identity_tuple:
+                perm_0idx = [s - 1 for s in sigma_inv_tuple]
                 koszul = koszul_sign_of_permutation(perm_0idx, degrees)
             else:
                 koszul = 1

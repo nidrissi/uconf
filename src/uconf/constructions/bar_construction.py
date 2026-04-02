@@ -409,7 +409,7 @@ class BarConstruction(UniqueRepresentation):
             """
             relabel_map = {j: sigma_tuple[j - 1] for j in range(1, self._arity + 1)}
             new_tree = relabel_leaves(tree_key, relabel_map)
-            return self(new_tree)
+            return self._from_validated_tree(new_tree)
 
         @cached_method
         def _normalize_to_shuffle(self, tree):
