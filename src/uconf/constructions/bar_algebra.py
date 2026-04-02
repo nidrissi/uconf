@@ -7,7 +7,7 @@ construction is the cofree conilpotent C-coalgebra
 
 where:
 
-- ``T^c_C(A) = ⊕_{n≥1} C(n) ⊗_{S_n} A^{⊗n}`` is the cofree conilpotent
+- ``T^c_C(A) = ⊕_{n≥1} C(n) ⊗ A^{⊗n}`` is the cofree conilpotent
   C-coalgebra on A (see :mod:`uconf.algebraic.cofree_coalgebra`).
 - ``d_{T^c} = d_C + d_A`` is the Leibniz differential on the cofree
   coalgebra (Koszul sign rule).
@@ -51,7 +51,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
     Extends :class:`CofreeCoalgebraModule` with the twisting differential
     d_α.  Basis keys are ``(c_key, m_tuple)`` pairs inherited from the cofree
-    coalgebra, where ``c_key ∈ C(n)_planar`` and ``m_tuple`` has length ``n``.
+    coalgebra, where ``c_key ∈ C(n)`` and ``m_tuple`` has length ``n``.
 
     The total differential is ``d = d_{T^c} + d_α`` where ``d_{T^c}`` is
     the cofree-coalgebra Leibniz differential and ``d_α`` contracts corollas
