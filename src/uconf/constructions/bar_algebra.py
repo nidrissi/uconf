@@ -184,13 +184,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         """Apply only the twisting differential d_α."""
         return self._d_alpha(elem)
 
-    # Representation
-    def _repr_term(self, basis_element) -> str:
-        return super()._repr_term(basis_element) + "_B"
-
-    def _latex_term(self, basis_element) -> str:
-        return super()._latex_term(basis_element) + "_B"
-
     # ------------------------------------------------------------------
     # Element class
     # ------------------------------------------------------------------
