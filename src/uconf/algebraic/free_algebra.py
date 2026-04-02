@@ -382,7 +382,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_p
                 if d_m_needed < 0:
                     continue
-                p_elems = list(comp_n.planar_basis_iter(d_p))
+                p_elems = list(
+                    getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_p)
+                )
                 if not p_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
@@ -459,7 +461,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             d_m_needed = d - d_p
             if d_m_needed < 0:
                 continue
-            p_elems = list(comp_n.planar_basis_iter(d_p))
+            p_elems = list(getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_p))
             if not p_elems:
                 continue
             m_tuples = list(_tuples_in_degree(m_keys_by_deg, w, d_m_needed))

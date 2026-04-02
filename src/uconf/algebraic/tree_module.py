@@ -108,10 +108,17 @@ def _inner_weight_on_key(module, m_key) -> int:
 def _module_basis_keys_in_weight_and_degree(module, d: int, w: int) -> Iterator:
     """Yield all basis keys of ``module`` in degree ``d`` and weight ``w``.
 
-    If ``module`` exposes ``basis_weight_iter``, it is used directly.
-    Otherwise every key is assigned weight 1 and only ``w == 1`` returns
-    any keys (those in degree ``d``).
+    Prefers ``graded_basis_by_weight`` (cached) over ``basis_weight_iter``
+    (uncached generator) so that repeated calls with the same ``(d, w)``
+    pair reuse already-computed results.  Falls back to ``basis_weight_iter``
+    when ``graded_basis_by_weight`` is not available, and to the weight-1
+    default for plain dg-modules.
     """
+    cached_fn = getattr(module, "graded_basis_by_weight", None)
+    if cached_fn is not None:
+        for elem in cached_fn(d, w):
+            yield from elem.support()
+        return
     basis_w_fn = getattr(module, "basis_weight_iter", None)
     if basis_w_fn is not None:
         for elem in basis_w_fn(d, w):

@@ -26,7 +26,7 @@ from __future__ import annotations
 import itertools
 from typing import Iterator
 
-from sage.all import tensor
+from sage.all import cached_method, tensor
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import (
@@ -229,6 +229,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                     for right_key in right_keys:
                         yield tensor((self.left_module(left_key), self.right_module(right_key)))
 
+    @cached_method
     def graded_basis_by_weight(self, d: int, w: int):
         """Family of basis elements of degree ``d`` and weight ``w``."""
         from sage.all import Family

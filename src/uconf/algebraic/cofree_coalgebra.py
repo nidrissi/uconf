@@ -38,6 +38,7 @@ from sage.all import (
     Family,
     GradedModulesWithBasis,
     SymmetricGroup,
+    cached_function,
     cached_method,
     tensor,
 )
@@ -55,6 +56,14 @@ from uconf.core.display import latex_linear_combination
 from uconf.core.signs import sign_from_exponent
 from uconf.core.signs import koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
+
+
+@cached_function
+def _Sn_elements(n: int) -> list:
+    """Return all elements of ``S_n`` in a fixed order, cached to avoid
+    re-running GAP's ``strong_generating_system`` on each basis enumeration.
+    """
+    return list(SymmetricGroup(n))
 
 
 class CofreeCoalgebraModule(CombinatorialFreeModule):
@@ -168,6 +177,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # Invariant orbit sum
     # ------------------------------------------------------------------
 
+    @cached_method
     def _invariant_orbit_sum(self, c_pl_key, m_tuple) -> "CofreeCoalgebraModule.Element":
         r"""Build the S_n-orbit sum (invariant element) for a planar key.
 
@@ -194,7 +204,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         c_pl_elem = comp.term(c_pl_key)
         result = self.zero()
 
-        for sigma in S_n:
+        for sigma in _Sn_elements(n):
             # c_pl · σ — permuted cooperad element (may carry its own sign)
             c_sigma = c_pl_elem.permute(sigma)
 
@@ -400,6 +410,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # Differential
     # ------------------------------------------------------------------
 
+    @cached_method
     def _boundary_on_basis(self, key) -> Any:
         r"""Leibniz rule: d(c ⊗ m_1 ⊗ … ⊗ m_n) = d_C(c) ⊗ m_… + Σ_i (−1)^{…} c ⊗ … ⊗ d_M(m_i) ⊗ ….
 
@@ -501,7 +512,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.planar_basis_iter(d_c))
+                c_elems = list(
+                    getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_c)
+                )
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
@@ -571,7 +584,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.planar_basis_iter(d_c))
+                c_elems = list(
+                    getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_c)
+                )
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w))
