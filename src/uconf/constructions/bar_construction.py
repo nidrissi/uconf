@@ -385,9 +385,7 @@ class BarConstruction(UniqueRepresentation):
                 yield self(tree)
 
         def _validate_basis_key(self, basis_key):
-            """Validate a tree basis key, auto-converting tuples to RootedTree."""
-            if isinstance(basis_key, tuple):
-                basis_key = RootedTree.from_tuple(basis_key)
+            """Validate a tree basis key."""
             return validate_tree(basis_key, self._arity, self._operad_cls, self.base_ring())
 
         @cached_method
@@ -458,7 +456,7 @@ class BarConstruction(UniqueRepresentation):
                         ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
-            if isinstance(x, (tuple, RootedTree)):
+            if isinstance(x, RootedTree):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()

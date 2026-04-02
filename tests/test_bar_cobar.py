@@ -47,55 +47,55 @@ class TestTrees:
     def test_is_leaf(self):
         assert is_leaf(1)
         assert is_leaf(3)
-        assert not is_leaf(((1, 2), 1, 2))
+        assert not is_leaf(RootedTree((1, 2), 1, 2))
 
     def test_is_internal(self):
-        tree = ((1, 2), 1, 2)  # Lie arity-3 tree
+        tree = RootedTree((1, 2), 1, 2)  # Lie arity-3 tree
         assert is_internal(tree)
         assert not is_internal(1)
 
     def test_decoration(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert decoration(tree) == (1, 2)
 
     def test_children(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert children(tree) == (1, 2)
 
     def test_vertex_arity(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert vertex_arity(tree) == 2
 
-        tree3 = ((1, 2), 1, 2, 3)
+        tree3 = RootedTree((1, 2), 1, 2, 3)
         assert vertex_arity(tree3) == 3
 
     def test_leaves(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert leaves(tree) == {1, 2}
 
-        nested = ((2, 1), ((1,), 1, 2), 3)
+        nested = RootedTree((2, 1), RootedTree((1,), 1, 2), 3)
         assert leaves(nested) == {1, 2, 3}
 
     def test_weight(self):
         assert weight(1) == 0
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert weight(tree) == 1
 
-        nested = ((2, 1), ((1,), 1, 2), 3)
+        nested = RootedTree((2, 1), RootedTree((1,), 1, 2), 3)
         assert weight(nested) == 2
 
     def test_tree_arity(self):
         assert tree_arity(1) == 1
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert tree_arity(tree) == 2
 
     def test_vertices_dfs(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         verts = vertices_dfs(tree)
         assert len(verts) == 1
         assert verts[0] is tree
 
-        nested = ((2, 1), ((1,), 1, 2), 3)
+        nested = RootedTree((2, 1), RootedTree((1,), 1, 2), 3)
         verts = vertices_dfs(nested)
         assert len(verts) == 2
         # DFS order: root first, then child
@@ -103,10 +103,10 @@ class TestTrees:
         assert decoration(verts[1]) == (1,)
 
     def test_internal_edges(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert internal_edges_dfs(tree) == []
 
-        nested = ((2, 1), ((1,), 1, 2), 3)
+        nested = RootedTree((2, 1), RootedTree((1,), 1, 2), 3)
         edges = internal_edges_dfs(nested)
         assert len(edges) == 1
         parent, pos, child = edges[0]
@@ -115,15 +115,15 @@ class TestTrees:
         assert decoration(child) == (1,)
 
     def test_relabel_leaves(self):
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         relabeled = relabel_leaves(tree, {1: 3, 2: 4})
         assert leaves(relabeled) == {3, 4}
         assert decoration(relabeled) == (1, 2)
 
     def test_graft(self):
         # Graft a leaf onto another tree
-        tree_top = ((1, 2), 1, 2)  # leaves {1, 2}
-        tree_bot = ((1,), 1, 2)  # leaves {1, 2}
+        tree_top = RootedTree((1, 2), 1, 2)  # leaves {1, 2}
+        tree_bot = RootedTree((1,), 1, 2)  # leaves {1, 2}
 
         # Graft tree_bot onto leaf 1 of tree_top
         grafted = graft(tree_top, 1, tree_bot)
@@ -134,12 +134,12 @@ class TestTrees:
         from sage.all import QQ
 
         # Valid Lie tree in arity 3
-        tree = ((1, 2), 1, 2, 3)  # root has arity 3, decoration (1, 2)
+        tree = RootedTree((1, 2), 1, 2, 3)  # root has arity 3, decoration (1, 2)
         validated = validate_tree(tree, 3, Lie, QQ)
         assert validated is not None
 
         # Invalid: wrong leaves
-        bad_tree = ((1, 2), 1, 2, 4)
+        bad_tree = RootedTree((1, 2), 1, 2, 4)
         with pytest.raises(ValueError, match="Invalid leaves"):
             validate_tree(bad_tree, 3, Lie, QQ)
 
@@ -150,7 +150,7 @@ def test_bar_cobar_accept_nested_operad_providers() -> None:
 
     bar = BarConstruction(surj_shifted_lie)
     b3 = bar(3, QQ)
-    tree = (((1, 2, 3), (1, 2)), 1, 2, 3)
+    tree = RootedTree(((1, 2, 3), (1, 2)), 1, 2, 3)
 
     assert b3(tree) != b3.zero()
 
@@ -165,10 +165,10 @@ class TestShuffleTrees:
         """Test min_leaf correctly finds minimum leaf in a tree."""
         assert min_leaf(1) == 1
         assert min_leaf(3) == 3
-        assert min_leaf(((), 1, 2)) == 1
-        assert min_leaf(((), 2, 1)) == 1
+        assert min_leaf(RootedTree((), 1, 2)) == 1
+        assert min_leaf(RootedTree((), 2, 1)) == 1
         # Nested tree: (((), 3, 4), 1, 2) has min leaf 1
-        assert min_leaf((((), ((), 3, 4), 2), 1)) == 1
+        assert min_leaf(RootedTree(((), RootedTree((), 3, 4), 2), 1)) == 1
 
     def test_is_shuffle_tree(self):
         """Test is_shuffle_tree correctly identifies shuffle trees."""
@@ -176,20 +176,20 @@ class TestShuffleTrees:
         assert is_shuffle_tree(1)
 
         # Shuffle: children sorted by min leaf
-        assert is_shuffle_tree(((), 1, 2))
-        assert is_shuffle_tree(((), 1, 2, 3))
+        assert is_shuffle_tree(RootedTree((), 1, 2))
+        assert is_shuffle_tree(RootedTree((), 1, 2, 3))
 
         # NOT shuffle: children not sorted
-        assert not is_shuffle_tree(((), 2, 1))
-        assert not is_shuffle_tree(((), 3, 1, 2))
-        assert not is_shuffle_tree(((), 1, 3, 2))
+        assert not is_shuffle_tree(RootedTree((), 2, 1))
+        assert not is_shuffle_tree(RootedTree((), 3, 1, 2))
+        assert not is_shuffle_tree(RootedTree((), 1, 3, 2))
 
         # Nested shuffle tree
-        nested_shuffle = ((), ((), 1, 2), 3)
+        nested_shuffle = RootedTree((), RootedTree((), 1, 2), 3)
         assert is_shuffle_tree(nested_shuffle)
 
         # Nested non-shuffle: inner tree is not shuffle
-        nested_non_shuffle = ((), ((), 2, 1), 3)
+        nested_non_shuffle = RootedTree((), RootedTree((), 2, 1), 3)
         assert not is_shuffle_tree(nested_non_shuffle)
 
     def test_to_shuffle_tree_bar_commutative(self):
@@ -197,7 +197,7 @@ class TestShuffleTrees:
         # For Commutative, permuting children has no effect on decoration
         # ((), 2, 1) should normalize to ((), 1, 2) with sign
 
-        tree = ((), 2, 1)
+        tree = RootedTree((), 2, 1)
         terms = to_shuffle_tree_bar(tree, Commutative, QQ)
 
         # For Commutative, single term expected
@@ -206,7 +206,7 @@ class TestShuffleTrees:
 
         # Should be sorted
         assert is_shuffle_tree(shuffle)
-        assert shuffle == ((), 1, 2)
+        assert shuffle == RootedTree((), 1, 2)
 
         # For Com with degree 0 decorations and weight-1 trees,
         # the Koszul sign is (-1)^{0*0} = 1
@@ -220,7 +220,7 @@ class TestShuffleTrees:
         # Min leaves: child 1 has min 3, child 2 has min 1
         # Should swap children to get ((), ((), 1, 2), ((), 3, 4))
 
-        tree = ((), ((), 3, 4), ((), 1, 2))
+        tree = RootedTree((), RootedTree((), 3, 4), RootedTree((), 1, 2))
         terms = to_shuffle_tree_bar(tree, Commutative, QQ)
 
         # For Commutative, single term expected
@@ -229,8 +229,8 @@ class TestShuffleTrees:
 
         assert is_shuffle_tree(shuffle)
         # Children should be swapped: first child has min 1, second has min 3
-        assert min_leaf(shuffle[1]) == 1
-        assert min_leaf(shuffle[2]) == 3
+        assert min_leaf(children(shuffle)[0]) == 1
+        assert min_leaf(children(shuffle)[1]) == 3
 
     def test_bar_commutative_shuffle_normalization(self):
         """Test that BarConstruction normalizes trees to shuffle form."""
@@ -238,8 +238,8 @@ class TestShuffleTrees:
         B2 = BCom(2, QQ)
 
         # These two trees should be equal after normalization
-        tree1 = ((), 1, 2)
-        tree2 = ((), 2, 1)
+        tree1 = RootedTree((), 1, 2)
+        tree2 = RootedTree((), 2, 1)
 
         elem1 = B2(tree1)
         elem2 = B2(tree2)
@@ -254,14 +254,14 @@ class TestShuffleTrees:
         B2 = BCom(2, QQ)
 
         # The only shuffle tree in arity 2 with weight 1 is ((), 1, 2)
-        shuffle_tree = ((), 1, 2)
+        shuffle_tree = RootedTree((), 1, 2)
         elem = B2(shuffle_tree)
 
         # Verify it's non-zero
         assert elem != B2.zero()
 
         # The non-shuffle version should give the same element
-        non_shuffle_tree = ((), 2, 1)
+        non_shuffle_tree = RootedTree((), 2, 1)
         elem2 = B2(non_shuffle_tree)
         assert elem == elem2
 
@@ -272,8 +272,8 @@ class TestShuffleTrees:
 
         # Lie(2, QQ) has basis key (1,) which is skew-symmetric
         # Permuting by (12) gives a sign of -1
-        tree1 = ((1,), 1, 2)
-        tree2 = ((1,), 2, 1)
+        tree1 = RootedTree((1,), 1, 2)
+        tree2 = RootedTree((1,), 2, 1)
 
         elem1 = B2(tree1)
         elem2 = B2(tree2)
@@ -317,7 +317,7 @@ class TestBarConstructionLie:
         """Test that counit is zero for arity != 1."""
         BLie = BarConstruction(Lie)
         B2 = BLie(2, QQ)
-        tree = ((1,), 1, 2)
+        tree = RootedTree((1,), 1, 2)
         elem = B2(tree)
         assert B2.counit(elem) == 0
 
@@ -332,14 +332,14 @@ class TestBarConstructionLie:
 
         # For arity 2, reduced is identity
         B2 = BLie(2, QQ)
-        tree = ((1,), 1, 2)
+        tree = RootedTree((1,), 1, 2)
         elem2 = B2(tree)
         assert B2.reduced(elem2) == elem2
 
     def test_bar_lie_degree(self):
         BLie = BarConstruction(Lie)
         B3 = BLie(3, QQ)
-        tree = ((1, 2), 1, 2, 3)
+        tree = RootedTree((1, 2), 1, 2, 3)
         assert B3.degree_on_basis(tree) == 1
 
     def test_bar_lie_boundary_squared_zero_arity2(self):
@@ -349,7 +349,7 @@ class TestBarConstructionLie:
 
         # Arity 2 tree: single vertex with decoration (1,) and children 1, 2
         # Lie(2, QQ) has basis key (1,) - a permutation of (1,) representing [x_1, x_2]
-        tree = ((1,), 1, 2)
+        tree = RootedTree((1,), 1, 2)
         elem = B2(tree)
 
         # Lie has trivial differential, so d_1 = 0
@@ -364,14 +364,14 @@ class TestBarConstructionLie:
         B3 = BLie(3, QQ)
 
         # Weight-1 tree in arity 3
-        tree = ((1, 2), 1, 2, 3)
+        tree = RootedTree((1, 2), 1, 2, 3)
         elem = B3(tree)
         bdry = elem.boundary()
         bdry2 = bdry.boundary()
         assert bdry2 == B3.zero(), f"d^2 != 0: {bdry2}"
 
         # Another basis element
-        tree2 = ((2, 1), 1, 2, 3)
+        tree2 = RootedTree((2, 1), 1, 2, 3)
         elem2 = B3(tree2)
         bdry = elem2.boundary()
         bdry2 = bdry.boundary()
@@ -385,7 +385,7 @@ class TestBarConstructionLie:
         # Weight-2 tree: root with arity 2, one child is internal with arity 2
         # Root: (1,), children: internal node with (1,), and leaf 3
         # Child: (1,), children: 1, 2
-        nested = ((1,), ((1,), 1, 2), 3)
+        nested = RootedTree((1,), RootedTree((1,), 1, 2), 3)
         elem = B3(nested)
         bdry = elem.boundary()
         bdry2 = bdry.boundary()
@@ -397,7 +397,7 @@ class TestBarConstructionLie:
         B3 = BLie(3, QQ)
 
         # Weight-2 tree
-        nested = ((1,), ((1,), 1, 2), 3)
+        nested = RootedTree((1,), RootedTree((1,), 1, 2), 3)
         elem = B3(nested)
 
         # d_2 should contract to a weight-1 tree
@@ -414,7 +414,7 @@ class TestBarConstructionLie:
         B4 = BLie(4, QQ)
 
         # Root arity 3 with one internal arity-2 child
-        tree = ((1, 2), ((1,), 1, 2), 3, 4)
+        tree = RootedTree((1, 2), RootedTree((1,), 1, 2), 3, 4)
         elem = B4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == B4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
@@ -424,7 +424,7 @@ class TestBarConstructionLie:
         BLie = BarConstruction(Lie)
         B6 = BLie(6, QQ)
 
-        tree = ((1, 2, 3), ((1,), 1, 2), ((1,), 3, 4), 5, 6)
+        tree = RootedTree((1, 2, 3), RootedTree((1,), 1, 2), RootedTree((1,), 3, 4), 5, 6)
         elem = B6(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == B6.zero(), f"d^2 != 0 in arity 6: {bdry2}"
@@ -434,7 +434,7 @@ class TestBarConstructionLie:
         BLie = BarConstruction(Lie)
         B3 = BLie(3, QQ)
 
-        tree = ((1, 2), 1, 2, 3)
+        tree = RootedTree((1, 2), 1, 2, 3)
         elem = B3(tree)
 
         permuted = elem.permute([2, 1, 3])
@@ -454,11 +454,11 @@ class TestBarConstructionSurjection:
     def test_bar_surjection_degree(self):
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert B2.degree_on_basis(tree) == 1
 
         # Surjection basis (1, 2, 1) has degree 1
-        tree2 = ((1, 2, 1), 1, 2)
+        tree2 = RootedTree((1, 2, 1), 1, 2)
         assert B2.degree_on_basis(tree2) == 2
 
     def test_bar_surjection_d_squared_zero_weight1(self):
@@ -467,7 +467,7 @@ class TestBarConstructionSurjection:
         B2 = BS(2, QQ)
 
         # Weight-1 tree with (1, 2) decoration
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         elem = B2(tree)
         bdry = elem.boundary()
         bdry2 = bdry.boundary()
@@ -479,7 +479,7 @@ class TestBarConstructionSurjection:
         B2 = BS(2, QQ)
 
         # Surjection basis (1, 2, 1) has degree 1
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B2(tree)
         bdry = elem.boundary()
         bdry2 = bdry.boundary()
@@ -491,7 +491,7 @@ class TestBarConstructionSurjection:
         B2 = BS(2, QQ)
 
         # (1, 2, 1) has nontrivial boundary in Surjection
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B2(tree)
 
         d1 = elem.d1()
@@ -503,7 +503,7 @@ class TestBarConstructionSurjection:
         BS = BarConstruction(Surjection)
         B4 = BS(4, QQ)
 
-        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
+        tree = RootedTree((1, 2, 3, 1), RootedTree((1, 2, 1), 1, 2), 3, 4)
         elem = B4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == B4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
@@ -513,7 +513,7 @@ class TestBarConstructionSurjection:
         BS = BarConstruction(Surjection)
         B5 = BS(5, QQ)
 
-        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), ((1, 2, 1), 3, 4), 5)
+        tree = RootedTree((1, 2, 3, 1), RootedTree((1, 2, 1), 1, 2), RootedTree((1, 2, 1), 3, 4), 5)
         elem = B5(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == B5.zero(), f"d^2 != 0 in arity 5: {bdry2}"
@@ -538,7 +538,7 @@ class TestCobarConstruction:
         O2 = OmegaS(2, QQ)
         # SurjectionDual basis (1, 2) has degree 0
         # s^{-1}C degree = 0 - (2 - 1) = -1
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         assert O2.degree_on_basis(tree) == -1
 
     def test_cobar_d_squared_zero_unit(self):
@@ -553,7 +553,7 @@ class TestCobarConstruction:
         OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2, QQ)
 
-        tree1 = ((1, 2), 1, 2)
+        tree1 = RootedTree((1, 2), 1, 2)
         elem1 = O2(tree1)
 
         # Compose with unit
@@ -568,8 +568,8 @@ class TestCobarConstruction:
         OmegaS = CobarConstruction(SurjectionDual)
         O2 = OmegaS(2, QQ)
 
-        tree1 = ((1, 2), 1, 2)
-        tree2 = ((1, 2), 1, 2)
+        tree1 = RootedTree((1, 2), 1, 2)
+        tree2 = RootedTree((1, 2), 1, 2)
         elem1 = O2(tree1)
         elem2 = O2(tree2)
 
@@ -585,8 +585,8 @@ class TestCobarConstruction:
         OmegaS = CobarConstruction(SurjectionDual)
         O3 = OmegaS(3, QQ)
 
-        x = O3(((1, 2, 3), 1, 2, 3))
-        y = O3(((1, 3, 2), 1, 2, 3))
+        x = O3(RootedTree((1, 2, 3), 1, 2, 3))
+        y = O3(RootedTree((1, 3, 2), 1, 2, 3))
 
         composed = OmegaS.compose(x, 2, y)
         assert composed.arity() == 5
@@ -600,7 +600,7 @@ class TestCobarConstruction:
         OmegaS = CobarConstruction(SurjectionDual)
         O4 = OmegaS(4, QQ)
 
-        tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        tree = RootedTree((1, 2, 3), RootedTree((1, 2), 1, 2), 3, 4)
         elem = O4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O4.zero(), f"d^2 != 0 in arity 4: {bdry2}"
@@ -611,8 +611,8 @@ class TestContractEdge:
 
     def test_contract_simple(self):
         # Tree: root (1,) with children (internal (1,) with children 1, 2) and 3
-        child_vertex = ((1,), 1, 2)
-        root = ((1,), child_vertex, 3)
+        child_vertex = RootedTree((1,), 1, 2)
+        root = RootedTree((1,), child_vertex, 3)
         # Contract root -> child edge at position 1
         # New vertex has arity 3, children 1, 2, 3
         # Result depends on new_decoration
@@ -634,7 +634,7 @@ class TestExpandVertex:
 
     def test_expand_simple(self):
         # Start with a single vertex tree
-        tree = ((1, 2, 1), 1, 2, 3)  # Surjection arity 3
+        tree = RootedTree((1, 2, 1), 1, 2, 3)  # Surjection arity 3
 
         # Expand vertex at position l=1, arities (2, 2)
         # Original has arity 3, expanded to arity-2 top + arity-2 bottom
@@ -687,14 +687,14 @@ class TestBarCoderivation:
         """d is a coderivation: Δ(d(x)) = (d⊗id + (-1)^|a| id⊗d)(Δ(x))."""
         BLie = BarConstruction(Lie)
         # weight-2 tree in B(Lie)(3): Δ_{1;2,2} and Δ_{2;2,2}
-        tree = ((1,), ((1,), 1, 2), 3)
+        tree = RootedTree((1,), RootedTree((1,), 1, 2), 3)
         self._check_coderivation(BLie, tree, 1, 2, 2)
         self._check_coderivation(BLie, tree, 2, 2, 2)
 
     def test_bar_lie_coderivation_weight2_arity4(self):
         """Coderivation property for B(Lie)(4) weight-2 tree."""
         BLie = BarConstruction(Lie)
-        tree = ((1, 2), ((1,), 1, 2), 3, 4)
+        tree = RootedTree((1, 2), RootedTree((1,), 1, 2), 3, 4)
         self._check_coderivation(BLie, tree, 1, 2, 3)
         self._check_coderivation(BLie, tree, 2, 2, 3)
         self._check_coderivation(BLie, tree, 1, 3, 2)
@@ -703,13 +703,13 @@ class TestBarCoderivation:
         """Coderivation property for weight-1 B(Surjection)(3) tree."""
         BS = BarConstruction(Surjection)
         # weight-1 tree: Δ gives 0 (no internal subtree to split off at arity 2)
-        tree = ((1, 2, 3), 1, 2, 3)
+        tree = RootedTree((1, 2, 3), 1, 2, 3)
         self._check_coderivation(BS, tree, 1, 2, 2)
 
     def test_bar_surjection_coderivation_weight2(self):
         """Coderivation property for weight-2 B(Surjection)(4) tree."""
         BS = BarConstruction(Surjection)
-        tree = ((1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        tree = RootedTree((1, 2, 3), RootedTree((1, 2), 1, 2), 3, 4)
         self._check_coderivation(BS, tree, 1, 2, 3)
         self._check_coderivation(BS, tree, 2, 3, 2)
 
@@ -717,7 +717,7 @@ class TestBarCoderivation:
         """Coderivation holds when d_1 is nontrivial (Surjection has d1 ≠ 0)."""
         BS = BarConstruction(Surjection)
         # (1,2,1) has nontrivial boundary in Surjection(2, QQ)
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         self._check_coderivation(BS, tree, 1, 1, 2)
 
 
@@ -763,7 +763,7 @@ class TestCoAssociative:
         OmegaCA = CobarConstruction(CoAssociative)
         O3 = OmegaCA(3, QQ)
         # Weight-1 tree with (1,2,3) decoration
-        tree = ((1, 2, 3), 1, 2, 3)
+        tree = RootedTree((1, 2, 3), 1, 2, 3)
         elem = O3(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O3.zero(), f"d^2 != 0 for CoAss: {bdry2}"
@@ -772,7 +772,7 @@ class TestCoAssociative:
         """d^2 = 0 for Ω(CoAss)(4)."""
         OmegaCA = CobarConstruction(CoAssociative)
         O4 = OmegaCA(4, QQ)
-        tree = ((1, 2, 3, 4), 1, 2, 3, 4)
+        tree = RootedTree((1, 2, 3, 4), 1, 2, 3, 4)
         elem = O4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O4.zero(), f"d^2 != 0 for CoAss arity 4: {bdry2}"
@@ -816,7 +816,7 @@ class TestCoCommutative:
         OmegaCC = CobarConstruction(CoCommutative)
         O3 = OmegaCC(3, QQ)
         # weight-1 tree with decoration () in arity 3
-        tree = ((), 1, 2, 3)
+        tree = RootedTree((), 1, 2, 3)
         elem = O3(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O3.zero(), f"d^2 != 0 for CoCom: {bdry2}"
@@ -829,7 +829,7 @@ class TestCobarSignFix:
     def test_cobar_com_square_zero_arity5_weight1(self, arity: int):
         OmegaCom = CobarConstruction(CoCommutative)
         OC = OmegaCom(arity, QQ)
-        tree = ((),) + tuple(range(1, arity + 1))
+        tree = RootedTree((), *range(1, arity + 1))
         elem = OC(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == OC.zero(), f"d^2 != 0 for CoCom arity {arity}: {bdry2}"
@@ -839,7 +839,7 @@ class TestCobarSignFix:
         OmegaS = CobarConstruction(SurjectionDual)
         O4 = OmegaS(4, QQ)
         # root arity 3 with one internal arity-2 child
-        tree = ((1, 2, 3, 1), ((1, 2, 1), 1, 2), 3, 4)
+        tree = RootedTree((1, 2, 3, 1), RootedTree((1, 2, 1), 1, 2), 3, 4)
         elem = O4(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O4.zero(), f"d^2 != 0 in arity 4 weight 2: {bdry2}"
@@ -854,7 +854,7 @@ class TestCobarSignFix:
         OmegaS = CobarConstruction(SurjectionDual)
         O5 = OmegaS(5, QQ)
         # root arity 3, inner arity 3 as first child, leaves 4 and 5 as other children
-        tree = ((1, 2, 3, 1), ((1, 2, 3), 1, 2, 3), 4, 5)
+        tree = RootedTree((1, 2, 3, 1), RootedTree((1, 2, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O5.zero(), f"d^2 != 0 in arity 5 weight 2: {bdry2}"
@@ -863,7 +863,7 @@ class TestCobarSignFix:
         """d^2 = 0 for a tree where the inner node has high-degree decoration."""
         OmegaS = CobarConstruction(SurjectionDual)
         O5 = OmegaS(5, QQ)
-        tree = ((1, 2, 3, 1), ((1, 2, 1, 3), 1, 2, 3), 4, 5)
+        tree = RootedTree((1, 2, 3, 1), RootedTree((1, 2, 1, 3), 1, 2, 3), 4, 5)
         elem = O5(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O5.zero(), f"d^2 != 0 in arity 5 weight 2: {bdry2}"
@@ -872,7 +872,7 @@ class TestCobarSignFix:
         """d^2 = 0 for a weight-3 tree where the sign fix matters."""
         OmegaS = CobarConstruction(SurjectionDual)
         O6 = OmegaS(6, QQ)
-        tree = ((1, 2, 3, 1, 4), ((1, 2, 1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
+        tree = RootedTree((1, 2, 3, 1, 4), RootedTree((1, 2, 1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6)
         elem = O6(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O6.zero(), f"d^2 != 0 in arity 6 weight 3: {bdry2}"
@@ -891,7 +891,7 @@ class TestBarPlanarize:
 
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
-        tree = ((1, 2, 1, 3), 1, 2, 3)
+        tree = RootedTree((1, 2, 1, 3), 1, 2, 3)
         elem = B3(tree)
         result = elem.planarize()
         S3 = SymmetricGroup(3)
@@ -899,7 +899,7 @@ class TestBarPlanarize:
         assert len(items) == 1
         (pl_tree, sigma_key), coeff = items[0]
         assert coeff == 1
-        assert pl_tree == ((1, 2, 1, 3), 1, 2, 3)
+        assert pl_tree == RootedTree((1, 2, 1, 3), 1, 2, 3)
         assert S3(sigma_key) == S3.identity()
 
     def test_planarize_surjection_nonplanar_corolla(self):
@@ -908,14 +908,14 @@ class TestBarPlanarize:
 
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
-        tree = ((2, 1, 2, 3), 1, 2, 3)
+        tree = RootedTree((2, 1, 2, 3), 1, 2, 3)
         elem = B3(tree)
         result = elem.planarize()
         items = list(result)
         assert len(items) == 1
         (pl_tree, sigma_key), coeff = items[0]
         assert coeff == 1
-        assert pl_tree == ((1, 2, 1, 3), 1, 2, 3)
+        assert pl_tree == RootedTree((1, 2, 1, 3), 1, 2, 3)
         S3 = SymmetricGroup(3)
         assert S3(sigma_key) == S3([2, 1, 3])
 
@@ -923,7 +923,7 @@ class TestBarPlanarize:
         """Round-trip T_pl.permute(σ) == T for a weight-2 Surjection tree."""
         BS = BarConstruction(Surjection)
         B4 = BS(4, QQ)
-        tree = ((2, 1, 2, 3), ((1, 2), 1, 2), 3, 4)
+        tree = RootedTree((2, 1, 2, 3), RootedTree((1, 2), 1, 2), 3, 4)
         elem = B4(tree)
         assert elem != B4.zero()
         assert planarize_round_trip_ok(elem)
@@ -933,9 +933,9 @@ class TestBarPlanarize:
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
         for tree in [
-            ((1, 2, 3), 1, 2, 3),
-            ((2, 1, 2, 3), 1, 2, 3),
-            ((1, 3, 2, 1), 1, 2, 3),
+            RootedTree((1, 2, 3), 1, 2, 3),
+            RootedTree((2, 1, 2, 3), 1, 2, 3),
+            RootedTree((1, 3, 2, 1), 1, 2, 3),
         ]:
             elem = B3(tree)
             assert elem != B3.zero()
@@ -946,13 +946,13 @@ class TestBarPlanarize:
         BS = BarConstruction(Surjection)
 
         B5 = BS(5, QQ)
-        weight3_tree = ((2, 1, 2, 3), ((1, 2, 1), 1, 2), ((2, 1), 3, 4), 5)
+        weight3_tree = RootedTree((2, 1, 2, 3), RootedTree((1, 2, 1), 1, 2), RootedTree((2, 1), 3, 4), 5)
         elem = B5(weight3_tree)
         assert elem != B5.zero()
         assert planarize_round_trip_ok(elem)
 
         B6 = BS(6, QQ)
-        weight3_tree_arity6 = ((2, 1, 3, 4, 2), ((1, 2), 1, 2), ((1, 2, 1), 3, 4), 5, 6)
+        weight3_tree_arity6 = RootedTree((2, 1, 3, 4, 2), RootedTree((1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6)
         elem2 = B6(weight3_tree_arity6)
         assert elem2 != B6.zero()
         assert planarize_round_trip_ok(elem2)
@@ -971,7 +971,7 @@ class TestBarPlanarize:
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
         id2 = S2.identity()
-        tree = ((perm21, id2), 1, 2)
+        tree = RootedTree((perm21, id2), 1, 2)
         elem = B2(tree)
         result = elem.planarize()
         items = list(result)
@@ -979,7 +979,7 @@ class TestBarPlanarize:
         (pl_tree, sigma_key), coeff = items[0]
         assert coeff == 1
         # The planar decoration must start with identity
-        assert pl_tree[0][0] == id2
+        assert decoration(pl_tree)[0] == id2
         # The global permutation must be (1,2) (the transposition)
         S2_global = SymmetricGroup(2)
         assert S2_global(sigma_key) == S2_global([2, 1])
@@ -993,8 +993,8 @@ class TestBarPlanarize:
         perm21 = S2([2, 1])
         id2 = S2.identity()
         for tree in [
-            ((perm21, id2), 1, 2),
-            ((id2, perm21), 1, 2),
+            RootedTree((perm21, id2), 1, 2),
+            RootedTree((id2, perm21), 1, 2),
         ]:
             elem = B2(tree)
             assert elem != B2.zero()
@@ -1008,7 +1008,7 @@ class TestBarPlanarize:
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         perm21 = S2([2, 1])
-        tree = ((perm21, id2), ((id2, perm21), 1, 2), 3)
+        tree = RootedTree((perm21, id2), RootedTree((id2, perm21), 1, 2), 3)
         elem = B3(tree)
         assert elem != B3.zero()
         assert planarize_round_trip_ok(elem)
@@ -1024,7 +1024,7 @@ class TestBarPlanarize:
         basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
-        assert tree_key == ((1, 2), 1, 2)
+        assert tree_key == RootedTree((1, 2), 1, 2)
 
     def test_planar_basis_it_surjection_degree1_arity3(self):
         """B(Surj)(3) degree-1 planar basis is exactly {(1,2,3)}."""
@@ -1033,7 +1033,7 @@ class TestBarPlanarize:
         basis = list(B3.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
-        assert tree_key == ((1, 2, 3), 1, 2, 3)
+        assert tree_key == RootedTree((1, 2, 3), 1, 2, 3)
 
     def test_planar_basis_it_surjection_degree2_arity2(self):
         """B(Surj)(2) degree-2 planar basis is exactly {(1,2,1)}."""
@@ -1042,7 +1042,7 @@ class TestBarPlanarize:
         basis = list(B2.planar_basis_iter(2))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
-        assert tree_key == ((1, 2, 1), 1, 2)
+        assert tree_key == RootedTree((1, 2, 1), 1, 2)
 
     def test_planar_basis_it_all_planar(self):
         """Every element yielded by planar_basis_iter is planar (σ = id)."""
@@ -1066,7 +1066,7 @@ class TestBarPlanarize:
         basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
         tree_key = list(basis[0].support())[0]
-        dec = tree_key[0]
+        dec = decoration(tree_key)
         # Planar means first permutation is the identity
         BE2 = BarrattEccles(2, QQ)
         assert dec[0] == BE2._symmetric_group.identity()
@@ -1079,7 +1079,7 @@ class TestBarPlanarize:
         """Element.planarize() delegates to Component.planarize()."""
         BS = BarConstruction(Surjection)
         B3 = BS(3, QQ)
-        tree = ((2, 1, 2, 3), 1, 2, 3)
+        tree = RootedTree((2, 1, 2, 3), 1, 2, 3)
         elem = B3(tree)
         # Both call paths should give the same result
         result_component = B3.planarize(elem)
@@ -1099,7 +1099,7 @@ class TestBarPlanarize:
         S2 = BE2._symmetric_group
         perm21 = S2([2, 1])
         id2 = S2.identity()
-        had_tree = (((1, 2), (perm21, id2)), 1, 2)
+        had_tree = RootedTree(((1, 2), (perm21, id2)), 1, 2)
         elem = B2(had_tree)
         assert elem != B2.zero()
         assert planarize_round_trip_ok(elem)
@@ -1141,7 +1141,7 @@ class TestBasisIter:
         basis = list(B2.basis_iter(1))
         assert len(basis) == 1
         (key, coeff) = next(iter(basis[0]))
-        assert key == ((), 1, 2)
+        assert key == RootedTree((), 1, 2)
         assert coeff == 1
 
     def test_basis_it_commutative_arity3_degree1(self):
@@ -1150,7 +1150,7 @@ class TestBasisIter:
         basis = list(B3.basis_iter(1))
         assert len(basis) == 1
         (key, _) = next(iter(basis[0]))
-        assert key == ((), 1, 2, 3)
+        assert key == RootedTree((), 1, 2, 3)
 
     def test_basis_it_commutative_arity3_degree2(self):
         """B(Com)(3) in degree 2 has exactly three shuffle trees (weight 2)."""
@@ -1159,9 +1159,9 @@ class TestBasisIter:
         keys = [next(iter(e))[0] for e in basis]
         assert len(keys) == 3
         # All three weight-2 shuffle trees for arity 3:
-        assert ((), 1, ((), 2, 3)) in keys  # root(leaf1, internal{2,3})
-        assert ((), ((), 1, 2), 3) in keys  # root(internal{1,2}, leaf3)
-        assert ((), ((), 1, 3), 2) in keys  # root(internal{1,3}, leaf2)  — non-planar
+        assert RootedTree((), 1, RootedTree((), 2, 3)) in keys  # root(leaf1, internal{2,3})
+        assert RootedTree((), RootedTree((), 1, 2), 3) in keys  # root(internal{1,2}, leaf3)
+        assert RootedTree((), RootedTree((), 1, 3), 2) in keys  # root(internal{1,3}, leaf2)  — non-planar
 
     def test_basis_it_all_shuffle_trees(self):
         """Every element from basis_iter is a valid shuffle tree."""
@@ -1204,7 +1204,7 @@ class TestBarConstructionNegativeDegree:
         assert len(basis) == 1
         (key, coeff) = next(iter(basis[0]))
         # Corolla with root decorated by sLie(2) basis element (1,) and leaves 1, 2
-        assert key == ((1,), 1, 2)
+        assert key == RootedTree((1,), 1, 2)
         assert coeff == 1
 
     def test_basis_it_shifted_lie_arity3_degree_minus1(self):
