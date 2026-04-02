@@ -349,11 +349,13 @@ class CobarConstruction(UniqueRepresentation):
             return Family(self.planar_basis_iter(d))
 
         def _validate_basis_key(self, basis_key):
-            """Validate a tree basis key.
+            """Validate a tree basis key, auto-converting tuples to RootedTree.
 
             For arity 1, the unit (leaf 1) is valid.
             For arity >= 2, must be a valid decorated tree.
             """
+            if isinstance(basis_key, tuple):
+                basis_key = RootedTree.from_tuple(basis_key)
             if self._arity == 1:
                 if basis_key == 1:
                     return 1
