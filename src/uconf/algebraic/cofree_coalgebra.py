@@ -165,6 +165,132 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         return result
 
     # ------------------------------------------------------------------
+    # Invariant orbit sum
+    # ------------------------------------------------------------------
+
+    def _invariant_orbit_sum(self, c_pl_key, m_tuple) -> "CofreeCoalgebraModule.Element":
+        r"""Build the S_n-orbit sum (invariant element) for a planar key.
+
+        Given a **planar** cooperad key ``c_pl_key ∈ C(n)`` and an n-tuple
+        ``m_tuple``, returns the invariant element::
+
+            N(c_pl, m) = Σ_{σ ∈ S_n}  (c_pl · σ) ⊗ ε(σ⁻¹; m) · σ⁻¹ · m
+
+        where ``c_pl · σ = c_pl.permute(σ)`` and ``ε`` is the Koszul sign.
+
+        For arity 1 this is simply ``self.term((c_pl_key, m_tuple))``.
+
+        The **leading key** of the result is ``(c_pl_key, m_tuple)`` — the
+        planar term — which always appears with coefficient 1.
+        """
+        n = len(m_tuple)
+        if n <= 1:
+            return self.term((c_pl_key, m_tuple))
+
+        comp = self._cooperad_cls(n, self.base_ring())
+        S_n = SymmetricGroup(n)
+        M = self._inner_module
+
+        c_pl_elem = comp.term(c_pl_key)
+        result = self.zero()
+
+        for sigma in S_n:
+            # c_pl · σ — permuted cooperad element (may carry its own sign)
+            c_sigma = c_pl_elem.permute(sigma)
+
+            # σ⁻¹ · m_tuple
+            sigma_inv = sigma.inverse()
+            permuted_m = tuple(m_tuple[sigma_inv(i) - 1] for i in range(1, n + 1))
+
+            # Koszul sign from permuting graded module elements by σ⁻¹
+            if sigma != S_n.identity():
+                perm_0idx = [sigma_inv(i) - 1 for i in range(1, n + 1)]
+                degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+                koszul = koszul_sign_of_permutation(perm_0idx, degrees)
+            else:
+                koszul = 1
+
+            for c_key, c_coeff in c_sigma:
+                result += koszul * c_coeff * self.term((c_key, permuted_m))
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Canonicalization (for homology matrix construction)
+    # ------------------------------------------------------------------
+
+    def _canonicalize_key(self, key):
+        """Map any ``(c_key, m_tuple)`` to a canonical (planar) orbit representative.
+
+        Returns ``(canonical_key, sign)`` where ``canonical_key`` is
+        ``(c_planar, permuted_m)`` and ``sign`` accounts for the
+        planarization coefficient and the Koszul sign.
+
+        When `planarize` returns multiple planar terms (e.g. for the bar
+        construction of a Hadamard product involving Lie), the first term
+        is chosen as representative.  All terms share the same permutation
+        ``σ`` (determined by the quasi-planar factor) so the permuted
+        m-tuple is the same regardless of which term is selected.
+
+        For arity 1 (where ``c_key`` is the unit), returns ``(key, 1)``.
+        """
+        c_key, m_tuple = key
+        n = len(m_tuple)
+        if n <= 1:
+            return key, 1
+
+        comp = self._cooperad_cls(n, self.base_ring())
+        S_n = SymmetricGroup(n)
+        M = self._inner_module
+
+        # Planarize the cooperad key: c_key = Σ_k coeff_k · c_pl_k ⊗ σ
+        # All terms share the same σ (quasi-planar via the free factor).
+        planarized = comp.planarize(comp.term(c_key))
+        terms = list(planarized)
+        (c_pl_key, sigma_key), pl_coeff = terms[0]
+        sigma = S_n(sigma_key)
+
+        # Permute m_tuple by σ
+        permuted_m = tuple(m_tuple[sigma(i) - 1] for i in range(1, n + 1))
+
+        # Koszul sign from permuting graded module elements
+        if sigma != S_n.identity():
+            perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
+            degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+            koszul = koszul_sign_of_permutation(perm_0idx, degrees)
+        else:
+            koszul = 1
+
+        return (c_pl_key, permuted_m), pl_coeff * koszul
+
+    # ------------------------------------------------------------------
+    # Leading key (for homology basis enumeration)
+    # ------------------------------------------------------------------
+
+    def _leading_key(self, elem):
+        """Return the canonical (planar) key of a basis element.
+
+        For orbit-sum elements produced by :meth:`basis_iter`, this returns
+        the ``(c_planar_key, m_tuple)`` whose cooperad key is planar.  For
+        arity-1 elements this is trivially the only key.
+        """
+        for key in elem.support():
+            c_key, m_tuple = key
+            n = len(m_tuple)
+            if n <= 1:
+                return key
+            comp = self._cooperad_cls(n, self.base_ring())
+            if hasattr(comp, "is_planar_key") and comp.is_planar_key(c_key):
+                return key
+            # Fallback: planarize and check if σ is the identity
+            planarized = comp.planarize(comp.term(c_key))
+            for (c_pl_key, sigma_key), _pl_coeff in planarized:
+                if c_pl_key == c_key:
+                    return key
+        # Should not reach here for well-formed orbit sums
+        return elem.leading_support()
+
+    # ------------------------------------------------------------------
     # Basis key validation
     # ------------------------------------------------------------------
 
@@ -306,10 +432,15 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # ------------------------------------------------------------------
 
     def basis_iter(self, d: int) -> Iterator[Any]:
-        """Iterate over basis elements of total degree ``d``.
+        """Iterate over S_n-invariant basis elements of total degree ``d``.
 
-        Enumerates all C(n)-decorations (not just planar ones) paired
-        with all M-tuples of the correct total degree.
+        Each yielded element is a full S_n-orbit sum::
+
+            N(c_pl, m) = Σ_{σ ∈ S_n} (c_pl·σ) ⊗ ε(σ⁻¹; m) · σ⁻¹ · m
+
+        indexed by a **planar** cooperad key ``c_pl`` and m-tuple ``m``.
+        The leading support key of each orbit sum is ``(c_pl, m)`` (the
+        planar term).
 
         Raises:
             ValueError: when arity is unbounded.
@@ -323,7 +454,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # n = 1: C(1) is the unit, degree 0 → need module keys at degree d
         c_key_1 = C.unit_key()
         for mk in _module_basis_keys_in_degree(M, d):
-            yield self((c_key_1, (mk,)))
+            yield self._invariant_orbit_sum(c_key_1, (mk,))
 
         # Determine max arity for n >= 2.
         # Need: d_c + d_m = d with d_c >= connectivity*(n-1), d_m >= 0
@@ -370,7 +501,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.basis_iter(d_c))
+                c_elems = list(comp_n.planar_basis_iter(d_c))
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree(m_keys_by_deg, n, d_m_needed))
@@ -379,7 +510,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 for c_elem in c_elems:
                     for c_key in c_elem.support():
                         for m_tuple in m_tuples:
-                            yield self((c_key, m_tuple))
+                            yield self._invariant_orbit_sum(c_key, m_tuple)
 
     def _weight_on_basis(self, key) -> int:
         """Weight of a basis key ``(c_key, m_tuple)``.
@@ -393,10 +524,11 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         return sum(_inner_weight_on_key(self._inner_module, m) for m in m_tuple)
 
     def basis_weight_iter(self, d: int, w: int) -> Iterator[Any]:
-        """Iterate over basis elements of total degree ``d`` and weight ``w``.
+        """Iterate over S_n-invariant basis elements of degree ``d`` and weight ``w``.
 
-        Weight is additive: the weight of ``(c_key, m_tuple)`` is the sum of
-        the weights of its leaf-module elements.
+        Each yielded element is a full S_n-orbit sum, indexed by a planar
+        cooperad key and an m-tuple.  Weight is additive over leaf-module
+        elements.
 
         Unlike :meth:`basis_iter`, this method is always finite (``w``
         bounds the arity).
@@ -429,7 +561,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # n = 1: single leaf
         id_key = C.unit_key()
         for mk in keys_by_dw.get((d, w), []):
-            yield self((id_key, (mk,)))
+            yield self._invariant_orbit_sum(id_key, (mk,))
 
         # n >= 2
         for n in range(2, max_n + 1):
@@ -439,7 +571,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(comp_n.basis_iter(d_c))
+                c_elems = list(comp_n.planar_basis_iter(d_c))
                 if not c_elems:
                     continue
                 m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w))
@@ -448,7 +580,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 for c_elem in c_elems:
                     for c_key in c_elem.support():
                         for m_tuple in m_tuples:
-                            yield self((c_key, m_tuple))
+                            yield self._invariant_orbit_sum(c_key, m_tuple)
 
     @cached_method
     def graded_basis(self, d: int):
