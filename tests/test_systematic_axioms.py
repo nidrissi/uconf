@@ -36,6 +36,7 @@ from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import RootedTree
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 # ---------------------------------------------------------------------------
@@ -799,20 +800,20 @@ class TestBarAlgebraSurjection:
     def test_d_squared_zero_weight1_binary(self, R, surjection_bar):
         """d²=0 on a weight-1 binary tree with Surjection decorations."""
         B = surjection_bar
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         elem = B((tree, ((), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight1_binary_deg1(self, R, surjection_bar):
         """d²=0 on weight-1 binary tree with degree-1 Surjection decoration."""
         B = surjection_bar
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B((tree, ((), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight2(self, R, surjection_bar):
         """d²=0 on a weight-2 right-nested tree."""
         B = surjection_bar
-        tree = ((1, 2), 1, ((1, 2), 2, 3))
+        tree = RootedTree((1, 2), 1, RootedTree((1, 2), 2, 3))
         elem = B((tree, ((), (), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()
