@@ -43,7 +43,6 @@ from sage.all import (
     tensor,
 )
 
-from uconf.algebraic._util import _construct_possible_tensor
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import (
     _inner_weight_on_key,
@@ -276,10 +275,11 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         return (c_pl_key, permuted_m), pl_coeff * koszul
 
+    @cached_method
     def _full_canonicalize_key(self, key):
         """Map any ``(c_key, m_tuple)`` to ALL canonical (planar) representatives.
 
-        Returns a list of ``(canonical_key, sign)`` pairs, one for each
+        Returns a tuple of ``(canonical_key, sign)`` pairs, one for each
         planar term produced by ``planarize``.  Unlike
         :meth:`_canonicalize_key`, this captures multi-term planarizations
         (e.g. from the Lie operad factor in a Hadamard product).
@@ -462,20 +462,37 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         comp = self._cooperad_cls(n, self.base_ring())
         result = self.zero()
 
-        dc_elem = comp.boundary(comp(c_key))
+        # d_C term: bypass morphism overhead when possible.
+        # The cooperad boundary on a pure basis key produces valid keys.
+        dc_on_basis = getattr(comp, "_boundary_on_basis", None)
+        if dc_on_basis is not None:
+            dc_elem = dc_on_basis(c_key)
+        else:
+            dc_elem = comp.boundary(comp.term(c_key))
         for dc_key, dc_coeff in dc_elem:
-            result += dc_coeff * self((dc_key, m_tuple))
+            result += dc_coeff * self.term((dc_key, m_tuple))
 
-        # d_M terms with Koszul signs
+        # d_M terms with Koszul signs.
+        # Bypass morphism overhead: call the inner module's boundary
+        # on_basis function directly instead of going through
+        # morphism.__call__ + linear_combination.
         c_deg = comp.degree_on_basis(c_key)
         cumulative = c_deg
+        M = self._inner_module
+        m_bdry = M.boundary
+        m_bdry_on_key = getattr(m_bdry, "on_basis", None)
+        if m_bdry_on_key is not None:
+            m_bdry_on_key = m_bdry_on_key()
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            m_elem = _construct_possible_tensor(self._inner_module, mk)
-            for new_mk, m_coeff in self._inner_module.boundary(m_elem):
+            if m_bdry_on_key is not None:
+                dm = m_bdry_on_key(mk)
+            else:
+                dm = m_bdry(M.term(mk))
+            for new_mk, m_coeff in dm:
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self((c_key, new_m))
-            cumulative += self._inner_module.degree_on_basis(mk)
+                result += sign * m_coeff * self.term((c_key, new_m))
+            cumulative += M.degree_on_basis(mk)
 
         return result
 

@@ -38,7 +38,6 @@ from typing import ClassVar
 
 from sage.all import cached_method
 
-from uconf.algebraic._util import _construct_possible_tensor
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
@@ -132,7 +131,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         result = self.zero()
 
         c_comp = C(n, base_ring)
-        c_elem = c_comp(c_key)
+        c_elem = c_comp.term(c_key)
 
         for n_r in range(2, n + 1):
             m = n - n_r + 1
@@ -145,16 +144,15 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 for (c_L_key, c_R_key), coeff in cocomp:
                     # Apply α to c_R
                     c_R_comp = C(n_r, base_ring)
-                    c_R_elem = c_R_comp(c_R_key)
+                    c_R_elem = c_R_comp.term(c_R_key)
                     alpha_c_R = self._alpha(c_R_elem)
 
                     if not alpha_c_R:
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    a_slice = [
-                        _construct_possible_tensor(M, m_tuple[j]) for j in range(i - 1, i + n_r - 1)
-                    ]
+                    # Use M.term() to bypass element construction overhead
+                    a_slice = [M.term(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
                     action_result = self._algebra.act(alpha_c_R, a_slice)
 
                     if not action_result:
@@ -171,7 +169,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # Planarization inside the boundary breaks d²=0.
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += sign * coeff * a_coeff * self((c_L_key, new_m))
+                        result += sign * coeff * a_coeff * self.term((c_L_key, new_m))
 
         return result
 
