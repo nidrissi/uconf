@@ -326,7 +326,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         this simply returns the unique support key.  For arity-1 elements
         this is trivially the only key.
         """
-        support = list(elem.support())
+        support = elem.support()
         if len(support) == 1:
             return support[0]
         # Fallback for multi-term elements (e.g. from external construction)
