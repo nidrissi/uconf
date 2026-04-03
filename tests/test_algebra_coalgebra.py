@@ -564,6 +564,7 @@ class TestBarAlgebraIota:
                         result += a_coeff * module(())
                 else:
                     from uconf.core.trees import children, decoration, is_leaf, vertex_arity
+
                     v_arity = vertex_arity(key)
                     if v_arity != n:
                         continue
