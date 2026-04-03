@@ -353,13 +353,21 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
     Works correctly when M has elements only in strictly-positive degrees or P has
     `connectivity ≥ 1`; otherwise it raises `ValueError` rather than returning a
     partial list.
+  - For quasi-planar inputs, `basis_iter` uses planar representatives rather than
+    explicit `S_n`-orbit sums. This keeps the same coinvariant information while
+    avoiding expensive orbit construction.
 
 - `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module)`
   - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
   - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
-  - `CofreeCoalgebraModule.basis_iter(d)` — iterates over all basis elements of degree `d`;
+  - `CofreeCoalgebraModule.basis_iter(d)` — iterates over planar representatives
+    `(c_pl, m)` of basis elements of degree `d` (instead of precomputing full orbit
+    sums);
     same arity-bounding logic as `FreeAlgebraModule.basis_iter` and the same
     `ValueError` fail-fast behavior in non-exhaustive regimes.
+  - The boundary matrix canonicalizes non-planar output terms back to planar keys,
+    redistributing coefficients across all planar contributions when planarization
+    is multi-term.
 - `algebraic/spherical.py`
   - `ReducedSphereCochains(d)` — rank-1 module for reduced cochains of `S^d`,
     concentrated in degree `d`.
@@ -390,6 +398,30 @@ These maps are built via `module_morphism` on first use.
 - Constructors generally accept `dict` (linear combinations) and tuple/list (basis key).
 - Degenerate keys are normalized to `0` through internal validation; malformed keys raise `TypeError` or `ValueError`.
 - For permutations in tests, use **one-line list notation** (for example `[2, 1]`).
+
+## Planar coinvariant model (free/cofree)
+
+When a factor splits as `X = X_pl ⊗ k[S_n]`, free/cofree modules use the
+identification
+
+`(X_pl ⊗ k[S_n]) ⊗_{S_n} Y  ≅  X_pl ⊗ Y`
+
+to enumerate only planar representatives. This removes the dominant orbit-sum
+cost in basis enumeration.
+
+Two boundary strategies were analyzed:
+
+1. Orbit-sum first, then boundary, then renormalize (coefficient-level canonical).
+2. Boundary on planar representatives, then canonicalize non-planar outputs.
+
+These are not coefficient-identical in general when `m_tuple` has repeated
+entries: coefficients differ by `|Stab(m)|`. In particular, over positive
+characteristic this factor can vanish (for example, `2 = 0` in `GF(2)`).
+
+The implemented complex uses planar representatives plus boundary
+canonicalization. It is chain-isomorphic to the orbit-sum complex, satisfies
+`d^2 = 0`, and has the same homology, while being substantially faster in
+practice.
 
 ## Quick examples
 
