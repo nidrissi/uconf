@@ -289,7 +289,9 @@ class BarConstruction(UniqueRepresentation):
                 sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
                 canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
                 sigma_global = sym_alg(self._symmetric_group(list(leaf_order)))
-                result += total_coeff * self._from_validated_tree(canonical_tree).tensor(sigma_global)
+                result += total_coeff * self._from_validated_tree(canonical_tree).tensor(
+                    sigma_global
+                )
 
             return result
 
