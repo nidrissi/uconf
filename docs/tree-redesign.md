@@ -120,3 +120,68 @@ All existing operations are preserved with the same semantics:
   This is already partially achieved since `RootedTree` children are references.
 - **Flat array representation**: For very large trees, store nodes in a flat
   DFS-ordered array with parent/child indices for cache-friendly traversal.
+
+---
+
+## Status Update (2026-04): Planar Coinvariant Enumeration
+
+In parallel with tree-level optimization, profiling showed a separate dominant
+cost in cofree coalgebra basis enumeration: explicit `S_n` orbit-sum
+construction for invariants. The current implementation now enumerates planar
+representatives directly and canonicalizes boundary output back to planar keys.
+
+### Mathematical Setup
+
+For invariants of the form
+
+`X ⊗_{S_n} Y` with `X = X_pl ⊗ k[S_n]`,
+
+we use the canonical identification
+
+`(X_pl ⊗ k[S_n]) ⊗_{S_n} Y  ≅  X_pl ⊗ Y`
+
+to avoid explicit orbit sums in basis enumeration.
+
+### Boundary Strategies Compared
+
+Two methods were tested.
+
+1. Orbit-sum method (reference):
+   - Build orbit-sum representative.
+   - Apply boundary.
+   - Renormalize to planar representatives.
+2. Planar-first method:
+   - Keep only planar representative in the basis.
+   - Apply boundary there.
+   - Canonicalize non-planar output terms to planar keys.
+
+### Result
+
+The two methods are not coefficient-identical in general when the module tuple
+`m` has repeated entries. The difference is a stabilizer factor `|Stab(m)|`.
+
+- Over `QQ`, this appears as multiplicative factors (for example factor `2` in
+  binary symmetry cases).
+- Over positive characteristic, this factor can vanish (for example `2 = 0` in
+  `GF(2)`), so matrix entries can differ by zero/nonzero behavior.
+
+Despite this, the two complexes are chain-isomorphic under the coinvariant
+identification above. The planar-first implementation satisfies `d^2 = 0` and
+computes the same homology.
+
+### Implementation Notes
+
+- `basis_iter` / `basis_weight_iter` enumerate planar terms `term((c_pl, m))`
+  directly (no orbit-sum construction during enumeration).
+- Boundary matrix assembly canonicalizes non-planar terms via a full
+  canonicalization routine that returns all planar contributions.
+- This fixes a subtle lossy behavior from single-term canonicalization when
+  planarization has multiple terms (for example with Lie-type factors).
+
+### Validation Summary
+
+- `d^2 = 0` checked at weights 2-4 over both `QQ` and `GF(2)`.
+- Regression tests added for planar basis counting/canonical keys and boundary
+  canonicalization behavior.
+- Observed speedup on heavy layers around `2.8x` (example: 226s to 80s), with
+  full test suite passing.
