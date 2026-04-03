@@ -872,7 +872,9 @@ class TestCobarSignFix:
         """d^2 = 0 for a weight-3 tree where the sign fix matters."""
         OmegaS = CobarConstruction(SurjectionDual)
         O6 = OmegaS(6, QQ)
-        tree = RootedTree((1, 2, 3, 1, 4), RootedTree((1, 2, 1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6)
+        tree = RootedTree(
+            (1, 2, 3, 1, 4), RootedTree((1, 2, 1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6
+        )
         elem = O6(tree)
         bdry2 = elem.boundary().boundary()
         assert bdry2 == O6.zero(), f"d^2 != 0 in arity 6 weight 3: {bdry2}"
@@ -946,13 +948,17 @@ class TestBarPlanarize:
         BS = BarConstruction(Surjection)
 
         B5 = BS(5, QQ)
-        weight3_tree = RootedTree((2, 1, 2, 3), RootedTree((1, 2, 1), 1, 2), RootedTree((2, 1), 3, 4), 5)
+        weight3_tree = RootedTree(
+            (2, 1, 2, 3), RootedTree((1, 2, 1), 1, 2), RootedTree((2, 1), 3, 4), 5
+        )
         elem = B5(weight3_tree)
         assert elem != B5.zero()
         assert planarize_round_trip_ok(elem)
 
         B6 = BS(6, QQ)
-        weight3_tree_arity6 = RootedTree((2, 1, 3, 4, 2), RootedTree((1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6)
+        weight3_tree_arity6 = RootedTree(
+            (2, 1, 3, 4, 2), RootedTree((1, 2), 1, 2), RootedTree((1, 2, 1), 3, 4), 5, 6
+        )
         elem2 = B6(weight3_tree_arity6)
         assert elem2 != B6.zero()
         assert planarize_round_trip_ok(elem2)
@@ -1161,7 +1167,9 @@ class TestBasisIter:
         # All three weight-2 shuffle trees for arity 3:
         assert RootedTree((), 1, RootedTree((), 2, 3)) in keys  # root(leaf1, internal{2,3})
         assert RootedTree((), RootedTree((), 1, 2), 3) in keys  # root(internal{1,2}, leaf3)
-        assert RootedTree((), RootedTree((), 1, 3), 2) in keys  # root(internal{1,3}, leaf2)  — non-planar
+        assert (
+            RootedTree((), RootedTree((), 1, 3), 2) in keys
+        )  # root(internal{1,3}, leaf2)  — non-planar
 
     def test_basis_it_all_shuffle_trees(self):
         """Every element from basis_iter is a valid shuffle tree."""
