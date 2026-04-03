@@ -249,7 +249,12 @@ class BarConstruction(UniqueRepresentation):
                 op_parent = self._operad_cls(k, base_ring)
 
                 dec_elem = op_parent.term(dec)
-                planarized = op_parent.planarize(dec_elem)
+                # Bypass morphism overhead: call _planarize_on_basis directly
+                planarize_fn = getattr(op_parent, "_planarize_on_basis", None)
+                if planarize_fn is not None:
+                    planarized = planarize_fn(dec)
+                else:
+                    planarized = op_parent.planarize(dec_elem)
 
                 old_ch = children(node)
                 results = []
