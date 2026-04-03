@@ -297,7 +297,12 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         comp = self._cooperad_cls(n, self.base_ring())
         M = self._inner_module
 
-        planarized = comp.planarize(comp.term(c_key))
+        # Call _planarize_on_basis directly to skip morphism overhead
+        planarize_fn = getattr(comp, "_planarize_on_basis", None)
+        if planarize_fn is not None:
+            planarized = planarize_fn(c_key)
+        else:
+            planarized = comp.planarize(comp.term(c_key))
         result = []
         degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
         identity_tuple = tuple(range(1, n + 1))
