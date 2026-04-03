@@ -287,11 +287,12 @@ class TreeModule(CombinatorialFreeModule):
 
     def _element_constructor_(self, x):
         if isinstance(x, dict):
+            R = self.base_ring()
             clean = {}
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    clean[k] = clean.get(k, 0) + coeff
+                    clean[k] = clean.get(k, R.zero()) + R(coeff)
             return self.sum_of_terms(clean.items())
 
         if isinstance(x, (tuple, list)) and len(x) == 2:

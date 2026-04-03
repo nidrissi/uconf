@@ -177,7 +177,7 @@ class Associative(CombinatorialFreeModule):
                 for tau, y_coeff in y:
                     yield (
                         Associative._compose_basis_tuple(sigma, input, tau),
-                        x_coeff * y_coeff,
+                        target.base_ring()(x_coeff * y_coeff),
                     )
 
         return target.sum_of_terms(term_generator())
@@ -215,8 +215,9 @@ class Associative(CombinatorialFreeModule):
                 )
 
             def term_generator():
+                R = parent.base_ring()
                 for basis_key, coeff in self:
                     permuted = tuple(sigma(v) for v in basis_key)
-                    yield permuted, coeff
+                    yield permuted, R(coeff)
 
             return parent.sum_of_terms(term_generator())

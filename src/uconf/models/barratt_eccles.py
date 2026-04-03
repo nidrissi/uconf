@@ -62,12 +62,13 @@ class BarrattEccles(CombinatorialFreeModule):
         permutation data raises.
         """
         if isinstance(x, dict):
+            R = self.base_ring()
             clean_dict = {}
             for key, coeff in x.items():
                 clean_key = self._validate_basis_key(key)
                 if clean_key is None:
                     continue
-                clean_dict[clean_key] = coeff
+                clean_dict[clean_key] = R(coeff)
             return self.sum_of_terms(clean_dict.items())
 
         if isinstance(x, (tuple, list)):
@@ -301,7 +302,7 @@ class BarrattEccles(CombinatorialFreeModule):
                         path = target._validate_basis_key(path)
                         # Yield the constructed basis tuple and the combined coefficient
                         if path is not None:
-                            yield (tuple(path), x_coeff * y_coeff * sign)
+                            yield (tuple(path), target.base_ring()(x_coeff * y_coeff * sign))
 
         return target.sum_of_terms(term_generator())
 
@@ -364,10 +365,11 @@ class BarrattEccles(CombinatorialFreeModule):
                 )
 
             def permuted_term_generator():
+                R = parent.base_ring()
                 for basis, coeff in self:
                     # Precompose each permutation in the basis tuple with sigma
                     permuted_basis = tuple(sigma * p for p in basis)
-                    yield (permuted_basis, coeff)
+                    yield (permuted_basis, R(coeff))
 
             return parent.sum_of_terms(permuted_term_generator())
 

@@ -62,12 +62,13 @@ class Surjection(CombinatorialFreeModule):
         consecutive equal entries, map to zero. Invalid keys raise.
         """
         if isinstance(x, dict):
+            R = self.base_ring()
             clean_dict = {}
             for key, coeff in x.items():
                 clean_key = self._validate_basis_key(key)
                 if clean_key is None:
                     continue
-                clean_dict[clean_key] = coeff
+                clean_dict[clean_key] = R(coeff)
             return self.sum_of_terms(clean_dict.items())
 
         if isinstance(x, (tuple, list)):
@@ -197,6 +198,8 @@ class Surjection(CombinatorialFreeModule):
             else:
                 signs[idx] = 0
 
+        R = self.base_ring()
+
         def term_generator():
             for idx in range(0, len(basis_element)):
                 bdry_summand = basis_element[:idx] + basis_element[idx + 1 :]
@@ -204,7 +207,7 @@ class Surjection(CombinatorialFreeModule):
                     basis_element[idx] in bdry_summand
                     and self._validate_basis_key(bdry_summand) is not None
                 ):
-                    yield (bdry_summand, signs[idx])
+                    yield (bdry_summand, R(signs[idx]))
 
         return self.sum_of_terms(term_generator())
 
@@ -288,7 +291,7 @@ class Surjection(CombinatorialFreeModule):
                         # Validate the new basis key before yielding
                         if target._validate_basis_key(new_k) is None:
                             continue
-                        yield (new_k, sign * x_coeff * y_coeff)
+                        yield (new_k, target.base_ring()(sign * x_coeff * y_coeff))
 
         return target.sum_of_terms(term_generator())
 
@@ -355,10 +358,11 @@ class Surjection(CombinatorialFreeModule):
                 )
 
             def permuted_term_generator():
+                R = parent.base_ring()
                 for u, coeff in self:
                     # Precompose each permutation in the basis tuple with sigma
                     permuted_basis = tuple(sigma(i) for i in u)
-                    yield (permuted_basis, coeff)
+                    yield (permuted_basis, R(coeff))
 
             return parent.sum_of_terms(permuted_term_generator())
 
