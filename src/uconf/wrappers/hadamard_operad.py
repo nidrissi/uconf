@@ -200,8 +200,13 @@ class HadamardProduct(UniqueRepresentation):
             left_parent = self._left_parent
 
             # Planarize the right factor: q -> q_pl ⊗ σ
-            right_elem = right_parent.term(right_basis)
-            right_planarized = right_parent.planarize(right_elem)
+            # Bypass morphism overhead by calling _planarize_on_basis directly
+            right_planarize_fn = getattr(right_parent, "_planarize_on_basis", None)
+            if right_planarize_fn is not None:
+                right_planarized = right_planarize_fn(right_basis)
+            else:
+                right_elem = right_parent.term(right_basis)
+                right_planarized = right_parent.planarize(right_elem)
 
             target = tensor([self, self._symmetric_group_algebra])
             result = target.zero()
