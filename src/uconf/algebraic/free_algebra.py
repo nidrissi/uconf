@@ -36,7 +36,6 @@ from sage.all import (
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
-    SymmetricGroup,
     cached_method,
 )
 
@@ -136,18 +135,20 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """
         n = len(m_tuple)
         comp = p_elem.parent()
-        S_n = SymmetricGroup(n)
         M = self._inner_module
+        identity_tuple = tuple(range(1, n + 1))
+        # Pre-compute degrees only once if n > 1
+        if n > 1:
+            degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
         result = self.zero()
         for p_key, p_coeff in p_elem:
             planarized = comp.planarize(comp.term(p_key))
             for (p_planar_key, sigma_key), pl_coeff in planarized:
-                sigma = S_n(sigma_key)
-                permuted_m = tuple(m_tuple[sigma(i) - 1] for i in range(1, n + 1))
+                sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
+                permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
                 # Koszul sign for permuting graded leaf-module elements.
-                if n > 1 and sigma != S_n.identity():
-                    perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
-                    degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+                if n > 1 and sigma_tuple != identity_tuple:
+                    perm_0idx = [s - 1 for s in sigma_tuple]
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
@@ -182,8 +183,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         # support every non-negative arity.  Any exception here is a real bug
         # and should propagate, not be silently ignored.
         comp = self._operad_cls(n, self.base_ring())
-        if hasattr(comp, "_validate_basis_key"):
-            p_key = comp._validate_basis_key(p_key_raw)
+        validate_fn = getattr(comp, "_validate_basis_key", None)
+        if validate_fn is not None:
+            p_key = validate_fn(p_key_raw)
             if p_key is None:
                 return None
         else:

@@ -23,6 +23,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
+import itertools
 from typing import Any, Iterator
 
 from sage.all import (
@@ -44,6 +45,7 @@ from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import (
+    RootedTree,
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
@@ -246,13 +248,18 @@ class BarConstruction(UniqueRepresentation):
                 dec = decoration(node)
                 op_parent = self._operad_cls(k, base_ring)
 
-                dec_elem = op_parent(dec)
-                planarized = op_parent.planarize(dec_elem)
+                dec_elem = op_parent.term(dec)
+                # Bypass morphism overhead: call _planarize_on_basis directly
+                planarize_fn = getattr(op_parent, "_planarize_on_basis", None)
+                if planarize_fn is not None:
+                    planarized = planarize_fn(dec)
+                else:
+                    planarized = op_parent.planarize(dec_elem)
 
                 old_ch = children(node)
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
-                    sigma_v_tuple = SymmetricGroup(k)(sigma_key).tuple()
+                    sigma_v_tuple = tuple(sigma_key)
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
                     # Recursively planarize each (reordered) child, combining
@@ -261,9 +268,7 @@ class BarConstruction(UniqueRepresentation):
                     for ch in new_ch:
                         child_term_lists.append(_planarize_subtree(ch))
 
-                    from itertools import product as iter_product
-
-                    for combo in iter_product(*child_term_lists):
+                    for combo in itertools.product(*child_term_lists):
                         total_child_coeff = 1
                         new_ch_planarized = []
                         leaf_order = []
@@ -273,7 +278,7 @@ class BarConstruction(UniqueRepresentation):
                             leaf_order.extend(lo_ch)
 
                         total_coeff = dec_coeff * total_child_coeff
-                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        node_result = RootedTree(planar_dec_key, *new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
                 return results
@@ -284,7 +289,7 @@ class BarConstruction(UniqueRepresentation):
                 sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
                 canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
                 sigma_global = sym_alg(self._symmetric_group(list(leaf_order)))
-                result += total_coeff * self(canonical_tree).tensor(sigma_global)
+                result += total_coeff * self._from_validated_tree(canonical_tree).tensor(sigma_global)
 
             return result
 
@@ -305,10 +310,9 @@ class BarConstruction(UniqueRepresentation):
                 if not hasattr(op_parent, "planarize"):
                     return False
                 planarized = op_parent.planarize(op_parent(dec))
-                Sk = SymmetricGroup(k)
-                identity_k = Sk.identity()
+                identity_tuple = tuple(range(1, k + 1))
                 for (_pl_dec, sigma_key), _coeff in planarized:
-                    if Sk(sigma_key) != identity_k:
+                    if tuple(sigma_key) != identity_tuple:
                         return False
             return True
 
@@ -409,7 +413,7 @@ class BarConstruction(UniqueRepresentation):
             """
             relabel_map = {j: sigma_tuple[j - 1] for j in range(1, self._arity + 1)}
             new_tree = relabel_leaves(tree_key, relabel_map)
-            return self(new_tree)
+            return self._from_validated_tree(new_tree)
 
         @cached_method
         def _normalize_to_shuffle(self, tree):
@@ -455,7 +459,7 @@ class BarConstruction(UniqueRepresentation):
                         ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
-            if isinstance(x, tuple):
+            if isinstance(x, RootedTree):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
@@ -470,6 +474,18 @@ class BarConstruction(UniqueRepresentation):
                 return self.term(1)
 
             raise ValueError(f"Invalid input for {self.name} element: {x!r}")
+
+        def _from_validated_tree(self, tree):
+            """Build element from a tree known to be structurally valid.
+
+            Skips ``_validate_basis_key`` but still normalises to shuffle form.
+            Used by internal boundary computations where trees are produced from
+            known-valid trees by replacing decorations.
+            """
+            R = self.base_ring()
+            return self.sum_of_terms(
+                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            )
 
         def arity(self) -> int:
             return self._arity
@@ -576,7 +592,7 @@ class BarConstruction(UniqueRepresentation):
                 for new_dec, coeff in bdry:
                     # Replace decoration of this vertex
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self(new_tree)
+                    result += sign * coeff * self._from_validated_tree(new_tree)
 
                 cumulative_degree += vertex_sp_degree
 
@@ -649,7 +665,7 @@ class BarConstruction(UniqueRepresentation):
                 # For each term in the composition, build the contracted tree
                 for new_dec, coeff in composed:
                     new_tree = contract_edge(tree, parent_vertex, child_pos, new_dec)
-                    result += total_sign * coeff * self(new_tree)
+                    result += total_sign * coeff * self._from_validated_tree(new_tree)
 
             return result
 
@@ -660,16 +676,16 @@ class BarConstruction(UniqueRepresentation):
             target_vertex = vertices[index]
             return self._replace_decoration_rec(tree, target_vertex, new_decoration)
 
-        def _replace_decoration_rec(self, node, target: tuple, new_decoration: tuple) -> tuple:
+        def _replace_decoration_rec(self, node, target, new_decoration: tuple):
             """Recursively replace decoration of target vertex."""
             if is_leaf(node):
                 return node
             if node is target:
-                return (new_decoration,) + children(node)
+                return RootedTree(new_decoration, *children(node))
             new_children = tuple(
                 self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
-            return (decoration(node),) + new_children
+            return RootedTree(decoration(node), *new_children)
 
         @staticmethod
         def counit(x: "BarConstruction.Element"):

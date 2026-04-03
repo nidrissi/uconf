@@ -50,8 +50,8 @@ def _boundary_matrix(
     n_target:
         Number of basis elements in the target degree (number of rows).
     strict:
-        If ``True`` *and* the module exposes ``_canonicalize_key``, every
-        non-canonical key in the boundary is verified: its canonical
+        If ``True`` *and* the module exposes ``_full_canonicalize_key``,
+        every non-canonical key in the boundary is verified: its canonical
         representative **must** also appear in ``key_to_idx_target``.
         Raises :class:`ValueError` if this invariant is broken.
 
@@ -63,7 +63,7 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
-    canonicalize = getattr(module, "_canonicalize_key", None)
+    full_canonicalize = getattr(module, "_full_canonicalize_key", None)
     for j, elem in enumerate(basis_source):
         bdry = module.boundary(elem)
         for key, coeff in bdry:
@@ -71,23 +71,19 @@ def _boundary_matrix(
             i = key_to_idx_target.get(key)
             if i is not None:
                 M[i, j] += coeff
-            elif canonicalize is not None:
-                # The key is non-canonical (e.g. a non-planar term in an
-                # orbit sum).  The boundary of an invariant element is
-                # again invariant, so every orbit member already appears
-                # in the boundary — the canonical (planar) key is picked
-                # up by the direct lookup above.  We therefore skip this
-                # term to avoid counting it twice.
-                #
-                # In strict mode, verify that the canonical representative
-                # is actually present in the target basis.
-                if strict:
-                    canonical_key, _sign = canonicalize(key)
-                    if canonical_key not in key_to_idx_target:
+            elif full_canonicalize is not None:
+                # The key is non-canonical (e.g. a non-planar cooperad key
+                # in a cofree coalgebra).  Canonicalize it and distribute
+                # the coefficient across all planar representatives.
+                for canon_key, sign in full_canonicalize(key):
+                    ci = key_to_idx_target.get(canon_key)
+                    if ci is not None:
+                        M[ci, j] += coeff * sign
+                    elif strict:
                         raise ValueError(
                             f"Boundary of basis element {elem} contains "
                             f"non-canonical key {key} whose canonical "
-                            f"representative {canonical_key} is not in "
+                            f"representative {canon_key} is not in "
                             f"the target basis keys"
                         )
             else:

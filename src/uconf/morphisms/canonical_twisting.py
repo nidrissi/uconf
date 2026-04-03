@@ -32,6 +32,7 @@ from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.cooperad import CooperadLike
 from uconf.core.operad import OperadLike
 from uconf.core.trees import (
+    RootedTree,
     children,
     decoration,
     is_leaf,
@@ -138,7 +139,7 @@ def canonical_inclusion(cooperad: CooperadLike) -> TwistingMorphism:
         result = cobar_parent.zero()
         for c_key, coeff in c_elem:
             # Build single-vertex cobar tree: (c_key, 1, 2, ..., n)
-            cobar_tree_key = (c_key,) + tuple(range(1, n + 1))
+            cobar_tree_key = RootedTree(c_key, *range(1, n + 1))
             result += coeff * cobar_parent(cobar_tree_key)
 
         return result
