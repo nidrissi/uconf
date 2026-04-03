@@ -251,7 +251,7 @@ class Lie(CombinatorialFreeModule):
             return vec[0] * self.term(())
 
         left_inv = self._pbw_left_inverse()
-        coords = left_inv * vec
+        coords = (left_inv * vec).change_ring(self.base_ring())
         keys = self._basis_keys()
         return self.sum_of_terms((keys[i], coords[i]) for i in range(len(keys)) if coords[i] != 0)
 
