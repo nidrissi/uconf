@@ -36,6 +36,7 @@ from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.signs import sign_from_exponent
+from uconf.core.trees import RootedTree
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
 # ---------------------------------------------------------------------------
@@ -532,10 +533,10 @@ class TestBarAlgebraGF2:
     @pytest.mark.parametrize(
         "tree,a_tuple",
         [
-            ((_MU, 1, 2), ((), ())),
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
-            ((_MU3, 1, 2, 3), ((), (), ())),
+            (RootedTree(_MU, 1, 2), ((), ())),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), ((), (), ())),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), ((), (), ())),
+            (RootedTree(_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
     def test_d_squared_zero_trivial_gf2(self, trivial_bar_gf2, tree, a_tuple):
@@ -549,10 +550,10 @@ class TestBarAlgebraGF2:
     @pytest.mark.parametrize(
         "tree,a_tuple",
         [
-            ((_MU, 1, 2), (_GEN1, _GEN1)),
-            ((_MU, 1, (_MU, 2, 3)), (_GEN1, _GEN1, _GEN1)),
-            ((_MU, (_MU, 1, 2), 3), (_GEN1, _GEN1, _GEN1)),
-            ((_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU, 1, 2), (_GEN1, _GEN1)),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), (_GEN1, _GEN1, _GEN1)),
+            (RootedTree(_MU3, 1, 2, 3), (_GEN1, _GEN1, _GEN1)),
         ],
     )
     def test_d_squared_zero_free_algebra_gf2(self, free_algebra_bar_gf2, tree, a_tuple):
@@ -590,10 +591,10 @@ class TestBarAlgebraIotaGF2:
     @pytest.mark.parametrize(
         "tree,a_tuple",
         [
-            ((_MU, 1, 2), ((), ())),
-            ((_MU, 1, (_MU, 2, 3)), ((), (), ())),
-            ((_MU, (_MU, 1, 2), 3), ((), (), ())),
-            ((_MU3, 1, 2, 3), ((), (), ())),
+            (RootedTree(_MU, 1, 2), ((), ())),
+            (RootedTree(_MU, 1, RootedTree(_MU, 2, 3)), ((), (), ())),
+            (RootedTree(_MU, RootedTree(_MU, 1, 2), 3), ((), (), ())),
+            (RootedTree(_MU3, 1, 2, 3), ((), (), ())),
         ],
     )
     def test_d_squared_zero_gf2(self, trivial_iota_bar_gf2, tree, a_tuple):
@@ -659,7 +660,7 @@ class TestCobarCoalgebraGF2:
         "key",
         [
             (1, ((),)),
-            (((1, 2), 1, 2), ((), ())),
+            (RootedTree((1, 2), 1, 2), ((), ())),
         ],
     )
     def test_d_squared_zero_gf2(self, cobar_complex_gf2, key):
@@ -799,20 +800,20 @@ class TestBarAlgebraSurjection:
     def test_d_squared_zero_weight1_binary(self, R, surjection_bar):
         """d²=0 on a weight-1 binary tree with Surjection decorations."""
         B = surjection_bar
-        tree = ((1, 2), 1, 2)
+        tree = RootedTree((1, 2), 1, 2)
         elem = B((tree, ((), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight1_binary_deg1(self, R, surjection_bar):
         """d²=0 on weight-1 binary tree with degree-1 Surjection decoration."""
         B = surjection_bar
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B((tree, ((), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()
 
     def test_d_squared_zero_weight2(self, R, surjection_bar):
         """d²=0 on a weight-2 right-nested tree."""
         B = surjection_bar
-        tree = ((1, 2), 1, ((1, 2), 2, 3))
+        tree = RootedTree((1, 2), 1, RootedTree((1, 2), 2, 3))
         elem = B((tree, ((), (), ())))
         assert B.boundary(B.boundary(elem)) == B.zero()

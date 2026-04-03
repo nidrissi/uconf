@@ -73,7 +73,11 @@ class Lie(CombinatorialFreeModule):
         if not isinstance(basis_key, (tuple, list)):
             raise TypeError(f"Basis key must be a tuple/list, got {type(basis_key)}")
 
-        clean = tuple(int(i) for i in basis_key)
+        # Fast path: if already a tuple, skip conversion when all elements are Python int
+        if isinstance(basis_key, tuple) and all(type(x) is int for x in basis_key):
+            clean = basis_key
+        else:
+            clean = tuple(int(i) for i in basis_key)
         n = int(self.arity())
 
         if n == 1:

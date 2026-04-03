@@ -12,6 +12,7 @@ from uconf import (
     Surjection,
 )
 from uconf.core.quasi_planar import QuasiPlanarMixin
+from uconf.core.trees import RootedTree
 from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 
 
@@ -44,7 +45,7 @@ class TestDSigmaOnSurjection:
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
         # Weight-1, degree-2 bar tree: (1,2,1) in S(2)
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B2(tree)
 
         S2 = SymmetricGroup(2)
@@ -65,7 +66,7 @@ class TestDSigmaOnSurjection:
         """d_{(σ1,σ2)} = d_{σ1} ∘ d_{σ2}."""
         BS = BarConstruction(Surjection)
         B2 = BS(2, QQ)
-        tree = ((1, 2, 1), 1, 2)
+        tree = RootedTree((1, 2, 1), 1, 2)
         elem = B2(tree)
         S2 = SymmetricGroup(2)
         sigma = S2([2, 1])
@@ -90,7 +91,7 @@ class TestDSigmaOnBarrattEccles:
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         s21 = S2([2, 1])
-        tree = ((id2, s21), 1, 2)  # degree-2 bar element
+        tree = RootedTree((id2, s21), 1, 2)  # degree-2 bar element
         elem = B2(tree)
 
         reconstructed = B2.zero()
@@ -121,7 +122,7 @@ class TestDSigmaOnHadamard:
             BarrattEccles(2, QQ)._symmetric_group([2, 1]),
         )
         had_key = ((1,), be_key)
-        tree = (had_key, 1, 2)
+        tree = RootedTree(had_key, 1, 2)
         elem = BH2(tree)
 
         if elem == BH2.zero():
@@ -252,7 +253,7 @@ class TestEComoduleMap:
         # Degree-2 bar tree: ((1,), (id, s21)) at HLE(2)
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
-        tree_key = (had_key, 1, 2)
+        tree_key = RootedTree(had_key, 1, 2)
         dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
@@ -273,7 +274,7 @@ class TestEComoduleMap:
 
         be_key_deg1 = (id2, s21)
         had_key = ((1,), be_key_deg1)
-        tree_key = (had_key, 1, 2)
+        tree_key = RootedTree(had_key, 1, 2)
         dec_elem = BH2(tree_key)
 
         if dec_elem == BH2.zero():
@@ -293,7 +294,7 @@ class TestEComoduleMap:
         BE2 = BarrattEccles(2, QQ)
 
         # Planar degree-1 element: (1,2) in Surjection(2, QQ)
-        tree_key = ((1, 2), 1, 2)
+        tree_key = RootedTree((1, 2), 1, 2)
         dec_elem = B2(tree_key)
 
         result = e_comodule_on_generator(dec_elem)
@@ -364,7 +365,7 @@ class TestComoduleAxioms:
         id2 = S2.identity()
 
         had_d0 = ((1,), (id2,))
-        bar_d0 = (had_d0, 1, 2)
+        bar_d0 = RootedTree(had_d0, 1, 2)
         dec_elem = BH2(bar_d0)
 
         # ν(x) ∈ E ⊗ C
@@ -398,7 +399,7 @@ class TestComoduleAxioms:
         s21 = S2([2, 1])
 
         had_d1 = ((1,), (id2, s21))
-        bar_d1 = (had_d1, 1, 2)
+        bar_d1 = RootedTree(had_d1, 1, 2)
         dec_elem = BH2(bar_d1)
 
         nu_x = e_comodule_on_generator(dec_elem)
@@ -451,7 +452,7 @@ class TestComoduleAxioms:
         id2 = S2.identity()
 
         had_d0 = ((1,), (id2,))
-        bar_d0 = (had_d0, 1, 2)
+        bar_d0 = RootedTree(had_d0, 1, 2)
         dec_elem = BH2(bar_d0)
 
         nu_x = e_comodule_on_generator(dec_elem)
@@ -480,7 +481,7 @@ class TestComoduleAxioms:
         s21 = S2([2, 1])
 
         had_d1 = ((1,), (id2, s21))
-        bar_d1 = (had_d1, 1, 2)
+        bar_d1 = RootedTree(had_d1, 1, 2)
         dec_elem = BH2(bar_d1)
 
         nu_x = e_comodule_on_generator(dec_elem)

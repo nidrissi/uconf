@@ -200,8 +200,13 @@ class HadamardProduct(UniqueRepresentation):
             left_parent = self._left_parent
 
             # Planarize the right factor: q -> q_pl ⊗ σ
-            right_elem = right_parent.term(right_basis)
-            right_planarized = right_parent.planarize(right_elem)
+            # Bypass morphism overhead by calling _planarize_on_basis directly
+            right_planarize_fn = getattr(right_parent, "_planarize_on_basis", None)
+            if right_planarize_fn is not None:
+                right_planarized = right_planarize_fn(right_basis)
+            else:
+                right_elem = right_parent.term(right_basis)
+                right_planarized = right_parent.planarize(right_elem)
 
             target = tensor([self, self._symmetric_group_algebra])
             result = target.zero()
@@ -229,10 +234,12 @@ class HadamardProduct(UniqueRepresentation):
                 raise TypeError("Basis key must be a pair (left_basis, right_basis).")
             left_basis, right_basis = basis_key
 
-            if hasattr(self._left_parent, "_validate_basis_key"):
-                left_basis = self._left_parent._validate_basis_key(left_basis)
-            if hasattr(self._right_parent, "_validate_basis_key"):
-                right_basis = self._right_parent._validate_basis_key(right_basis)
+            left_validate = getattr(self._left_parent, "_validate_basis_key", None)
+            right_validate = getattr(self._right_parent, "_validate_basis_key", None)
+            if left_validate is not None:
+                left_basis = left_validate(left_basis)
+            if right_validate is not None:
+                right_basis = right_validate(right_basis)
 
             if left_basis is None or right_basis is None:
                 return None
@@ -349,7 +356,12 @@ class HadamardProduct(UniqueRepresentation):
                 left_elems = list(_component_basis_in_degree(left_parent, d_left))
                 if not left_elems:
                     continue
-                right_elems = list(_component_basis_in_degree(right_parent, d_right))
+                # Use cached graded basis when available
+                right_graded_fn = getattr(right_parent, "graded_basis", None)
+                if right_graded_fn is not None:
+                    right_elems = list(right_graded_fn(d_right))
+                else:
+                    right_elems = list(_component_basis_in_degree(right_parent, d_right))
                 if not right_elems:
                     continue
                 for left_elem in left_elems:
@@ -376,13 +388,24 @@ class HadamardProduct(UniqueRepresentation):
             if max_d_right < min_d_right:
                 return
 
+            # Use cached graded basis methods when available to avoid
+            # re-enumerating surjections/Lie elements for repeated calls.
+            right_graded_fn = getattr(right_parent, "graded_planar_basis", None)
+            left_graded_fn = getattr(left_parent, "graded_basis", None)
+
             for d_right in range(min_d_right, max_d_right + 1):
                 d_left = d - d_right
-                right_elems = list(right_parent.planar_basis_iter(d_right))
+                if right_graded_fn is not None:
+                    right_elems = list(right_graded_fn(d_right))
+                else:
+                    right_elems = list(right_parent.planar_basis_iter(d_right))
                 if not right_elems:
                     continue
 
-                left_elems = list(_component_basis_in_degree(left_parent, d_left))
+                if left_graded_fn is not None:
+                    left_elems = list(left_graded_fn(d_left))
+                else:
+                    left_elems = list(_component_basis_in_degree(left_parent, d_left))
 
                 for left_elem in left_elems:
                     for right_elem in right_elems:

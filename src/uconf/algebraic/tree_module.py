@@ -24,6 +24,7 @@ from sage.all import (
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.trees import (
+    RootedTree,
     children,
     decoration,
     enumerate_planar_trees_generic_in_degree,
@@ -591,9 +592,9 @@ class TreeModule(CombinatorialFreeModule):
         if is_leaf(tree):
             return tree
         if tree is target_vertex:
-            return (new_dec,) + children(tree)
+            return RootedTree(new_dec, *children(tree))
         new_children = tuple(self._replace_dec(c, target_vertex, new_dec) for c in children(tree))
-        return (decoration(tree),) + new_children
+        return RootedTree(decoration(tree), *new_children)
 
     # ------------------------------------------------------------------
     # Planar normalisation
@@ -702,7 +703,7 @@ class TreeModule(CombinatorialFreeModule):
             # Step 3: planarize the current vertex's decoration.
             seq_parent = self._symmetric_sequence_cls(k, base_ring)
             if not hasattr(seq_parent, "planarize"):
-                results.append((child_coeff, (dec,) + tuple(new_kids)))
+                results.append((child_coeff, RootedTree(dec, *new_kids)))
                 continue
 
             planarized = seq_parent.planarize(seq_parent(dec))
@@ -714,11 +715,11 @@ class TreeModule(CombinatorialFreeModule):
             for (pl_dec, sigma_key), pl_coeff in terms:
                 sigma = S_k(sigma_key)
                 if sigma == identity:
-                    results.append((child_coeff * pl_coeff, (pl_dec,) + tuple(new_kids)))
+                    results.append((child_coeff * pl_coeff, RootedTree(pl_dec, *new_kids)))
                 else:
                     sigma_inv = sigma.inverse()
                     reordered = tuple(new_kids[sigma_inv(j) - 1] for j in range(1, k + 1))
-                    results.append((child_coeff * pl_coeff, (pl_dec,) + reordered))
+                    results.append((child_coeff * pl_coeff, RootedTree(pl_dec, *reordered)))
 
         return results
 

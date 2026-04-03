@@ -41,6 +41,7 @@ from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.trees import (
+    RootedTree,
     after_cobar_deg,
     children,
     decoration,
@@ -262,13 +263,13 @@ class CobarConstruction(UniqueRepresentation):
                 ]
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
-                    sigma_v = SymmetricGroup(k)(sigma_key)
-                    sigma_v_tuple = sigma_v.tuple()
+                    sigma_v_tuple = tuple(sigma_key)
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
 
                     # Koszul sign from permuting children of cobar-degrees
                     # d_1, …, d_k by sigma_v.
-                    if sigma_v != SymmetricGroup(k).identity():
+                    identity_tuple = tuple(range(1, k + 1))
+                    if sigma_v_tuple != identity_tuple:
                         perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
                         reorder_sign = koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
                     else:
@@ -290,7 +291,7 @@ class CobarConstruction(UniqueRepresentation):
                             leaf_order.extend(lo_ch)
 
                         total_coeff = dec_coeff * total_child_coeff * reorder_sign
-                        node_result = (planar_dec_key,) + tuple(new_ch_planarized)
+                        node_result = RootedTree(planar_dec_key, *new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
                 return results
@@ -402,7 +403,7 @@ class CobarConstruction(UniqueRepresentation):
                         ) * R(shuffle_coeff)
                 return super()._element_constructor_(clean_dict)
 
-            if isinstance(x, (tuple, int)):
+            if isinstance(x, (int, RootedTree)):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
@@ -413,6 +414,16 @@ class CobarConstruction(UniqueRepresentation):
                 )
 
             return super()._element_constructor_(x)
+
+        def _from_validated_tree(self, tree):
+            """Build element from a tree known to be structurally valid.
+
+            Skips ``_validate_basis_key`` but still normalises to shuffle form.
+            """
+            R = self.base_ring()
+            return self.sum_of_terms(
+                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            )
 
         def arity(self) -> int:
             return self._arity
@@ -552,7 +563,7 @@ class CobarConstruction(UniqueRepresentation):
 
                 for new_dec, coeff in bdry:
                     new_tree = self._replace_vertex_decoration_by_index(tree, verts, j, new_dec)
-                    result += sign * coeff * self(new_tree)
+                    result += sign * coeff * self._from_validated_tree(new_tree)
 
                 cumulative_degree += vertex_sinv_degree
 
@@ -678,7 +689,7 @@ class CobarConstruction(UniqueRepresentation):
                         total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
 
                         new_tree = expand_vertex(tree, curr_vertex, i, dec_left, dec_right, m, n)
-                        result += total_sign * coeff * self(new_tree)
+                        result += total_sign * coeff * self._from_validated_tree(new_tree)
 
         def _d2_all_splits(
             self,
@@ -737,7 +748,7 @@ class CobarConstruction(UniqueRepresentation):
                     dec_left,
                     dec_right,
                 )
-                result += total_sign * coop_sign * self(new_tree)
+                result += total_sign * coop_sign * self._from_validated_tree(new_tree)
 
         def _gathering_exponent(self, child_positions, orig_children, base_ring):
             """Koszul sign exponent from gathering non-contiguous children.
@@ -791,7 +802,7 @@ class CobarConstruction(UniqueRepresentation):
                 pos_set = set(child_positions)
 
                 bot_children = tuple(orig[j - 1] for j in child_positions)
-                bot_vertex = (dec_right,) + bot_children
+                bot_vertex = RootedTree(dec_right, *bot_children)
 
                 top_children = []
                 bot_inserted = False
@@ -802,7 +813,7 @@ class CobarConstruction(UniqueRepresentation):
                             bot_inserted = True
                     else:
                         top_children.append(orig[j - 1])
-                return (dec_left,) + tuple(top_children)
+                return RootedTree(dec_left, *top_children)
             # Recurse into subtrees
             new_children = tuple(
                 self._expand_vertex_nc(
@@ -816,25 +827,25 @@ class CobarConstruction(UniqueRepresentation):
                 else c
                 for c in children(tree)
             )
-            return (decoration(tree),) + new_children
+            return RootedTree(decoration(tree), *new_children)
 
         def _replace_vertex_decoration_by_index(
             self, tree, vertices: list, index: int, new_decoration: tuple
-        ) -> tuple:
+        ):
             """Replace the decoration of the index-th vertex (DFS order)."""
             target_vertex = vertices[index]
             return self._replace_decoration_rec(tree, target_vertex, new_decoration)
 
-        def _replace_decoration_rec(self, node, target: tuple, new_decoration: tuple):
+        def _replace_decoration_rec(self, node, target, new_decoration: tuple):
             """Recursively replace decoration of target vertex."""
             if is_leaf(node):
                 return node
             if node is target:
-                return (new_decoration,) + children(node)
+                return RootedTree(new_decoration, *children(node))
             new_children = tuple(
                 self._replace_decoration_rec(c, target, new_decoration) for c in children(node)
             )
-            return (decoration(node),) + new_children
+            return RootedTree(decoration(node), *new_children)
 
         @staticmethod
         def unit() -> "CobarConstruction.Element":
@@ -904,7 +915,7 @@ class CobarConstruction(UniqueRepresentation):
                     new_tree = relabel_leaves(tree, relabel_map)
                 # Use parent(new_tree) so that shuffle normalization
                 # is applied — the relabeled tree may be out of order.
-                result += coeff * parent(new_tree)
+                result += coeff * parent._from_validated_tree(new_tree)
             return result
 
 

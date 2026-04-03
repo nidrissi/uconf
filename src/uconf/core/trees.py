@@ -1,13 +1,25 @@
 """Rooted tree utilities for bar/cobar constructions.
 
-Trees are encoded as nested tuples:
-- A leaf is an ``int`` in ``{1, ..., n}`` (the arity).
-- An internal vertex is ``(decoration, child_1, ..., child_k)`` where
-  ``decoration`` is an operad/cooperad basis key (a tuple) and each
-  ``child_j`` is a leaf or subtree.  For connected operads, ``k >= 2``.
+Trees are represented using the :class:`RootedTree` class:
 
-Example (arity 3, weight 2):
-    ``((1, 2), ((1,), 1, 2), 3)``
+- A **leaf** is a plain ``int`` in ``{1, …, n}`` (the arity).
+- An **internal vertex** is a :class:`RootedTree` instance holding a
+  ``decoration`` (an operad/cooperad basis key, always a tuple) and an
+  ordered sequence of ``children`` (each a leaf or another ``RootedTree``).
+  For connected operads, every vertex has at least 2 children.
+
+``RootedTree`` is **immutable** and **hashable**, making it suitable as a
+basis key in SageMath's ``CombinatorialFreeModule`` and as an argument to
+``@cached_method``.
+
+Structural properties that the old tuple encoding recomputed from scratch
+on every call — ``weight``, ``leaves``, ``min_leaf``, ``tree_arity`` — are
+now **eagerly cached** at construction time and available in O(1).
+
+Example (arity 3, weight 2)::
+
+    RootedTree((1, 2), RootedTree((1,), 1, 2), 3)
+
 represents a tree with root decorated by the Lie basis key ``(1, 2)``
 (a binary bracket), whose first child is another internal vertex
 decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
@@ -15,9 +27,162 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
+from functools import total_ordering
 from typing import Any, Callable, Iterator, Literal
 
+from itertools import combinations, product as iter_product
+
 from uconf.core.signs import koszul_sign_of_permutation
+
+
+# =====================================================================
+# RootedTree class
+# =====================================================================
+
+
+@total_ordering
+class RootedTree:
+    """Immutable rooted tree with eagerly cached structural properties.
+
+    Parameters
+    ----------
+    decoration : tuple
+        Operad/cooperad basis key decorating this vertex.
+    *children : int | RootedTree
+        Ordered children.  Each child is either a leaf (``int``) or
+        another ``RootedTree``.
+
+    Cached attributes (O(1) access after construction):
+
+    - ``_decoration``: the vertex decoration.
+    - ``_children``: tuple of children.
+    - ``_arity``: number of children (vertex arity).
+    - ``_weight``: total number of internal vertices in this subtree.
+    - ``_leaves``: ``frozenset`` of all leaf labels.
+    - ``_min_leaf``: minimum leaf label.
+    - ``_tree_arity``: total number of leaves.
+
+    ``RootedTree`` is immutable: all ``__slots__`` are set once in
+    ``__init__`` and ``__setattr__`` is overridden to prevent mutation.
+    """
+
+    __slots__ = (
+        "_decoration",
+        "_children",
+        "_arity",
+        "_weight",
+        "_leaves",
+        "_min_leaf",
+        "_tree_arity",
+        "_hash",
+    )
+
+    def __init__(self, decoration: tuple, *children: int | RootedTree):
+        object.__setattr__(self, "_decoration", decoration)
+        object.__setattr__(self, "_children", children)
+        object.__setattr__(self, "_arity", len(children))
+
+        w = 1
+        lv: set[int] = set()
+        ml = float("inf")
+        for c in children:
+            if isinstance(c, RootedTree):
+                w += c._weight
+                lv.update(c._leaves)
+                cml = c._min_leaf
+            else:
+                lv.add(c)
+                cml = c
+            if cml < ml:
+                ml = cml
+
+        object.__setattr__(self, "_weight", w)
+        object.__setattr__(self, "_leaves", frozenset(lv))
+        object.__setattr__(self, "_min_leaf", ml)
+        object.__setattr__(self, "_tree_arity", len(lv))
+        object.__setattr__(self, "_hash", hash((decoration, children)))
+
+    # -- immutability ---------------------------------------------------
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise AttributeError("RootedTree instances are immutable")
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("RootedTree instances are immutable")
+
+    # -- hashing and equality -------------------------------------------
+
+    def __hash__(self) -> int:
+        return self._hash
+
+    def __eq__(self, other: object) -> bool:
+        if self is other:
+            return True
+        if not isinstance(other, RootedTree):
+            return NotImplemented
+        if self._hash != other._hash:
+            return False
+        return self._decoration == other._decoration and self._children == other._children
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, int):
+            return False  # internal vertices sort after leaves
+        if not isinstance(other, RootedTree):
+            return NotImplemented
+        # Lexicographic on (decoration, children), matching old tuple order.
+        if self._decoration != other._decoration:
+            return self._decoration < other._decoration
+        return self._cmp_children() < other._cmp_children()
+
+    def _cmp_children(self) -> tuple:
+        """Return a tuple suitable for lexicographic child comparison.
+
+        Leaves (int) sort before ``RootedTree`` instances.  Within each
+        type the natural ordering is used.  We wrap each child in a
+        ``(type_tag, value)`` pair so that ``int < RootedTree`` is
+        well-defined even though Python 3 forbids direct ``int < object``.
+        """
+        return tuple(
+            (0, c) if isinstance(c, int) else (1, c._decoration, c._cmp_children())
+            for c in self._children
+        )
+
+    # -- representation -------------------------------------------------
+
+    def __repr__(self) -> str:
+        kids = ", ".join(repr(c) for c in self._children)
+        return f"T({self._decoration!r}; {kids})"
+
+    # -- conversion -----------------------------------------------------
+
+    def to_tuple(self) -> tuple:
+        """Convert back to the legacy nested-tuple representation."""
+        kids = tuple(c.to_tuple() if isinstance(c, RootedTree) else c for c in self._children)
+        return (self._decoration,) + kids
+
+    @classmethod
+    def from_tuple(cls, t):
+        """Create a ``RootedTree`` from a nested-tuple representation.
+
+        Leaves (``int``) are returned as-is.
+        """
+        if isinstance(t, int):
+            return t
+        if isinstance(t, cls):
+            return t
+        dec = t[0]
+        kids = tuple(cls.from_tuple(c) for c in t[1:])
+        return cls(dec, *kids)
+
+    # -- pickling (needed by SageMath serialisation) --------------------
+
+    def __reduce__(self):
+        return (RootedTree, (self._decoration,) + self._children)
+
+
+# =====================================================================
+# Predicates and accessors  (thin wrappers for uniform API)
+# =====================================================================
 
 
 def is_leaf(node) -> bool:
@@ -26,57 +191,66 @@ def is_leaf(node) -> bool:
 
 
 def is_internal(node) -> bool:
-    """Return True if ``node`` is an internal vertex (a tuple)."""
-    return isinstance(node, tuple) and len(node) >= 1 and isinstance(node[0], tuple)
+    """Return True if ``node`` is an internal vertex."""
+    return isinstance(node, RootedTree)
 
 
-def decoration(vertex: tuple) -> tuple:
+def decoration(vertex: RootedTree) -> tuple:
     """Return the decoration (operad basis key) of an internal vertex."""
-    return vertex[0]
+    return vertex._decoration
 
 
-def children(vertex: tuple) -> tuple:
+def children(vertex: RootedTree) -> tuple:
     """Return the children of an internal vertex as a tuple."""
-    return vertex[1:]
+    return vertex._children
 
 
-def vertex_arity(vertex: tuple) -> int:
+def vertex_arity(vertex: RootedTree) -> int:
     """Return the arity (number of children) of an internal vertex."""
-    return len(vertex) - 1
+    return vertex._arity
 
 
-def leaves(tree) -> set[int]:
-    """Return the set of all leaf labels in the tree."""
-    if is_leaf(tree):
-        return {tree}
-    result: set[int] = set()
-    for child in children(tree):
-        result |= leaves(child)
-    return result
+def leaves(tree) -> frozenset[int]:
+    """Return the (frozen)set of all leaf labels in the tree.
+
+    O(1) for ``RootedTree`` nodes (cached); O(n) for bare ``int`` leaves.
+    """
+    if isinstance(tree, int):
+        return frozenset({tree})
+    return tree._leaves
 
 
 def weight(tree) -> int:
-    """Return the weight (number of internal vertices) of the tree."""
-    if is_leaf(tree):
+    """Return the weight (number of internal vertices) of the tree.
+
+    O(1) for ``RootedTree`` nodes (cached).
+    """
+    if isinstance(tree, int):
         return 0
-    return 1 + sum(weight(child) for child in children(tree))
+    return tree._weight
 
 
 def tree_arity(tree) -> int:
-    """Return the arity of the tree (number of leaves)."""
-    return len(leaves(tree))
+    """Return the arity of the tree (number of leaves).
+
+    O(1) for ``RootedTree`` nodes (cached).
+    """
+    if isinstance(tree, int):
+        return 1
+    return tree._tree_arity
 
 
-def vertices_dfs(tree) -> list[tuple]:
+def vertices_dfs(tree) -> list[RootedTree]:
     """Return all internal vertices in depth-first (pre-order) traversal.
 
-    Each entry is the internal vertex tuple itself.
+    Each entry is the ``RootedTree`` object itself (identity-safe).
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return []
-    result = [tree]
-    for child in children(tree):
-        result.extend(vertices_dfs(child))
+    result: list[RootedTree] = [tree]
+    for child in tree._children:
+        if isinstance(child, RootedTree):
+            result.extend(vertices_dfs(child))
     return result
 
 
@@ -86,12 +260,12 @@ def subtree_degree(tree, operad_cls, base_ring) -> int:
     In the conventions used by ``BarConstruction``, each internal vertex
     contributes ``deg_P(decoration) + 1``.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return 0
-    parent = operad_cls(vertex_arity(tree), base_ring)
-    dec = decoration(tree)
+    parent = operad_cls(tree._arity, base_ring)
+    dec = tree._decoration
     vertex_deg = parent.degree_on_basis(dec) + 1
-    child_deg = sum(subtree_degree(c, operad_cls, base_ring) for c in children(tree))
+    child_deg = sum(subtree_degree(c, operad_cls, base_ring) for c in tree._children)
     return vertex_deg + child_deg
 
 
@@ -101,12 +275,12 @@ def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     In the conventions used by ``CobarConstruction``, each internal vertex
     contributes ``deg_C(decoration) - 1``.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return 0
-    parent = cooperad_cls(vertex_arity(tree), base_ring)
-    dec = decoration(tree)
+    parent = cooperad_cls(tree._arity, base_ring)
+    dec = tree._decoration
     vertex_deg = parent.degree_on_basis(dec) - 1
-    child_deg = sum(subtree_degree_cobar(c, cooperad_cls, base_ring) for c in children(tree))
+    child_deg = sum(subtree_degree_cobar(c, cooperad_cls, base_ring) for c in tree._children)
     return vertex_deg + child_deg
 
 
@@ -122,15 +296,15 @@ def after_cobar_deg(tree, leaf_i: int, cooperad_cls, base_ring) -> int:
     For a corolla (single internal vertex) this is always 0, since the
     root is visited before any leaf.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return 0
-    kids = children(tree)
-    # Find which child subtree contains leaf_i
+    kids = tree._children
+    # Find which child subtree contains leaf_i (O(1) via cached leaves)
     for p, child in enumerate(kids):
-        if is_leaf(child):
-            child_leaves = {child}
+        if isinstance(child, int):
+            child_leaves = frozenset({child})
         else:
-            child_leaves = leaves(child)
+            child_leaves = child._leaves
         if leaf_i in child_leaves:
             # Vertices after leaf_i:
             # 1. vertices after leaf_i within child p (recursion)
@@ -142,25 +316,25 @@ def after_cobar_deg(tree, leaf_i: int, cooperad_cls, base_ring) -> int:
     raise ValueError(f"Leaf {leaf_i} not found in tree")
 
 
-def internal_edges_dfs(tree) -> list[tuple[tuple, int, tuple]]:
+def internal_edges_dfs(tree) -> list[tuple[RootedTree, int, RootedTree]]:
     """Enumerate all internal edges (parent-child pairs between internal vertices).
 
     Returns a list of ``(parent_vertex, child_position, child_vertex)`` tuples
     where ``child_position`` is 1-indexed (the slot in the operad composition).
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return []
-    result = []
-    for i, child in enumerate(children(tree), start=1):
-        if is_internal(child):
+    result: list[tuple[RootedTree, int, RootedTree]] = []
+    for i, child in enumerate(tree._children, start=1):
+        if isinstance(child, RootedTree):
             result.append((tree, i, child))
             result.extend(internal_edges_dfs(child))
     return result
 
 
 def contract_edge(
-    tree: tuple, parent_vertex: tuple, child_pos: int, new_decoration: tuple
-) -> tuple:
+    tree: RootedTree, parent_vertex: RootedTree, child_pos: int, new_decoration: tuple
+) -> RootedTree:
     """Contract one internal edge, merging parent and child vertices.
 
     The ``child_pos``-th child of ``parent_vertex`` is an internal vertex.
@@ -170,35 +344,38 @@ def contract_edge(
 
     This function recursively finds and contracts the specified edge in the tree.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return tree
 
     if tree is parent_vertex:
         # This is the parent vertex to contract
-        child_vertex = children(tree)[child_pos - 1]
-        assert is_internal(child_vertex), "Child must be internal for contraction"
+        child_vertex = tree._children[child_pos - 1]
+        assert isinstance(child_vertex, RootedTree), "Child must be internal for contraction"
 
         # Build new children list
         new_children = []
-        for i, c in enumerate(children(tree), start=1):
+        for i, c in enumerate(tree._children, start=1):
             if i < child_pos:
                 new_children.append(c)
             elif i == child_pos:
                 # Insert children of the child vertex here
-                new_children.extend(children(child_vertex))
+                new_children.extend(child_vertex._children)
             else:
                 new_children.append(c)
 
-        return (new_decoration,) + tuple(new_children)
+        return RootedTree(new_decoration, *new_children)
 
     # Recurse into children
-    new_children = []
-    for child in children(tree):
-        new_children.append(contract_edge(child, parent_vertex, child_pos, new_decoration))
-    return (decoration(tree),) + tuple(new_children)
+    new_children = tuple(
+        contract_edge(c, parent_vertex, child_pos, new_decoration)
+        if isinstance(c, RootedTree)
+        else c
+        for c in tree._children
+    )
+    return RootedTree(tree._decoration, *new_children)
 
 
-def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None) -> tuple | int:
+def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None):
     """Graft ``tree_bot`` onto leaf ``i`` of ``tree_top``.
 
     If ``relabel_bot`` is provided, it maps each leaf of ``tree_bot`` to its
@@ -208,11 +385,17 @@ def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None) -> tuple 
 
     Returns the grafted tree.
     """
-    n_bot = tree_arity(tree_bot)
+    if isinstance(tree_bot, int):
+        n_bot = 1
+    else:
+        n_bot = tree_bot._tree_arity
 
     if relabel_bot is None:
         # Default relabeling: tree_bot leaves become i, i+1, ..., i+n_bot-1
-        bot_leaves_sorted = sorted(leaves(tree_bot))
+        if isinstance(tree_bot, int):
+            bot_leaves_sorted = [tree_bot]
+        else:
+            bot_leaves_sorted = sorted(tree_bot._leaves)
         relabel_bot = {old: i + idx for idx, old in enumerate(bot_leaves_sorted)}
 
     def relabel_top(leaf: int) -> int:
@@ -224,28 +407,30 @@ def graft(tree_top, i: int, tree_bot, relabel_bot: dict | None = None) -> tuple 
             raise ValueError("Leaf i should be replaced, not relabeled")
 
     def graft_rec(node):
-        if is_leaf(node):
+        if isinstance(node, int):
             if node == i:
                 # Replace with tree_bot (relabeled)
                 return relabel_leaves(tree_bot, relabel_bot)
             else:
                 return relabel_top(node)
         # Internal vertex: recurse
-        new_children = tuple(graft_rec(c) for c in children(node))
-        return (decoration(node),) + new_children
+        new_children = tuple(graft_rec(c) for c in node._children)
+        return RootedTree(node._decoration, *new_children)
 
     return graft_rec(tree_top)
 
 
 def relabel_leaves(tree, mapping: dict):
     """Apply a leaf relabeling according to ``mapping``."""
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return mapping.get(tree, tree)
-    new_children = tuple(relabel_leaves(c, mapping) for c in children(tree))
-    return (decoration(tree),) + new_children
+    new_children = tuple(relabel_leaves(c, mapping) for c in tree._children)
+    return RootedTree(tree._decoration, *new_children)
 
 
-def split_at_vertex(tree: tuple, target_vertex: tuple) -> tuple[tuple | int, int, tuple] | None:
+def split_at_vertex(
+    tree: RootedTree, target_vertex: RootedTree
+) -> tuple[RootedTree | int, int, RootedTree] | None:
     """Split the tree at a given internal vertex.
 
     Returns ``(tree_top, position, tree_bot)`` where:
@@ -260,17 +445,16 @@ def split_at_vertex(tree: tuple, target_vertex: tuple) -> tuple[tuple | int, int
 
     def find_and_replace(node, replacement_leaf: int):
         """Replace target_vertex with replacement_leaf, return new node."""
-        if is_leaf(node):
+        if isinstance(node, int):
             return node
         if node is target_vertex:
             return replacement_leaf
-        new_children = tuple(find_and_replace(c, replacement_leaf) for c in children(node))
-        return (decoration(node),) + new_children
+        new_children = tuple(find_and_replace(c, replacement_leaf) for c in node._children)
+        return RootedTree(node._decoration, *new_children)
 
     # Determine what leaf label to use as placeholder
     # Use min leaf of target_vertex's subtree
-    bot_leaves = leaves(target_vertex)
-    placeholder = min(bot_leaves)
+    placeholder = target_vertex._min_leaf
 
     tree_top = find_and_replace(tree, placeholder)
     tree_bot = target_vertex
@@ -278,7 +462,7 @@ def split_at_vertex(tree: tuple, target_vertex: tuple) -> tuple[tuple | int, int
     return (tree_top, placeholder, tree_bot)
 
 
-def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1] | None:
+def validate_tree(tree, arity: int, operad_cls, base_ring) -> RootedTree | Literal[1] | None:
     """Validate a tree for use in bar/cobar constructions.
 
     Checks:
@@ -289,45 +473,52 @@ def validate_tree(tree, arity: int, operad_cls, base_ring) -> tuple | Literal[1]
     Returns a validated tree with cleaned decorations, raises if invalid, or None if decorations are invalid but the tree structure is fine.
     """
     # Check that tree_arity matches
-    if is_leaf(tree):
+    if isinstance(tree, int):
         # A single leaf is only valid for arity 1
         if arity == 1 and tree == 1:
             return tree
         raise ValueError(f"Invalid leaf: {tree}, expected 1 for arity 1")
 
     # Check leaves
-    tree_leaves = leaves(tree)
-    if tree_leaves != set(range(1, arity + 1)):
+    tree_leaves = tree._leaves
+    if tree_leaves != frozenset(range(1, arity + 1)):
         raise ValueError(f"Invalid leaves: {tree_leaves}, should be {set(range(1, arity + 1))}")
 
     # Validate all internal vertices
     def validate_vertex(node):
-        if is_leaf(node):
+        if isinstance(node, int):
             return node
 
-        v_arity = vertex_arity(node)
+        v_arity = node._arity
         if v_arity < 2:
             raise ValueError(f"Invalid vertex with arity {v_arity} < 2: {node}")
 
-        dec = decoration(node)
+        dec = node._decoration
         parent = operad_cls(v_arity, base_ring)
 
-        if hasattr(parent, "_validate_basis_key"):
-            clean_dec = parent._validate_basis_key(dec)
+        validate_fn = getattr(parent, "_validate_basis_key", None)
+        if validate_fn is not None:
+            clean_dec = validate_fn(dec)
             if clean_dec is None:
                 return None
         else:
             clean_dec = dec
 
-        # Validate children
+        # Validate children, tracking whether anything changed
+        changed = clean_dec is not dec
         new_children = []
-        for child in children(node):
+        for child in node._children:
             validated = validate_vertex(child)
             if validated is None:
                 return None
+            if validated is not child:
+                changed = True
             new_children.append(validated)
 
-        return (clean_dec,) + tuple(new_children)
+        # Avoid reconstructing the tree if nothing changed
+        if not changed:
+            return node
+        return RootedTree(clean_dec, *new_children)
 
     return validate_vertex(tree)
 
@@ -338,7 +529,7 @@ def enumerate_planar_trees_in_degree(
     operad_cls: Any,
     base_ring: Any,
     target_degree: int,
-) -> Iterator[tuple]:
+) -> Iterator[RootedTree]:
     """Enumerate planar-decorated trees in ``B(P)(arity)`` of bar degree ``target_degree``.
 
     A tree is *planar* (in the quasi-planar cooperad sense) when:
@@ -390,7 +581,7 @@ def enumerate_planar_trees_in_degree(
             if hasattr(parent, "planar_basis_iter"):
                 for elem in parent.planar_basis_iter(dec_degree):
                     for dec in elem.support():
-                        yield (dec,) + tuple(range(1, arity + 1))
+                        yield RootedTree(dec, *range(1, arity + 1))
 
     # ------------------------------------------------------------------
     # Weight >= 2: binary root, one of whose children is an internal
@@ -435,7 +626,7 @@ def enumerate_planar_trees_in_degree(
                                     base_ring,
                                     deg2,
                                 ):
-                                    yield (root_dec, c1, c2)
+                                    yield RootedTree(root_dec, c1, c2)
 
 
 def _planar_subtrees_for_leaves(
@@ -444,7 +635,7 @@ def _planar_subtrees_for_leaves(
     operad_cls: Any,
     base_ring: Any,
     target_degree: int,
-) -> Iterator[tuple | int]:
+) -> Iterator[RootedTree | int]:
     """Enumerate planar subtrees for a given leaf set and exact bar degree.
 
     A single leaf always has bar degree 0.
@@ -474,18 +665,18 @@ def tree_to_string(
     """Return a human-readable string representation of a decorated tree.
 
     Args:
-        tree: A rooted tree encoded by nested tuples.
+        tree: A rooted tree (``RootedTree`` or leaf ``int``).
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return str(tree)
 
-    arity = vertex_arity(tree)
-    dec = decoration(tree)
+    arity = tree._arity
+    dec = tree._decoration
     dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(tree_to_string(c, decoration_formatter) for c in children(tree))
+    children_str = ", ".join(tree_to_string(c, decoration_formatter) for c in tree._children)
     return f"({dec_str}; {children_str})"
 
 
@@ -496,65 +687,65 @@ def tree_to_latex(
     """Return a LaTeX representation of a decorated rooted tree.
 
     Args:
-        tree: A rooted tree encoded by nested tuples.
+        tree: A rooted tree (``RootedTree`` or leaf ``int``).
         decoration_formatter: Optional callback ``(decoration, arity) -> str``.
             When provided, it is used to render each vertex decoration.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return str(tree)
 
-    arity = vertex_arity(tree)
-    dec = decoration(tree)
+    arity = tree._arity
+    dec = tree._decoration
     dec_str = decoration_formatter(dec, arity)
 
-    children_str = ", ".join(tree_to_latex(c, decoration_formatter) for c in children(tree))
+    children_str = ", ".join(tree_to_latex(c, decoration_formatter) for c in tree._children)
     return f"\\left({dec_str}; {children_str}\\right)"
 
 
-def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> tuple:
+def copy_tree_structure(old_tree, new_decorations: list[tuple]) -> RootedTree:
     """Create a tree with the same structure but new decorations.
 
     ``new_decorations`` should be in DFS order matching ``vertices_dfs(old_tree)``.
     """
-    if is_leaf(old_tree):
+    if isinstance(old_tree, int):
         return old_tree
 
     dec_iter = iter(new_decorations)
 
     def rebuild(node):
-        if is_leaf(node):
+        if isinstance(node, int):
             return node
         new_dec = next(dec_iter)
-        new_children = tuple(rebuild(c) for c in children(node))
-        return (new_dec,) + new_children
+        new_children = tuple(rebuild(c) for c in node._children)
+        return RootedTree(new_dec, *new_children)
 
     return rebuild(old_tree)
 
 
-def replace_vertex_decoration(tree: tuple, target: tuple, new_decoration: tuple) -> tuple:
+def replace_vertex_decoration(tree: RootedTree, target: RootedTree, new_decoration: tuple):
     """Replace the decoration of a specific vertex in the tree."""
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return tree
 
     if tree is target:
-        return (new_decoration,) + children(tree)
+        return RootedTree(new_decoration, *tree._children)
 
     new_children = tuple(
-        replace_vertex_decoration(c, target, new_decoration) if is_internal(c) else c
-        for c in children(tree)
+        replace_vertex_decoration(c, target, new_decoration) if isinstance(c, RootedTree) else c
+        for c in tree._children
     )
-    return (decoration(tree),) + new_children
+    return RootedTree(tree._decoration, *new_children)
 
 
 def expand_vertex(
-    tree: tuple,
-    target_vertex: tuple,
+    tree: RootedTree,
+    target_vertex: RootedTree,
     child_pos: int,
     left_decoration: tuple,
     right_decoration: tuple,
     left_arity: int,
     right_arity: int,
-) -> tuple:
+) -> RootedTree:
     """Expand a vertex into two vertices connected by an edge.
 
     Used in the cobar differential ``d_2``. The infinitesimal cocomposition
@@ -566,11 +757,11 @@ def expand_vertex(
     - Original children l..l+b-1 go to bottom positions 1..b
     - Original children l+b..k go to top positions l+1..a
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return tree
 
     if tree is target_vertex:
-        orig_children = children(tree)
+        orig_children = tree._children
         k = len(orig_children)
         a, b = left_arity, right_arity
         l = child_pos
@@ -578,7 +769,7 @@ def expand_vertex(
 
         # Build bottom vertex children: original children l, l+1, ..., l+b-1
         bottom_children = orig_children[l - 1 : l - 1 + b]
-        bottom_vertex = (right_decoration,) + bottom_children
+        bottom_vertex = RootedTree(right_decoration, *bottom_children)
 
         # Build top vertex children
         top_children = (
@@ -586,7 +777,7 @@ def expand_vertex(
             + (bottom_vertex,)  # position l
             + orig_children[l - 1 + b :]  # remaining
         )
-        return (left_decoration,) + top_children
+        return RootedTree(left_decoration, *top_children)
 
     # Recurse
     new_children = tuple(
@@ -600,12 +791,12 @@ def expand_vertex(
                 left_arity,
                 right_arity,
             )
-            if is_internal(c)
+            if isinstance(c, RootedTree)
             else c
         )
-        for c in children(tree)
+        for c in tree._children
     )
-    return (decoration(tree),) + new_children
+    return RootedTree(tree._decoration, *new_children)
 
 
 # =============================================================================
@@ -614,10 +805,13 @@ def expand_vertex(
 
 
 def min_leaf(tree) -> int:
-    """Return the minimum leaf label in a tree or subtree."""
-    if is_leaf(tree):
+    """Return the minimum leaf label in a tree or subtree.
+
+    O(1) for ``RootedTree`` nodes (cached).
+    """
+    if isinstance(tree, int):
         return tree
-    return min(min_leaf(c) for c in children(tree))
+    return tree._min_leaf
 
 
 def is_shuffle_tree(tree) -> bool:
@@ -627,14 +821,14 @@ def is_shuffle_tree(tree) -> bool:
     the minimum leaf label in each child subtree increases from left to right.
 
     Example:
-        ((), 1, 2) is shuffle (min({1})=1 < min({2})=2)
-        ((), 2, 1) is NOT shuffle (min({2})=2 > min({1})=1)
+        ``RootedTree((), 1, 2)`` is shuffle (min({1})=1 < min({2})=2)
+        ``RootedTree((), 2, 1)`` is NOT shuffle (min({2})=2 > min({1})=1)
 
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return True
 
-    kids = children(tree)
+    kids = tree._children
     min_leaves = [min_leaf(c) for c in kids]
 
     # Children must be sorted by min leaf
@@ -643,7 +837,7 @@ def is_shuffle_tree(tree) -> bool:
             return False
 
     # Recursively check all subtrees
-    return all(is_shuffle_tree(c) for c in kids if is_internal(c))
+    return all(is_shuffle_tree(c) for c in kids if isinstance(c, RootedTree))
 
 
 def to_shuffle_tree_bar(tree, operad_cls, base_ring):
@@ -659,20 +853,19 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
     When the operad's ``permute`` produces multiple basis terms (e.g. for
     Lie-based operads), each term gives a separate output tree.
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return [(tree, 1)]
 
-    kids = children(tree)
-    dec = decoration(tree)
+    kids = tree._children
+    dec = tree._decoration
     k = len(kids)
 
     # Recursively normalize children first.
     # Each child may expand into multiple terms.
-    from itertools import product as iter_product
 
     child_term_lists: list[list[tuple]] = []
     for c in kids:
-        if is_internal(c):
+        if isinstance(c, RootedTree):
             child_term_lists.append(to_shuffle_tree_bar(c, operad_cls, base_ring))
         else:
             child_term_lists.append([(c, 1)])
@@ -685,8 +878,18 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
         for item in combo:
             child_coeff *= item[1]
 
-        # Compute min leaf and bar-degree for each normalized child
+        # Compute min leaf for each child (O(1) via cached _min_leaf)
         min_leaves = [min_leaf(c) for c in normalized_kids]
+
+        # Check if children are already sorted by min leaf
+        already_sorted = all(min_leaves[i] < min_leaves[i + 1] for i in range(k - 1))
+
+        if already_sorted:
+            new_tree = RootedTree(dec, *normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
+
+        # Children need reordering — now compute bar-degrees for Koszul sign
         bar_degrees = [subtree_degree(c, operad_cls, base_ring) for c in normalized_kids]
 
         # Sort children by min leaf
@@ -694,11 +897,6 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
         indexed.sort(key=lambda x: x[0])
 
         perm = [item[1] for item in indexed]
-
-        if perm == list(range(k)):
-            new_tree = (dec,) + tuple(normalized_kids)
-            results.append((new_tree, child_coeff))
-            continue
 
         koszul_sign = koszul_sign_of_permutation(perm, bar_degrees)
 
@@ -714,7 +912,7 @@ def to_shuffle_tree_bar(tree, operad_cls, base_ring):
 
         sorted_kids = tuple(item[2] for item in indexed)
         for new_dec_key, dec_coeff in permuted_dec_elem:
-            new_tree = (new_dec_key,) + sorted_kids
+            new_tree = RootedTree(new_dec_key, *sorted_kids)
             total_coeff = child_coeff * koszul_sign * dec_coeff
             results.append((new_tree, total_coeff))
 
@@ -851,7 +1049,7 @@ def _shuffle_subtrees_iter(
             root_dec_deg = target_degree - 1
             if root_dec_deg >= min_root_dec_deg:
                 for root_dec in _operad_basis_keys_in_degree(root_parent, root_dec_deg):
-                    yield (root_dec,) + sorted_ls
+                    yield RootedTree(root_dec, *sorted_ls)
         else:
             # Partition sorted_ls into v_arity non-empty shuffle parts.
             for parts in _shuffle_partitions(sorted_ls, v_arity):
@@ -882,8 +1080,8 @@ def _shuffle_children_iter(
     base_ring: Any,
     total_deg: int,
     root_dec: tuple,
-) -> Iterator[tuple]:
-    """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` where each
+) -> Iterator[RootedTree]:
+    """Yield complete decorated trees ``RootedTree(root_dec, t_1, ..., t_k)`` where each
     *t_i* covers *parts[i]* and the bar-degrees of *t_1, ..., t_k* sum to *total_deg*.
     """
     connectivity = getattr(operad_cls, "connectivity", 0)
@@ -927,8 +1125,8 @@ def _shuffle_children_iter(
                     for ft in first_trees:
                         yield [ft] + rest
 
-    for children in _children_combinations(0, total_deg):
-        yield (root_dec,) + tuple(children)
+    for ch_list in _children_combinations(0, total_deg):
+        yield RootedTree(root_dec, *ch_list)
 
 
 def enumerate_shuffle_trees_in_degree(
@@ -999,8 +1197,8 @@ def _shuffle_children_iter_generic(
     root_dec: tuple,
     vertex_offset: int,
     use_planar_decs: bool = False,
-) -> Iterator[tuple]:
-    """Yield complete decorated trees ``(root_dec, t_1, ..., t_k)`` with generic per-vertex offset."""
+) -> Iterator[RootedTree]:
+    """Yield complete decorated trees ``RootedTree(root_dec, t_1, ..., t_k)`` with generic per-vertex offset."""
     connectivity = getattr(operad_cls, "connectivity", 0)
 
     min_from = [0] * (len(parts) + 1)
@@ -1047,7 +1245,7 @@ def _shuffle_children_iter_generic(
                         yield [ft] + rest
 
     for ch in _children_combinations(0, total_deg):
-        yield (root_dec,) + tuple(ch)
+        yield RootedTree(root_dec, *ch)
 
 
 def _shuffle_subtrees_iter_generic(
@@ -1095,7 +1293,7 @@ def _shuffle_subtrees_iter_generic(
             root_dec_deg = target_degree - vertex_offset
             if root_dec_deg >= min_root_dec_deg:
                 for root_dec in _dec_iter(root_parent, root_dec_deg):
-                    yield (root_dec,) + sorted_ls
+                    yield RootedTree(root_dec, *sorted_ls)
         else:
             for parts in _shuffle_partitions(sorted_ls, v_arity):
                 min_child_total = sum(
@@ -1135,8 +1333,6 @@ def _consecutive_parts_iter(leaf_range: tuple, k: int) -> Iterator[list[tuple]]:
     Yields:
         Lists of *k* consecutive sub-tuples that together cover *leaf_range*.
     """
-    from itertools import combinations
-
     n = len(leaf_range)
     if k <= 0 or k > n:
         return
@@ -1163,8 +1359,8 @@ def _planar_children_iter_generic(
     root_dec: tuple,
     vertex_offset: int,
     use_planar_decs: bool = True,
-) -> Iterator[tuple]:
-    """Yield complete planar-decorated trees ``(root_dec, t_1, …, t_k)`` for consecutive parts."""
+) -> Iterator[RootedTree]:
+    """Yield complete planar-decorated trees ``RootedTree(root_dec, t_1, …, t_k)`` for consecutive parts."""
     connectivity = getattr(operad_cls, "connectivity", 0)
 
     min_from = [0] * (len(parts) + 1)
@@ -1211,7 +1407,7 @@ def _planar_children_iter_generic(
                         yield [ft] + rest
 
     for ch in _children_combinations(0, total_deg):
-        yield (root_dec,) + tuple(ch)
+        yield RootedTree(root_dec, *ch)
 
 
 def _planar_subtrees_iter_generic(
@@ -1268,7 +1464,7 @@ def _planar_subtrees_iter_generic(
             root_dec_deg = target_degree - vertex_offset
             if root_dec_deg >= min_root_dec_deg:
                 for root_dec in _dec_iter(root_parent, root_dec_deg):
-                    yield (root_dec,) + leaf_range
+                    yield RootedTree(root_dec, *leaf_range)
         else:
             # Split leaf_range into v_arity consecutive sub-ranges
             for parts in _consecutive_parts_iter(leaf_range, v_arity):
@@ -1469,19 +1665,18 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
     For the implemented cobar grading, subtree degrees are computed by
     ``subtree_degree_cobar`` (sum of ``deg_C(v) - 1`` over internal vertices).
     """
-    if is_leaf(tree):
+    if isinstance(tree, int):
         return [(tree, 1)]
 
-    kids = children(tree)
-    dec = decoration(tree)
+    kids = tree._children
+    dec = tree._decoration
     k = len(kids)
 
     # Recursively normalize children first.
-    from itertools import product as iter_product
 
     child_term_lists: list[list[tuple]] = []
     for c in kids:
-        if is_internal(c):
+        if isinstance(c, RootedTree):
             child_term_lists.append(to_shuffle_tree_cobar(c, cooperad_cls, base_ring))
         else:
             child_term_lists.append([(c, 1)])
@@ -1494,17 +1689,22 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
             child_coeff *= item[1]
 
         min_leaves = [min_leaf(c) for c in normalized_kids]
+
+        # Check if children are already sorted by min leaf
+        already_sorted = all(min_leaves[i] < min_leaves[i + 1] for i in range(k - 1))
+
+        if already_sorted:
+            new_tree = RootedTree(dec, *normalized_kids)
+            results.append((new_tree, child_coeff))
+            continue
+
+        # Children need reordering — now compute cobar-degrees for Koszul sign
         cobar_degrees = [subtree_degree_cobar(c, cooperad_cls, base_ring) for c in normalized_kids]
 
         indexed = list(zip(min_leaves, range(k), normalized_kids, cobar_degrees))
         indexed.sort(key=lambda x: x[0])
 
         perm = [item[1] for item in indexed]
-
-        if perm == list(range(k)):
-            new_tree = (dec,) + tuple(normalized_kids)
-            results.append((new_tree, child_coeff))
-            continue
 
         koszul_sign = koszul_sign_of_permutation(perm, cobar_degrees)
 
@@ -1519,7 +1719,7 @@ def to_shuffle_tree_cobar(tree, cooperad_cls, base_ring):
 
         sorted_kids = tuple(item[2] for item in indexed)
         for new_dec_key, dec_coeff in permuted_dec_elem:
-            new_tree = (new_dec_key,) + sorted_kids
+            new_tree = RootedTree(new_dec_key, *sorted_kids)
             total_coeff = child_coeff * koszul_sign * dec_coeff
             results.append((new_tree, total_coeff))
 
