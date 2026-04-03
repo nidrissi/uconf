@@ -23,6 +23,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
+import itertools
 from typing import Any, Iterator
 
 from sage.all import (
@@ -247,7 +248,7 @@ class BarConstruction(UniqueRepresentation):
                 dec = decoration(node)
                 op_parent = self._operad_cls(k, base_ring)
 
-                dec_elem = op_parent(dec)
+                dec_elem = op_parent.term(dec)
                 planarized = op_parent.planarize(dec_elem)
 
                 old_ch = children(node)
@@ -262,9 +263,7 @@ class BarConstruction(UniqueRepresentation):
                     for ch in new_ch:
                         child_term_lists.append(_planarize_subtree(ch))
 
-                    from itertools import product as iter_product
-
-                    for combo in iter_product(*child_term_lists):
+                    for combo in itertools.product(*child_term_lists):
                         total_child_coeff = 1
                         new_ch_planarized = []
                         leaf_order = []
@@ -285,7 +284,7 @@ class BarConstruction(UniqueRepresentation):
                 sigma_global_inv = {l: pos for pos, l in enumerate(leaf_order, start=1)}
                 canonical_tree = relabel_leaves(planar_with_orig, sigma_global_inv)
                 sigma_global = sym_alg(self._symmetric_group(list(leaf_order)))
-                result += total_coeff * self(canonical_tree).tensor(sigma_global)
+                result += total_coeff * self._from_validated_tree(canonical_tree).tensor(sigma_global)
 
             return result
 
