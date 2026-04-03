@@ -164,7 +164,7 @@ class ShiftedCooperad(UniqueRepresentation):
             base_coerced = self._base_parent.sum_of_terms(
                 (basis, R(coeff)) for basis, coeff in element
             )
-            return self.sum_of_terms((basis, R(coeff)) for basis, coeff in base_coerced)
+            return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
         def basis_iter(self, d: int) -> "Iterator[ShiftedCooperad.Element]":
             """Iterate over basis elements of this shifted-cooperad component in degree ``d``.

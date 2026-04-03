@@ -281,7 +281,7 @@ class ShiftedOperad(UniqueRepresentation):
                 base_coerced = self._base_parent.sum_of_terms(
                     (basis, R(coeff)) for basis, coeff in element
                 )
-                return self.sum_of_terms((basis, R(coeff)) for basis, coeff in base_coerced)
+                return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
         def degree_on_basis(self, basis_element) -> int:
             if isinstance(basis_element, ShiftedOperad.Element):
