@@ -351,7 +351,12 @@ class HadamardProduct(UniqueRepresentation):
                 left_elems = list(_component_basis_in_degree(left_parent, d_left))
                 if not left_elems:
                     continue
-                right_elems = list(_component_basis_in_degree(right_parent, d_right))
+                # Use cached graded basis when available
+                right_graded_fn = getattr(right_parent, "graded_basis", None)
+                if right_graded_fn is not None:
+                    right_elems = list(right_graded_fn(d_right))
+                else:
+                    right_elems = list(_component_basis_in_degree(right_parent, d_right))
                 if not right_elems:
                     continue
                 for left_elem in left_elems:
@@ -378,13 +383,24 @@ class HadamardProduct(UniqueRepresentation):
             if max_d_right < min_d_right:
                 return
 
+            # Use cached graded basis methods when available to avoid
+            # re-enumerating surjections/Lie elements for repeated calls.
+            right_graded_fn = getattr(right_parent, "graded_planar_basis", None)
+            left_graded_fn = getattr(left_parent, "graded_basis", None)
+
             for d_right in range(min_d_right, max_d_right + 1):
                 d_left = d - d_right
-                right_elems = list(right_parent.planar_basis_iter(d_right))
+                if right_graded_fn is not None:
+                    right_elems = list(right_graded_fn(d_right))
+                else:
+                    right_elems = list(right_parent.planar_basis_iter(d_right))
                 if not right_elems:
                     continue
 
-                left_elems = list(_component_basis_in_degree(left_parent, d_left))
+                if left_graded_fn is not None:
+                    left_elems = list(left_graded_fn(d_left))
+                else:
+                    left_elems = list(_component_basis_in_degree(left_parent, d_left))
 
                 for left_elem in left_elems:
                     for right_elem in right_elems:
