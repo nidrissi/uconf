@@ -188,10 +188,15 @@ class BarrattEccles(CombinatorialFreeModule):
         return Family(self.planar_basis_iter(d))
 
     def _planarize_on_basis(self, basis_element: tuple):
-        """Split a basis element into planar representative and group element."""
+        """Split a basis element into planar representative and group element.
+
+        Decomposition: ``(p_0, …, p_k) = (id, p_1 p_0⁻¹, …, p_k p_0⁻¹) · p_0``
+        (RIGHT action), so that ``planar.permute(p_0)`` reconstructs the
+        original element.
+        """
         perm = basis_element[0]
         perm_inverse = perm.inverse()
-        permuted = tuple(perm_inverse * p for p in basis_element)
+        permuted = tuple(p * perm_inverse for p in basis_element)
         return self(permuted).tensor(self._symmetric_group_algebra(perm))
 
     def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
@@ -352,8 +357,11 @@ class BarrattEccles(CombinatorialFreeModule):
             )
 
         def permute(self, sigma) -> BarrattEccles.Element:
-            """
-            Permutes the basis elements of self by precomposing with sigma.
+            r"""Apply the right `S_n` action: `(p_0, \ldots, p_k) \cdot \sigma = (p_0 \sigma, \ldots, p_k \sigma)`.
+
+            This is the standard operad right action (postcomposition)
+            and is compatible with table reduction equivariance:
+            ``tr(e.permute(σ)) == tr(e).permute(σ)``.
             """
             parent = self.parent()
             if isinstance(sigma, (list, tuple)):
@@ -367,8 +375,7 @@ class BarrattEccles(CombinatorialFreeModule):
             def permuted_term_generator():
                 R = parent.base_ring()
                 for basis, coeff in self:
-                    # Precompose each permutation in the basis tuple with sigma
-                    permuted_basis = tuple(sigma * p for p in basis)
+                    permuted_basis = tuple(p * sigma for p in basis)
                     yield (permuted_basis, R(coeff))
 
             return parent.sum_of_terms(permuted_term_generator())
