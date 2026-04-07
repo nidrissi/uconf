@@ -938,7 +938,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
     class TestAssociativityAction:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-        @pytest.mark.xfail(reason="Sign bug in composition action on pullback algebra")
+        # @pytest.mark.xfail(reason="Sign bug in composition action on pullback algebra")
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         def test_compatible(self, p_deg, layers: ConfigurationLayers):
             rng = Random(_SEED)
@@ -960,15 +960,20 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 for q in _sample(p_elems, 2, rng):
                     lhs = pb.act(P.compose(p, 1, q), [a, b, c])
                     rhs = pb.act(p, [pb.act(q, [a, b]), c])
-                    assert _as_dict(lhs) == _as_dict(rhs)
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity at i=1 for p={p}, q={q}, a={a}, b={b}, c={c}"
+                    )
 
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
                     lhs = pb.act(P.compose(p, 2, q), [a, b, c])
                     rhs = pb.act(p, [a, pb.act(q, [b, c])])
+                    # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
                     rhs_sign = sign_from_exponent(mod.degree_on_basis(a.support()[0]) * q.degree())
                     rhs *= rhs_sign
-                    assert _as_dict(lhs) == _as_dict(rhs)
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity at i=2 for p={p}, q={q}, a={a}, b={b}, c={c}"
+                    )
 
     class TestLeibnizAction:
         """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
