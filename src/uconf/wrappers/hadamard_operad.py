@@ -247,7 +247,8 @@ class HadamardProduct(UniqueRepresentation):
 
         def _element_constructor_(self, x):
             if isinstance(x, HadamardProduct.Element):
-                return self.sum_of_terms((basis, coeff) for basis, coeff in x)
+                R = self.base_ring()
+                return self.sum_of_terms((basis, R(coeff)) for basis, coeff in x)
 
             if isinstance(x, dict):
                 clean_dict = {}
@@ -438,10 +439,11 @@ class HadamardProduct(UniqueRepresentation):
             if right_parent.base_ring() != self.base_ring():
                 raise TypeError("Right element must have the same base ring as target.")
 
+            R = self.base_ring()
             return self.sum_of_terms(
                 (
                     (left_basis, right_basis),
-                    left_coeff * right_coeff,
+                    R(left_coeff * right_coeff),
                 )
                 for left_basis, left_coeff in left_element
                 for right_basis, right_coeff in right_element

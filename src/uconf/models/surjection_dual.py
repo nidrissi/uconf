@@ -67,7 +67,8 @@ class SurjectionDual(Surjection):
         """Compute the differential by transposing ``Surjection`` differential."""
         primal_degree = len(basis_element) - self.arity()
         row = self._boundary_rows_for_degree(primal_degree).get(basis_element, {})
-        return self.sum_of_terms(row.items())
+        R = self.base_ring()
+        return self.sum_of_terms((k, R(v)) for k, v in row.items())
 
     @cached_method
     def _cocompose_rows(self, i: int, m: int, n: int, u_degree: int) -> dict:
@@ -142,7 +143,8 @@ class SurjectionDual(Surjection):
         def _on_basis(u_basis: tuple[int, ...]):
             u_degree = -source_parent.degree_on_basis(u_basis)
             rows = source_parent._cocompose_rows(i, m, n, u_degree)
-            return target.sum_of_terms(rows.get(u_basis, {}).items())
+            R = target.base_ring()
+            return target.sum_of_terms((k, R(v)) for k, v in rows.get(u_basis, {}).items())
 
         result = target.zero()
         for u_basis, u_coeff in x:

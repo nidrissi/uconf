@@ -77,11 +77,12 @@ class SimplicialChains(CombinatorialFreeModule):
         zero. Invalid simplex data raises.
         """
         if isinstance(x, dict):
+            R = self.base_ring()
             clean = {}
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    clean[k] = clean.get(k, 0) + coeff
+                    clean[k] = clean.get(k, R.zero()) + R(coeff)
             return self.sum_of_terms(clean.items())
 
         if isinstance(x, (tuple, list)):
@@ -220,6 +221,7 @@ class SimplicialChains(CombinatorialFreeModule):
             target = tensor([SC] * (times + 1))
 
             def terms():
+                R = target.base_ring()
                 for simplex, coeff in self:
                     dim = len(simplex) - 1
                     # All ways to split simplex into (times+1) overlapping parts.
@@ -228,7 +230,7 @@ class SimplicialChains(CombinatorialFreeModule):
                         pieces = tuple(simplex[a : b + 1] for a, b in pairwise(p))
                         if any(len(pc) < 1 for pc in pieces):
                             continue
-                        yield (pieces, coeff)
+                        yield (pieces, R(coeff))
 
             return target.sum_of_terms(terms())
 
@@ -283,11 +285,12 @@ class SimplicialCochains(CombinatorialFreeModule):
         raises.
         """
         if isinstance(x, dict):
+            R = self.base_ring()
             clean = {}
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    clean[k] = clean.get(k, 0) + coeff
+                    clean[k] = clean.get(k, R.zero()) + R(coeff)
             return self.sum_of_terms(clean.items())
         if isinstance(x, (tuple, list)):
             k = self._validate_basis_key(x)
@@ -350,6 +353,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         """
 
         def terms():
+            R = self.base_ring()
             dim = len(simplex) - 1
             for j in range(dim + 2):
                 if j == 0:
@@ -362,7 +366,7 @@ class SimplicialCochains(CombinatorialFreeModule):
                     augmented = simplex[:j] + (w,) + simplex[j:]
                     sign_exp = j + 1 + dim
                     sign = -1 if sign_exp % 2 == 1 else 1
-                    yield (augmented, sign)
+                    yield (augmented, R(sign))
 
         return self.sum_of_terms(terms())
 

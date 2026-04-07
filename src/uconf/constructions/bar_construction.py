@@ -443,7 +443,8 @@ class BarConstruction(UniqueRepresentation):
             """
             if isinstance(x, BarConstruction.Element):
                 if x.parent().factory is self.factory:
-                    return self.sum_of_terms((basis, coeff) for basis, coeff in x)
+                    R = self.base_ring()
+                    return self.sum_of_terms((basis, R(coeff)) for basis, coeff in x)
                 raise TypeError("Element from different bar construction")
 
             R = self.base_ring()
