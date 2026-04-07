@@ -1185,15 +1185,15 @@ class TestFullModel:
                     assert lhs == rhs
 
         @pytest.mark.parametrize("n", [2, 3])
-        def test_comodule_chain_map(self, n):
+        def test_comodule_chain_map(self, n, ring):
             """φ(dp) = d(φ(p)) — composed morphism is a chain map."""
             sLie = ShiftedOperad(Lie, -1)
             H_op = HadamardProduct(sLie, Surjection)
             C_cop = BarConstruction(H_op)
             P_op = CobarConstruction(C_cop)
             phi = _make_surjection_comodule_morphism(C_cop)
-            Pn = P_op(n, QQ)
-            for d in range(3):
+            Pn = P_op(n, ring)
+            for d in range(-3, 3):
                 for p_elem in Pn.graded_basis(d):
                     phi_dp = phi(p_elem.boundary())
                     d_phi_p = phi(p_elem).boundary()
