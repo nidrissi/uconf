@@ -37,7 +37,7 @@ Basis sizes (for reference):
 from random import Random
 
 import pytest
-from sage.all import GF, QQ, Partitions, SymmetricGroup, tensor
+from sage.all import GF, QQ, Partitions, SymmetricGroup
 
 from uconf import (
     compute_chain_complex,
@@ -69,10 +69,10 @@ def _sample(population, k, rng):
 
 
 def _all_decompositions(total_arity):
-    """Yield all (i, m, n) with m + n - 1 = total_arity, m ≥ 2, n ≥ 2."""
-    for m in range(2, total_arity):
+    """Yield all (i, m, n) with m + n - 1 = total_arity, m ≥ 1, n ≥ 1."""
+    for m in range(1, total_arity + 1):
         n = total_arity - m + 1
-        if n < 2:
+        if n < 1:
             continue
         for i in range(1, m + 1):
             yield (i, m, n)
@@ -353,13 +353,17 @@ class TestLayer1_BH:
             C1 = C(1, ring)
             assert C.reduced(C.counit_element(ring)) == C1.zero()
 
-        def test_Delta_1_1_2_is_zero(self, layers: ConfigurationLayers, ring):
-            """Δ_{1;1,2}(x) = 0 for the reduced cooperad structure."""
+        def test_Delta_1_1_n_is_eta_tensor_x(self, layers: ConfigurationLayers, ring):
+            """Δ_{1;1,n}(x) = η ⊗ x (left counit identity)."""
             C = layers.BXsLie
-            C2 = C(2, ring)
-            tgt = tensor([C(1, ring), C2])
-            for elem in C2.graded_basis(0):
-                assert C.infinitesimal_cocompose(elem, 1, 1, 2) == tgt.zero()
+            for n in [2, 3]:
+                Cn = C(n, ring)
+                C1 = C(1, ring)
+                eta = C1.term(C.unit_key())
+                for elem in Cn.graded_basis(0):
+                    result = C.infinitesimal_cocompose(elem, 1, 1, n)
+                    expected = eta.tensor(elem)
+                    assert result == expected
 
     class TestSeqCoassociativity:
         """(id⊗Δ) ∘ Δ = (Δ⊗id) ∘ Δ on B(H)(4), m=n=p=2, i=j=1."""
