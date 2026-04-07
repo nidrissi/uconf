@@ -337,7 +337,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         Each yielded element is a single planar term ``self.term((c_pl, m))``
         indexed by a **planar** cooperad key ``c_pl`` and m-tuple ``m``.
 
-        Uses the isomorphism ``C(n) \\u2297_{S_n} M^{\\u2297n} \\u2245 C_pl(n) \\u2297 M^{\\u2297n}``
+        Uses the isomorphism ``C(n) ⊗_{S_n} M^{⊗n} ≅ C_pl(n) ⊗ M^{⊗n}``
         and enumerates only planar C(n)-decorations.
 
         Raises:
