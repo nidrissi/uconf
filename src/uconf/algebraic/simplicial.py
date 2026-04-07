@@ -275,7 +275,9 @@ def surjection_chain_action(
                 else:
                     yield (tuple(new_factors), coeff)
 
-    return target.sum_of_terms(term_generator())
+    return target.sum_of_terms(
+        (key, target.base_ring()(coeff)) for key, coeff in term_generator()
+    )
 
 
 def surjection_cochain_action(
@@ -405,7 +407,8 @@ def surjection_cochain_action(
     result_dict = {k: v for k, v in result_dict.items() if v != 0}
     if not result_dict:
         return target.zero()
-    return target.sum_of_terms(result_dict.items())
+    R = target.base_ring()
+    return target.sum_of_terms((k, R(v)) for k, v in result_dict.items())
 
 
 class SurjectionSimplicialCochainAlgebra(OperadAlgebra):

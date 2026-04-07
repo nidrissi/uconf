@@ -143,9 +143,10 @@ class ShiftedCooperad(UniqueRepresentation):
             )
 
         def _boundary_on_basis(self, basis_element):
+            R = self.base_ring()
             sign = shifted_boundary_sign(self.factory.shift_degree)
             base_bdry = sign * self._base_parent.boundary(self._base_parent(basis_element))
-            return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
+            return self.sum_of_terms((basis, R(coeff)) for basis, coeff in base_bdry)
 
         def arity(self) -> int:
             return self._arity
@@ -157,10 +158,11 @@ class ShiftedCooperad(UniqueRepresentation):
             return self._base_parent
 
         def from_base(self, element) -> "ShiftedCooperad.Element":
+            R = self.base_ring()
             if element.parent() is self._base_parent:
-                return self.sum_of_terms((basis, coeff) for basis, coeff in element)
+                return self.sum_of_terms((basis, R(coeff)) for basis, coeff in element)
             base_coerced = self._base_parent.sum_of_terms(
-                (basis, coeff) for basis, coeff in element
+                (basis, R(coeff)) for basis, coeff in element
             )
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
@@ -175,8 +177,9 @@ class ShiftedCooperad(UniqueRepresentation):
             base_parent = self._base_parent
             base_basis_it = getattr(base_parent, "basis_iter", None)
             if base_basis_it is not None:
+                R = self.base_ring()
                 for elem in base_basis_it(unshifted_degree):
-                    yield self.sum_of_terms((key, coeff) for key, coeff in elem)
+                    yield self.sum_of_terms((key, R(coeff)) for key, coeff in elem)
             else:
                 for key in base_parent.basis():
                     if base_parent.degree_on_basis(key) == unshifted_degree:
@@ -209,7 +212,8 @@ class ShiftedCooperad(UniqueRepresentation):
             return str(basis_element)
 
         def counit(self, x: "ShiftedCooperad.Element"):
-            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
+            R = self.base_ring()
+            base_x = self.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
             return self.factory.cooperad_cls.counit(base_x)
 
         def unit_key(self) -> object:
@@ -217,7 +221,8 @@ class ShiftedCooperad(UniqueRepresentation):
             return self.factory.unit_key()
 
         def reduced(self, x: "ShiftedCooperad.Element") -> "ShiftedCooperad.Element":
-            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
+            R = self.base_ring()
+            base_x = self.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
             return self.from_base(self.factory.cooperad_cls.reduced(base_x))
 
         def infinitesimal_cocompose(self, x: "ShiftedCooperad.Element", i: int, m: int, n: int):
@@ -225,10 +230,12 @@ class ShiftedCooperad(UniqueRepresentation):
             right_parent = self.factory(n, self.base_ring())
             target = tensor([left_parent, right_parent])
 
-            base_x = self.base_parent().sum_of_terms((basis, coeff) for basis, coeff in x)
+            R = self.base_ring()
+            base_x = self.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
             base_delta = self.factory.cooperad_cls.infinitesimal_cocompose(base_x, i, m, n)
 
             def term_generator():
+                Rt = target.base_ring()
                 for key, coeff in base_delta:
                     left_basis, right_basis = key
                     right_degree = right_parent.base_parent().degree_on_basis(right_basis)
@@ -239,7 +246,7 @@ class ShiftedCooperad(UniqueRepresentation):
                         n,
                         right_degree,
                     )
-                    yield (key, sign * coeff)
+                    yield (key, Rt(sign * coeff))
 
             return target.sum_of_terms(term_generator())
 
@@ -276,7 +283,7 @@ class ShiftedCooperad(UniqueRepresentation):
 
             base_permuted = (
                 parent.base_parent()
-                .sum_of_terms((basis, coeff) for basis, coeff in self)
+                .sum_of_terms((basis, parent.base_ring()(coeff)) for basis, coeff in self)
                 .permute(sigma)
             )
             sign = shifted_permutation_sign(parent.factory.shift_degree, sigma)
@@ -296,7 +303,8 @@ class ShiftedCooperad(UniqueRepresentation):
 
         def base_element(self):
             parent = self.parent()
-            return parent.base_parent().sum_of_terms((basis, coeff) for basis, coeff in self)
+            R = parent.base_ring()
+            return parent.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in self)
 
 
 ShiftedCooperad.Component.Element = ShiftedCooperad.Element

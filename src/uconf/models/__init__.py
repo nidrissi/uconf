@@ -41,6 +41,7 @@ def _table_reduction_on_basis(self: BarrattEccles):
         target = Surjection(n, self.base_ring())
 
         def term_generator():
+            R = target.base_ring()
             for pi_ord in Partitions(
                 d + n,
                 length=d + 1,  # pyright: ignore[reportCallIssue]
@@ -57,7 +58,7 @@ def _table_reduction_on_basis(self: BarrattEccles):
                             removed += filtered[: i - 1]
                         k2 += filtered[:i]
                     if not degenerate:
-                        yield tuple(k2), 1
+                        yield tuple(k2), R.one()
 
         return target.sum_of_terms(term_generator())
 

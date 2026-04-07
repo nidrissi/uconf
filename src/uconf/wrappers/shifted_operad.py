@@ -94,6 +94,7 @@ class ShiftedOperad(UniqueRepresentation):
         n = y_parent.arity()
         target = self(m + n - 1, x_parent.base_ring())
         accumulated = target.zero()
+        R = target.base_ring()
 
         for x_basis, x_coeff in x:
             x_term = x_parent.base_parent()(x_basis)
@@ -111,7 +112,7 @@ class ShiftedOperad(UniqueRepresentation):
                 accumulated += target.sum_of_terms(
                     (
                         basis,
-                        sign * x_coeff * y_coeff * coeff,
+                        R(sign * x_coeff * y_coeff * coeff),
                     )
                     for basis, coeff in base_composed
                 )
@@ -153,8 +154,9 @@ class ShiftedOperad(UniqueRepresentation):
 
                 def _planar_basis_it(d):
                     unshifted = d - shift * (arity - 1)
+                    R = self_ref.base_ring()
                     for elem in base_parent.planar_basis_iter(unshifted):
-                        yield self_ref.sum_of_terms((k, c) for k, c in elem)
+                        yield self_ref.sum_of_terms((k, R(c)) for k, c in elem)
 
                 self.planar_basis_iter = _planar_basis_it
 
@@ -222,9 +224,10 @@ class ShiftedOperad(UniqueRepresentation):
             )
 
         def _boundary_on_basis(self, basis_element):
+            R = self.base_ring()
             sign = shifted_boundary_sign(self.factory.shift_degree)
             base_bdry = sign * self._base_parent.boundary(self._base_parent(basis_element))
-            return self.sum_of_terms((basis, coeff) for basis, coeff in base_bdry)
+            return self.sum_of_terms((basis, R(coeff)) for basis, coeff in base_bdry)
 
         def __call__(self, x) -> "ShiftedOperad.Element":
             return super().__call__(x)
@@ -257,8 +260,9 @@ class ShiftedOperad(UniqueRepresentation):
             base_parent = self._base_parent
             base_basis_it = getattr(base_parent, "basis_iter", None)
             if base_basis_it is not None:
+                R = self.base_ring()
                 for elem in base_basis_it(unshifted_degree):
-                    yield self.sum_of_terms((key, coeff) for key, coeff in elem)
+                    yield self.sum_of_terms((key, R(coeff)) for key, coeff in elem)
             else:
                 for key in base_parent.basis():
                     if base_parent.degree_on_basis(key) == unshifted_degree:
@@ -270,11 +274,12 @@ class ShiftedOperad(UniqueRepresentation):
             return Family(self.basis_iter(d))
 
         def from_base(self, element) -> "ShiftedOperad.Element":
+            R = self.base_ring()
             if element.parent() is self._base_parent:
-                return self.sum_of_terms((basis, coeff) for basis, coeff in element)
+                return self.sum_of_terms((basis, R(coeff)) for basis, coeff in element)
             else:
                 base_coerced = self._base_parent.sum_of_terms(
-                    (basis, coeff) for basis, coeff in element
+                    (basis, R(coeff)) for basis, coeff in element
                 )
                 return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
@@ -341,7 +346,7 @@ class ShiftedOperad(UniqueRepresentation):
 
             base_permuted = (
                 parent.base_parent()
-                .sum_of_terms((basis, coeff) for basis, coeff in self)
+                .sum_of_terms((basis, parent.base_ring()(coeff)) for basis, coeff in self)
                 .permute(sigma)
             )
             sign = shifted_permutation_sign(parent.factory.shift_degree, sigma)
@@ -350,7 +355,8 @@ class ShiftedOperad(UniqueRepresentation):
         def base_element(self):
             """Return the underlying element in the base operad component."""
             parent = self.parent()
-            return parent.base_parent().sum_of_terms((basis, coeff) for basis, coeff in self)
+            R = parent.base_ring()
+            return parent.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in self)
 
         def underlying_element(self):
             """Return the underlying element in the base operad component."""
