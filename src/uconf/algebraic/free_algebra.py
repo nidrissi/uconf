@@ -588,11 +588,30 @@ class FreeOperadAlgebra(OperadAlgebra):
                     pos = j + 1  # 1-indexed position
                     composed_elem = P.compose(composed_elem, pos, p_j_elem)
 
+                # Koszul sign from rearranging
+                #   q ⊗ (p₁⊗m₁) ⊗ … ⊗ (pₖ⊗mₖ)
+                # into
+                #   (q ⊗ p₁ ⊗ … ⊗ pₖ) ⊗ (m₁ ⊗ … ⊗ mₖ):
+                #
+                # ε = (-1)^{Σ_{j<l} |mⱼ| · |pₗ|}
+                inner_mod = self._inner_module
+                sign_exp = 0
+                for j in range(k - 1):
+                    p_j_key_j, m_j_tuple_j = input_keys[j]
+                    m_deg_j = sum(inner_mod.degree_on_basis(mk) for mk in m_j_tuple_j)
+                    for l in range(j + 1, k):
+                        p_l_key = input_keys[l][0]
+                        p_l_deg = P(n_list[l], R).degree_on_basis(p_l_key)
+                        sign_exp += m_deg_j * p_l_deg
+                koszul = sign_from_exponent(sign_exp)
+
                 # Concatenate the M-tuples
                 m_concat = tuple(mk for ik in input_keys for mk in ik[1])
 
                 # Normalise: planarize composed_elem and permute m_concat
-                result += coeff * self.module._normalized_corolla_sum(composed_elem, m_concat)
+                result += koszul * coeff * self.module._normalized_corolla_sum(
+                    composed_elem, m_concat
+                )
 
         return result
 
