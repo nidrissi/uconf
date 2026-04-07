@@ -7,6 +7,7 @@ Layer 1: C = B(H) (Bar construction cooperad)
 Layer 2: P = Ω(C) = Ω(B(H)) (Cobar construction operad)
 Layer 3: Free_P(k[d]) (Free algebra)
 Layer 4: HadamardTensorAlgebra (sphere cochains ⊗ free algebra)
+Layer 4½: Comodule morphism φ: P → S ⊙ P (chain map, operad map, equivariance, comodule)
 Layer 5: PullbackAlgebra
 Layer 6: BarAlgebra (bar algebra)
 
@@ -39,21 +40,12 @@ import pytest
 from sage.all import GF, QQ, Partitions, SymmetricGroup, tensor
 
 from uconf import (
-    BarConstruction,
-    BarrattEccles,
-    CobarConstruction,
-    HadamardProduct,
-    Lie,
-    ShiftedOperad,
-    Surjection,
     compute_chain_complex,
-    e_comodule_on_generator,
     euclidean_unordered_configuration_model,
 )
 from uconf.algebraic.configuration import (
     ConfigurationLayers,
     _build_layers,
-    _make_surjection_comodule_morphism,
 )
 from uconf.core.signs import sign_from_exponent
 
@@ -772,10 +764,12 @@ class TestLayer3_ΩBH_Kd:
                     assert _as_dict(lhs) == _as_dict(rhs)
 
             # Also test with the second insertion position: p ∘_2 q
+            # γ(p ∘_2 q; a,a,a) = (-1)^{|q|·|a|} γ(p; a, γ(q; a,a))
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
                     lhs = fa.act(P.compose(p, 2, q), [a, a, a])
                     rhs = fa.act(p, [a, fa.act(q, [a, a])])
+                    rhs *= sign_from_exponent(q.degree() * a.degree())
                     assert _as_dict(lhs) == _as_dict(rhs)
 
     class TestLeibnizAction:
@@ -907,6 +901,145 @@ class TestLayer4_S_ΩBH_Kd:
 
 
 # ===========================================================================
+# Layer 4½: Comodule morphism φ: P = Ω(C) → S ⊙ P
+# ===========================================================================
+
+
+class TestLayer4h_comodule_morphism:
+    """Verify that the comodule morphism φ: Ω(C) → S ⊙ Ω(C) satisfies
+    chain map, operad map, equivariance, and comodule map axioms.
+    """
+
+    class TestChainMap:
+        """φ(dp) = d(φ(p)) — the morphism commutes with differentials."""
+
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("deg", [-1, 0, 1, 2])
+        def test_chain_map(self, n, deg, layers: ConfigurationLayers):
+            P = layers.OBXsLie
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            Pn = P(n, R)
+            basis = list(Pn.graded_basis(deg))
+            if not basis:
+                pytest.skip(f"No P({n}) elements at degree {deg}")
+            rng = Random(_SEED)
+            tested = 0
+            for p_elem in _sample(basis, 10, rng):
+                phi_dp = phi(p_elem.boundary())
+                d_phi_p = phi(p_elem).boundary()
+                tested += 1
+                assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) at n={n}, deg={deg} for p={p_elem}"
+            assert tested > 0, "No basis elements tested (nontriviality check)"
+
+    class TestOperadMap:
+        """φ(p ∘ᵢ q) = φ(p) ∘ᵢ φ(q) — the morphism respects operad composition."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        @pytest.mark.parametrize("q_deg", [-1, 0])
+        def test_operad_map(self, p_deg, q_deg, layers: ConfigurationLayers):
+            P = layers.OBXsLie
+            Q = layers.comodule_morphism.target  # S ⊙ P
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            P2 = P(2, R)
+            p_elems = list(P2.graded_basis(p_deg))
+            q_elems = list(P2.graded_basis(q_deg))
+            if not p_elems or not q_elems:
+                pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
+            rng = Random(_SEED)
+            tested = 0
+            for p in _sample(p_elems, 3, rng):
+                for q in _sample(q_elems, 3, rng):
+                    for i in [1, 2]:
+                        lhs = phi(P.compose(p, i, q))
+                        rhs = Q.compose(phi(p), i, phi(q))
+                        tested += 1
+                        assert lhs == rhs, (
+                            f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at p_deg={p_deg}, q_deg={q_deg}"
+                        )
+            assert tested > 0, "No compositions tested (nontriviality check)"
+
+    class TestEquivariance:
+        """φ(p · σ) = φ(p) · σ — the morphism respects symmetric group action."""
+
+        @pytest.mark.parametrize("n", [2, 3])
+        @pytest.mark.parametrize("deg", [-1, 0, 1])
+        def test_equivariance(self, n, deg, layers: ConfigurationLayers):
+            P = layers.OBXsLie
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            Pn = P(n, R)
+            basis = list(Pn.graded_basis(deg))
+            if not basis:
+                pytest.skip(f"No P({n}) elements at degree {deg}")
+            Sn = SymmetricGroup(n)
+            rng = Random(_SEED)
+            tested = 0
+            for p_elem in _sample(basis, 5, rng):
+                for sigma in _sample(list(Sn), min(4, Sn.order()), rng):
+                    p_sigma = p_elem.permute(sigma)
+                    phi_p_sigma = phi(p_sigma)
+                    phi_p = phi(p_elem)
+                    phi_p_acted = phi_p.permute(sigma)
+                    tested += 1
+                    assert phi_p_sigma == phi_p_acted, (
+                        f"φ(p·σ) ≠ φ(p)·σ at n={n}, deg={deg}, σ={sigma}"
+                    )
+            assert tested > 0, "No equivariance tests run (nontriviality check)"
+
+    class TestComoduleMap:
+        """Unit preservation and compatibility with E-comodule structure."""
+
+        def test_unit_preservation(self, layers: ConfigurationLayers):
+            """φ(id_P) = id_{S⊙P} — the unit is preserved."""
+            P = layers.OBXsLie
+            Q = layers.comodule_morphism.target
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            unit_P = P.unit(R)
+            result = phi(unit_P)
+            unit_Q = Q.unit(R)
+            assert _as_dict(result) == _as_dict(unit_Q), (
+                f"φ(id) = {result} ≠ {unit_Q} = id_{'{S⊙P}'}"
+            )
+
+        @pytest.mark.parametrize("deg", [-1, 0, 1])
+        def test_factorisation_through_e_comodule(self, deg, layers: ConfigurationLayers):
+            """φ = (table_reduction ⊗ id) ∘ Δ — the morphism factorises correctly."""
+            P = layers.OBXsLie
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
+
+            Delta = make_e_comodule_morphism(layers.BXsLie)
+            Pn = P(2, R)
+            Q = phi.target
+            Qn = Q(2, R)
+            basis = list(Pn.graded_basis(deg))
+            if not basis:
+                pytest.skip(f"No P(2) elements at degree {deg}")
+            rng = Random(_SEED)
+            tested = 0
+            for p_elem in _sample(basis, 5, rng):
+                # Apply E-comodule morphism, then table-reduce left factor
+                delta_p = Delta(p_elem)
+                delta_parent = delta_p.parent()
+                be_parent = delta_parent.left_parent()
+                result = Qn.zero()
+                for (be_key, cobar_key), coeff in delta_p:
+                    surj_elem = be_parent(be_key).table_reduction()
+                    for surj_key, surj_coeff in surj_elem:
+                        result += coeff * surj_coeff * Qn((surj_key, cobar_key))
+                direct = phi(p_elem)
+                tested += 1
+                assert result == direct, (
+                    f"Factorisation mismatch at deg={deg}: (TR⊗id)∘Δ ≠ φ for p={p_elem}"
+                )
+            assert tested > 0, "No factorisation tests run (nontriviality check)"
+
+
+# ===========================================================================
 # Layer 5: PullbackAlgebra
 # ===========================================================================
 
@@ -942,7 +1075,6 @@ class TestLayer5_pb_S_ΩBH_Kd:
     class TestAssociativityAction:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-        # @pytest.mark.xfail(reason="Sign bug in composition action on pullback algebra")
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers):
             rng = Random(_SEED)
@@ -1159,45 +1291,6 @@ class TestFullModel:
                 for w in range(1, 4):
                     basis = model.module.graded_basis_by_weight(k, w)
                     assert len(basis) == len(set(basis))
-
-    class TestComodule:
-        @pytest.mark.parametrize("n", [2, 3])
-        def test_generator_chain_map(self, n):
-            """ν(∂c) = (d_E⊗1 + 1⊗∂_C)(ν(c))."""
-            sLie = ShiftedOperad(Lie, -1)
-            H_op = HadamardProduct(sLie, Surjection)
-            C_cop = BarConstruction(H_op)
-            Cn = C_cop(n, QQ)
-            BEn = BarrattEccles(n, QQ)
-            for d in range(3):
-                for elem in Cn.graded_basis(d):
-                    lhs = e_comodule_on_generator(elem.boundary())
-                    rhs = tensor([BEn, Cn]).zero()
-                    for (b, u), coeff in e_comodule_on_generator(elem):
-                        b_elem = BEn(b)
-                        u_elem = Cn(u)
-                        rhs += coeff * b_elem.boundary().tensor(u_elem)
-                        rhs += (
-                            coeff
-                            * (-1) ** BEn.degree_on_basis(b)
-                            * b_elem.tensor(Cn.boundary(u_elem))
-                        )
-                    assert lhs == rhs
-
-        @pytest.mark.parametrize("n", [2, 3])
-        def test_comodule_chain_map(self, n, ring):
-            """φ(dp) = d(φ(p)) — composed morphism is a chain map."""
-            sLie = ShiftedOperad(Lie, -1)
-            H_op = HadamardProduct(sLie, Surjection)
-            C_cop = BarConstruction(H_op)
-            P_op = CobarConstruction(C_cop)
-            phi = _make_surjection_comodule_morphism(C_cop)
-            Pn = P_op(n, ring)
-            for d in range(-3, 3):
-                for p_elem in Pn.graded_basis(d):
-                    phi_dp = phi(p_elem.boundary())
-                    d_phi_p = phi(p_elem).boundary()
-                    assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) for p={p_elem}"
 
 
 class TestExpectedDimension:

@@ -313,6 +313,27 @@ def make_e_comodule_morphism(
             child_image = _extend_tree(child, base_ring)
             result = target_factory.compose(result, j, child_image)
 
+        # Fix leaf ordering.  Operadic composition assigns consecutive
+        # blocks of labels to each child: child_1 gets {1,…,a_1},
+        # child_2 gets {a_1+1,…,a_1+a_2}, etc.  But the actual cobar
+        # tree may interleave those labels differently (e.g. child_1
+        # has leaves {1,3} while child_2 is leaf 2).  Permute the
+        # result so that standard position i maps to the tree's actual
+        # leaf label.  This is only needed (and valid as an S_n
+        # permutation) when the tree's leaves are exactly {1,…,n};
+        # recursive calls on subtrees with non-consecutive leaves are
+        # composed correctly by the parent and do not need relabeling.
+        n = tree._tree_arity
+        if tree._leaves == frozenset(range(1, n + 1)):
+            leaf_order: list[int] = []
+            for child in kids:
+                if is_leaf(child):
+                    leaf_order.append(child)
+                else:
+                    leaf_order.extend(sorted(child._leaves))
+            if leaf_order != list(range(1, n + 1)):
+                result = result.permute(leaf_order)
+
         return result
 
     def _on_element(element: Any) -> Any:
