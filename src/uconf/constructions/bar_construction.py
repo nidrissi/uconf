@@ -733,8 +733,18 @@ class BarConstruction(UniqueRepresentation):
         def infinitesimal_cocompose(self, x: "BarConstruction.Element", i: int, m: int, n: int):
             """Partial cocomposition dual to free operad composition.
 
-            Splits trees at internal edges where the lower subtree has leaves
-            ``{i, i+1, ..., i+n-1}``.
+            Computes the full infinitesimal cocomposition
+            ``Δ^{i;m,n}: B(P)(m+n-1) → B(P)(m) ⊗ B(P)(n)``.
+
+            This includes both the *reduced* part (splitting trees at internal
+            edges where the lower subtree has leaves ``{i, …, i+n-1}``) and
+            the *identity* summands:
+
+            - ``n = 1``: ``Δ^{i;m,1}(x) = x ⊗ η`` (right counit axiom).
+            - ``m = 1``: ``Δ^{1;1,n}(x) = η ⊗ x`` (left counit axiom).
+
+            The Koszul sign for the identity summands is always +1 because the
+            identity element η has no internal vertices (bar degree 0).
             """
             if m <= 0 or n <= 0:
                 raise ValueError(f"Arities must be positive. Got m={m}, n={n}.")
@@ -747,6 +757,26 @@ class BarConstruction(UniqueRepresentation):
             right_parent = self.factory(n, self.base_ring())
             target = tensor([left_parent, right_parent])
 
+            unit_key = self.factory.unit_key()
+
+            # --- Identity summands (counit axioms) ---
+            # When n = 1: Δ^{i;m,1}(x) = x ⊗ η
+            if n == 1:
+                total = target.zero()
+                eta_right = right_parent.term(unit_key)
+                for tree, coeff in x:
+                    total += coeff * left_parent.term(tree).tensor(eta_right)
+                return total
+
+            # When m = 1: Δ^{1;1,n}(x) = η ⊗ x
+            if m == 1:
+                total = target.zero()
+                eta_left = left_parent.term(unit_key)
+                for tree, coeff in x:
+                    total += coeff * eta_left.tensor(right_parent.term(tree))
+                return total
+
+            # --- Reduced cocomposition (m ≥ 2, n ≥ 2) ---
             def _on_basis(tree):
                 """Cocompose a single tree basis element."""
                 result = target.zero()
