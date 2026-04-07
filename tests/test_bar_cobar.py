@@ -341,8 +341,7 @@ class TestBarConstructionLie:
         BLie = BarConstruction(Lie)
         B2 = BLie(2, QQ)
         B1 = BLie(1, QQ)
-        for tree in B2.graded_basis(0):
-            x = tree
+        for x in B2.graded_basis(0):
             for i in range(1, 3):
                 delta = B2.infinitesimal_cocompose(x, i, 2, 1)
                 # Apply (id⊗ε): sum coeff * left * ε(right)
