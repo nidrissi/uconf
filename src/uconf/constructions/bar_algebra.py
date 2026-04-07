@@ -135,7 +135,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         for n_r in range(2, n + 1):
             m = n - n_r + 1
-            if m < 1:
+            if m < 2:
                 continue
             for i in range(1, m + 1):
                 # Infinitesimal cocomposition Δ^{i;m,n_r}
