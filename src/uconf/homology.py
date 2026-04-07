@@ -50,10 +50,7 @@ def _boundary_matrix(
     n_target:
         Number of basis elements in the target degree (number of rows).
     strict:
-        If ``True`` *and* the module exposes ``_full_canonicalize_key``,
-        every non-canonical key in the boundary is verified: its canonical
-        representative **must** also appear in ``key_to_idx_target``.
-        Raises :class:`ValueError` if this invariant is broken.
+        Currently unused; kept for API compatibility.
 
     Returns
     -------
@@ -63,29 +60,12 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
-    full_canonicalize = getattr(module, "_full_canonicalize_key", None)
     for j, elem in enumerate(basis_source):
         bdry = module.boundary(elem)
         for key, coeff in bdry:
-            # Try direct lookup first
             i = key_to_idx_target.get(key)
             if i is not None:
                 M[i, j] += coeff
-            elif full_canonicalize is not None:
-                # The key is non-canonical (e.g. a non-planar cooperad key
-                # in a cofree coalgebra).  Canonicalize it and distribute
-                # the coefficient across all planar representatives.
-                for canon_key, sign in full_canonicalize(key):
-                    ci = key_to_idx_target.get(canon_key)
-                    if ci is not None:
-                        M[ci, j] += coeff * sign
-                    elif strict:
-                        raise ValueError(
-                            f"Boundary of basis element {elem} contains "
-                            f"non-canonical key {key} whose canonical "
-                            f"representative {canon_key} is not in "
-                            f"the target basis keys"
-                        )
             else:
                 raise ValueError(
                     f"Boundary of basis element {elem} contains key {key} "
@@ -112,17 +92,12 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
     seen: set = set()
     elems: list = []
     keys: list = []
-    leading_key_fn = getattr(module, "_leading_key", None)
     if weight is not None:
         family = module.graded_basis_by_weight(d, weight)
     else:
         family = module.graded_basis(d)
     for b in family:
-        # Use the module's _leading_key if available (e.g. cofree
-        # coalgebra orbit sums), otherwise fall back to leading_support.
-        if leading_key_fn is not None:
-            key = leading_key_fn(b)
-        elif hasattr(b, "leading_support"):
+        if hasattr(b, "leading_support"):
             key = b.leading_support()
         else:
             support = list(b.support())
@@ -180,9 +155,7 @@ def compute_chain_complex(
         usually faster and significantly lighter in memory for dg-modules
         with sparse boundaries.
     strict:
-        When ``True``, every non-canonical boundary key is verified: its
-        canonical representative must be present in the target basis.
-        Useful for catching invariance bugs.  Default ``False``.
+        Currently unused; kept for API compatibility.
 
     Returns
     -------
