@@ -40,11 +40,6 @@ import pytest
 from sage.all import GF, QQ, Partitions, SymmetricGroup, tensor
 
 from uconf import (
-    BarConstruction,
-    HadamardProduct,
-    Lie,
-    ShiftedOperad,
-    Surjection,
     compute_chain_complex,
     euclidean_unordered_configuration_model,
 )
@@ -934,9 +929,7 @@ class TestLayer4h_comodule_morphism:
                 phi_dp = phi(p_elem.boundary())
                 d_phi_p = phi(p_elem).boundary()
                 tested += 1
-                assert phi_dp == d_phi_p, (
-                    f"φ(dp) ≠ d(φ(p)) at n={n}, deg={deg} for p={p_elem}"
-                )
+                assert phi_dp == d_phi_p, f"φ(dp) ≠ d(φ(p)) at n={n}, deg={deg} for p={p_elem}"
             assert tested > 0, "No basis elements tested (nontriviality check)"
 
     class TestOperadMap:
@@ -963,8 +956,7 @@ class TestLayer4h_comodule_morphism:
                         rhs = Q.compose(phi(p), i, phi(q))
                         tested += 1
                         assert lhs == rhs, (
-                            f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at p_deg={p_deg}, "
-                            f"q_deg={q_deg}"
+                            f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at p_deg={p_deg}, q_deg={q_deg}"
                         )
             assert tested > 0, "No compositions tested (nontriviality check)"
 
@@ -1042,8 +1034,7 @@ class TestLayer4h_comodule_morphism:
                 direct = phi(p_elem)
                 tested += 1
                 assert result == direct, (
-                    f"Factorisation mismatch at deg={deg}: "
-                    f"(TR⊗id)∘Δ ≠ φ for p={p_elem}"
+                    f"Factorisation mismatch at deg={deg}: (TR⊗id)∘Δ ≠ φ for p={p_elem}"
                 )
             assert tested > 0, "No factorisation tests run (nontriviality check)"
 
@@ -1084,7 +1075,6 @@ class TestLayer5_pb_S_ΩBH_Kd:
     class TestAssociativityAction:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
-        # @pytest.mark.xfail(reason="Sign bug in composition action on pullback algebra")
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers):
             rng = Random(_SEED)
