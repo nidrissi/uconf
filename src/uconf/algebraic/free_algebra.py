@@ -609,8 +609,8 @@ class FreeOperadAlgebra(OperadAlgebra):
                 m_concat = tuple(mk for ik in input_keys for mk in ik[1])
 
                 # Normalise: planarize composed_elem and permute m_concat
-                result += koszul * coeff * self.module._normalized_corolla_sum(
-                    composed_elem, m_concat
+                result += (
+                    koszul * coeff * self.module._normalized_corolla_sum(composed_elem, m_concat)
                 )
 
         return result
