@@ -275,9 +275,7 @@ def surjection_chain_action(
                 else:
                     yield (tuple(new_factors), coeff)
 
-    return target.sum_of_terms(
-        (key, target.base_ring()(coeff)) for key, coeff in term_generator()
-    )
+    return target.sum_of_terms((key, target.base_ring()(coeff)) for key, coeff in term_generator())
 
 
 def surjection_cochain_action(

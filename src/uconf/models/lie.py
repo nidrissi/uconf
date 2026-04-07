@@ -257,7 +257,9 @@ class Lie(CombinatorialFreeModule):
         left_inv = self._pbw_left_inverse()
         coords = (left_inv * vec).change_ring(self.base_ring())
         keys = self._basis_keys()
-        return self.sum_of_terms((keys[i], self.base_ring()(coords[i])) for i in range(len(keys)) if coords[i] != 0)
+        return self.sum_of_terms(
+            (keys[i], self.base_ring()(coords[i])) for i in range(len(keys)) if coords[i] != 0
+        )
 
     def arity(self) -> int:
         """Return the arity of this Lie operad component."""
