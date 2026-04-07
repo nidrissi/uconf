@@ -336,6 +336,45 @@ class TestBarConstructionLie:
         elem2 = B2(tree)
         assert B2.reduced(elem2) == elem2
 
+    def test_bar_lie_counit_axiom_right(self):
+        """Right counit axiom: (id⊗ε) ∘ Δ^{i;m,1}(x) = x."""
+        BLie = BarConstruction(Lie)
+        B2 = BLie(2, QQ)
+        B1 = BLie(1, QQ)
+        for x in B2.graded_basis(0):
+            for i in range(1, 3):
+                delta = B2.infinitesimal_cocompose(x, i, 2, 1)
+                # Apply (id⊗ε): sum coeff * left * ε(right)
+                result = B2.zero()
+                for (lk, rk), c in delta:
+                    eps = B1.counit(B1.term(rk))
+                    result += c * eps * B2.term(lk)
+                assert result == x
+
+    def test_bar_lie_counit_axiom_left(self):
+        """Left counit axiom: (ε⊗id) ∘ Δ^{1;1,n}(x) = x."""
+        BLie = BarConstruction(Lie)
+        B1 = BLie(1, QQ)
+        for n in [2, 3]:
+            Bn = BLie(n, QQ)
+            for x in Bn.graded_basis(0):
+                delta = Bn.infinitesimal_cocompose(x, 1, 1, n)
+                # Apply (ε⊗id): sum coeff * ε(left) * right
+                result = Bn.zero()
+                for (lk, rk), c in delta:
+                    eps = B1.counit(B1.term(lk))
+                    result += c * eps * Bn.term(rk)
+                assert result == x
+
+    def test_bar_lie_counit_axiom_trivial(self):
+        """Counit axiom at arity 1: Δ^{1;1,1}(η) = η ⊗ η."""
+        BLie = BarConstruction(Lie)
+        B1 = BLie(1, QQ)
+        eta = B1.term(BLie.unit_key())
+        delta = B1.infinitesimal_cocompose(eta, 1, 1, 1)
+        expected = eta.tensor(eta)
+        assert delta == expected
+
     def test_bar_lie_degree(self):
         BLie = BarConstruction(Lie)
         B3 = BLie(3, QQ)
@@ -719,6 +758,17 @@ class TestBarCoderivation:
         # (1,2,1) has nontrivial boundary in Surjection(2, QQ)
         tree = RootedTree((1, 2, 1), 1, 2)
         self._check_coderivation(BS, tree, 1, 1, 2)
+
+    def test_bar_lie_coderivation_m1_and_n1(self):
+        """Coderivation property holds for identity decompositions (m=1 or n=1)."""
+        BLie = BarConstruction(Lie)
+        tree = RootedTree((1,), RootedTree((1,), 1, 2), 3)
+        # m=1: top is identity
+        self._check_coderivation(BLie, tree, 1, 1, 3)
+        # n=1: bottom is identity
+        self._check_coderivation(BLie, tree, 1, 3, 1)
+        self._check_coderivation(BLie, tree, 2, 3, 1)
+        self._check_coderivation(BLie, tree, 3, 3, 1)
 
 
 class TestCoAssociative:
