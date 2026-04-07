@@ -772,10 +772,12 @@ class TestLayer3_ΩBH_Kd:
                     assert _as_dict(lhs) == _as_dict(rhs)
 
             # Also test with the second insertion position: p ∘_2 q
+            # γ(p ∘_2 q; a,a,a) = (-1)^{|q|·|a|} γ(p; a, γ(q; a,a))
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
                     lhs = fa.act(P.compose(p, 2, q), [a, a, a])
                     rhs = fa.act(p, [a, fa.act(q, [a, a])])
+                    rhs *= sign_from_exponent(q.degree() * a.degree())
                     assert _as_dict(lhs) == _as_dict(rhs)
 
     class TestLeibnizAction:
