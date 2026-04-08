@@ -630,8 +630,7 @@ class CobarConstruction(UniqueRepresentation):
                 # Use _iter_all_splits when available (bar cooperad) so that
                 # non-contiguous leaf subsets are not silently skipped.
                 if hasattr(curr_parent, "_iter_all_splits"):
-                    self._d2_all_splits(
-                        result,
+                    result += self._d2_all_splits(
                         tree,
                         curr_vertex,
                         curr_arity,
@@ -642,8 +641,7 @@ class CobarConstruction(UniqueRepresentation):
                         base_ring,
                     )
                 else:
-                    self._d2_contiguous(
-                        result,
+                    result += self._d2_contiguous(
                         tree,
                         curr_vertex,
                         curr_arity,
@@ -658,7 +656,6 @@ class CobarConstruction(UniqueRepresentation):
 
         def _d2_contiguous(
             self,
-            result,
             tree,
             curr_vertex,
             curr_arity,
@@ -668,6 +665,7 @@ class CobarConstruction(UniqueRepresentation):
             base_ring,
         ):
             """Original d₂ path: iterate over contiguous positions only."""
+            result = self.zero()
             curr_elem = curr_parent(curr_dec)
             for m in range(2, curr_arity):
                 n = curr_arity - m + 1
@@ -687,14 +685,16 @@ class CobarConstruction(UniqueRepresentation):
                         )
 
                         koszul_exp = right_sinv_deg * before_deg
-                        total_sign = sign_from_exponent(global_accum + left_degree + koszul_exp)
+                        # The leading -1 mirrors the desuspension transfer
+                        # sign in d₁: d₂(s⁻¹c) = -Σ s⁻¹c_L ∘_i s⁻¹c_R.
+                        total_sign = -sign_from_exponent(global_accum + left_degree + koszul_exp)
 
                         new_tree = expand_vertex(tree, curr_vertex, i, dec_left, dec_right, m, n)
                         result += total_sign * coeff * self._from_validated_tree(new_tree)
+            return result
 
         def _d2_all_splits(
             self,
-            result,
             tree,
             curr_vertex,
             curr_arity,
@@ -705,6 +705,7 @@ class CobarConstruction(UniqueRepresentation):
             base_ring,
         ):
             """General d₂ path: iterate over all cooperad splits."""
+            result = self.zero()
             orig_children = children(curr_vertex)
 
             for child_positions, dec_left, dec_right, coop_sign in curr_parent._iter_all_splits(
@@ -738,7 +739,9 @@ class CobarConstruction(UniqueRepresentation):
                 )
 
                 koszul_exp = right_sinv_deg * before_deg
-                total_sign = sign_from_exponent(
+                # The leading -1 mirrors the desuspension transfer
+                # sign in d₁: d₂(s⁻¹c) = -Σ s⁻¹c_L ∘_i s⁻¹c_R.
+                total_sign = -sign_from_exponent(
                     global_accum + left_degree + koszul_exp + gathering_exp
                 )
 
@@ -750,6 +753,7 @@ class CobarConstruction(UniqueRepresentation):
                     dec_right,
                 )
                 result += total_sign * coop_sign * self._from_validated_tree(new_tree)
+            return result
 
         def _gathering_exponent(self, child_positions, orig_children, base_ring):
             """Koszul sign exponent from gathering non-contiguous children.
