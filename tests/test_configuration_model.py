@@ -1230,7 +1230,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
 
         @pytest.mark.parametrize("weight", [2, 3])
         def test_d_alpha_squared(self, dim, ring, weight, layers: ConfigurationLayers):
-            """d_alpha² = 0."""
+            """d_α² = 0."""
             mod = layers.bar.module
             rng = Random(_SEED)
             tested = 0
@@ -1240,7 +1240,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
                     tested += 1
                     dd = mod.d_alpha(mod.d_alpha(elem))
                     assert dd == mod.zero(), (
-                        f"d_alpha²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
+                        f"d_α²({elem}) ≠0 w={weight} deg={deg} dim={dim} ring={ring}"
                     )
             assert tested > 0, "No basis elements found (nontriviality check)"
 
@@ -1307,21 +1307,25 @@ class TestExpectedDimension:
 
         return sum(1 for p in P if len(p) <= S)
 
-    @pytest.mark.xfail(reason="Dimension counts are currently incorrect over GF(2).")
     @pytest.mark.parametrize("w", [1, 2, 3, 4])
     def test_expected_dimension_gf2(self, w: int):
         model = euclidean_unordered_configuration_model(GF(2), 2)
         cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
+        print(
+            "Found Betti numbers:",
+            [cc.betti(deg) for deg in range(-1, 3)],
+            f"Expected dimensions: {[self._count(deg, w) for deg in range(-1, 3)]}",
+        )
         for deg in range(-1, 3):
             assert cc.betti(deg) == self._count(deg, w), (
                 f"Betti number mismatch at deg={deg}, weight={w}"
             )
 
-    @pytest.mark.xfail(reason="Dimension counts are currently incorrect over QQ.")
     @pytest.mark.parametrize("w", [1, 2, 3, 4])
     def test_expected_dimension_QQ(self, w: int):
         model = euclidean_unordered_configuration_model(QQ, 2)
         cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
+        print("Found Betti numbers:", [cc.betti(deg) for deg in range(-1, 3)])
         for deg in range(-1, 3):
             if deg == 0 or (w > 1 and deg == 1):
                 assert cc.betti(deg) == 1, f"Betti number mismatch at deg={deg}, weight={w}"

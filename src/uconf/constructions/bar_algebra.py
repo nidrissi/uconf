@@ -188,7 +188,19 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         return result
 
     def _dalpha_all_splits(self, c_key, m_tuple, n, base_ring, c_comp):
-        """d_α via _iter_all_splits (handles non-contiguous leaf subsets)."""
+        """d_α via _iter_all_splits (handles non-contiguous leaf subsets).
+
+        ``_iter_all_splits`` yields both the reduced cocompositions
+        (splitting at internal edges) and the identity summands
+        (counit axioms):
+
+        - ``Δ^{i;n,1}(c) = c ⊗ η`` (right counit): these vanish
+          automatically because twisting morphisms send the counit
+          to zero (α(η) = 0).
+        - ``Δ^{1;1,n}(c) = η ⊗ c`` (left counit): α is applied to
+          the whole element *c*.  The sign is +1 because *η* has
+          bar degree 0.
+        """
         C = self._cooperad_cls
         M = self._inner_module
         result = self.zero()
