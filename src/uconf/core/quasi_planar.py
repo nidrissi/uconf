@@ -127,6 +127,45 @@ class QuasiPlanarMixin(__quasi_planar_base):
 
         return result
 
+    def d_sigma_decompose(self, x: Any) -> dict[Any, Any]:
+        """Decompose ``boundary(x)`` into all σ-indexed components at once.
+
+        Returns a dictionary ``{σ: d_σ(x)}`` containing only the non-zero
+        components.  This is equivalent to calling ``d_sigma(x, σ)`` for
+        every ``σ ∈ S_n``, but computes ``boundary`` and ``planarize``
+        only **once** instead of once per permutation query.
+
+        Parameters
+        ----------
+        x : element of this component
+
+        Returns
+        -------
+        dict
+            Mapping from permutation σ to the non-zero planar element
+            ``d_σ(x) ∈ P_pl(n)``.
+        """
+        from sage.all import SymmetricGroup
+
+        bdry = self.boundary(x)
+        if not bdry:
+            return {}
+
+        n = self.arity()
+        S_n = SymmetricGroup(n)
+
+        planarized = self.planarize(bdry)
+
+        result: dict[Any, Any] = {}
+        for (planar_key, group_key), coeff in planarized:
+            sigma = S_n(group_key)
+            if sigma in result:
+                result[sigma] += coeff * self.term(planar_key)
+            else:
+                result[sigma] = coeff * self.term(planar_key)
+
+        return {sigma: val for sigma, val in result.items() if val}
+
     def d_sigma_iterate(self, x: Any, sigmas: Iterable[Any]) -> Any:
         """Apply ``d_sigma`` iteratively for a sequence of permutations.
 

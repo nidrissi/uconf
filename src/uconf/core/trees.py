@@ -27,7 +27,7 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from functools import total_ordering
+from functools import lru_cache, total_ordering
 from typing import Any, Callable, Iterator, Literal
 
 from itertools import combinations, product as iter_product
@@ -254,11 +254,15 @@ def vertices_dfs(tree) -> list[RootedTree]:
     return result
 
 
+@lru_cache(maxsize=None)
 def subtree_degree(tree, operad_cls, base_ring) -> int:
     """Compute the total shifted bar degree of a subtree.
 
     In the conventions used by ``BarConstruction``, each internal vertex
     contributes ``deg_P(decoration) + 1``.
+
+    Memoized: trees are immutable and hashable, so results are cached
+    across calls with the same ``(tree, operad_cls, base_ring)`` triple.
     """
     if isinstance(tree, int):
         return 0
@@ -269,11 +273,15 @@ def subtree_degree(tree, operad_cls, base_ring) -> int:
     return vertex_deg + child_deg
 
 
+@lru_cache(maxsize=None)
 def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     """Compute the total shifted cobar degree of a subtree.
 
     In the conventions used by ``CobarConstruction``, each internal vertex
     contributes ``deg_C(decoration) - 1``.
+
+    Memoized: trees are immutable and hashable, so results are cached
+    across calls with the same ``(tree, cooperad_cls, base_ring)`` triple.
     """
     if isinstance(tree, int):
         return 0

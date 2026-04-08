@@ -193,10 +193,10 @@ def _nu_on_planar(
     """
     result = target.zero()
 
-    # Pre-materialise the non-identity permutations once so that the inner
-    # loop never triggers GAP's strong_generating_system on each recursion.
     n = cooperad_component.arity()
-    non_id_perms = _non_identity_perms(n)
+    # Pre-warm the non-identity permutation list so that the first call to
+    # d_sigma_decompose doesn't trigger GAP's strong_generating_system.
+    _non_identity_perms(n)
     # Cache the k=0 BE basis element (identity simplex) to avoid repeated
     # construction on every recursion entry.
     be_id_elem = be_component((identity_n,))
@@ -234,9 +234,11 @@ def _nu_on_planar(
                 coop_factor = make_cooperad_factor(current_d_elem, sigma_prod)
                 result += be_elem.tensor(coop_factor)
 
-        for sigma in non_id_perms:
-            next_d = cooperad_component.d_sigma(current_d_elem, sigma)
-            if next_d:
+        # Compute all d_sigma components at once (one boundary+planarize
+        # call) instead of once per permutation.
+        decomp = cooperad_component.d_sigma_decompose(current_d_elem)
+        for sigma, next_d in decomp.items():
+            if sigma != identity_n:
                 recurse(next_d, sigma_bar + [sigma])
 
     recurse(planar_elem, [])
@@ -293,14 +295,17 @@ def make_e_comodule_morphism(
         be_component = BarrattEccles(k, base_ring)
         for (be_key, coop_key), t_coeff in root_tensor:
             # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
+            # Use _from_validated_tree to skip redundant validation — this
+            # is a corolla with leaves 1..k and a known-valid cooperad key.
             cobar_tree = RootedTree(coop_key, *range(1, k + 1))
-            cobar_elem = cobar_k(cobar_tree)
+            cobar_elem = cobar_k._from_validated_tree(cobar_tree)
             # Koszul sign from commuting the BE element (degree |e|) past
             # the desuspension s⁻¹ (degree −1) in the inclusion ι: C ↪ Ω(C):
             #   e ⊗ c  ↦  (−1)^{|e|} e ⊙ s⁻¹c
             koszul = sign_from_exponent(be_component.degree_on_basis(be_key))
             for cobar_key, c_coeff in cobar_elem:
-                root_image += koszul * t_coeff * c_coeff * target_k((be_key, cobar_key))
+                # Use term() directly — both keys are already validated
+                root_image += koszul * t_coeff * c_coeff * target_k.term((be_key, cobar_key))
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.
