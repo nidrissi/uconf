@@ -856,12 +856,22 @@ class BarConstruction(UniqueRepresentation):
             return total
 
         def _iter_all_splits(self, tree_key):
-            """Iterate over ALL non-root internal vertices and yield splits.
+            """Iterate over all infinitesimal cocompositions and yield splits.
 
             Unlike ``infinitesimal_cocompose`` (which only handles contiguous
             leaf sets ``{i, ..., i+n-1}``), this method finds splits at
             **every** internal edge of the bar tree—including subtrees whose
             leaf set is non-contiguous after shuffle normalisation.
+
+            The method also yields the identity (counit) summands, following
+            the same convention as ``infinitesimal_cocompose``:
+
+            - **Right counit** (``n = 1``):
+              ``Δ^{i;k,1}(c) = c ⊗ η`` for each position ``i``.
+              Yields ``((i,), tree_key, unit_key, +1)``.
+            - **Left counit** (``m = 1``):
+              ``Δ^{1;1,k}(c) = η ⊗ c``.
+              Yields ``((1, ..., k), unit_key, tree_key, +1)``.
 
             Yields ``(child_positions, top_key, bot_key, koszul_sign)`` where:
 
@@ -872,12 +882,24 @@ class BarConstruction(UniqueRepresentation):
               (order-preserving).
             - ``koszul_sign`` is the cofree-cooperad Koszul sign from the
               DFS tensor-product reordering (same convention as
-              ``infinitesimal_cocompose``).
+              ``infinitesimal_cocompose``).  For identity summands the sign
+              is always ``+1`` (the identity element η has bar degree 0).
             """
             base_ring = self.base_ring()
             operad_cls = self._operad_cls
             k = self._arity
 
+            unit_key = self.factory.unit_key()
+
+            # --- Identity summands (counit axioms) ---
+            # Right counit: Δ^{i;k,1}(c) = c ⊗ η for each position i.
+            for i in range(1, k + 1):
+                yield ((i,), tree_key, unit_key, 1)
+
+            # Left counit: Δ^{1;1,k}(c) = η ⊗ c.
+            yield (tuple(range(1, k + 1)), unit_key, tree_key, 1)
+
+            # --- Reduced cocomposition (splitting at internal edges) ---
             all_verts = vertices_dfs(tree_key)
             for vertex in all_verts:
                 vertex_leaf_set = leaves(vertex)

@@ -713,6 +713,12 @@ class CobarConstruction(UniqueRepresentation):
             ):
                 n = len(child_positions)
                 m = curr_arity - n + 1
+
+                # Skip identity summands (counit axioms): d₂ uses only the
+                # reduced cooperad cocomposition (both parts arity ≥ 2).
+                if n < 2 or m < 2:
+                    continue
+
                 pos_set = set(child_positions)
                 min_pos = child_positions[0]
 
