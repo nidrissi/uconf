@@ -165,11 +165,16 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
                     # Build the new m_tuple: replace a_i,...,a_{i+n_r-1}
                     # with the single action result.
-                    # Keep raw cooperad keys — do NOT planarize here.
-                    # Planarization inside the boundary breaks d²=0.
+                    # Normalise the cooperad key to planar via
+                    # _normalized_corolla_sum (coinvariant quotient).
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += sign * coeff * a_coeff * self.term((c_L_key, new_m))
+                        result += (
+                            sign
+                            * coeff
+                            * a_coeff
+                            * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                        )
 
         return result
 

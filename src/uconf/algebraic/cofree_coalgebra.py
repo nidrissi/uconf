@@ -2,26 +2,24 @@
 
 The cofree conilpotent C-coalgebra on a dg-module M is
 
-    T^c_C(M) = \u2295_{n\u22651} C(n) \u2297 M^{\u2297n}
+    T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}
 
 with:
-- Degree: deg(c_key, m_tuple) = deg_C(c_key) + \u03a3_i deg_M(m_i).
+- Degree: deg(c_key, m_tuple) = deg_C(c_key) + Σ_i deg_M(m_i).
 - Differential d = d_C + d_M from the Koszul sign rule (Leibniz rule).
-- C-coalgebra costructure: the infinitesimal cocomposition \u0394^{i;m,n} applies
+- C-coalgebra costructure: the infinitesimal cocomposition Δ^{i;m,n} applies
   the cooperad's cocomposition to the C-decoration and splits the M-labels.
 
 The basis keys are pairs ``(c_key, m_tuple)`` where:
 
-- ``c_key`` is an **arbitrary** basis key of ``C(n)`` for ``n = len(m_tuple) >= 1``.
+- ``c_key`` is a **planar** basis key of ``C(n)`` for ``n = len(m_tuple) >= 1``.
 - ``m_tuple`` is a tuple of ``n`` values.
 
-.. note::
-   The underlying module uses the full tensor product ``C(n) \u2297 M^{\u2297n}``
-   rather than the coinvariant quotient ``C(n) \u2297_{S_n} M^{\u2297n}``.
-   For quasi-planar cooperads (free S_n-action), elements arising from the
-   differential are naturally S_n-invariant, so this correctly computes
-   the invariant homology ``H_*(C(n) \u2297^{S_n} M^{\u2297n})`` in any
-   characteristic.
+**Quasi-planar requirement**: C must be a quasi-planar cooperad, i.e. each
+component ``C(n)`` satisfies ``C(n) ≅ C_pl(n) ⊗ k[S_n]`` and exposes a
+``planarize`` linear map.  The basis uses only planar C-keys, so two corollas
+``(c·σ, m_tuple)`` and ``(c, σ·m_tuple)`` are identified as the same element
+(coinvariant quotient).
 
 The coprojection pi: T^c_C(M) -> M kills all elements with n >= 2 and maps
 ``(id_key, (m,)) |-> m``.
@@ -37,8 +35,6 @@ from sage.all import (
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
-    SymmetricGroup,
-    cached_function,
     cached_method,
     tensor,
 )
@@ -57,28 +53,17 @@ from uconf.core.signs import koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
-@cached_function
-def _Sn_elements(n: int) -> list:
-    """Return all elements of ``S_n`` in a fixed order, cached to avoid
-    re-running GAP's ``strong_generating_system`` on each basis enumeration.
-    """
-    return list(SymmetricGroup(n))
-
-
 class CofreeCoalgebraModule(CombinatorialFreeModule):
     """Underlying dg-module of the cofree conilpotent C-coalgebra ``T^c_C(M)``.
 
-    Basis keys are ``(c_key, m_tuple)`` pairs where ``c_key`` is any basis
-    key of ``C(n)`` (planar **or** non-planar) and ``m_tuple`` has length
-    ``n``.
+    Basis keys are ``(c_key, m_tuple)`` pairs where ``c_key`` is a **planar**
+    basis key of ``C(n)`` and ``m_tuple`` has length ``n``.  The differential
+    is the Leibniz rule ``d = d_C + d_M`` with Koszul signs.  Non-planar keys
+    are automatically normalised via ``planarize`` (permuting the m_tuple).
 
-    Unlike a coinvariant representation, keys are stored as-is: no
-    identification ``(c·σ, m) ~ (c, σ·m)`` is applied.  This preserves
-    S_n-invariant elements faithfully in every characteristic.
-
-    The cooperad ``C`` must be quasi-planar (free S_n-action) so that
-    ``basis_iter`` produces a finite, non-redundant enumeration via the
-    shuffle / full basis of each component.
+    The cooperad ``C`` must be quasi-planar: each component ``C(n)`` must
+    expose a ``planarize`` linear map decomposing elements into planar
+    representative ⊗ symmetric group element.
 
     This class is normally not instantiated directly; use
     :class:`CofreeConilpotentCoalgebra` instead.
@@ -174,178 +159,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         return result
 
     # ------------------------------------------------------------------
-    # Invariant orbit sum
-    # ------------------------------------------------------------------
-
-    @cached_method
-    def _invariant_orbit_sum(self, c_pl_key, m_tuple) -> "CofreeCoalgebraModule.Element":
-        r"""Build the S_n-orbit sum (invariant element) for a planar key.
-
-        Given a **planar** cooperad key ``c_pl_key ∈ C(n)`` and an n-tuple
-        ``m_tuple``, returns the invariant element::
-
-            N(c_pl, m) = Σ_{σ ∈ S_n}  (c_pl · σ) ⊗ ε(σ⁻¹; m) · σ⁻¹ · m
-
-        where ``c_pl · σ = c_pl.permute(σ)`` and ``ε`` is the Koszul sign.
-
-        For arity 1 this is simply ``self.term((c_pl_key, m_tuple))``.
-
-        The **leading key** of the result is ``(c_pl_key, m_tuple)`` — the
-        planar term — which always appears with coefficient 1.
-        """
-        n = len(m_tuple)
-        if n <= 1:
-            return self.term((c_pl_key, m_tuple))
-
-        comp = self._cooperad_cls(n, self.base_ring())
-        M = self._inner_module
-
-        c_pl_elem = comp.term(c_pl_key)
-        result = self.zero()
-        identity_tuple = tuple(range(1, n + 1))
-        # Pre-compute degrees once
-        degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-
-        for sigma in _Sn_elements(n):
-            # c_pl · σ — permuted cooperad element (may carry its own sign)
-            c_sigma = c_pl_elem.permute(sigma)
-
-            # σ⁻¹ · m_tuple — use tuple() to avoid repeated sigma_inv(i) calls
-            sigma_inv = sigma.inverse()
-            sigma_inv_tuple = sigma_inv.tuple()
-            permuted_m = tuple(m_tuple[sigma_inv_tuple[i] - 1] for i in range(n))
-
-            # Koszul sign from permuting graded module elements by σ⁻¹
-            if sigma_inv_tuple != identity_tuple:
-                perm_0idx = [s - 1 for s in sigma_inv_tuple]
-                koszul = koszul_sign_of_permutation(perm_0idx, degrees)
-            else:
-                koszul = 1
-
-            for c_key, c_coeff in c_sigma:
-                result += koszul * c_coeff * self.term((c_key, permuted_m))
-
-        return result
-
-    # ------------------------------------------------------------------
-    # Canonicalization (for homology matrix construction)
-    # ------------------------------------------------------------------
-
-    def _canonicalize_key(self, key):
-        """Map any ``(c_key, m_tuple)`` to a canonical (planar) orbit representative.
-
-        Returns ``(canonical_key, sign)`` where ``canonical_key`` is
-        ``(c_planar, permuted_m)`` and ``sign`` accounts for the
-        planarization coefficient and the Koszul sign.
-
-        When `planarize` returns multiple planar terms (e.g. for the bar
-        construction of a Hadamard product involving Lie), the first term
-        is chosen as representative.  All terms share the same permutation
-        ``σ`` (determined by the quasi-planar factor) so the permuted
-        m-tuple is the same regardless of which term is selected.
-
-        For arity 1 (where ``c_key`` is the unit), returns ``(key, 1)``.
-        """
-        c_key, m_tuple = key
-        n = len(m_tuple)
-        if n <= 1:
-            return key, 1
-
-        comp = self._cooperad_cls(n, self.base_ring())
-        S_n = SymmetricGroup(n)
-        M = self._inner_module
-
-        # Planarize the cooperad key: c_key = Σ_k coeff_k · c_pl_k ⊗ σ
-        # All terms share the same σ (quasi-planar via the free factor).
-        planarized = comp.planarize(comp.term(c_key))
-        terms = list(planarized)
-        (c_pl_key, sigma_key), pl_coeff = terms[0]
-        sigma = S_n(sigma_key)
-
-        # Permute m_tuple by σ
-        permuted_m = tuple(m_tuple[sigma(i) - 1] for i in range(1, n + 1))
-
-        # Koszul sign from permuting graded module elements
-        if sigma != S_n.identity():
-            perm_0idx = [sigma(i) - 1 for i in range(1, n + 1)]
-            degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-            koszul = koszul_sign_of_permutation(perm_0idx, degrees)
-        else:
-            koszul = 1
-
-        return (c_pl_key, permuted_m), pl_coeff * koszul
-
-    @cached_method
-    def _full_canonicalize_key(self, key):
-        """Map any ``(c_key, m_tuple)`` to ALL canonical (planar) representatives.
-
-        Returns a tuple of ``(canonical_key, sign)`` pairs, one for each
-        planar term produced by ``planarize``.  Unlike
-        :meth:`_canonicalize_key`, this captures multi-term planarizations
-        (e.g. from the Lie operad factor in a Hadamard product).
-
-        This is needed for the planar-basis chain complex construction,
-        where we compute the boundary of single planar terms and must
-        correctly redistribute non-planar boundary output across all
-        target planar keys.
-        """
-        c_key, m_tuple = key
-        n = len(m_tuple)
-        if n <= 1:
-            return [(key, self.base_ring().one())]
-
-        comp = self._cooperad_cls(n, self.base_ring())
-        M = self._inner_module
-
-        # Call _planarize_on_basis directly to skip morphism overhead
-        planarize_fn = getattr(comp, "_planarize_on_basis", None)
-        if planarize_fn is not None:
-            planarized = planarize_fn(c_key)
-        else:
-            planarized = comp.planarize(comp.term(c_key))
-        result = []
-        degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-        identity_tuple = tuple(range(1, n + 1))
-
-        for (c_pl_key, sigma_key), pl_coeff in planarized:
-            sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
-            permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
-
-            if n > 1 and sigma_tuple != identity_tuple:
-                perm_0idx = [s - 1 for s in sigma_tuple]
-                koszul = koszul_sign_of_permutation(perm_0idx, degrees)
-            else:
-                koszul = 1
-
-            result.append(((c_pl_key, permuted_m), pl_coeff * koszul))
-        return result
-
-    # ------------------------------------------------------------------
-    # Leading key (for homology basis enumeration)
-    # ------------------------------------------------------------------
-
-    def _leading_key(self, elem):
-        """Return the canonical (planar) key of a basis element.
-
-        Since basis elements are now planar terms (single-key elements),
-        this simply returns the unique support key.  For arity-1 elements
-        this is trivially the only key.
-        """
-        support = elem.support()
-        if len(support) == 1:
-            return support[0]
-        # Fallback for multi-term elements (e.g. from external construction)
-        for key in support:
-            c_key, m_tuple = key
-            n = len(m_tuple)
-            if n <= 1:
-                return key
-            comp = self._cooperad_cls(n, self.base_ring())
-            if hasattr(comp, "is_planar_key") and comp.is_planar_key(c_key):
-                return key
-        return elem.leading_support()
-
-    # ------------------------------------------------------------------
     # Basis key validation
     # ------------------------------------------------------------------
 
@@ -387,14 +200,22 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
-                    result += coeff * self.term(k)
+                    c_key_raw, m_tuple_raw = k
+                    n = len(m_tuple_raw)
+                    comp = self._cooperad_cls(n, self.base_ring())
+                    result += coeff * self._normalized_corolla_sum(
+                        comp.term(c_key_raw), m_tuple_raw
+                    )
             return result
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             k = self._validate_basis_key(x)
             if k is None:
                 return self.zero()
-            return self.term(k)
+            c_key_raw, m_tuple_raw = k
+            n = len(m_tuple_raw)
+            comp = self._cooperad_cls(n, self.base_ring())
+            return self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
 
         raise TypeError(
             f"Cannot construct element from {x!r}. Expected a dict of basis keys to coefficients, or a single basis key tuple (c_key, m_tuple)."
@@ -461,23 +282,28 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         r"""Leibniz rule: d(c ⊗ m_1 ⊗ … ⊗ m_n) = d_C(c) ⊗ m_… + Σ_i (−1)^{…} c ⊗ … ⊗ d_M(m_i) ⊗ ….
 
         Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
+
+        The d_C output may contain non-planar cooperad keys; these are
+        normalised to planar keys via ``_normalized_corolla_sum`` (coinvariant
+        quotient).  The d_M terms keep the (already planar) cooperad key
+        unchanged.
         """
         c_key, m_tuple = key
         n = len(m_tuple)
         comp = self._cooperad_cls(n, self.base_ring())
         result = self.zero()
 
-        # d_C term: bypass morphism overhead when possible.
-        # The cooperad boundary on a pure basis key produces valid keys.
+        # d_C term: normalise non-planar keys via _normalized_corolla_sum.
         dc_on_basis = getattr(comp, "_boundary_on_basis", None)
         if dc_on_basis is not None:
             dc_elem = dc_on_basis(c_key)
         else:
             dc_elem = comp.boundary(comp.term(c_key))
-        for dc_key, dc_coeff in dc_elem:
-            result += dc_coeff * self.term((dc_key, m_tuple))
+        result += self._normalized_corolla_sum(dc_elem, m_tuple)
 
         # d_M terms with Koszul signs.
+        # The cooperad key c_key is already planar (from basis iteration),
+        # so no normalisation is needed — use self.term() directly.
         # Bypass morphism overhead: call the inner module's boundary
         # on_basis function directly instead of going through
         # morphism.__call__ + linear_combination.
@@ -511,10 +337,8 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         Each yielded element is a single planar term ``self.term((c_pl, m))``
         indexed by a **planar** cooperad key ``c_pl`` and m-tuple ``m``.
 
-        The boundary matrix uses :meth:`_full_canonicalize_key` to correctly
-        handle non-planar terms in the boundary output.  This avoids the
-        expensive S_n-orbit sum computation while giving an isomorphic
-        chain complex with the same homology.
+        Uses the isomorphism ``C(n) ⊗_{S_n} M^{⊗n} ≅ C_pl(n) ⊗ M^{⊗n}``
+        and enumerates only planar C(n)-decorations.
 
         Raises:
             ValueError: when arity is unbounded.
