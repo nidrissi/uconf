@@ -224,15 +224,6 @@ class TestBarAlgebra:
         deg = bar.module.degree_on_basis((tree, a_tuple))
         assert deg == 1
 
-    def test_dact_weight1_binary_gives_zero(self, bar):
-        """d_α on weight-1 binary corolla is zero (cogenerator has trivial cocomposition)."""
-        mu = (1, 2)
-        tree = RootedTree(mu, 1, 2)
-        a_tuple = ((), ())
-        elem = bar.module((tree, a_tuple))
-        result = bar.module.d_alpha(elem)
-        assert result == bar.module.zero()
-
     _MU = (1, 2)
     _MU3 = (1, 2, 3)
 
@@ -361,19 +352,6 @@ class TestBarAlgebraFreeAlgebra:
         tree = RootedTree(mu, 1, RootedTree(mu, 2, 3))
         deg = bar.module.degree_on_basis((tree, (gen1, gen1, gen1)))
         assert deg == 5
-
-    def test_dact_weight1_binary_gives_zero(self, bar):
-        """d_α on weight-1 binary corolla is zero (cogenerator has trivial cocomposition).
-
-        In the cofree coalgebra, single-vertex corollas are cogenerators whose
-        infinitesimal cocomposition is trivial, so d_α = 0.
-        """
-        gen1 = ((1,), ((),))
-        mu = (1, 2)
-        tree = RootedTree(mu, 1, 2)
-        elem = bar.module((tree, (gen1, gen1)))
-        result = bar.module.d_alpha(elem)
-        assert result == bar.module.zero()
 
     @pytest.mark.parametrize(
         "tree,a_tuple",

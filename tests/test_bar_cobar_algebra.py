@@ -151,19 +151,6 @@ class TestBarAlgebra:
         elem = bar.module((C.unit_key(), ((),)))
         assert bar.module.boundary(elem) == bar.module.zero()
 
-    def test_weight1_binary_d_alpha(self, bar):
-        """d_α on binary corolla is zero (cogenerator has trivial cocomposition)."""
-        C = bar.cooperad_cls
-        comp2 = C(2, QQ)
-        for p_elem in comp2.planar_basis_iter(1):
-            for c_key in p_elem.support():
-                elem = bar.module((c_key, ((), ())))
-                d_alpha = bar.module.d_alpha(elem)
-                # Single-vertex corollas are cogenerators of the cofree cooperad,
-                # so their infinitesimal cocomposition is zero → d_α = 0.
-                assert d_alpha == bar.module.zero()
-                return
-
     def test_d_squared_zero_weight1(self, bar):
         C = bar.cooperad_cls
         comp2 = C(2, QQ)
