@@ -96,12 +96,21 @@ class TwistingMorphism:
 
         For c ∈ C(n), the pre-Lie product is:
 
-            (α ⋆ β)(c) = Σ_{i, m, n_r} (-1)^{|c_L|} α(c_L) ∘_i β(c_R)
+            (α ⋆ β)(c) = Σ_{S, m} (-1)^{|c_L|} (α(c_L) ∘_{min(S)} β(c_R)) · σ_S
 
-        where ``Δ^{i;m,n_r}(c) = Σ c_L ⊗ c_R`` is the infinitesimal
-        cocomposition of c in slot i with left arity m and right arity n_r,
-        and the Koszul sign ``(-1)^{|β| · |c_L|} = (-1)^{|c_L|}`` comes from
-        permuting the degree-(-1) map β past the graded element c_L.
+        where the sum is over all reduced splits Δ_{(1)}(c) = Σ c_L ⊗_S c_R with
+        |S| = n_r ≥ 2, m = n - n_r + 1 ≥ 2, and σ_S is the shuffle permutation
+        that maps the consecutive block {min(S), …, min(S)+n_r-1} back to the
+        (possibly non-contiguous) leaf set S.  For contiguous S, σ_S = id.
+
+        The Koszul sign ``(-1)^{|c_L|}`` comes from permuting the degree-(-1)
+        map β past the graded element c_L.
+
+        When the cooperad component provides ``_iter_all_splits`` (e.g. the bar
+        construction cooperad), all internal-edge splits—including those with
+        non-contiguous leaf sets—are enumerated and the shuffle permutation σ_S
+        is applied to the composed operad element.  Otherwise the method falls
+        back to ``infinitesimal_cocompose``, which only handles contiguous splits.
 
         Args:
             other: Another twisting morphism β: C → P (same cooperad and operad).
@@ -115,26 +124,72 @@ class TwistingMorphism:
         p_parent = self.operad(n, base_ring)
         result = p_parent.zero()
 
-        for m in range(2, n):
-            n_right = n - m + 1
-            for i in range(1, m + 1):
-                cocomp = self.cooperad.infinitesimal_cocompose(c_elem, i, m, n_right)
-                for (dec_left, dec_right), coeff in cocomp:
+        # Check if the cooperad component supports _iter_all_splits (e.g. bar
+        # construction).  If so, use it to handle non-contiguous leaf sets.
+        c_comp = self.cooperad(n, base_ring)
+        if hasattr(c_comp, "_iter_all_splits"):
+            for c_key, c_coeff in c_elem:
+                for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(
+                    c_key
+                ):
+                    n_r = len(child_positions)
+                    m = n - n_r + 1
+                    # Reduced splits only: both sides arity ≥ 2
+                    if n_r < 2 or m < 2:
+                        continue
+
                     left_parent = self.cooperad(m, base_ring)
-                    right_parent = self.cooperad(n_right, base_ring)
+                    right_parent = self.cooperad(n_r, base_ring)
 
                     # Koszul sign: (-1)^{|β| · |c_L|} where |β| = -1
-                    # Since (-1)^{-d} = (-1)^d, the sign is (-1)^{|c_L|}
-                    deg_c_L = left_parent.degree_on_basis(dec_left)
+                    deg_c_L = left_parent.degree_on_basis(c_L_key)
                     koszul_sign = sign_from_exponent(deg_c_L)
 
-                    alpha_left = self(left_parent(dec_left))
-                    beta_right = other(right_parent(dec_right))
-                    composed = self.operad.compose(alpha_left, i, beta_right)
-                    # Extract basis keys and add in the target parent to avoid
-                    # Sage coercion issues between different CombinatorialFreeModule instances
+                    alpha_left = self(left_parent.term(c_L_key))
+                    beta_right = other(right_parent.term(c_R_key))
+
+                    # Composition at position j = min(S) = child_positions[0]
+                    j = child_positions[0]
+                    composed = self.operad.compose(alpha_left, j, beta_right)
+
+                    # Apply shuffle permutation σ_S for non-contiguous leaf sets.
+                    # After composing at position j, the n_r leaves of c_R sit at
+                    # consecutive positions {j, j+1, …, j+n_r-1}.  We need them
+                    # at the (possibly non-contiguous) positions child_positions.
+                    # σ_S maps position j+l-1 → child_positions[l-1] and maps
+                    # the remaining positions to the non-S leaves in order.
+                    S = list(child_positions)
+                    if S != list(range(S[0], S[0] + n_r)):
+                        T = sorted(set(range(1, n + 1)) - set(S))
+                        sigma = list(range(1, S[0])) + S + T[S[0] - 1 :]
+                        composed = composed.permute(sigma)
+
+                    # Accumulate: extract basis keys to avoid Sage coercion issues
                     for p_key, p_coeff in composed:
-                        result += koszul_sign * coeff * p_coeff * p_parent(p_key)
+                        result += (
+                            koszul_sign * c_coeff * coop_sign * p_coeff * p_parent(p_key)
+                        )
+        else:
+            # Fallback: contiguous splits via infinitesimal_cocompose
+            for m in range(2, n):
+                n_right = n - m + 1
+                for i in range(1, m + 1):
+                    cocomp = self.cooperad.infinitesimal_cocompose(c_elem, i, m, n_right)
+                    for (dec_left, dec_right), coeff in cocomp:
+                        left_parent = self.cooperad(m, base_ring)
+                        right_parent = self.cooperad(n_right, base_ring)
+
+                        # Koszul sign: (-1)^{|β| · |c_L|} where |β| = -1
+                        deg_c_L = left_parent.degree_on_basis(dec_left)
+                        koszul_sign = sign_from_exponent(deg_c_L)
+
+                        alpha_left = self(left_parent(dec_left))
+                        beta_right = other(right_parent(dec_right))
+                        composed = self.operad.compose(alpha_left, i, beta_right)
+                        # Extract basis keys and add in the target parent to avoid
+                        # Sage coercion issues between different CombinatorialFreeModule instances
+                        for p_key, p_coeff in composed:
+                            result += koszul_sign * coeff * p_coeff * p_parent(p_key)
 
         return result
 
