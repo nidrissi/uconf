@@ -2,12 +2,12 @@
 
 The cofree conilpotent C-coalgebra on a dg-module M is
 
-    T^c_C(M) = \u2295_{n\u22651} C(n) \u2297_{S_n} M^{\u2297n}
+    T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}
 
 with:
-- Degree: deg(c_key, m_tuple) = deg_C(c_key) + \u03a3_i deg_M(m_i).
+- Degree: deg(c_key, m_tuple) = deg_C(c_key) + Σ_i deg_M(m_i).
 - Differential d = d_C + d_M from the Koszul sign rule (Leibniz rule).
-- C-coalgebra costructure: the infinitesimal cocomposition \u0394^{i;m,n} applies
+- C-coalgebra costructure: the infinitesimal cocomposition Δ^{i;m,n} applies
   the cooperad's cocomposition to the C-decoration and splits the M-labels.
 
 The basis keys are pairs ``(c_key, m_tuple)`` where:
@@ -16,9 +16,9 @@ The basis keys are pairs ``(c_key, m_tuple)`` where:
 - ``m_tuple`` is a tuple of ``n`` values.
 
 **Quasi-planar requirement**: C must be a quasi-planar cooperad, i.e. each
-component ``C(n)`` satisfies ``C(n) \u2245 C_pl(n) \u2297 k[S_n]`` and exposes a
+component ``C(n)`` satisfies ``C(n) ≅ C_pl(n) ⊗ k[S_n]`` and exposes a
 ``planarize`` linear map.  The basis uses only planar C-keys, so two corollas
-``(c\u00b7\u03c3, m_tuple)`` and ``(c, \u03c3\u00b7m_tuple)`` are identified as the same element
+``(c·σ, m_tuple)`` and ``(c, σ·m_tuple)`` are identified as the same element
 (coinvariant quotient).
 
 The coprojection pi: T^c_C(M) -> M kills all elements with n >= 2 and maps
