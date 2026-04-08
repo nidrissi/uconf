@@ -133,10 +133,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         c_comp = C(n, base_ring)
         c_elem = c_comp.term(c_key)
 
-        for n_r in range(2, n + 1):
+        for n_r in range(1, n + 1):
             m = n - n_r + 1
-            if m < 2:
-                continue
             for i in range(1, m + 1):
                 # Infinitesimal cocomposition Δ^{i;m,n_r}
                 cocomp = C.infinitesimal_cocompose(c_elem, i, m, n_r)
