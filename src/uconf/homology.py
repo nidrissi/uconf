@@ -35,7 +35,6 @@ def _boundary_matrix(
     n_target: int,
     *,
     sparse: bool,
-    strict: bool = False,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -49,8 +48,6 @@ def _boundary_matrix(
         Dictionary mapping basis *keys* in the target degree to row indices.
     n_target:
         Number of basis elements in the target degree (number of rows).
-    strict:
-        Currently unused; kept for API compatibility.
 
     Returns
     -------
@@ -124,7 +121,6 @@ def compute_chain_complex(
     weight: int | None = None,
     check: bool = False,
     sparse: bool = True,
-    strict: bool = False,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -154,8 +150,6 @@ def compute_chain_complex(
         Whether to build differential matrices in sparse format.  This is
         usually faster and significantly lighter in memory for dg-modules
         with sparse boundaries.
-    strict:
-        Currently unused; kept for API compatibility.
 
     Returns
     -------
@@ -212,12 +206,7 @@ def compute_chain_complex(
         if not source and n_target == 0:
             continue
         differentials[d] = _boundary_matrix(
-            module,
-            source,
-            key_to_idx[d - 1],
-            n_target,
-            sparse=sparse,
-            strict=strict,
+            module, source, key_to_idx[d - 1], n_target, sparse=sparse
         )
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
@@ -263,7 +252,6 @@ def homology_basis(
     *,
     degrees: range | None = None,
     weight: int | None = None,
-    strict: bool = False,
 ) -> list:
     """Return cycle representatives for a basis of the homology in *degree*.
 
@@ -283,10 +271,6 @@ def homology_basis(
         has non-trivial basis below ``degree - 1``.
     weight:
         Passed through to :func:`chain_complex`.  See its documentation.
-    strict:
-        Passed through to :func:`compute_chain_complex`.  Verifies that
-        non-canonical boundary keys have canonical representatives in the
-        target basis.
 
     Returns
     -------
@@ -307,6 +291,6 @@ def homology_basis(
         if degree not in degrees:
             raise ValueError(f"degree {degree} must be contained in the supplied range {degrees}")
 
-    C = compute_chain_complex(module, degrees, weight=weight, strict=strict)
+    C = compute_chain_complex(module, degrees, weight=weight)
 
     return compute_homology_representatives(module, degree, weight, C)
