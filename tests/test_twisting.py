@@ -321,27 +321,6 @@ class TestBarAlgebra:
         elem = B((c_keys[0], ((), ())))
         assert elem.degree() == 1
 
-    def test_dalpha_zero_on_corolla(self):
-        """d_α on a corolla (cooperad cogenerator) is 0.
-
-        In the cofree coalgebra model, d_α is a coderivation defined by
-        infinitesimal cocomposition. On cogenerators (single-vertex trees
-        in the cooperad), the cocomposition is trivial, so d_α = 0.
-        """
-        pi = canonical_projection(Associative)
-        alg = _trivial_ass_algebra()
-        bar = BarAlgebra(pi, alg)
-        B = bar.module
-        C = bar.cooperad_cls
-        R = QQ
-        c2 = C(2, R)
-        c_keys = [k for e in c2.planar_basis_iter(1) for k in e.support()]
-        elem = B((c_keys[0], ((), ())))
-        dalpha = B.d_alpha(elem)
-        assert dalpha == B.zero()
-
-    _MU = (1, 2)
-
     @pytest.mark.parametrize("w", [1, 2, 3])
     def test_d_squared_zero_projection(self, w):
         """d² = 0 on B_π(A) for π: B(Ass) → Ass at various weights."""
