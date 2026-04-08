@@ -42,7 +42,7 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
 from uconf.core.display import latex_linear_combination
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.twisting import TwistingMorphism
 
 
@@ -118,6 +118,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         sign because the cofree coalgebra decomposition Δ_{(1)} preserves the
         left-to-right ordering of the A-factors.
 
+        When the cooperad is a bar/cofree cooperad whose elements may have
+        non-contiguous leaf orderings, this method uses ``_iter_all_splits``
+        to capture all internal-edge decompositions—including those with
+        non-contiguous leaf subsets—with the correct algebra slicing and
+        Koszul gathering sign.
+
         Reference: Loday-Vallette, Section 6.3 and 11.2.
         """
         c_key, m_tuple = key
@@ -127,10 +133,20 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         base_ring = self.base_ring()
         C = self._cooperad_cls
+        c_comp = C(n, base_ring)
+
+        # Use _iter_all_splits when available (bar construction cooperads)
+        # to handle non-contiguous leaf subsets correctly.
+        if hasattr(c_comp, "_iter_all_splits"):
+            return self._dalpha_all_splits(c_key, m_tuple, n, base_ring, c_comp)
+
+        return self._dalpha_contiguous(c_key, m_tuple, n, base_ring, c_comp)
+
+    def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
+        """d_α via contiguous partial cocompositions (original path)."""
+        C = self._cooperad_cls
         M = self._inner_module
         result = self.zero()
-
-        c_comp = C(n, base_ring)
         c_elem = c_comp.term(c_key)
 
         for n_r in range(1, n + 1):
@@ -149,7 +165,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    # Use M.term() to bypass element construction overhead
                     a_slice = [M.term(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
                     action_result = self._algebra.act(alpha_c_R, a_slice)
 
@@ -161,10 +176,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     c_L_deg = c_L_comp.degree_on_basis(c_L_key)
                     sign = sign_from_exponent(c_L_deg)
 
-                    # Build the new m_tuple: replace a_i,...,a_{i+n_r-1}
-                    # with the single action result.
-                    # Normalise the cooperad key to planar via
-                    # _normalized_corolla_sum (coinvariant quotient).
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
                         result += (
@@ -173,6 +184,74 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                             * a_coeff
                             * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
                         )
+
+        return result
+
+    def _dalpha_all_splits(self, c_key, m_tuple, n, base_ring, c_comp):
+        """d_α via _iter_all_splits (handles non-contiguous leaf subsets)."""
+        C = self._cooperad_cls
+        M = self._inner_module
+        result = self.zero()
+
+        for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
+            n_r = len(child_positions)
+            m = n - n_r + 1
+
+            # Apply α to c_R
+            c_R_comp = C(n_r, base_ring)
+            c_R_elem = c_R_comp.term(c_R_key)
+            alpha_c_R = self._alpha(c_R_elem)
+
+            if not alpha_c_R:
+                continue
+
+            # Algebra slice at the ACTUAL (possibly non-contiguous) positions
+            a_slice = [M.term(m_tuple[s - 1]) for s in child_positions]
+            action_result = self._algebra.act(alpha_c_R, a_slice)
+
+            if not action_result:
+                continue
+
+            # Koszul sign: (-1)^{|c_L|}
+            c_L_comp = C(m, base_ring)
+            c_L_deg = c_L_comp.degree_on_basis(c_L_key)
+            sign = sign_from_exponent(c_L_deg)
+
+            # Build new m_tuple: order-preserving mapping from
+            # original positions to the m-element result tuple.
+            # Placeholder position gets the action result; other
+            # positions keep their original algebra elements.
+            S_set = set(child_positions)
+            min_S = child_positions[0]  # child_positions is sorted
+            T = sorted(set(range(1, n + 1)) - S_set)
+            top_positions = sorted(T + [min_S])  # maps to {1,...,m}
+
+            # Koszul gathering sign from permuting algebra elements
+            # to group the non-contiguous S positions together.
+            # The gathering permutation maps (1,...,n) to
+            # (T<min_S, S_1,...,S_k, T≥min_S).
+            gathering_sign = 1
+            if tuple(child_positions) != tuple(range(child_positions[0], child_positions[0] + n_r)):
+                # Non-contiguous: compute Koszul sign of gathering
+                T_before = [t for t in T if t < min_S]
+                T_after = [t for t in T if t > min_S]
+                gathered = T_before + list(child_positions) + T_after
+                # gathered is a permutation of (1,...,n)
+                perm_0idx = [g - 1 for g in gathered]
+                degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
+                gathering_sign = koszul_sign_of_permutation(perm_0idx, degrees)
+
+            for a_new_key, a_coeff in action_result:
+                new_m = tuple(
+                    a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
+                )
+                result += (
+                    sign
+                    * coop_sign
+                    * gathering_sign
+                    * a_coeff
+                    * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                )
 
         return result
 
