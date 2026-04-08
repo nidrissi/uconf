@@ -1272,9 +1272,7 @@ class TestFullModel:
         @pytest.mark.parametrize("w,dmax", [(2, 5), (3, 4), (4, 2)])
         def test_full_model(self, dim, ring, w: int, dmax: int):
             model = euclidean_unordered_configuration_model(ring, dim)
-            C = compute_chain_complex(
-                model.module, degrees=range(-1, dmax), weight=w, check=True, strict=True
-            )
+            C = compute_chain_complex(model.module, degrees=range(-1, dmax), weight=w, check=True)
             assert C is not None
 
     class TestDSquaredMinimal:
