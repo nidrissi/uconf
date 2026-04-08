@@ -1201,15 +1201,17 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             assert tested > 0, "No basis elements found (nontriviality check)"
 
     class TestDecomposedDSquared:
-        """Test the two components of d separately: d_cofree and d_alpha.
+        """Test the components of d separately: d_cofree and d_alpha.
 
-        d = d_cofree + d_alpha,  so d² = d_cofree² + d_alpha²
-        + (d_cofree ∘ d_alpha + d_alpha ∘ d_cofree) = 0.
+        d = d_cofree + d_alpha,  so d² = d_cofree² + (d_alpha² + cross) = 0,
+        where cross = d_cofree ∘ d_alpha + d_alpha ∘ d_cofree.
 
-        This decomposes d²=0 into three independent identities:
-        1. d_cofree² = 0
-        2. d_alpha² = 0
-        3. d_cofree ∘ d_alpha + d_alpha ∘ d_cofree = 0 (cross term)
+        This yields two independent identities:
+        1. d_cofree² = 0  (the cofree coalgebra differential squares to zero)
+        2. d_alpha² + cross = 0  (the Maurer-Cartan equation at the module level)
+
+        Note: d_alpha² and cross are *not* individually zero in general; only
+        their sum vanishes (as a consequence of the MC equation ∂α + α ⋆ α = 0).
         """
 
         @pytest.mark.parametrize("weight", [2, 3])
@@ -1229,8 +1231,13 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             assert tested > 0, "No basis elements found (nontriviality check)"
 
         @pytest.mark.parametrize("weight", [2, 3])
-        def test_d_alpha_squared(self, dim, ring, weight, layers: ConfigurationLayers):
-            """d_α² = 0."""
+        def test_mc_equation(self, dim, ring, weight, layers: ConfigurationLayers):
+            """d_alpha² + (d_cofree ∘ d_alpha + d_alpha ∘ d_cofree) = 0.
+
+            This is the Maurer-Cartan equation at the module level: the combined
+            contribution of d_alpha² and the cross term must vanish.  Neither
+            term is individually zero in general.
+            """
             mod = layers.bar.module
             rng = Random(_SEED)
             tested = 0
@@ -1239,24 +1246,10 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
                 for elem in _sample(basis, 20, rng):
                     tested += 1
                     dd = mod.d_alpha(mod.d_alpha(elem))
-                    assert dd == mod.zero(), (
-                        f"d_α²({elem}) ≠0 w={weight} deg={deg} dim={dim} ring={ring}"
-                    )
-            assert tested > 0, "No basis elements found (nontriviality check)"
-
-        @pytest.mark.parametrize("weight", [2, 3])
-        def test_cross_term(self, dim, ring, weight, layers: ConfigurationLayers):
-            """d_cofree ∘ d_alpha + d_alpha ∘ d_cofree = 0."""
-            mod = layers.bar.module
-            rng = Random(_SEED)
-            tested = 0
-            for deg in range(-1, 5):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 20, rng):
-                    tested += 1
                     cross = mod.d_cofree(mod.d_alpha(elem)) + mod.d_alpha(mod.d_cofree(elem))
-                    assert cross == mod.zero(), (
-                        f"cross term ≠ 0 w={weight} deg={deg} dim={dim} ring={ring}"
+                    assert dd + cross == mod.zero(), (
+                        f"d_α² + cross ≠ 0 for {elem} w={weight} deg={deg} "
+                        f"dim={dim} ring={ring}"
                     )
             assert tested > 0, "No basis elements found (nontriviality check)"
 
