@@ -1,7 +1,7 @@
 """Tests for chain complex construction and homology helpers."""
 
 import pytest
-from sage.all import QQ
+from sage.all import GF, QQ
 
 from uconf import (
     BarrattEccles,
@@ -10,6 +10,7 @@ from uconf import (
     compute_chain_complex,
     homology_basis,
 )
+from uconf.homology import compute_homology_representatives
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -229,3 +230,59 @@ class TestConnectivity:
         fa = FreeOperadAlgebra(Surjection, M)
         # FreeAlgebraModule inherits connectivity from M
         assert fa.module.connectivity == 2
+
+
+# ---------------------------------------------------------------------------
+# compute_homology_representatives — configuration model
+# ---------------------------------------------------------------------------
+
+
+class TestHomologyRepresentativesConfigModel:
+    """Test compute_homology_representatives on bar algebra of the configuration model.
+
+    Uses ``_build_euclidean_layers`` at low weight and degree to verify that
+    the returned representatives are cycles and that their count matches the
+    chain-complex Betti number.
+    """
+
+    @pytest.fixture(scope="class", params=[1, 2], ids=["dim1", "dim2"])
+    def bar_module(self, request):
+        from uconf.algebraic.configuration import _build_euclidean_layers
+
+        layers = _build_euclidean_layers(GF(2), request.param)
+        return layers.bar.module
+
+    @pytest.mark.parametrize(
+        "degree,weight",
+        [(0, 1), (0, 2), (1, 1), (1, 2), (1, 3), (0, 3)],
+    )
+    def test_representatives_are_cycles(self, bar_module, degree, weight) -> None:
+        """Every returned representative must satisfy boundary = 0."""
+        cc = compute_chain_complex(
+            bar_module,
+            degrees=range(degree - 1, degree + 2),
+            weight=weight,
+        )
+        reps = compute_homology_representatives(bar_module, degree, weight, cc)
+        for r in reps:
+            assert bar_module.boundary(r) == bar_module.zero(), (
+                f"Representative at degree={degree}, weight={weight} is not a cycle: {r}"
+            )
+
+    @pytest.mark.parametrize(
+        "degree,weight",
+        [(0, 1), (0, 2), (1, 1), (1, 2), (1, 3), (0, 3)],
+    )
+    def test_representative_count_matches_betti(self, bar_module, degree, weight) -> None:
+        """Number of representatives equals the Betti number at that degree."""
+        cc = compute_chain_complex(
+            bar_module,
+            degrees=range(degree - 1, degree + 2),
+            weight=weight,
+        )
+        reps = compute_homology_representatives(bar_module, degree, weight, cc)
+        betti = cc.betti().get(degree, 0)
+        assert len(reps) == betti, (
+            f"Expected {betti} representative(s) at degree={degree}, weight={weight}, "
+            f"got {len(reps)}"
+        )
