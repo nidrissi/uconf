@@ -146,7 +146,7 @@ def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
                     result_dict[combined_key] = combined_coeff
 
         return target_n.sum_of_terms(
-            (k, v) for k, v in result_dict.items() if v
+            ((k, v) for k, v in result_dict.items() if v), distinct=True
         )
 
     return OperadMorphism(cobar, surj_target, _on_element)

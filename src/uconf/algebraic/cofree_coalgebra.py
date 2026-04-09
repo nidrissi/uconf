@@ -172,7 +172,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                     result_dict[key] = coeff
 
         return self.sum_of_terms(
-            (k, v) for k, v in result_dict.items() if v
+            ((k, v) for k, v in result_dict.items() if v), distinct=True
         )
 
     # ------------------------------------------------------------------
