@@ -129,9 +129,7 @@ class TwistingMorphism:
         c_comp = self.cooperad(n, base_ring)
         if hasattr(c_comp, "_iter_all_splits"):
             for c_key, c_coeff in c_elem:
-                for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(
-                    c_key
-                ):
+                for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
                     n_r = len(child_positions)
                     m = n - n_r + 1
                     # Reduced splits only: both sides arity ≥ 2
@@ -166,9 +164,7 @@ class TwistingMorphism:
 
                     # Accumulate: extract basis keys to avoid Sage coercion issues
                     for p_key, p_coeff in composed:
-                        result += (
-                            koszul_sign * c_coeff * coop_sign * p_coeff * p_parent(p_key)
-                        )
+                        result += koszul_sign * c_coeff * coop_sign * p_coeff * p_parent(p_key)
         else:
             # Fallback: contiguous splits via infinitesimal_cocompose
             for m in range(2, n):

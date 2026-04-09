@@ -1248,8 +1248,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
                     dd = mod.d_alpha(mod.d_alpha(elem))
                     cross = mod.d_cofree(mod.d_alpha(elem)) + mod.d_alpha(mod.d_cofree(elem))
                     assert dd + cross == mod.zero(), (
-                        f"d_α² + cross ≠ 0 for {elem} w={weight} deg={deg} "
-                        f"dim={dim} ring={ring}"
+                        f"d_α² + cross ≠ 0 for {elem} w={weight} deg={deg} dim={dim} ring={ring}"
                     )
             assert tested > 0, "No basis elements found (nontriviality check)"
 
