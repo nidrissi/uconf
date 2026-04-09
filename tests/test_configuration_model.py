@@ -53,8 +53,6 @@ from uconf.core.signs import sign_from_exponent
 # Helpers
 # ---------------------------------------------------------------------------
 
-_SEED = 20260330
-
 
 def _as_dict(x):
     """Convert a SageMath element to {basis_key: coeff}, dropping zeros."""
@@ -81,6 +79,13 @@ def _all_decompositions(total_arity):
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+_SEED = 20260330
+
+
+@pytest.fixture
+def rng():
+    return Random(_SEED)
 
 
 @pytest.fixture(params=[QQ, GF(2)], ids=["QQ", "GF2"])
@@ -125,9 +130,8 @@ class TestLayer0_H:
                 (4, 0),
             ],
         )
-        def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring):
+        def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring, rng):
             Hn = layers.XsLie(n, ring)
-            rng = Random(_SEED)
             tested = 0
             for elem in _sample(list(Hn.graded_basis(d)), 30, rng):
                 tested += 1
@@ -152,10 +156,9 @@ class TestLayer0_H:
                     assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-2, -1, 0])
-        def test_right_arity3(self, d: int, layers: ConfigurationLayers, ring):
+        def test_right_arity3(self, d: int, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             unit = H.unit(ring)
-            rng = Random(_SEED)
             for elem in _sample(list(H(3, ring).graded_basis(d)), 10, rng):
                 for i in [1, 2, 3]:
                     assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
@@ -166,13 +169,12 @@ class TestLayer0_H:
         @pytest.mark.parametrize("d_x", [-1, 0])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity2(self, d_x: int, d_y: int, d_z: int, layers: ConfigurationLayers, ring):
+        def test_arity2(self, d_x: int, d_y: int, d_z: int, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             H2 = H(2, ring)
             xs = list(H2.graded_basis(d_x))
             ys = list(H2.graded_basis(d_y))
             zs = list(H2.graded_basis(d_z))
-            rng = Random(_SEED)
             for x in _sample(xs, 2, rng):
                 for y in _sample(ys, 2, rng):
                     for z in _sample(zs, 2, rng):
@@ -185,10 +187,9 @@ class TestLayer0_H:
         @pytest.mark.parametrize("d_x", [-2, -1])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y,z ∈ H(2)."""
             H = layers.XsLie
-            rng = Random(_SEED)
             xs = list(H(3, ring).graded_basis(d_x))
             ys = list(H(2, ring).graded_basis(d_y))
             zs = list(H(2, ring).graded_basis(d_z))
@@ -222,11 +223,10 @@ class TestLayer0_H:
         @pytest.mark.parametrize("d_x", [-2, -1])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y,z ∈ H(2): par-assoc for i < j ≤ arity(x)."""
             H = layers.XsLie
             m = 2  # arity of y
-            rng = Random(_SEED)
             xs = list(H(3, ring).graded_basis(d_x))
             ys = list(H(2, ring).graded_basis(d_y))
             zs = list(H(2, ring).graded_basis(d_z))
@@ -259,10 +259,9 @@ class TestLayer0_H:
 
         @pytest.mark.parametrize("d_x", [-2, -1, 0])
         @pytest.mark.parametrize("d_y", [-1, 0, 1])
-        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring):
+        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y ∈ H(2)."""
             H = layers.XsLie
-            rng = Random(_SEED)
             xs = list(H(3, ring).graded_basis(d_x))
             ys = list(H(2, ring).graded_basis(d_y))
             for x in _sample(xs, 3, rng):
@@ -277,10 +276,9 @@ class TestLayer0_H:
     class TestEquivariance:
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("d", [-1, 0, 1])
-        def test_d_commutes(self, n, d, layers: ConfigurationLayers, ring):
+        def test_d_commutes(self, n, d, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             Hn = H(n, ring)
-            rng = Random(_SEED)
             basis = list(Hn.graded_basis(d))
             for elem in _sample(basis, 10, rng):
                 for sigma in SymmetricGroup(n):
@@ -302,10 +300,9 @@ class TestLayer0_H:
                 assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-2, -1, 0])
-        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             basis = list(H(3, ring).graded_basis(d))
-            rng = Random(_SEED)
             perms = list(SymmetricGroup(3))
             for elem in _sample(basis, 5, rng):
                 for sigma in _sample(perms, 3, rng):
@@ -328,10 +325,9 @@ class TestLayer1_BH:
             "n,d",
             [(2, 0), (2, 1), (2, 2), (2, 3), (3, -1), (3, 0), (3, 1), (4, -2), (4, -1), (4, 0)],
         )
-        def test_d_squared(self, n, d, layers: ConfigurationLayers, ring):
+        def test_d_squared(self, n, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             Cn = C(n, ring)
-            rng = Random(_SEED)
             tested = 0
             for elem in _sample(list(Cn.graded_basis(d)), 30, rng):
                 tested += 1
@@ -369,10 +365,9 @@ class TestLayer1_BH:
         """(id⊗Δ) ∘ Δ = (Δ⊗id) ∘ Δ on B(H)(4), m=n=p=2, i=j=1."""
 
         @pytest.mark.parametrize("d", [-1, 0, 1])
-        def test_arity4(self, d, layers: ConfigurationLayers, ring):
+        def test_arity4(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             C3 = C(3, ring)
-            rng = Random(_SEED)
             for x in _sample(list(C(4, ring).graded_basis(d)), 10, rng):
                 lhs = {}
                 for (a, dk), c1 in C.infinitesimal_cocompose(x, 1, 2, 3):
@@ -392,11 +387,10 @@ class TestLayer1_BH:
         """Parallel coassociativity on B(H)(4): i=1, j=2, m=n=p=2."""
 
         @pytest.mark.parametrize("d", [-1, 0])
-        def test_arity4(self, d, layers: ConfigurationLayers, ring):
+        def test_arity4(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             C3 = C(3, ring)
             C2 = C(2, ring)
-            rng = Random(_SEED)
             for x in _sample(list(C(4, ring).graded_basis(d)), 10, rng):
                 lhs = {}
                 for (e, ck), c1 in C.infinitesimal_cocompose(x, 3, 3, 2):
@@ -418,10 +412,9 @@ class TestLayer1_BH:
 
         @pytest.mark.parametrize("n", [2, 3, 4])
         @pytest.mark.parametrize("d", [0, 1, 2])
-        def test_coderivation(self, n, d, layers: ConfigurationLayers, ring):
+        def test_coderivation(self, n, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             Cn = C(n, ring)
-            rng = Random(_SEED)
             for x in _sample(list(Cn.graded_basis(d)), 15, rng):
                 dx = x.boundary()
                 for i, m, k in _all_decompositions(n):
@@ -451,9 +444,8 @@ class TestLayer1_BH:
                 )
 
         @pytest.mark.parametrize("d", [-1, 0, 1])
-        def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
-            rng = Random(_SEED)
             for elem in _sample(list(C(3, ring).graded_basis(d)), 8, rng):
                 for sigma in SymmetricGroup(3):
                     sl = list(sigma.tuple())
@@ -474,9 +466,8 @@ class TestLayer1_BH:
                 assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-1, 0])
-        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
-            rng = Random(_SEED)
             basis = list(C(3, QQ).graded_basis(d))
             perms = list(SymmetricGroup(3))
             for elem in _sample(basis, 5, rng):
@@ -513,10 +504,9 @@ class TestLayer2_ΩBH:
                 (4, 0),
             ],
         )
-        def test_d_squared(self, n, d, layers: ConfigurationLayers, ring):
+        def test_d_squared(self, n, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             Pn = P(n, ring)
-            rng = Random(_SEED)
             tested = 0
             for elem in _sample(list(Pn.graded_basis(d)), 30, rng):
                 tested += 1
@@ -526,10 +516,9 @@ class TestLayer2_ΩBH:
     class TestUnit:
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("d", [-1, 0, 1])
-        def test_left(self, n, d, layers: ConfigurationLayers, ring):
+        def test_left(self, n, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             unit = P.unit(ring)
-            rng = Random(_SEED)
             for elem in _sample(list(P(n, ring).graded_basis(d)), 20, rng):
                 assert _as_dict(P.compose(unit, 1, elem)) == _as_dict(elem)
 
@@ -542,10 +531,9 @@ class TestLayer2_ΩBH:
                     assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-2, -1, 0])
-        def test_right_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_right_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             unit = P.unit(ring)
-            rng = Random(_SEED)
             for elem in _sample(list(P(3, ring).graded_basis(d)), 10, rng):
                 for i in [1, 2, 3]:
                     assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
@@ -571,10 +559,9 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d_x", [-2, -1])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+        def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ P(3), y,z ∈ P(2)."""
             P = layers.OBXsLie
-            rng = Random(_SEED)
             xs = list(P(3, ring).graded_basis(d_x))
             ys = list(P(2, ring).graded_basis(d_y))
             zs = list(P(2, ring).graded_basis(d_z))
@@ -608,11 +595,10 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d_x", [-2, -1])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
+        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ P(3), y,z ∈ P(2): par-assoc for i < j ≤ arity(x)."""
             P = layers.OBXsLie
             m = 2  # arity of y
-            rng = Random(_SEED)
             xs = list(P(3, ring).graded_basis(d_x))
             ys = list(P(2, ring).graded_basis(d_y))
             zs = list(P(2, ring).graded_basis(d_z))
@@ -645,10 +631,9 @@ class TestLayer2_ΩBH:
 
         @pytest.mark.parametrize("d_x", [-2, -1, 0])
         @pytest.mark.parametrize("d_y", [-1, 0, 1])
-        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring):
+        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring, rng):
             """x ∈ P(3), y ∈ P(2)."""
             P = layers.OBXsLie
-            rng = Random(_SEED)
             xs = list(P(3, ring).graded_basis(d_x))
             ys = list(P(2, ring).graded_basis(d_y))
             for x in _sample(xs, 3, rng):
@@ -670,9 +655,8 @@ class TestLayer2_ΩBH:
                 )
 
         @pytest.mark.parametrize("d", [-2, -1, 0])
-        def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            rng = Random(_SEED)
             for elem in _sample(list(P(3, ring).graded_basis(d)), 8, rng):
                 for sigma in SymmetricGroup(3):
                     sl = list(sigma.tuple())
@@ -693,9 +677,8 @@ class TestLayer2_ΩBH:
                 assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-2, -1])
-        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring):
+        def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            rng = Random(_SEED)
             basis = list(P(3, ring).graded_basis(d))
             perms = list(SymmetricGroup(3))
             for elem in _sample(basis, 5, rng):
@@ -716,9 +699,8 @@ class TestLayer3_ΩBH_Kd:
 
     class TestDSquared:
         @pytest.mark.parametrize("weight", [1, 2, 3, 4])
-        def test_d_squared(self, dim, ring, layers: ConfigurationLayers, weight):
+        def test_d_squared(self, dim, ring, layers: ConfigurationLayers, weight, rng):
             mod = layers.free_alg.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(1, 7):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
@@ -743,7 +725,7 @@ class TestLayer3_ΩBH_Kd:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_compatible(self, p_deg, layers: ConfigurationLayers):
+        def test_compatible(self, p_deg, layers: ConfigurationLayers, rng):
             fa = layers.free_alg
             mod = fa.module
             R = layers.bar.module.base_ring()
@@ -760,7 +742,6 @@ class TestLayer3_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            rng = Random(_SEED)
             for p in _sample(p_elems, 2, rng):
                 for q in _sample(p_elems, 2, rng):
                     lhs = fa.act(P.compose(p, 1, q), [a, a, a])
@@ -781,7 +762,7 @@ class TestLayer3_ΩBH_Kd:
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers, rng):
             fa = layers.free_alg
             mod = fa.module
             R = layers.bar.module.base_ring()
@@ -796,7 +777,6 @@ class TestLayer3_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            rng = Random(_SEED)
             for p in _sample(p_elems, 2, rng):
                 lhs = mod.boundary(fa.act(p, [a, a]))
                 rhs = fa.act(p.boundary(), [a, a])
@@ -816,10 +796,9 @@ class TestLayer4_S_ΩBH_Kd:
     """Hadamard tensor algebra (sphere cochains ⊗ free algebra)."""
 
     class TestDSquared:
-        @pytest.mark.parametrize("weight", [1, 2, 3])
-        def test_d_squared(self, dim, ring, weight, layers: ConfigurationLayers):
+        @pytest.mark.parametrize("weight", [1, 2, 3, 4])
+        def test_d_squared(self, dim, ring, weight, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-1, 6):
                 basis = list(ta.graded_basis_by_weight(deg, weight))
@@ -842,8 +821,7 @@ class TestLayer4_S_ΩBH_Kd:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
-        def test_algebra_associative(self, p_deg, layers: ConfigurationLayers):
-            rng = Random(_SEED)
+        def test_algebra_associative(self, p_deg, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
@@ -878,7 +856,7 @@ class TestLayer4_S_ΩBH_Kd:
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
@@ -892,7 +870,6 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            rng = Random(_SEED)
             for p in _sample(p_elems, 2, rng):
                 lhs = ta.boundary(ta.act(p, [a, a]))
                 rhs = ta.act(p.boundary(), [a, a])
@@ -919,7 +896,7 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("deg", [-1, 0, 1, 2])
-        def test_chain_map(self, n, deg, layers: ConfigurationLayers):
+        def test_chain_map(self, n, deg, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
@@ -927,7 +904,6 @@ class TestLayer4h_comodule_morphism:
             basis = list(Pn.graded_basis(deg))
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
-            rng = Random(_SEED)
             tested = 0
             for p_elem in _sample(basis, 10, rng):
                 phi_dp = phi(p_elem.boundary())
@@ -941,7 +917,7 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
         @pytest.mark.parametrize("q_deg", [-1, 0])
-        def test_operad_map(self, p_deg, q_deg, layers: ConfigurationLayers):
+        def test_operad_map(self, p_deg, q_deg, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             Q = layers.comodule_morphism.target  # S ⊙ P
             phi = layers.comodule_morphism
@@ -951,7 +927,6 @@ class TestLayer4h_comodule_morphism:
             q_elems = list(P2.graded_basis(q_deg))
             if not p_elems or not q_elems:
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
-            rng = Random(_SEED)
             tested = 0
             for p in _sample(p_elems, 3, rng):
                 for q in _sample(q_elems, 3, rng):
@@ -969,7 +944,7 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("deg", [-1, 0, 1])
-        def test_equivariance(self, n, deg, layers: ConfigurationLayers):
+        def test_equivariance(self, n, deg, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
@@ -978,7 +953,6 @@ class TestLayer4h_comodule_morphism:
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             Sn = SymmetricGroup(n)
-            rng = Random(_SEED)
             tested = 0
             for p_elem in _sample(basis, 5, rng):
                 for sigma in _sample(list(Sn), min(4, Sn.order()), rng):
@@ -1009,7 +983,7 @@ class TestLayer4h_comodule_morphism:
             )
 
         @pytest.mark.parametrize("deg", [-1, 0, 1])
-        def test_factorisation_through_e_comodule(self, deg, layers: ConfigurationLayers):
+        def test_factorisation_through_e_comodule(self, deg, layers: ConfigurationLayers, rng):
             """φ = (table_reduction ⊗ id) ∘ Δ — the morphism factorises correctly."""
             P = layers.OBXsLie
             phi = layers.comodule_morphism
@@ -1023,7 +997,6 @@ class TestLayer4h_comodule_morphism:
             basis = list(Pn.graded_basis(deg))
             if not basis:
                 pytest.skip(f"No P(2) elements at degree {deg}")
-            rng = Random(_SEED)
             tested = 0
             for p_elem in _sample(basis, 5, rng):
                 # Apply E-comodule morphism, then table-reduce left factor
@@ -1053,9 +1026,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
 
     class TestDSquared:
         @pytest.mark.parametrize("weight", [1, 2, 3])
-        def test_d_squared(self, dim, ring, weight, layers: ConfigurationLayers):
+        def test_d_squared(self, dim, ring, weight, layers: ConfigurationLayers, rng):
             mod = layers.pulled_back.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-1, 6):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
@@ -1080,8 +1052,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
-        def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers):
-            rng = Random(_SEED)
+        def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1120,7 +1091,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_leibniz(self, p_deg, layers: ConfigurationLayers):
+        def test_leibniz(self, p_deg, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1135,7 +1106,6 @@ class TestLayer5_pb_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            rng = Random(_SEED)
             for p in _sample(p_elems, 2, rng):
                 lhs = mod.boundary(pb.act(p, [a, a]))
                 rhs = pb.act(p.boundary(), [a, a])
@@ -1171,9 +1141,8 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
     class TestDSquaredWeight3:
         """d²=0 at weight 3 — where the sign bug first manifests (QQ only)."""
 
-        def test_d_squared(self, dim, ring, layers: ConfigurationLayers):
+        def test_d_squared(self, dim, ring, layers: ConfigurationLayers, rng):
             mod = layers.bar.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-1, 5):
                 basis = list(mod.graded_basis_by_weight(deg, 3))
@@ -1187,9 +1156,8 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
     class TestDSquaredWeight4:
         """d²=0 at weight 4."""
 
-        def test_d_squared(self, dim, ring, layers: ConfigurationLayers):
+        def test_d_squared(self, dim, ring, layers: ConfigurationLayers, rng):
             mod = layers.bar.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-2, 4):
                 basis = list(mod.graded_basis_by_weight(deg, 4))
@@ -1215,10 +1183,9 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
         """
 
         @pytest.mark.parametrize("weight", [2, 3])
-        def test_d_cofree_squared(self, dim, ring, weight, layers: ConfigurationLayers):
+        def test_d_cofree_squared(self, dim, ring, weight, layers: ConfigurationLayers, rng):
             """d_cofree² = 0."""
             mod = layers.bar.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-1, 5):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
@@ -1231,7 +1198,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             assert tested > 0, "No basis elements found (nontriviality check)"
 
         @pytest.mark.parametrize("weight", [2, 3])
-        def test_mc_equation(self, dim, ring, weight, layers: ConfigurationLayers):
+        def test_mc_equation(self, dim, ring, weight, layers: ConfigurationLayers, rng):
             """d_alpha² + (d_cofree ∘ d_alpha + d_alpha ∘ d_cofree) = 0.
 
             This is the Maurer-Cartan equation at the module level: the combined
@@ -1239,7 +1206,6 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             term is individually zero in general.
             """
             mod = layers.bar.module
-            rng = Random(_SEED)
             tested = 0
             for deg in range(-1, 5):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
