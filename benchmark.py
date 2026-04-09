@@ -7,10 +7,14 @@ from sage.all import GF
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
 model = euclidean_unordered_configuration_model(GF(2), 2)
-
+mod = model.module
 profile = cProfile.Profile()
 profile.enable()
+#---------------
+
 cc = compute_chain_complex(model.module, degrees=range(-1, 1), weight=4)
+
+#----------------
 profile.disable()
 
 report_path = Path("benchmark_profile.txt")
