@@ -1,6 +1,6 @@
 """Canonical operad/cooperad and simplicial model classes."""
 
-from sage.all import Partitions
+from sage.all import Partitions, cached_function
 
 from itertools import permutations
 
@@ -28,39 +28,49 @@ __all__ = [
 ]
 
 
+@cached_function
+def _compute_table_reduction_cached(n, base_ring, basis_element: tuple) -> Surjection.Element:
+    """Compute table reduction on one Barratt--Eccles basis element (cached).
+
+    Cached on (arity, base_ring, basis_element) so repeated calls with the
+    same BE key avoid recomputing the expensive partition enumeration.
+    """
+    d = len(basis_element) - 1
+    target = Surjection(n, base_ring)
+
+    def term_generator():
+        R = target.base_ring()
+        for pi_ord in Partitions(
+            d + n,
+            length=d + 1,  # pyright: ignore[reportCallIssue]
+        ):
+            for pi in set(permutations(pi_ord)):
+                k2, removed = [], []
+                degenerate = False
+                for idx, i in enumerate(pi):
+                    filtered = [i for i in basis_element[idx].tuple() if i not in removed]
+                    if idx > 0 and k2[-1] == filtered[0]:
+                        degenerate = True
+                        break
+                    if i > 1:
+                        removed += filtered[: i - 1]
+                    k2 += filtered[:i]
+                if not degenerate:
+                    yield tuple(k2), R.one()
+
+    return target.sum_of_terms(term_generator())
+
+
 def _table_reduction_on_basis(self: BarrattEccles):
     """Create the basis-level table-reduction map ``E_n -> S_n``.
 
     Returns a callable compatible with ``module_morphism(on_basis=...)``.
     """
+    n = self.arity()
+    base_ring = self.base_ring()
 
     def _compute_table_reduction(basis_element: tuple) -> Surjection.Element:
-        """Compute table reduction on one Barratt--Eccles basis element."""
-        n = self.arity()
-        d = len(basis_element) - 1
-        target = Surjection(n, self.base_ring())
-
-        def term_generator():
-            R = target.base_ring()
-            for pi_ord in Partitions(
-                d + n,
-                length=d + 1,  # pyright: ignore[reportCallIssue]
-            ):
-                for pi in set(permutations(pi_ord)):
-                    k2, removed = [], []
-                    degenerate = False
-                    for idx, i in enumerate(pi):
-                        filtered = [i for i in basis_element[idx].tuple() if i not in removed]
-                        if idx > 0 and k2[-1] == filtered[0]:
-                            degenerate = True
-                            break
-                        if i > 1:
-                            removed += filtered[: i - 1]
-                        k2 += filtered[:i]
-                    if not degenerate:
-                        yield tuple(k2), R.one()
-
-        return target.sum_of_terms(term_generator())
+        return _compute_table_reduction_cached(n, base_ring, basis_element)
 
     return _compute_table_reduction
 

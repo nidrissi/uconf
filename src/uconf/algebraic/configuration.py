@@ -115,15 +115,34 @@ def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
         base_ring = source_parent.base_ring()
         target_n = surj_target(n, base_ring)
 
-        result = target_n.zero()
+        # Cache table_reduction results per BE basis key within this element,
+        # avoiding redundant computation for repeated keys.
+        tr_cache: dict = {}
+
+        # Accumulate result as {key: coeff} dict to avoid repeated element
+        # construction overhead.
+        result_dict: dict = {}
+        R = target_n.base_ring()
+
         be_parent = source_parent.left_parent()
         for (be_key, cobar_key), coeff in be_had_elem:
-            surj_elem = be_parent(be_key).table_reduction()
+            if be_key in tr_cache:
+                surj_elem = tr_cache[be_key]
+            else:
+                surj_elem = be_parent(be_key).table_reduction()
+                tr_cache[be_key] = surj_elem
 
             for surj_key, surj_coeff in surj_elem:
-                result += coeff * surj_coeff * target_n((surj_key, cobar_key))
+                combined_key = (surj_key, cobar_key)
+                combined_coeff = R(coeff * surj_coeff)
+                if combined_key in result_dict:
+                    result_dict[combined_key] += combined_coeff
+                else:
+                    result_dict[combined_key] = combined_coeff
 
-        return result
+        return target_n.sum_of_terms(
+            (k, v) for k, v in result_dict.items() if v
+        )
 
     return OperadMorphism(cobar, surj_target, _on_element)
 
