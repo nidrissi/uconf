@@ -593,7 +593,9 @@ class FreeOperadAlgebra(OperadAlgebra):
 
         P = self.operad_cls
         R = self._base_ring
-        result = self.module.zero()
+        # Accumulate as dict to avoid intermediate element construction
+        # per (q_key, term_combo) pair.
+        result_dict: dict = {}
         input_term_lists = [list(x) for x in inputs]
 
         for q_key, q_coeff in p_element:
@@ -635,11 +637,16 @@ class FreeOperadAlgebra(OperadAlgebra):
                 m_concat = tuple(mk for ik in input_keys for mk in ik[1])
 
                 # Normalise: planarize composed_elem and permute m_concat
-                result += (
-                    koszul * coeff * self.module._normalized_corolla_sum(composed_elem, m_concat)
-                )
+                ncs = self.module._normalized_corolla_sum(composed_elem, m_concat)
+                outer = koszul * coeff
+                for key, val in ncs:
+                    combined = outer * val
+                    if key in result_dict:
+                        result_dict[key] += combined
+                    else:
+                        result_dict[key] = combined
 
-        return result
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def include(self, m_key):
         """Return the image of ``m_key`` under the inclusion η: M → P ∘ M.
