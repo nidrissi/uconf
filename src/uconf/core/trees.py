@@ -27,20 +27,19 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
-from functools import lru_cache, total_ordering
+from itertools import combinations
+from itertools import product as iter_product
 from typing import Any, Callable, Iterator, Literal
 
-from itertools import combinations, product as iter_product
+from sage.all import cached_function
 
 from uconf.core.signs import koszul_sign_of_permutation
-
 
 # =====================================================================
 # RootedTree class
 # =====================================================================
 
 
-@total_ordering
 class RootedTree:
     """Immutable rooted tree with eagerly cached structural properties.
 
@@ -254,7 +253,7 @@ def vertices_dfs(tree) -> list[RootedTree]:
     return result
 
 
-@lru_cache(maxsize=None)
+@cached_function
 def subtree_degree(tree, operad_cls, base_ring) -> int:
     """Compute the total shifted bar degree of a subtree.
 
@@ -273,7 +272,7 @@ def subtree_degree(tree, operad_cls, base_ring) -> int:
     return vertex_deg + child_deg
 
 
-@lru_cache(maxsize=None)
+@cached_function
 def subtree_degree_cobar(tree, cooperad_cls, base_ring) -> int:
     """Compute the total shifted cobar degree of a subtree.
 

@@ -124,7 +124,7 @@ improvement of roughly 10 s.
 
 Both functions recursively compute the total shifted bar/cobar degree of
 a subtree. Since `RootedTree` instances are immutable and hashable, the
-results are now cached via `@lru_cache(maxsize=None)` keyed on
+results are now cached via `@cached_function` keyed on
 `(tree, operad_cls, base_ring)`. Called during shuffle tree normalisation
 (`to_shuffle_tree_bar/cobar`) and sign computation.
 
