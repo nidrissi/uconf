@@ -18,7 +18,7 @@ Typical usage::
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from sage.all import ChainComplex, matrix
 
@@ -218,7 +218,7 @@ def compute_homology_representatives(
     weight: int | None,
     cc,
     *,
-    algorithm: str = "fast",
+    algorithm: Literal["fast", "sage"] = "fast",
 ) -> list:
     """Compute cycle representatives for a basis of ``H_{degree}(cc)``.
 
