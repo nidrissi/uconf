@@ -145,16 +145,36 @@ class QuasiPlanarMixin(__quasi_planar_base):
             Mapping from permutation σ to the non-zero planar element
             ``d_σ(x) ∈ P_pl(n)``.
         """
-        bdry = self.boundary(x)
+        # Bypass morphism overhead for single-term elements: call on_basis
+        # directly instead of going through morphism.__call__ + linear_combination.
+        bdry_on_basis = getattr(self.boundary, "on_basis", None)
+        if bdry_on_basis is not None:
+            bdry_on_basis = bdry_on_basis()
+            bdry = self.zero()
+            for key, coeff in x:
+                bdry += coeff * bdry_on_basis(key)
+        else:
+            bdry = self.boundary(x)
+
         if not bdry:
             return {}
 
-        planarized = self.planarize(bdry)
+        # Similarly bypass planarize morphism overhead
+        planarize_on_basis = getattr(self, "_planarize_on_basis", None)
+        if planarize_on_basis is not None:
+            planarized_terms = []
+            for key, coeff in bdry:
+                p_result = planarize_on_basis(key)
+                for pk, pc in p_result:
+                    planarized_terms.append((pk, coeff * pc))
+        else:
+            planarized = self.planarize(bdry)
+            planarized_terms = list(planarized)
 
         # Accumulate as {sigma_key: {planar_key: coeff}} for faster grouping,
         # then build elements at the end.
         result_dicts: dict[Any, dict] = {}
-        for (planar_key, group_key), coeff in planarized:
+        for (planar_key, group_key), coeff in planarized_terms:
             if group_key in result_dicts:
                 d = result_dicts[group_key]
                 if planar_key in d:

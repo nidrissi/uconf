@@ -130,8 +130,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
                 for tensor_basis, tensor_coeff in selected_terms:
                     left_key, right_key = tensor_basis
-                    left_inputs.append(self.left_module(left_key))
-                    right_inputs.append(self.right_module(right_key))
+                    left_inputs.append(self.left_module.term(left_key))
+                    right_inputs.append(self.right_module.term(right_key))
                     left_degs.append(left_deg(left_key))
                     right_degs.append(right_deg(right_key))
                     scalar *= tensor_coeff
