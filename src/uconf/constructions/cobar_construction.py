@@ -158,7 +158,10 @@ class CobarConstruction(UniqueRepresentation):
                 a_deg = after_cobar_deg(x_tree, i, self.cooperad_cls, base_ring)
                 sign = sign_from_exponent(y_deg * a_deg)
                 grafted = graft(x_tree, i, y_tree)
-                result += sign * x_coeff * y_coeff * target(grafted)
+                # Use _from_validated_tree to skip redundant validation — both
+                # x_tree and y_tree are already validated cobar trees and graft
+                # produces a structurally valid tree.
+                result += sign * x_coeff * y_coeff * target._from_validated_tree(grafted)
 
         return result
 

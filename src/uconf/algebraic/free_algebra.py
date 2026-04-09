@@ -140,9 +140,18 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         # Pre-compute degrees only once if n > 1
         if n > 1:
             degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-        result = self.zero()
+
+        # Accumulate as dict to avoid repeated element construction
+        result_dict: dict = {}
+
+        # Bypass planarize morphism overhead: call _planarize_on_basis directly
+        planarize_on_basis = getattr(comp, "_planarize_on_basis", None)
+
         for p_key, p_coeff in p_elem:
-            planarized = comp.planarize(comp.term(p_key))
+            if planarize_on_basis is not None:
+                planarized = planarize_on_basis(p_key)
+            else:
+                planarized = comp.planarize(comp.term(p_key))
             for (p_planar_key, sigma_key), pl_coeff in planarized:
                 sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
                 permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
@@ -152,8 +161,16 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
-                result += p_coeff * pl_coeff * koszul * self.term((p_planar_key, permuted_m))
-        return result
+                key = (p_planar_key, permuted_m)
+                coeff = p_coeff * pl_coeff * koszul
+                if key in result_dict:
+                    result_dict[key] += coeff
+                else:
+                    result_dict[key] = coeff
+
+        return self.sum_of_terms(
+            (k, v) for k, v in result_dict.items() if v
+        )
 
     # ------------------------------------------------------------------
     # Basis key validation
@@ -287,20 +304,33 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         result = self.zero()
 
         # d_P term: keep raw operad keys (may be non-planar)
+        # Bypass _element_constructor_ validation — call
+        # _normalized_corolla_sum directly since dp_elem is internally produced.
         dp_elem = comp.boundary(comp(p_key))
-        for dp_key, dp_coeff in dp_elem:
-            result += dp_coeff * self((dp_key, m_tuple))
+        if dp_elem:
+            result += self._normalized_corolla_sum(dp_elem, m_tuple)
 
         # d_M terms with Koszul signs
+        # Bypass morphism overhead: call the inner module's boundary
+        # on_basis function directly instead of going through
+        # morphism.__call__ + linear_combination.
         p_deg = comp.degree_on_basis(p_key)
         cumulative = p_deg
+        M = self._inner_module
+        m_bdry = M.boundary
+        m_bdry_on_key = getattr(m_bdry, "on_basis", None)
+        if m_bdry_on_key is not None:
+            m_bdry_on_key = m_bdry_on_key()
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            m_elem = self._inner_module.term(mk)
-            for new_mk, m_coeff in self._inner_module.boundary(m_elem):
+            if m_bdry_on_key is not None:
+                dm = m_bdry_on_key(mk)
+            else:
+                dm = m_bdry(M.term(mk))
+            for new_mk, m_coeff in dm:
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self((p_key, new_m))
-            cumulative += self._inner_module.degree_on_basis(mk)
+                result += sign * m_coeff * self.term((p_key, new_m))
+            cumulative += M.degree_on_basis(mk)
 
         return result
 

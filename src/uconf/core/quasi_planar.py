@@ -145,26 +145,38 @@ class QuasiPlanarMixin(__quasi_planar_base):
             Mapping from permutation σ to the non-zero planar element
             ``d_σ(x) ∈ P_pl(n)``.
         """
-        from sage.all import SymmetricGroup
-
         bdry = self.boundary(x)
         if not bdry:
             return {}
 
+        planarized = self.planarize(bdry)
+
+        # Accumulate as {sigma_key: {planar_key: coeff}} for faster grouping,
+        # then build elements at the end.
+        result_dicts: dict[Any, dict] = {}
+        for (planar_key, group_key), coeff in planarized:
+            if group_key in result_dicts:
+                d = result_dicts[group_key]
+                if planar_key in d:
+                    d[planar_key] += coeff
+                else:
+                    d[planar_key] = coeff
+            else:
+                result_dicts[group_key] = {planar_key: coeff}
+
+        # Convert to Sage elements and filter zeros.
+        # We need the sigma as a SymmetricGroup element for the caller.
+        from sage.all import SymmetricGroup
         n = self.arity()
         S_n = SymmetricGroup(n)
 
-        planarized = self.planarize(bdry)
-
         result: dict[Any, Any] = {}
-        for (planar_key, group_key), coeff in planarized:
-            sigma = S_n(group_key)
-            if sigma in result:
-                result[sigma] += coeff * self.term(planar_key)
-            else:
-                result[sigma] = coeff * self.term(planar_key)
+        for group_key, coeff_dict in result_dicts.items():
+            terms = [(k, v) for k, v in coeff_dict.items() if v]
+            if terms:
+                result[S_n(group_key)] = self.sum_of_terms(terms)
 
-        return {sigma: val for sigma, val in result.items() if val}
+        return result
 
     def d_sigma_iterate(self, x: Any, sigmas: Iterable[Any]) -> Any:
         """Apply ``d_sigma`` iteratively for a sequence of permutations.

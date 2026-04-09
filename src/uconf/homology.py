@@ -57,8 +57,21 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
+
+    # Try to bypass the Sage morphism.__call__ overhead by calling
+    # the on_basis function directly. For single-term basis elements,
+    # boundary(term(key)) == on_basis(key), but the morphism wrapper
+    # adds ~2µs per call from linear_combination/genexpr.
+    boundary = module.boundary
+    on_basis_fn = getattr(boundary, "on_basis", None)
+    if on_basis_fn is not None:
+        on_basis_fn = on_basis_fn()
     for j, elem in enumerate(basis_source):
-        bdry = module.boundary(elem)
+        if on_basis_fn is not None:
+            key = elem.leading_support()
+            bdry = on_basis_fn(key)
+        else:
+            bdry = boundary(elem)
         for key, coeff in bdry:
             i = key_to_idx_target.get(key)
             if i is not None:
