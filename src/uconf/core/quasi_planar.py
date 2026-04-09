@@ -150,39 +150,57 @@ class QuasiPlanarMixin(__quasi_planar_base):
         # directly instead of going through morphism.__call__ + linear_combination.
         bdry_on_basis = get_on_basis(self.boundary)
         if bdry_on_basis is not None:
-            bdry = self.zero()
+            # Accumulate boundary as {key: coeff} dict to avoid building
+            # intermediate Sage elements entirely.
+            bdry_dict: dict = {}
             for key, coeff in x:
-                bdry += coeff * bdry_on_basis(key)
+                for bk, bc in bdry_on_basis(key):
+                    combined = coeff * bc
+                    if bk in bdry_dict:
+                        bdry_dict[bk] += combined
+                    else:
+                        bdry_dict[bk] = combined
+            # Filter zeros
+            bdry_items = [(k, v) for k, v in bdry_dict.items() if v]
         else:
             bdry = self.boundary(x)
+            if not bdry:
+                return {}
+            bdry_items = list(bdry)
 
-        if not bdry:
+        if not bdry_items:
             return {}
 
         # Similarly bypass planarize morphism overhead
         planarize_on_basis = getattr(self, "_planarize_on_basis", None)
-        if planarize_on_basis is not None:
-            planarized_terms = []
-            for key, coeff in bdry:
-                p_result = planarize_on_basis(key)
-                for pk, pc in p_result:
-                    planarized_terms.append((pk, coeff * pc))
-        else:
-            planarized = self.planarize(bdry)
-            planarized_terms = list(planarized)
 
         # Accumulate as {sigma_key: {planar_key: coeff}} for faster grouping,
         # then build elements at the end.
         grouped_results: dict[Any, dict] = {}
-        for (planar_key, group_key), coeff in planarized_terms:
-            if group_key in grouped_results:
-                d = grouped_results[group_key]
-                if planar_key in d:
-                    d[planar_key] += coeff
+        if planarize_on_basis is not None:
+            for key, coeff in bdry_items:
+                p_result = planarize_on_basis(key)
+                for (planar_key, group_key), pc in p_result:
+                    combined = coeff * pc
+                    if group_key in grouped_results:
+                        d = grouped_results[group_key]
+                        if planar_key in d:
+                            d[planar_key] += combined
+                        else:
+                            d[planar_key] = combined
+                    else:
+                        grouped_results[group_key] = {planar_key: combined}
+        else:
+            planarized = self.planarize(self.sum_of_terms(bdry_items, distinct=True))
+            for (planar_key, group_key), coeff in planarized:
+                if group_key in grouped_results:
+                    d = grouped_results[group_key]
+                    if planar_key in d:
+                        d[planar_key] += coeff
+                    else:
+                        d[planar_key] = coeff
                 else:
-                    d[planar_key] = coeff
-            else:
-                grouped_results[group_key] = {planar_key: coeff}
+                    grouped_results[group_key] = {planar_key: coeff}
 
         # Convert to Sage elements and filter zeros.
         # We need the sigma as a SymmetricGroup element for the caller.
