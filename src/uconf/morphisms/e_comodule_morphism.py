@@ -155,10 +155,7 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
                             acted_dict[pair] += combined
                         else:
                             acted_dict[pair] = combined
-            total_result += pl_coeff * target.sum_of_terms(
-                (((be_k, cp_k), c) for (be_k, cp_k), c in acted_dict.items() if c),
-                distinct=True,
-            )
+            total_result += pl_coeff * target._from_dict(acted_dict, remove_zeros=True)
 
     return total_result
 
@@ -259,15 +256,9 @@ def _nu_on_planar(
 
     recurse(planar_elem, [])
 
-    # Build the tensor element from accumulated dict
-    return target.sum_of_terms(
-        (
-            ((be_key, coop_key), coeff)
-            for (be_key, coop_key), coeff in result_dict.items()
-            if coeff
-        ),
-        distinct=True,
-    )
+    # Build the tensor element from accumulated dict, bypassing
+    # the dict→items→dict round-trip of sum_of_terms(distinct=True).
+    return target._from_dict(result_dict, remove_zeros=True)
 
 
 def make_e_comodule_morphism(
@@ -340,9 +331,7 @@ def make_e_comodule_morphism(
                 else:
                     root_dict[combined_key] = combined_coeff
 
-        root_image = target_k.sum_of_terms(
-            ((k, v) for k, v in root_dict.items() if v), distinct=True
-        )
+        root_image = target_k._from_dict(root_dict, remove_zeros=True)
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.
@@ -398,8 +387,6 @@ def make_e_comodule_morphism(
                 else:
                     result_dict[key] = combined
 
-        return target_n.sum_of_terms(
-            ((k, v) for k, v in result_dict.items() if v), distinct=True
-        )
+        return target_n._from_dict(result_dict, remove_zeros=True)
 
     return OperadMorphism(cobar, target_factory, _on_element)

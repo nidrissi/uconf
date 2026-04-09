@@ -210,9 +210,10 @@ class QuasiPlanarMixin(__quasi_planar_base):
 
         result: dict[Any, Any] = {}
         for group_key, coeff_dict in grouped_results.items():
-            terms = [(k, v) for k, v in coeff_dict.items() if v]
-            if terms:
-                result[S_n(group_key)] = self.sum_of_terms(terms, distinct=True)
+            # Build element directly from dict, bypassing sum_of_terms overhead
+            elem = self._from_dict(coeff_dict, remove_zeros=True)
+            if elem:
+                result[S_n(group_key)] = elem
 
         return result
 

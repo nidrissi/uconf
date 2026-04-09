@@ -425,8 +425,11 @@ class CobarConstruction(UniqueRepresentation):
             Skips ``_validate_basis_key`` but still normalises to shuffle form.
             """
             R = self.base_ring()
-            return self.sum_of_terms(
-                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            # Shuffle normalization produces distinct keys (no duplicates),
+            # so build element directly via _from_dict to bypass the
+            # sum_of_terms dedup path.
+            return self._from_dict(
+                {key: R(coeff) for key, coeff in self._normalize_to_shuffle(tree)}
             )
 
         def arity(self) -> int:
