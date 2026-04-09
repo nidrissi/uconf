@@ -171,9 +171,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 else:
                     result_dict[key] = coeff
 
-        return self.sum_of_terms(
-            ((k, v) for k, v in result_dict.items() if v), distinct=True
-        )
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Basis key validation

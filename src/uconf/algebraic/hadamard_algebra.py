@@ -163,11 +163,9 @@ class HadamardTensorAlgebra(OperadAlgebra):
                         else:
                             result_dict[combined_key] = combined_coeff
 
-        # Build result from dict, filtering zeros.
-        # Keys are distinct (from dict), so skip internal deduplication.
-        return self.module.sum_of_terms(
-            ((k, v) for k, v in result_dict.items() if v), distinct=True
-        )
+        # Build result directly from dict, bypassing the
+        # dict→items→dict round-trip of sum_of_terms(distinct=True).
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def basis_iter(self, d: int) -> Iterator:
         """Iterate over basis elements of degree *d*.
@@ -300,9 +298,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 result_dict[key] += coeff
             else:
                 result_dict[key] = coeff
-        return self.module.sum_of_terms(
-            ((k, v) for k, v in result_dict.items() if v), distinct=True
-        )
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def boundary(self, a):
         """Tensor differential induced from the two dg-module differentials."""
@@ -344,6 +340,4 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 else:
                     result_dict[key] = c
 
-        return self.module.sum_of_terms(
-            ((k, v) for k, v in result_dict.items() if v), distinct=True
-        )
+        return self.module._from_dict(result_dict, remove_zeros=True)

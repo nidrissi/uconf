@@ -486,8 +486,10 @@ class BarConstruction(UniqueRepresentation):
             known-valid trees by replacing decorations.
             """
             R = self.base_ring()
-            return self.sum_of_terms(
-                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            # Shuffle normalization produces distinct keys, so build element
+            # directly via _from_dict to bypass sum_of_terms dedup.
+            return self._from_dict(
+                {key: R(coeff) for key, coeff in self._normalize_to_shuffle(tree)}
             )
 
         def arity(self) -> int:
