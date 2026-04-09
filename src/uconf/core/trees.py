@@ -150,7 +150,7 @@ class RootedTree:
 
     def __repr__(self) -> str:
         kids = ", ".join(repr(c) for c in self._children)
-        return f"T({self._decoration!r}; {kids})"
+        return f"𝐓({self._decoration!r}; {kids})"
 
     # -- conversion -----------------------------------------------------
 
