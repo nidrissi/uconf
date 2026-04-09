@@ -42,7 +42,7 @@ from sage.all import (
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
 from uconf.core.display import latex_linear_combination
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import get_on_basis, sign_from_exponent
 from uconf.core.signs import koszul_sign_of_permutation
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
@@ -318,9 +318,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         cumulative = p_deg
         M = self._inner_module
         m_bdry = M.boundary
-        m_bdry_on_key = getattr(m_bdry, "on_basis", None)
-        if m_bdry_on_key is not None:
-            m_bdry_on_key = m_bdry_on_key()
+        m_bdry_on_key = get_on_basis(m_bdry)
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
             if m_bdry_on_key is not None:

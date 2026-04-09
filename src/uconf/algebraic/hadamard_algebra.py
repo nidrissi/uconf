@@ -34,7 +34,7 @@ from uconf.algebraic.tree_module import (
     _module_basis_keys_in_degree,
     _module_basis_keys_in_weight_and_degree,
 )
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import get_on_basis, sign_from_exponent
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -270,12 +270,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
         sign = -1 if left_degree % 2 else 1
 
         # Bypass morphism overhead for boundaries: try on_basis directly
-        left_bdry_fn = getattr(self.left_algebra.module.boundary, "on_basis", None)
-        right_bdry_fn = getattr(self.right_algebra.module.boundary, "on_basis", None)
-        if left_bdry_fn is not None:
-            left_bdry_fn = left_bdry_fn()
-        if right_bdry_fn is not None:
-            right_bdry_fn = right_bdry_fn()
+        left_bdry_fn = get_on_basis(self.left_algebra.module.boundary)
+        right_bdry_fn = get_on_basis(self.right_algebra.module.boundary)
 
         if left_bdry_fn is not None:
             left_boundary = left_bdry_fn(left_basis)
@@ -314,12 +310,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
         R = self.module.base_ring()
 
         # Resolve boundary functions once
-        left_bdry_fn = getattr(self.left_algebra.module.boundary, "on_basis", None)
-        right_bdry_fn = getattr(self.right_algebra.module.boundary, "on_basis", None)
-        if left_bdry_fn is not None:
-            left_bdry_fn = left_bdry_fn()
-        if right_bdry_fn is not None:
-            right_bdry_fn = right_bdry_fn()
+        left_bdry_fn = get_on_basis(self.left_algebra.module.boundary)
+        right_bdry_fn = get_on_basis(self.right_algebra.module.boundary)
 
         for basis, coeff in x:
             left_basis, right_basis = basis
