@@ -194,7 +194,7 @@ class QuasiPlanarMixin(__quasi_planar_base):
         for group_key, coeff_dict in grouped_results.items():
             terms = [(k, v) for k, v in coeff_dict.items() if v]
             if terms:
-                result[S_n(group_key)] = self.sum_of_terms(terms)
+                result[S_n(group_key)] = self.sum_of_terms(terms, distinct=True)
 
         return result
 

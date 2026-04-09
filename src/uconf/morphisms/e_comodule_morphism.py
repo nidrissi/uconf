@@ -156,7 +156,8 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
                         else:
                             acted_dict[pair] = combined
             total_result += pl_coeff * target.sum_of_terms(
-                ((be_k, cp_k), c) for (be_k, cp_k), c in acted_dict.items() if c
+                (((be_k, cp_k), c) for (be_k, cp_k), c in acted_dict.items() if c),
+                distinct=True,
             )
 
     return total_result
@@ -260,9 +261,12 @@ def _nu_on_planar(
 
     # Build the tensor element from accumulated dict
     return target.sum_of_terms(
-        ((be_key, coop_key), coeff)
-        for (be_key, coop_key), coeff in result_dict.items()
-        if coeff
+        (
+            ((be_key, coop_key), coeff)
+            for (be_key, coop_key), coeff in result_dict.items()
+            if coeff
+        ),
+        distinct=True,
     )
 
 
@@ -337,7 +341,7 @@ def make_e_comodule_morphism(
                     root_dict[combined_key] = combined_coeff
 
         root_image = target_k.sum_of_terms(
-            (k, v) for k, v in root_dict.items() if v
+            ((k, v) for k, v in root_dict.items() if v), distinct=True
         )
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
@@ -395,7 +399,7 @@ def make_e_comodule_morphism(
                     result_dict[key] = combined
 
         return target_n.sum_of_terms(
-            (k, v) for k, v in result_dict.items() if v
+            ((k, v) for k, v in result_dict.items() if v), distinct=True
         )
 
     return OperadMorphism(cobar, target_factory, _on_element)
