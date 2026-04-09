@@ -77,3 +77,16 @@ def koszul_sign_of_permutation(perm_0idx: list[int], degrees: list[int]) -> int:
             if perm_0idx[i] > perm_0idx[j]:
                 exponent += degrees[perm_0idx[i]] * degrees[perm_0idx[j]]
     return 1 if exponent % 2 == 0 else -1
+
+
+def get_on_basis(morphism: Any):
+    """Extract the ``on_basis`` callable from a Sage module morphism.
+
+    Returns the ``on_basis`` function if available, or ``None``.
+    Calling ``on_basis(key)`` directly bypasses the overhead of
+    ``morphism.__call__`` → ``linear_combination`` for single-term inputs.
+    """
+    fn = getattr(morphism, "on_basis", None)
+    if fn is not None:
+        fn = fn()
+    return fn

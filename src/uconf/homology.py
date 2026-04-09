@@ -22,6 +22,8 @@ from typing import Any, Literal
 
 from sage.all import ChainComplex, matrix
 
+from uconf.core.signs import get_on_basis
+
 
 # ---------------------------------------------------------------------------
 # Boundary matrix
@@ -63,9 +65,7 @@ def _boundary_matrix(
     # boundary(term(key)) == on_basis(key), but the morphism wrapper
     # adds ~2µs per call from linear_combination/genexpr.
     boundary = module.boundary
-    on_basis_fn = getattr(boundary, "on_basis", None)
-    if on_basis_fn is not None:
-        on_basis_fn = on_basis_fn()
+    on_basis_fn = get_on_basis(boundary)
     for j, elem in enumerate(basis_source):
         if on_basis_fn is not None:
             key = elem.leading_support()

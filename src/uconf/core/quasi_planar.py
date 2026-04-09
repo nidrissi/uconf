@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
 from sage.all import Family
 
 from uconf.core.component import ComponentProtocol
+from uconf.core.signs import get_on_basis
 
 
 @runtime_checkable
@@ -147,9 +148,8 @@ class QuasiPlanarMixin(__quasi_planar_base):
         """
         # Bypass morphism overhead for single-term elements: call on_basis
         # directly instead of going through morphism.__call__ + linear_combination.
-        bdry_on_basis = getattr(self.boundary, "on_basis", None)
+        bdry_on_basis = get_on_basis(self.boundary)
         if bdry_on_basis is not None:
-            bdry_on_basis = bdry_on_basis()
             bdry = self.zero()
             for key, coeff in x:
                 bdry += coeff * bdry_on_basis(key)
@@ -173,16 +173,16 @@ class QuasiPlanarMixin(__quasi_planar_base):
 
         # Accumulate as {sigma_key: {planar_key: coeff}} for faster grouping,
         # then build elements at the end.
-        result_dicts: dict[Any, dict] = {}
+        grouped_results: dict[Any, dict] = {}
         for (planar_key, group_key), coeff in planarized_terms:
-            if group_key in result_dicts:
-                d = result_dicts[group_key]
+            if group_key in grouped_results:
+                d = grouped_results[group_key]
                 if planar_key in d:
                     d[planar_key] += coeff
                 else:
                     d[planar_key] = coeff
             else:
-                result_dicts[group_key] = {planar_key: coeff}
+                grouped_results[group_key] = {planar_key: coeff}
 
         # Convert to Sage elements and filter zeros.
         # We need the sigma as a SymmetricGroup element for the caller.
@@ -191,7 +191,7 @@ class QuasiPlanarMixin(__quasi_planar_base):
         S_n = SymmetricGroup(n)
 
         result: dict[Any, Any] = {}
-        for group_key, coeff_dict in result_dicts.items():
+        for group_key, coeff_dict in grouped_results.items():
             terms = [(k, v) for k, v in coeff_dict.items() if v]
             if terms:
                 result[S_n(group_key)] = self.sum_of_terms(terms)
