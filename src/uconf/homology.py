@@ -212,27 +212,112 @@ def compute_chain_complex(
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
 
-def compute_homology_representatives(module: Any, degree: int, weight: int | None, cc) -> list:
-    """
-    Compute homology representatives for a given module at a specific degree and weight.
+def compute_homology_representatives(
+    module: Any,
+    degree: int,
+    weight: int | None,
+    cc,
+    *,
+    algorithm: str = "fast",
+) -> list:
+    """Compute cycle representatives for a basis of ``H_{degree}(cc)``.
 
-    Extracts basis elements from the module and uses the chain complex homology computation
-    to generate representative elements. Each homology generator is converted back to a
-    module element by expressing it as a linear combination of basis elements.
+    Two algorithms are available, controlled by the *algorithm* keyword:
+
+    ``"fast"`` (default)
+        Uses explicit linear algebra without invoking SageMath's Smith
+        normal form machinery:
+
+        1. Compute ``ker = ker(d_degree: C_degree → C_{degree-1})`` via
+           :meth:`right_kernel` on the outgoing differential matrix.
+        2. Compute ``im = im(d_{degree+1}: C_{degree+1} → C_degree)`` via
+           the column space of the incoming differential.
+        3. Row-reduce ``[im_basis; ker_basis]`` to echelon form.  The rows
+           beyond the first ``dim(im)`` give homology representatives —
+           they are in ``ker`` and their pivot columns are outside those of
+           ``im``, so they are linearly independent modulo the image.
+
+        This avoids the expensive ``generators=True`` path in SageMath and
+        is significantly faster for large chain complexes.
+
+    ``"sage"``
+        Delegates to ``cc.homology(degree, generators=True)``.  Slower but
+        produces representatives whose coefficients are expressed in
+        SageMath's canonical reduced form, which can be easier to read.
 
     Args:
-        module (Any): The module for which to compute homology representatives.
-        degree (int): The homological degree at which to compute representatives.
-        weight (int | None): The weight parameter for basis element selection, or None if not applicable.
-        cc: The chain complex object with a homology method that accepts degree and generators=True.
+        module: The dg-module for which to compute representative cycles.
+        degree: The homological degree at which to compute representatives.
+        weight: Weight filter for basis selection, or ``None``.
+        cc: A SageMath :class:`~sage.homology.chain_complex.ChainComplex`
+            built from *module* via :func:`compute_chain_complex`.  Must
+            contain differentials for *degree* and *degree*+1.
+        algorithm: Which algorithm to use: ``"fast"`` (default) or
+            ``"sage"``.
 
     Returns:
-        list: A list of module elements representing the homology generators at the given degree.
+        A list of module elements that are cycles (``boundary(x) == 0``)
+        whose homology classes form a basis of ``H_{degree}(cc)``.
+
+    Raises:
+        ValueError: If *algorithm* is not ``"fast"`` or ``"sage"``.
     """
+    if algorithm == "sage":
+        return _compute_homology_representatives_sage(module, degree, weight, cc)
+    if algorithm == "fast":
+        return _compute_homology_representatives_fast(module, degree, weight, cc)
+    raise ValueError(f"Unknown algorithm {algorithm!r}: expected 'fast' or 'sage'.")
+
+
+def _compute_homology_representatives_fast(
+    module: Any, degree: int, weight: int | None, cc
+) -> list:
+    """Fast linear-algebra implementation; see :func:`compute_homology_representatives`."""
+    basis_elems, _ = _get_basis_elements(module, degree, weight)
+    if not basis_elems:
+        return []
+
+    # Step 1: ker(d_degree: C_degree -> C_{degree-1}).
+    d_out = cc.differential(degree)
+    ker = d_out.right_kernel()
+    if ker.dimension() == 0:
+        return []
+
+    # Step 2: im(d_{degree+1}: C_{degree+1} -> C_degree).
+    # cc.differential(degree+1) has shape dim(C_degree) × dim(C_{degree+1}).
+    # Its column space is im(d_{degree+1}).
+    d_in = cc.differential(degree + 1)
+    K = ker.basis_matrix()  # k × n_degree, rows are cycles (row vectors)
+    if d_in.ncols() == 0 or d_in.T.image().dimension() == 0:
+        # im is trivial; homology = kernel
+        rep_vecs = list(K.rows())
+    else:
+        I = d_in.column_space().basis_matrix()  # i × n_degree, rows span im(d_{d+1})
+        # Step 3: row-reduce [I; K] so that the first dim(im) rows span im
+        # and the remaining rows give independent homology representatives.
+        E = I.stack(K).echelon_form()
+        rank_I = I.rank()
+        rep_vecs = [E.row(j) for j in range(rank_I, E.rank())]
+
+    result: list = []
+    for vec in rep_vecs:
+        elem = module.zero()
+        for i, coeff in enumerate(vec):
+            if coeff:
+                elem += coeff * basis_elems[i]
+        result.append(elem)
+    return result
+
+
+def _compute_homology_representatives_sage(
+    module: Any, degree: int, weight: int | None, cc
+) -> list:
+    """SageMath ``generators=True`` implementation; see :func:`compute_homology_representatives`."""
     basis_elems, _ = _get_basis_elements(module, degree, weight)
 
     ho = cc.homology(degree, generators=True)
-    # The method returns a list of pairs (vector space, generator), but if there are no generators it returns `(Vector space of dimension 0 over Rational Field, ())` instead of an empty list, so we check for that case and return an empty list of representatives.
+    # cc.homology returns a bare tuple (not a list) when there are no
+    # generators, so guard against that case.
     if not isinstance(ho, list):
         return []
     result: list = []
