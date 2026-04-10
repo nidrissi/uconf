@@ -90,20 +90,21 @@ class Surjection(CombinatorialFreeModule):
 
         clean_tuple = tuple(basis_tuple) if not isinstance(basis_tuple, tuple) else basis_tuple
 
-        for p in clean_tuple:
+        # Fast degeneracy check: any two consecutive equal elements?
+        n = len(clean_tuple)
+        arity = self._arity
+        for i in range(n):
+            p = clean_tuple[i]
             if not isinstance(p, (int, Integer)):
                 raise TypeError(f"Basis key must be a tuple of integers. Got {p} ({type(p)}).")
-            if p < 1 or p > self.arity():
+            if p < 1 or p > arity:
                 raise ValueError(
-                    f"Surjection entries must lie in {{1, ..., {self.arity()}}}. Got {p}."
+                    f"Surjection entries must lie in {{1, ..., {arity}}}. Got {p}."
                 )
+            if i > 0 and clean_tuple[i - 1] == p:
+                return None
 
-        if len(clean_tuple) > 0:
-            for i in range(len(clean_tuple) - 1):
-                if clean_tuple[i] == clean_tuple[i + 1]:
-                    return None
-
-        if set(clean_tuple) != set(range(1, self.arity() + 1)):
+        if len(set(clean_tuple)) != arity:
             return None
 
         return clean_tuple

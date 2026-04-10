@@ -70,6 +70,7 @@ from uconf.core.morphism import OperadMorphism
 from uconf.core.twisting import TwistingMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
+from uconf.models import _compute_table_reduction_cached
 from uconf.morphisms.canonical_twisting import canonical_inclusion
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
@@ -115,15 +116,36 @@ def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
         base_ring = source_parent.base_ring()
         target_n = surj_target(n, base_ring)
 
-        result = target_n.zero()
+        # Cache table_reduction results per BE basis key within this element,
+        # avoiding redundant computation for repeated keys.
+        tr_cache: dict = {}
+
+        # Accumulate result as {key: coeff} dict to avoid repeated element
+        # construction overhead.
+        result_dict: dict = {}
+        R = target_n.base_ring()
+
         be_parent = source_parent.left_parent()
+        be_n = be_parent.arity()
+        be_ring = be_parent.base_ring()
         for (be_key, cobar_key), coeff in be_had_elem:
-            surj_elem = be_parent(be_key).table_reduction()
+            if be_key in tr_cache:
+                surj_elem = tr_cache[be_key]
+            else:
+                # Call the cached table_reduction function directly,
+                # bypassing the BE element construction + morphism overhead.
+                surj_elem = _compute_table_reduction_cached(be_n, be_ring, be_key)
+                tr_cache[be_key] = surj_elem
 
             for surj_key, surj_coeff in surj_elem:
-                result += coeff * surj_coeff * target_n((surj_key, cobar_key))
+                combined_key = (surj_key, cobar_key)
+                combined_coeff = R(coeff * surj_coeff)
+                if combined_key in result_dict:
+                    result_dict[combined_key] += combined_coeff
+                else:
+                    result_dict[combined_key] = combined_coeff
 
-        return result
+        return target_n._from_dict(result_dict, remove_zeros=True)
 
     return OperadMorphism(cobar, surj_target, _on_element)
 

@@ -466,10 +466,10 @@ class BarConstruction(UniqueRepresentation):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                # Normalize to shuffle form — coerce coefficients to the base ring
-                # to prevent integer accumulation (e.g. 1+1=2 instead of 0 in GF(2))
-                return self.sum_of_terms(
-                    (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(clean_key)
+                # Shuffle normalization produces distinct keys; use _from_dict
+                # to bypass the sum_of_terms dedup overhead.
+                return self._from_dict(
+                    {key: R(coeff) for key, coeff in self._normalize_to_shuffle(clean_key)}
                 )
 
             if isinstance(x, int) and self._arity == 1 and x == 1:
@@ -486,8 +486,10 @@ class BarConstruction(UniqueRepresentation):
             known-valid trees by replacing decorations.
             """
             R = self.base_ring()
-            return self.sum_of_terms(
-                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            # Shuffle normalization produces distinct keys, so build element
+            # directly via _from_dict to bypass sum_of_terms dedup.
+            return self._from_dict(
+                {key: R(coeff) for key, coeff in self._normalize_to_shuffle(tree)}
             )
 
         def arity(self) -> int:
