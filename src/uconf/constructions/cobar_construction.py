@@ -150,7 +150,11 @@ class CobarConstruction(UniqueRepresentation):
 
         target = self(m + n - 1, x_parent.base_ring())
         base_ring = x_parent.base_ring()
-        result = target.zero()
+        R = base_ring
+
+        # Accumulate as dict to avoid intermediate element construction
+        # per (x_tree, y_tree) pair.
+        result_dict: dict = {}
 
         for x_tree, x_coeff in x:
             for y_tree, y_coeff in y:
@@ -158,9 +162,17 @@ class CobarConstruction(UniqueRepresentation):
                 a_deg = after_cobar_deg(x_tree, i, self.cooperad_cls, base_ring)
                 sign = sign_from_exponent(y_deg * a_deg)
                 grafted = graft(x_tree, i, y_tree)
-                result += sign * x_coeff * y_coeff * target(grafted)
+                outer_coeff = R(sign * x_coeff * y_coeff)
+                # Shuffle normalization produces distinct keys, so use
+                # _normalize_to_shuffle directly.
+                for key, coeff in target._normalize_to_shuffle(grafted):
+                    combined = R(outer_coeff * coeff)
+                    if key in result_dict:
+                        result_dict[key] += combined
+                    else:
+                        result_dict[key] = combined
 
-        return result
+        return target._from_dict(result_dict, remove_zeros=True)
 
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of the cobar construction operad."""
@@ -408,10 +420,10 @@ class CobarConstruction(UniqueRepresentation):
                 clean_key = self._validate_basis_key(x)
                 if clean_key is None:
                     return self.zero()
-                # Coerce coefficients to the base ring to prevent integer
-                # accumulation (e.g. 1+1=2 instead of 0 in GF(2))
-                return self.sum_of_terms(
-                    (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(clean_key)
+                # Shuffle normalization produces distinct keys; use _from_dict
+                # to bypass the sum_of_terms dedup overhead.
+                return self._from_dict(
+                    {key: R(coeff) for key, coeff in self._normalize_to_shuffle(clean_key)}
                 )
 
             return super()._element_constructor_(x)
@@ -422,8 +434,11 @@ class CobarConstruction(UniqueRepresentation):
             Skips ``_validate_basis_key`` but still normalises to shuffle form.
             """
             R = self.base_ring()
-            return self.sum_of_terms(
-                (key, R(coeff)) for key, coeff in self._normalize_to_shuffle(tree)
+            # Shuffle normalization produces distinct keys (no duplicates),
+            # so build element directly via _from_dict to bypass the
+            # sum_of_terms dedup path.
+            return self._from_dict(
+                {key: R(coeff) for key, coeff in self._normalize_to_shuffle(tree)}
             )
 
         def arity(self) -> int:

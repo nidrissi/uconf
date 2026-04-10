@@ -3,7 +3,7 @@
 This document summarises the performance optimizations applied to `uconf`,
 both historical and current. Measurements reference the benchmark in
 `benchmark.py`: computing `compute_chain_complex` for the euclidean
-unordered configuration model on R² over GF(2) at weight 4.
+unordered configuration model on R² over GF(2) at weight 3.
 
 ---
 
@@ -144,27 +144,150 @@ corollas.
 
 ---
 
+## Optimizations applied 2026-04-09
+
+### Benchmark baseline (weight 3)
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Wall-clock time | ~10 s | ~4.3 s |
+| **Speedup** | — | **~2.3×** |
+| Total function calls | ~18.3 M | ~8.6 M |
+
+### 11. Cached table reduction per basis key
+
+**File:** `src/uconf/models/__init__.py`
+
+Introduced `_compute_table_reduction_cached` decorated with
+`@cached_function` keyed on `(arity, base_ring, basis_key)`.
+Previously table reduction was recomputed each time a BE basis element
+appeared in a different context; this eliminates ~8× redundant
+recomputation.
+
+### 12. Bypass Sage `morphism.__call__` overhead
+
+**Files:** `src/uconf/homology.py`, `src/uconf/algebraic/free_algebra.py`,
+`src/uconf/algebraic/cofree_coalgebra.py`,
+`src/uconf/algebraic/hadamard_algebra.py`,
+`src/uconf/core/quasi_planar.py`
+
+Each `morphism(term(key))` call adds ~2 µs overhead from
+`linear_combination` / generator dispatch. For 90 K+ calls this
+dominates.
+
+Extracted `get_on_basis()` helper in `core/signs.py` to uniformly access
+the underlying `on_basis` callable. Applied in:
+
+- `_boundary_matrix`: call `on_basis(key)` directly instead of
+  `boundary(elem)`
+- `_normalized_corolla_sum`: call `_planarize_on_basis(key)` directly
+  instead of `planarize(term(key))`
+- `d_sigma_decompose`: bypass both boundary and planarize wrappers
+- `free_algebra._boundary_on_basis`: call inner-module boundary directly
+
+### 13. Dict accumulation over element construction
+
+**Files:** `src/uconf/algebraic/hadamard_algebra.py`,
+`src/uconf/morphisms/e_comodule_morphism.py`,
+`src/uconf/algebraic/configuration.py`,
+`src/uconf/algebraic/free_algebra.py`,
+`src/uconf/algebraic/cofree_coalgebra.py`
+
+Replaced the pattern `result += coeff * module.term(key)` (which creates
+an intermediate Sage element per term) with `{key: coeff}` dict
+accumulation followed by a single `sum_of_terms()` call. Eliminates
+thousands of intermediate Sage element constructions per boundary
+evaluation.
+
+### 14. Cache morphism result in `PullbackAlgebra.act`
+
+**File:** `src/uconf/algebraic/pullback_algebra.py`
+
+The pullback algebra action `γ^Q(f(p); a_1, …, a_n)` calls
+`morphism(p_element)` for each `p`. The morphism result depends only
+on `p`, not on the algebra inputs `a_i`. Added a per-instance dict
+cache keyed on `tuple(p_element)` to avoid redundant morphism
+evaluations.
+
+### 15. Bypass validation for known-valid keys
+
+**Files:** `src/uconf/constructions/cobar_construction.py`,
+`src/uconf/algebraic/hadamard_algebra.py`,
+`src/uconf/models/surjection.py`
+
+- Use `_from_validated_tree` in cobar `compose` for internally-grafted
+  trees.
+- Use `self.module.term(key)` instead of `self.module(key)` in
+  `hadamard_algebra._act_impl` for keys that are already validated.
+- Optimise `surjection._validate_basis_key` to a single-pass combined
+  bounds + degeneracy check.
+
+### 16. Direct `_compute_table_reduction_cached` call
+
+**File:** `src/uconf/algebraic/configuration.py`
+
+`configuration._on_element` now calls the `@cached_function` directly
+instead of constructing a BE element and invoking
+`element.table_reduction()`, bypassing element construction and morphism
+dispatch.
+
+---
+
 ## Remaining bottlenecks (for future work)
 
-After the 2026-04-08 optimisations, the top cumulative-time functions are:
+After the 2026-04-09 optimisations, the top cumulative-time functions are
+(weight-3 benchmark, first run):
 
 | Function | Cumtime | Notes |
 |----------|---------|-------|
-| `hadamard_algebra._act_impl` | 9.5 s | Cartesian-product term expansion |
-| `free_algebra._act_impl` | 6.3 s | Operadic algebra action |
-| `free_algebra._normalized_corolla_sum` | 4.1 s | Normalisation after composition |
-| `validate_tree` / `validate_vertex` | 2.8 s | Still ~78 K calls from `_element_constructor_` |
-| `_planarize_on_basis` (bar + cobar) | 5.4 s | Planar decomposition |
-| `cobar_construction.compose` | 2.7 s | Tree-based operadic composition |
+| `e_comodule` pipeline | 3.6 s | 45 % — recursive cooperad coaction |
+| `hadamard_algebra._act_impl` | 2.6 s | Cartesian-product term expansion |
+| `free_algebra._act_impl` | 1.8 s | Operadic algebra action |
+| `_compute_table_reduction_cached` | 0.85 s | Partition enumeration (one-time) |
+| `sum_of_terms` | 1.3 s | 83 K calls — Sage element construction |
+| `_boundary_matrix` (total) | 8.0 s | Full boundary loop over 650 basis elements |
 
-Potential future optimisations:
+### Evaluated optimisation leads
 
-- **Skip validation in more internal paths:** Many `_element_constructor_`
-  calls from SageMath's `sum_of_terms` / `_from_dict` could use
-  `_from_validated_tree` when the caller guarantees validity.
-- **Cache `Lie._permute_on_basis`:** Add `@cached_method` to match
-  `BarConstruction._permute_on_basis`.
-- **GF(2) sign short-circuit:** Over characteristic 2, skip Koszul sign
-  computation entirely (`sign_from_exponent` always returns 1).
-- **Batch boundary + planarize in `_planarize_on_basis`:** Similar
-  batching strategy as `d_sigma_decompose`.
+The following were listed as potential future optimisations (2026-04-08)
+and have been evaluated against the current profile:
+
+- **Cache `Lie._permute_on_basis`:** ✅ Already implemented (has
+  `@cached_method` since the 2026-04-08 round).
+- **GF(2) sign short-circuit:** ❌ Not worthwhile. Profiling shows
+  `sign_from_exponent` and `koszul_sign_of_permutation` together total
+  only ~30 ms (0.04 s), less than 1 % of wall time. The refactoring cost
+  (threading base-ring characteristic through every call site) outweighs
+  the benefit.
+- **Skip validation in more internal paths:** ✅ Partially done (see §15).
+  Remaining `validate_tree`/`validate_vertex` calls (~84 K, 0.47 s)
+  come from `_from_validated_tree` → `_normalize_to_shuffle` → shuffle
+  tree normalisation, which still validates vertex ordering. These are
+  structurally necessary.
+- **Batch boundary + planarize in `_planarize_on_basis`:** ✅ Already
+  achieved via `d_sigma_decompose` (§8) and recursive `_planarize_subtree`.
+
+### New leads
+
+- **E-comodule morphism caching or algebraic reformulation:** The
+  recursive `_nu_on_planar.recurse` function (1.1 s, 9.7 K calls)
+  dominates the pipeline. Caching intermediate results keyed on
+  `(current_d_elem, len(sigma_bar))` could help if many branches
+  converge to the same intermediate element. Alternatively, an
+  algebraic reformulation that avoids the recursion entirely (e.g.
+  computing the acyclic-models map via iterated tensor products)
+  could yield larger gains.
+- **Reduce `sum_of_terms` overhead:** With 83 K calls at 1.3 s, the
+  Sage `CombinatorialFreeModule.sum_of_terms` method is a significant
+  overhead. For internal constructions that produce validated keys,
+  directly building the `_from_dict` representation could bypass the
+  `sum_of_terms` → `_from_dict` → `__classcall_private__` chain.
+- **Table reduction algorithm:** The current `term_generator` (0.8 s)
+  enumerates all permutations of integer partitions via
+  `set(permutations(pi_ord))`. For larger arities, a direct algorithm
+  that avoids redundant partition permutations could reduce this
+  one-time cost.
+- **Parallel boundary matrix assembly:** Since boundary evaluations for
+  different basis elements are independent, the `_boundary_matrix` loop
+  could be parallelised across multiple processes, though Sage's GIL
+  constraints limit the benefit of threading.

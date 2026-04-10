@@ -146,7 +146,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
         M = self._inner_module
-        result = self.zero()
+        # Accumulate as dict to avoid intermediate element construction
+        result_dict: dict = {}
         c_elem = c_comp.term(c_key)
 
         for n_r in range(1, n + 1):
@@ -178,14 +179,16 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += (
-                            sign
-                            * coeff
-                            * a_coeff
-                            * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
-                        )
+                        ncs = self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                        outer = sign * coeff * a_coeff
+                        for key, val in ncs:
+                            combined = outer * val
+                            if key in result_dict:
+                                result_dict[key] += combined
+                            else:
+                                result_dict[key] = combined
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     def _dalpha_all_splits(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via _iter_all_splits (handles non-contiguous leaf subsets).
@@ -203,7 +206,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         """
         C = self._cooperad_cls
         M = self._inner_module
-        result = self.zero()
+        # Accumulate as dict to avoid intermediate element construction
+        result_dict: dict = {}
 
         for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
             n_r = len(child_positions)
@@ -257,15 +261,16 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 new_m = tuple(
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
-                result += (
-                    sign
-                    * coop_sign
-                    * gathering_sign
-                    * a_coeff
-                    * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
-                )
+                ncs = self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                outer = sign * coop_sign * gathering_sign * a_coeff
+                for key, val in ncs:
+                    combined = outer * val
+                    if key in result_dict:
+                        result_dict[key] += combined
+                    else:
+                        result_dict[key] = combined
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Expose component differentials for debugging

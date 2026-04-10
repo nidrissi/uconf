@@ -140,7 +140,8 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         if sigma == identity_n:
             total_result += pl_coeff * planar_result
         else:
-            acted = target.zero()
+            # Accumulate acted result as dict to avoid repeated tensor construction
+            acted_dict: dict = {}
             for (be_key, coop_key), t_coeff in planar_result:
                 # RIGHT action on BE: right-multiply each simplex element by σ.
                 be_right = tuple(p * sigma for p in be_key)
@@ -148,14 +149,13 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
                 coop_perm = cooperad_component(coop_key).permute(sigma)
                 for be_k, be_c in be_perm:
                     for cp_k, cp_c in coop_perm:
-                        acted += (
-                            t_coeff
-                            * be_c
-                            * cp_c
-                            # https://github.com/sagemath/sage/issues/41882
-                            * tensor([be_component(be_k), cooperad_component(cp_k)])
-                        )
-            total_result += pl_coeff * acted
+                        pair = (be_k, cp_k)
+                        combined = t_coeff * be_c * cp_c
+                        if pair in acted_dict:
+                            acted_dict[pair] += combined
+                        else:
+                            acted_dict[pair] = combined
+            total_result += pl_coeff * target._from_dict(acted_dict, remove_zeros=True)
 
     return total_result
 
@@ -191,15 +191,17 @@ def _nu_on_planar(
     -------
     Element of *target*.
     """
-    result = target.zero()
-
     n = cooperad_component.arity()
     # Pre-warm the non-identity permutation list so that the first call to
     # d_sigma_decompose doesn't trigger GAP's strong_generating_system.
     _non_identity_perms(n)
-    # Cache the k=0 BE basis element (identity simplex) to avoid repeated
+    # Cache the k=0 BE basis key (identity simplex) to avoid repeated
     # construction on every recursion entry.
-    be_id_elem = be_component((identity_n,))
+    be_id_key = (identity_n,)
+
+    # Accumulate as {(be_key, coop_key): coeff} dict to avoid
+    # repeated tensor element construction overhead.
+    result_dict: dict = {}
 
     def make_cooperad_factor(pl_elem, sigma_prod=None):
         """Build the cooperad factor for the formula.
@@ -214,15 +216,19 @@ def _nu_on_planar(
 
     def recurse(current_d_elem, sigma_bar):
         """Accumulate contributions, pruning zero branches."""
-        nonlocal result
-
         if not current_d_elem:
             return
 
         k = len(sigma_bar)
 
         if k == 0:
-            result += be_id_elem.tensor(current_d_elem)
+            # be_id_key ⊗ current_d_elem
+            for coop_key, coop_coeff in current_d_elem:
+                pair = (be_id_key, coop_key)
+                if pair in result_dict:
+                    result_dict[pair] += coop_coeff
+                else:
+                    result_dict[pair] = coop_coeff
         else:
             be_elem = be_component.rho(list(sigma_bar))
 
@@ -232,7 +238,14 @@ def _nu_on_planar(
                     sigma_prod = s * sigma_prod
 
                 coop_factor = make_cooperad_factor(current_d_elem, sigma_prod)
-                result += be_elem.tensor(coop_factor)
+                for be_key, be_coeff in be_elem:
+                    for coop_key, coop_coeff in coop_factor:
+                        pair = (be_key, coop_key)
+                        combined = be_coeff * coop_coeff
+                        if pair in result_dict:
+                            result_dict[pair] += combined
+                        else:
+                            result_dict[pair] = combined
 
         # Compute all d_sigma components at once (one boundary+planarize
         # call) instead of once per permutation.
@@ -242,7 +255,10 @@ def _nu_on_planar(
                 recurse(next_d, sigma_bar + [sigma])
 
     recurse(planar_elem, [])
-    return result
+
+    # Build the tensor element from accumulated dict, bypassing
+    # the dict→items→dict round-trip of sum_of_terms(distinct=True).
+    return target._from_dict(result_dict, remove_zeros=True)
 
 
 def make_e_comodule_morphism(
@@ -291,8 +307,12 @@ def make_e_comodule_morphism(
         # then convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element.
         cobar_k = cobar(k, base_ring)
         target_k = target_factory(k, base_ring)
-        root_image = target_k.zero()
         be_component = BarrattEccles(k, base_ring)
+
+        # Accumulate as dict to avoid repeated element construction
+        root_dict: dict = {}
+        R = base_ring
+
         for (be_key, coop_key), t_coeff in root_tensor:
             # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
             # Use _from_validated_tree to skip redundant validation — this
@@ -304,8 +324,14 @@ def make_e_comodule_morphism(
             #   e ⊗ c  ↦  (−1)^{|e|} e ⊙ s⁻¹c
             koszul = sign_from_exponent(be_component.degree_on_basis(be_key))
             for cobar_key, c_coeff in cobar_elem:
-                # Use term() directly — both keys are already validated
-                root_image += koszul * t_coeff * c_coeff * target_k.term((be_key, cobar_key))
+                combined_key = (be_key, cobar_key)
+                combined_coeff = R(koszul * t_coeff * c_coeff)
+                if combined_key in root_dict:
+                    root_dict[combined_key] += combined_coeff
+                else:
+                    root_dict[combined_key] = combined_coeff
+
+        root_image = target_k._from_dict(root_dict, remove_zeros=True)
 
         # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
         # This preserves input positions 1, ..., j-1 at each step.
@@ -347,9 +373,20 @@ def make_e_comodule_morphism(
         n = parent.arity()
         base_ring = parent.base_ring()
         target_n = target_factory(n, base_ring)
-        result = target_n.zero()
+
+        # Accumulate as dict for efficiency
+        result_dict: dict = {}
+        R = base_ring
+
         for tree, coeff in element:
-            result += coeff * _extend_tree(tree, base_ring)
-        return result
+            tree_image = _extend_tree(tree, base_ring)
+            for key, img_coeff in tree_image:
+                combined = R(coeff * img_coeff)
+                if key in result_dict:
+                    result_dict[key] += combined
+                else:
+                    result_dict[key] = combined
+
+        return target_n._from_dict(result_dict, remove_zeros=True)
 
     return OperadMorphism(cobar, target_factory, _on_element)

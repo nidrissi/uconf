@@ -143,9 +143,18 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         identity_tuple = tuple(range(1, n + 1))
         if n > 1:
             degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-        result = self.zero()
+
+        # Accumulate as dict to avoid repeated element construction
+        result_dict: dict = {}
+
+        # Bypass planarize morphism overhead: call _planarize_on_basis directly
+        planarize_on_basis = getattr(comp, "_planarize_on_basis", None)
+
         for c_key, c_coeff in c_elem:
-            planarized = comp.planarize(comp.term(c_key))
+            if planarize_on_basis is not None:
+                planarized = planarize_on_basis(c_key)
+            else:
+                planarized = comp.planarize(comp.term(c_key))
             for (c_planar_key, sigma_key), pl_coeff in planarized:
                 sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
                 permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
@@ -155,8 +164,14 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
-                result += c_coeff * pl_coeff * koszul * self.term((c_planar_key, permuted_m))
-        return result
+                key = (c_planar_key, permuted_m)
+                coeff = c_coeff * pl_coeff * koszul
+                if key in result_dict:
+                    result_dict[key] += coeff
+                else:
+                    result_dict[key] = coeff
+
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Basis key validation

@@ -34,7 +34,7 @@ from uconf.algebraic.tree_module import (
     _module_basis_keys_in_degree,
     _module_basis_keys_in_weight_and_degree,
 )
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import get_on_basis, sign_from_exponent
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
@@ -103,8 +103,17 @@ class HadamardTensorAlgebra(OperadAlgebra):
         left_operad_parent = self.left_algebra.operad_cls(arity, self.module.base_ring())
         right_operad_parent = self.right_algebra.operad_cls(arity, self.module.base_ring())
 
-        result = self.module.zero()
+        # Pre-expand tensor_args into (basis_key, coeff) lists to avoid repeated iteration
         arg_expansions = [list(arg) for arg in tensor_args]
+
+        # Accumulate results as {basis_key: coeff} dict for efficient addition,
+        # avoiding repeated Sage element construction overhead.
+        result_dict: dict = {}
+        R = self.module.base_ring()
+
+        # Pre-compute left/right degree_on_basis functions
+        left_deg = self.left_module.degree_on_basis
+        right_deg = self.right_module.degree_on_basis
 
         for had_basis, had_coeff in p_element:
             left_basis, right_basis = had_basis
@@ -121,20 +130,16 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
                 for tensor_basis, tensor_coeff in selected_terms:
                     left_key, right_key = tensor_basis
-                    left_inputs.append(self.left_module(left_key))
-                    right_inputs.append(self.right_module(right_key))
-                    left_degs.append(self.left_module.degree_on_basis(left_key))
-                    right_degs.append(self.right_module.degree_on_basis(right_key))
+                    left_inputs.append(self.left_module.term(left_key))
+                    right_inputs.append(self.right_module.term(right_key))
+                    left_degs.append(left_deg(left_key))
+                    right_degs.append(right_deg(right_key))
                     scalar *= tensor_coeff
 
                 if scalar == 0:
                     continue
 
-                # Koszul sign from graded interchange:
-                #   p ⊗ q ⊗ a₁ ⊗ b₁ ⊗ … ⊗ aₙ ⊗ bₙ
-                #   → p ⊗ a₁ ⊗ … ⊗ aₙ ⊗ q ⊗ b₁ ⊗ … ⊗ bₙ
-                #
-                # ε = (-1)^{ |q| Σᵢ |aᵢ|  +  Σᵢ<ⱼ |bᵢ| · |aⱼ| }
+                # Koszul sign from graded interchange
                 n = len(left_degs)
                 sign_exponent = right_op_deg * sum(left_degs)
                 for i in range(n):
@@ -145,13 +150,22 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 left_value = self.left_algebra.act(left_op, left_inputs)
                 right_value = self.right_algebra.act(right_op, right_inputs)
 
+                # Use self.module.term() directly instead of tensor() to avoid
+                # Sage's tensor product construction overhead.
                 for left_out_basis, left_out_coeff in left_value:
                     for right_out_basis, right_out_coeff in right_value:
-                        result += tensor(
-                            [self.left_module(left_out_basis), self.right_module(right_out_basis)]
-                        ) * (koszul_sign * scalar * left_out_coeff * right_out_coeff)
+                        combined_key = (left_out_basis, right_out_basis)
+                        combined_coeff = R(
+                            koszul_sign * scalar * left_out_coeff * right_out_coeff
+                        )
+                        if combined_key in result_dict:
+                            result_dict[combined_key] += combined_coeff
+                        else:
+                            result_dict[combined_key] = combined_coeff
 
-        return result
+        # Build result directly from dict, bypassing the
+        # dict→items→dict round-trip of sum_of_terms(distinct=True).
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def basis_iter(self, d: int) -> Iterator:
         """Iterate over basis elements of degree *d*.
@@ -254,45 +268,76 @@ class HadamardTensorAlgebra(OperadAlgebra):
         left_degree = self.left_module.degree_on_basis(left_basis)
         sign = -1 if left_degree % 2 else 1
 
-        left_boundary = self.left_algebra.boundary(self.left_module(left_basis))
-        right_boundary = self.right_algebra.boundary(self.right_module(right_basis))
+        # Bypass morphism overhead for boundaries: try on_basis directly
+        left_bdry_fn = get_on_basis(self.left_algebra.module.boundary)
+        right_bdry_fn = get_on_basis(self.right_algebra.module.boundary)
 
-        result = self.module.zero()
+        if left_bdry_fn is not None:
+            left_boundary = left_bdry_fn(left_basis)
+        else:
+            left_boundary = self.left_algebra.boundary(self.left_module(left_basis))
+        if right_bdry_fn is not None:
+            right_boundary = right_bdry_fn(right_basis)
+        else:
+            right_boundary = self.right_algebra.boundary(self.right_module(right_basis))
+
+        # Use sum_of_terms with dict accumulation to avoid repeated tensor() overhead
+        result_dict: dict = {}
+        R = self.module.base_ring()
         for new_left_basis, left_coeff in left_boundary:
-            result += left_coeff * tensor(
-                [self.left_module(new_left_basis), self.right_module(right_basis)]
-            )
+            key = (new_left_basis, right_basis)
+            coeff = R(left_coeff)
+            if key in result_dict:
+                result_dict[key] += coeff
+            else:
+                result_dict[key] = coeff
         for new_right_basis, right_coeff in right_boundary:
-            result += (
-                sign
-                * right_coeff
-                * tensor([self.left_module(left_basis), self.right_module(new_right_basis)])
-            )
-        return result
+            key = (left_basis, new_right_basis)
+            coeff = R(sign * right_coeff)
+            if key in result_dict:
+                result_dict[key] += coeff
+            else:
+                result_dict[key] = coeff
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def boundary(self, a):
         """Tensor differential induced from the two dg-module differentials."""
         x = self.module(a)
-        result = self.module.zero()
+        result_dict: dict = {}
+        R = self.module.base_ring()
+
+        # Resolve boundary functions once
+        left_bdry_fn = get_on_basis(self.left_algebra.module.boundary)
+        right_bdry_fn = get_on_basis(self.right_algebra.module.boundary)
 
         for basis, coeff in x:
             left_basis, right_basis = basis
-            left_term = self.left_module(left_basis)
-            right_term = self.right_module(right_basis)
 
             left_degree = self.left_module.degree_on_basis(left_basis)
             sign = -1 if left_degree % 2 else 1
 
-            left_boundary = self.left_algebra.boundary(left_term)
-            right_boundary = self.right_algebra.boundary(right_term)
+            if left_bdry_fn is not None:
+                left_boundary = left_bdry_fn(left_basis)
+            else:
+                left_boundary = self.left_algebra.boundary(self.left_module(left_basis))
+            if right_bdry_fn is not None:
+                right_boundary = right_bdry_fn(right_basis)
+            else:
+                right_boundary = self.right_algebra.boundary(self.right_module(right_basis))
 
             for new_left_basis, left_coeff in left_boundary:
-                result += tensor(
-                    [self.left_module(new_left_basis), self.right_module(right_basis)]
-                ) * (coeff * left_coeff)
+                key = (new_left_basis, right_basis)
+                c = R(coeff * left_coeff)
+                if key in result_dict:
+                    result_dict[key] += c
+                else:
+                    result_dict[key] = c
             for new_right_basis, right_coeff in right_boundary:
-                result += tensor(
-                    [self.left_module(left_basis), self.right_module(new_right_basis)]
-                ) * (coeff * sign * right_coeff)
+                key = (left_basis, new_right_basis)
+                c = R(coeff * sign * right_coeff)
+                if key in result_dict:
+                    result_dict[key] += c
+                else:
+                    result_dict[key] = c
 
-        return result
+        return self.module._from_dict(result_dict, remove_zeros=True)

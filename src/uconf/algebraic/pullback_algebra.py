@@ -25,10 +25,21 @@ class PullbackAlgebra(OperadAlgebra):
         self.algebra = algebra
         self.module = algebra.module
         self.operad_cls = morphism.source
+        # Cache morphism results: the morphism f(p) depends only on p,
+        # not on the algebra elements. We cache by the frozenset of
+        # (key, coeff) pairs, which is hashable and identifies the element.
+        self._morphism_cache: dict = {}
 
     def act(self, p_element: Any, algebra_elements: Any) -> Any:
         """Apply the pullback structure map ``γ^Q(f(p); a_1, …, a_n)``."""
-        q_element = self.morphism(p_element)
+        # Cache key: tuple of (basis_key, coeff) pairs, which is hashable
+        cache_key = tuple(p_element)
+        cached = self._morphism_cache.get(cache_key)
+        if cached is not None:
+            q_element = cached
+        else:
+            q_element = self.morphism(p_element)
+            self._morphism_cache[cache_key] = q_element
         return self.algebra.act(q_element, algebra_elements)
 
     def boundary(self, a: Any) -> Any:
