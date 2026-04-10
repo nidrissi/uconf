@@ -60,6 +60,12 @@ def _boundary_matrix(
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
 
+    # Check if the module supports boundary-key normalisation (e.g.
+    # FreeAlgebraModule / CofreeCoalgebraModule keep raw operad/cooperad
+    # keys in the boundary to preserve d² = 0; these must be normalised
+    # to the planar basis exactly once, here at the matrix level).
+    normalize_fn = getattr(module, "_normalize_key", None)
+
     # Try to bypass the Sage morphism.__call__ overhead by calling
     # the on_basis function directly. For single-term basis elements,
     # boundary(term(key)) == on_basis(key), but the morphism wrapper
@@ -76,6 +82,17 @@ def _boundary_matrix(
             i = key_to_idx_target.get(key)
             if i is not None:
                 M[i, j] += coeff
+            elif normalize_fn is not None:
+                # Normalise a raw (non-planar) key to the planar basis.
+                for norm_key, norm_coeff in normalize_fn(key):
+                    i2 = key_to_idx_target.get(norm_key)
+                    if i2 is not None:
+                        M[i2, j] += coeff * norm_coeff
+                    else:
+                        raise ValueError(
+                            f"Boundary of basis element {elem} contains key {norm_key} "
+                            "(after normalisation) not found in target basis keys"
+                        )
             else:
                 raise ValueError(
                     f"Boundary of basis element {elem} contains key {key} "

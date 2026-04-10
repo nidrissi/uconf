@@ -295,18 +295,27 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Leibniz rule: d(p ⊗ m_1 ⊗…⊗ m_n) = d_P(p) ⊗ m_… + Σ_i (−1)^{…} p ⊗…⊗ d_M(m_i) ⊗….
 
         Koszul sign at leaf i: ``(−1)^{deg_P(p_key) + Σ_{j<i} deg_M(m_j)}``.
+
+        The d_P output may contain non-planar operad keys.  These are kept
+        raw (no NCS) so that d² = 0 is preserved at the element level.
+        Normalisation to the planar coinvariant basis happens only once, in
+        :meth:`_normalize_key` / :func:`~uconf.homology._boundary_matrix`.
         """
         p_key, m_tuple = key
         n = len(m_tuple)
         comp = self._operad_cls(n, self.base_ring())
+        R = self.base_ring()
         result = self.zero()
 
-        # d_P term: keep raw operad keys (may be non-planar)
-        # Bypass _element_constructor_ validation — call
-        # _normalized_corolla_sum directly since dp_elem is internally produced.
+        # d_P term: keep raw operad keys — do NOT normalize here.
+        # NCS (normalized corolla sum) is NOT compatible with iterated
+        # differentials: it merges distinct operad elements that share
+        # the same planar key, which can change coefficients before the
+        # second differential is applied, violating d² = 0.
         dp_elem = comp.boundary(comp(p_key))
         if dp_elem:
-            result += self._normalized_corolla_sum(dp_elem, m_tuple)
+            for dp_key, dp_coeff in dp_elem:
+                result += R(dp_coeff) * self.term((dp_key, m_tuple))
 
         # d_M terms with Koszul signs
         # Bypass morphism overhead: call the inner module's boundary
@@ -328,6 +337,35 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 result += sign * m_coeff * self.term((p_key, new_m))
             cumulative += M.degree_on_basis(mk)
 
+        return result
+
+    def _normalize_key(self, key):
+        """Normalise a ``(p_key, m_tuple)`` pair to the planar coinvariant basis.
+
+        Returns a list of ``(planar_key, coefficient)`` pairs.
+
+        Used by :func:`~uconf.homology._boundary_matrix` to project
+        boundary terms with raw (non-planar) operad keys onto the planar
+        basis — applying the normalisation exactly once.
+        """
+        p_key, m_tuple = key
+        n = len(m_tuple)
+        comp = self._operad_cls(n, self.base_ring())
+        ncs = self._normalized_corolla_sum(comp.term(p_key), m_tuple)
+        return list(ncs)
+
+    def normalize(self, elem):
+        """Project an element to the planar coinvariant basis.
+
+        Applies :meth:`_normalized_corolla_sum` to each basis term,
+        collecting results.  Idempotent on already-normalised elements.
+        """
+        result = self.zero()
+        for key, coeff in elem:
+            p_key, m_tuple = key
+            n = len(m_tuple)
+            comp = self._operad_cls(n, self.base_ring())
+            result += coeff * self._normalized_corolla_sum(comp.term(p_key), m_tuple)
         return result
 
     # ------------------------------------------------------------------
