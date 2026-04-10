@@ -179,12 +179,14 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        key = (c_L_key, new_m)
-                        combined = sign * coeff * a_coeff
-                        if key in result_dict:
-                            result_dict[key] += combined
-                        else:
-                            result_dict[key] = combined
+                        ncs = self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                        outer = sign * coeff * a_coeff
+                        for key, val in ncs:
+                            combined = outer * val
+                            if key in result_dict:
+                                result_dict[key] += combined
+                            else:
+                                result_dict[key] = combined
 
         return self._from_dict(result_dict, remove_zeros=True)
 
@@ -259,12 +261,14 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 new_m = tuple(
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
-                key = (c_L_key, new_m)
-                combined = sign * coop_sign * gathering_sign * a_coeff
-                if key in result_dict:
-                    result_dict[key] += combined
-                else:
-                    result_dict[key] = combined
+                ncs = self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
+                outer = sign * coop_sign * gathering_sign * a_coeff
+                for key, val in ncs:
+                    combined = outer * val
+                    if key in result_dict:
+                        result_dict[key] += combined
+                    else:
+                        result_dict[key] = combined
 
         return self._from_dict(result_dict, remove_zeros=True)
 

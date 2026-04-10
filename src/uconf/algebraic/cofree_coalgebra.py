@@ -298,25 +298,23 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         Koszul sign at leaf i: ``(-1)^{deg_C(c_key) + sum_{j<i} deg_M(m_j)}``.
 
-        The d_C output may contain non-planar cooperad keys.  These are kept
-        raw (no NCS) so that d² = 0 is preserved at the element level.
-        Normalisation to the planar coinvariant basis happens only once, in
-        :meth:`_normalize_key` / :func:`~uconf.homology._boundary_matrix`.
+        The d_C output may contain non-planar cooperad keys; these are
+        normalised to planar keys via ``_normalized_corolla_sum`` (coinvariant
+        quotient).  The d_M terms keep the (already planar) cooperad key
+        unchanged.
         """
         c_key, m_tuple = key
         n = len(m_tuple)
         comp = self._cooperad_cls(n, self.base_ring())
-        R = self.base_ring()
         result = self.zero()
 
-        # d_C term: keep raw cooperad keys — do NOT normalize here.
+        # d_C term: normalise non-planar keys via _normalized_corolla_sum.
         dc_on_basis = getattr(comp, "_boundary_on_basis", None)
         if dc_on_basis is not None:
             dc_elem = dc_on_basis(c_key)
         else:
             dc_elem = comp.boundary(comp.term(c_key))
-        for dc_key, dc_coeff in dc_elem:
-            result += R(dc_coeff) * self.term((dc_key, m_tuple))
+        result += self._normalized_corolla_sum(dc_elem, m_tuple)
 
         # d_M terms with Koszul signs.
         # The cooperad key c_key is already planar (from basis iteration),
@@ -342,35 +340,6 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 result += sign * m_coeff * self.term((c_key, new_m))
             cumulative += M.degree_on_basis(mk)
 
-        return result
-
-    def _normalize_key(self, key):
-        """Normalise a ``(c_key, m_tuple)`` pair to the planar coinvariant basis.
-
-        Returns a list of ``(planar_key, coefficient)`` pairs.
-
-        Used by :func:`~uconf.homology._boundary_matrix` to project
-        boundary terms with raw (non-planar) cooperad keys onto the planar
-        basis — applying the normalisation exactly once.
-        """
-        c_key, m_tuple = key
-        n = len(m_tuple)
-        comp = self._cooperad_cls(n, self.base_ring())
-        ncs = self._normalized_corolla_sum(comp.term(c_key), m_tuple)
-        return list(ncs)
-
-    def normalize(self, elem):
-        """Project an element to the planar coinvariant basis.
-
-        Applies :meth:`_normalized_corolla_sum` to each basis term,
-        collecting results.  Idempotent on already-normalised elements.
-        """
-        result = self.zero()
-        for key, coeff in elem:
-            c_key, m_tuple = key
-            n = len(m_tuple)
-            comp = self._cooperad_cls(n, self.base_ring())
-            result += coeff * self._normalized_corolla_sum(comp.term(c_key), m_tuple)
         return result
 
     # ------------------------------------------------------------------

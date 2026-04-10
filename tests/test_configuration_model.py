@@ -55,16 +55,7 @@ from uconf.core.signs import sign_from_exponent
 
 
 def _as_dict(x):
-    """Convert a SageMath element to {basis_key: coeff}, dropping zeros.
-
-    If the parent module has a ``normalize`` method (e.g. free algebra or
-    cofree coalgebra working with raw operad/cooperad keys), apply it first
-    so that comparisons are made in the planar coinvariant basis.
-    """
-    parent = x.parent()
-    normalize = getattr(parent, "normalize", None)
-    if normalize is not None:
-        x = normalize(x)
+    """Convert a SageMath element to {basis_key: coeff}, dropping zeros."""
     return {basis: coeff for basis, coeff in x if coeff != 0}
 
 
