@@ -38,6 +38,7 @@ from sage.all import (
 )
 
 from uconf.core.signs import (
+    koszul_sign_of_permutation,
     sign_from_exponent,
 )
 from uconf.core.display import latex_linear_combination
@@ -257,10 +258,29 @@ class BarConstruction(UniqueRepresentation):
                     planarized = op_parent.planarize(dec_elem)
 
                 old_ch = children(node)
+                # Bar-degrees of original children (needed for Koszul sign
+                # when children are reordered by the vertex planarize σ_v).
+                old_ch_degrees = [
+                    subtree_degree(c, self._operad_cls, base_ring)
+                    if not is_leaf(c)
+                    else 0
+                    for c in old_ch
+                ]
                 results = []
                 for (planar_dec_key, sigma_key), dec_coeff in planarized:
                     sigma_v_tuple = tuple(sigma_key)
                     new_ch = tuple(old_ch[sigma_v_tuple[j] - 1] for j in range(k))
+
+                    # Koszul sign from permuting children of bar-degrees
+                    # d_1, …, d_k by sigma_v.
+                    identity_tuple = tuple(range(1, k + 1))
+                    if sigma_v_tuple != identity_tuple:
+                        perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
+                        reorder_sign = koszul_sign_of_permutation(
+                            perm_0idx, old_ch_degrees
+                        )
+                    else:
+                        reorder_sign = 1
 
                     # Recursively planarize each (reordered) child, combining
                     # all term combinations from children.
@@ -277,7 +297,7 @@ class BarConstruction(UniqueRepresentation):
                             new_ch_planarized.append(p_ch)
                             leaf_order.extend(lo_ch)
 
-                        total_coeff = dec_coeff * total_child_coeff
+                        total_coeff = dec_coeff * total_child_coeff * reorder_sign
                         node_result = RootedTree(planar_dec_key, *new_ch_planarized)
                         results.append((total_coeff, node_result, leaf_order))
 
