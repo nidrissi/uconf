@@ -130,10 +130,10 @@ class TestLayer0_H:
                 (4, 0),
             ],
         )
-        def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring, rng):
+        def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring):
             Hn = layers.XsLie(n, ring)
             tested = 0
-            for elem in _sample(list(Hn.graded_basis(d)), 30, rng):
+            for elem in Hn.graded_basis(d):
                 tested += 1
                 assert elem.boundary().boundary() == Hn.zero()
             assert tested > 0, "No basis elements found (nontriviality check)"
@@ -156,10 +156,10 @@ class TestLayer0_H:
                     assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-2, -1, 0])
-        def test_right_arity3(self, d: int, layers: ConfigurationLayers, ring, rng):
+        def test_right_arity3(self, d: int, layers: ConfigurationLayers, ring):
             H = layers.XsLie
             unit = H.unit(ring)
-            for elem in _sample(list(H(3, ring).graded_basis(d)), 10, rng):
+            for elem in H(3, ring).graded_basis(d):
                 for i in [1, 2, 3]:
                     assert _as_dict(H.compose(elem, i, unit)) == _as_dict(elem)
 
@@ -172,12 +172,12 @@ class TestLayer0_H:
         def test_arity2(self, d_x: int, d_y: int, d_z: int, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             H2 = H(2, ring)
-            xs = list(H2.graded_basis(d_x))
-            ys = list(H2.graded_basis(d_y))
-            zs = list(H2.graded_basis(d_z))
-            for x in _sample(xs, 2, rng):
-                for y in _sample(ys, 2, rng):
-                    for z in _sample(zs, 2, rng):
+            xs = H2.graded_basis(d_x)
+            ys = H2.graded_basis(d_y)
+            zs = H2.graded_basis(d_z)
+            for x in _sample(xs, 12, rng):
+                for y in _sample(ys, 12, rng):
+                    for z in _sample(zs, 12, rng):
                         for i in [1, 2]:
                             for j in [1, 2]:
                                 lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
@@ -190,12 +190,12 @@ class TestLayer0_H:
         def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y,z ∈ H(2)."""
             H = layers.XsLie
-            xs = list(H(3, ring).graded_basis(d_x))
-            ys = list(H(2, ring).graded_basis(d_y))
-            zs = list(H(2, ring).graded_basis(d_z))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
-                    for z in _sample(zs, 2, rng):
+            xs = H(3, ring).graded_basis(d_x)
+            ys = H(2, ring).graded_basis(d_y)
+            zs = H(2, ring).graded_basis(d_z)
+            for x in _sample(xs, 12, rng):
+                for y in _sample(ys, 12, rng):
+                    for z in _sample(zs, 12, rng):
                         for i in [1, 2, 3]:
                             for j in [1, 2]:
                                 lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
@@ -502,16 +502,14 @@ class TestLayer2_ΩBH:
                 (4, -2),
                 (4, -1),
                 (4, 0),
+                (4, 1),
             ],
         )
         def test_d_squared(self, n, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             Pn = P(n, ring)
-            tested = 0
-            for elem in _sample(list(Pn.graded_basis(d)), 30, rng):
-                tested += 1
+            for elem in Pn.graded_basis(d):
                 assert elem.boundary().boundary() == Pn.zero()
-            assert tested > 0, "No basis elements found (nontriviality check)"
 
     class TestUnit:
         @pytest.mark.parametrize("n", [2, 3])
@@ -562,12 +560,12 @@ class TestLayer2_ΩBH:
         def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ P(3), y,z ∈ P(2)."""
             P = layers.OBXsLie
-            xs = list(P(3, ring).graded_basis(d_x))
-            ys = list(P(2, ring).graded_basis(d_y))
-            zs = list(P(2, ring).graded_basis(d_z))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
-                    for z in _sample(zs, 2, rng):
+            xs = P(3, ring).graded_basis(d_x)
+            ys = P(2, ring).graded_basis(d_y)
+            zs = P(2, ring).graded_basis(d_z)
+            for x in xs:
+                for y in ys:
+                    for z in zs:
                         for i in [1, 2, 3]:
                             for j in [1, 2]:
                                 lhs = P.compose(P.compose(x, i, y), i + j - 1, z)
@@ -595,16 +593,16 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d_x", [-2, -1])
         @pytest.mark.parametrize("d_y", [-1, 0])
         @pytest.mark.parametrize("d_z", [-1, 0])
-        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
+        def test_arity3(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring):
             """x ∈ P(3), y,z ∈ P(2): par-assoc for i < j ≤ arity(x)."""
             P = layers.OBXsLie
             m = 2  # arity of y
             xs = list(P(3, ring).graded_basis(d_x))
             ys = list(P(2, ring).graded_basis(d_y))
             zs = list(P(2, ring).graded_basis(d_z))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
-                    for z in _sample(zs, 2, rng):
+            for x in xs:
+                for y in ys:
+                    for z in zs:
                         for i in range(1, 4):
                             for j in range(i + 1, 4):
                                 lhs = P.compose(P.compose(x, i, y), j + m - 1, z)
@@ -631,13 +629,13 @@ class TestLayer2_ΩBH:
 
         @pytest.mark.parametrize("d_x", [-2, -1, 0])
         @pytest.mark.parametrize("d_y", [-1, 0, 1])
-        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring, rng):
+        def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring):
             """x ∈ P(3), y ∈ P(2)."""
             P = layers.OBXsLie
             xs = list(P(3, ring).graded_basis(d_x))
             ys = list(P(2, ring).graded_basis(d_y))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
+            for x in xs:
+                for y in ys:
                     for i in [1, 2, 3]:
                         lhs = P.compose(x, i, y).boundary()
                         rhs = P.compose(x.boundary(), i, y) + sign_from_exponent(
@@ -704,7 +702,7 @@ class TestLayer3_ΩBH_Kd:
             tested = 0
             for deg in range(1, 7):
                 basis = list(mod.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 30, rng):
+                for elem in basis:
                     tested += 1
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
@@ -801,8 +799,8 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             tested = 0
             for deg in range(-1, 6):
-                basis = list(ta.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 30, rng):
+                basis = ta.graded_basis_by_weight(deg, weight)
+                for elem in basis:
                     tested += 1
                     assert ta.boundary(ta.boundary(elem)) == ta.module.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
