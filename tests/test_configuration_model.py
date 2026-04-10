@@ -88,12 +88,12 @@ def rng():
     return Random(_SEED)
 
 
-@pytest.fixture(params=[QQ, GF(2)], ids=["QQ", "GF2"])
+@pytest.fixture(params=[QQ, GF(2)], ids=["Q", "F2"])
 def ring(request):
     return request.param
 
 
-@pytest.fixture(params=[1, 2], ids=["dim1", "dim2"])
+@pytest.fixture(params=[1, 2], ids=["d1", "d2"])
 def dim(request):
     return request.param
 
