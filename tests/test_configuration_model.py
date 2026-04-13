@@ -47,7 +47,7 @@ from uconf.algebraic.configuration import (
     ConfigurationLayers,
     _build_layers,
 )
-from uconf.core.signs import sign_from_exponent
+from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -794,6 +794,71 @@ class TestLayer3_ΩBH_Kd:
                 rhs += sign_from_exponent(p_deg + a.degree()) * fa.act(p, [a, da])
                 assert _as_dict(lhs) == _as_dict(rhs)
 
+    class TestEquivariance:
+        """γ(p·σ; a₁,...,aₙ) = ε(σ⁻¹; a) · γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        def test_equivariance_arity2(self, p_deg, layers: ConfigurationLayers, rng):
+            fa = layers.free_alg
+            mod = fa.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P2 = P(2, R)
+            p_elems = list(P2.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 6):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a]
+            degrees = [a_deg, a_deg]
+            for sigma in SymmetricGroup(2):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                for p in _sample(p_elems, 3, rng):
+                    p_sigma = p.permute(sl)
+                    lhs = fa.act(p_sigma, inputs)
+                    rhs = koszul * fa.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-2, -1])
+        def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+            fa = layers.free_alg
+            mod = fa.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P3 = P(3, R)
+            p_elems = list(P3.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(3) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 6):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a, a]
+            degrees = [a_deg, a_deg, a_deg]
+            for sigma in SymmetricGroup(3):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+                for p in _sample(p_elems, 3, rng):
+                    p_sigma = p.permute(sl)
+                    lhs = fa.act(p_sigma, inputs)
+                    rhs = koszul * fa.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
 
 # ===========================================================================
 # Layer 4: HadamardTensorAlgebra
@@ -887,6 +952,40 @@ class TestLayer4_S_ΩBH_Kd:
                 rhs += sign_from_exponent(p_deg_val) * ta.act(p, [da, a])
                 rhs += sign_from_exponent(p_deg_val + a_deg) * ta.act(p, [a, da])
                 assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestEquivariance:
+        """γ(p·σ; a₁,...,aₙ) = ε(σ⁻¹; a) · γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
+        def test_equivariance_arity2(self, p_deg, layers: ConfigurationLayers, rng):
+            ta = layers.tensor_alg
+            mod = ta.module
+            R = layers.bar.module.base_ring()
+            Q = ta.operad_cls
+            Q2 = Q(2, R)
+            p_elems = list(Q2.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No Q(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(ta.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a]
+            degrees = [a_deg, a_deg]
+            for sigma in SymmetricGroup(2):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                for p in _sample(p_elems, 3, rng):
+                    p_sigma = p.permute(sl)
+                    lhs = ta.act(p_sigma, inputs)
+                    rhs = koszul * ta.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
 
 
 # ===========================================================================
@@ -1279,6 +1378,102 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     p, [a, b, c, dd]
                 )
                 assert _as_dict(lhs) == _as_dict(rhs)
+
+    class TestEquivariance:
+        """γ(p·σ; a₁,...,aₙ) = ε(σ⁻¹; a) · γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
+
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
+        def test_equivariance_arity2(self, p_deg, layers: ConfigurationLayers, rng):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P2 = P(2, R)
+            p_elems = list(P2.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(2) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a]
+            degrees = [a_deg, a_deg]
+            for sigma in SymmetricGroup(2):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                for p in _sample(p_elems, 3, rng):
+                    p_sigma = p.permute(sl)
+                    lhs = pb.act(p_sigma, inputs)
+                    rhs = koszul * pb.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1])
+        def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P3 = P(3, R)
+            p_elems = list(P3.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(3) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a, a]
+            degrees = [a_deg, a_deg, a_deg]
+            for sigma in SymmetricGroup(3):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+                for p in p_elems:
+                    p_sigma = p.permute(sl)
+                    lhs = pb.act(p_sigma, inputs)
+                    rhs = koszul * pb.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1])
+        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P4 = P(4, R)
+            p_elems = list(P4.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(4) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a = w1[0]
+            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
+            inputs = [a, a, a, a]
+            degrees = [a_deg, a_deg, a_deg, a_deg]
+            for sigma in SymmetricGroup(4):
+                sigma_inv = sigma.inverse()
+                sl = list(sigma.tuple())
+                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 5)]
+                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 5)]
+                for p in p_elems:
+                    p_sigma = p.permute(sl)
+                    lhs = pb.act(p_sigma, inputs)
+                    rhs = koszul * pb.act(p, permuted)
+                    assert _as_dict(lhs) == _as_dict(rhs)
 
 
 # ===========================================================================
