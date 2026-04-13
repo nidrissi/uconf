@@ -76,6 +76,20 @@ def _all_decompositions(total_arity):
             yield (i, m, n)
 
 
+def _build_algebra_pool(mod, weights=(1, 2), deg_range=range(-1, 6)):
+    """Collect basis elements from *mod* across *weights* and *deg_range*."""
+    pool = []
+    for w in weights:
+        for d in deg_range:
+            pool.extend(mod.graded_basis_by_weight(d, w))
+    return pool
+
+
+def _elem_degree(mod, elem):
+    """Return the degree of a (possibly tensor-product) basis element."""
+    return mod.degree_on_basis(next(iter(elem.monomial_coefficients())))
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -647,7 +661,7 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-1, 0, 1])
         def test_d_commutes_arity2(self, d, layers: ConfigurationLayers, ring):
             P = layers.OBXsLie
-            for elem in P(2, ring).graded_basis(d):
+            for elem in _sample(P(2, ring).graded_basis(d), 30, rng):
                 assert _as_dict(elem.permute([2, 1]).boundary()) == _as_dict(
                     elem.boundary().permute([2, 1])
                 )
@@ -655,7 +669,7 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in P(3, ring).graded_basis(d):
+            for elem in _sample(P(3, ring).graded_basis(d), 30, rng):
                 for sigma in SymmetricGroup(3):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -665,7 +679,7 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_d_commutes_arity4(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in P(4, ring).graded_basis(d):
+            for elem in _sample(P(4, ring).graded_basis(d), 30, rng):
                 for sigma in SymmetricGroup(4):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -803,30 +817,25 @@ class TestLayer3_ΩBH_Kd:
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            P2 = P(2, R)
-            p_elems = list(P2.graded_basis(p_deg))
+            p_elems = list(P(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 6):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a]
-            degrees = [a_deg, a_deg]
-            for sigma in SymmetricGroup(2):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                for p in _sample(p_elems, 3, rng):
-                    p_sigma = p.permute(sl)
-                    lhs = fa.act(p_sigma, inputs)
-                    rhs = koszul * fa.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
+            pool = _build_algebra_pool(mod)
+            if len(pool) < 2:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(6):
+                inputs = rng.choices(pool, k=2)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(2):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = fa.act(p.permute(sl), inputs)
+                        rhs = koszul * fa.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-2, -1])
         def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
@@ -834,30 +843,52 @@ class TestLayer3_ΩBH_Kd:
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            P3 = P(3, R)
-            p_elems = list(P3.graded_basis(p_deg))
+            p_elems = list(P(3, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 6):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a, a]
-            degrees = [a_deg, a_deg, a_deg]
-            for sigma in SymmetricGroup(3):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
-                for p in _sample(p_elems, 3, rng):
-                    p_sigma = p.permute(sl)
-                    lhs = fa.act(p_sigma, inputs)
-                    rhs = koszul * fa.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
+            pool = _build_algebra_pool(mod)
+            if len(pool) < 3:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(4):
+                inputs = rng.choices(pool, k=3)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(3):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = fa.act(p.permute(sl), inputs)
+                        rhs = koszul * fa.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-3, -2])
+        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+            fa = layers.free_alg
+            mod = fa.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            p_elems = list(P(4, R).graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(4) elements at degree {p_deg}")
+            pool = _build_algebra_pool(mod)
+            if len(pool) < 4:
+                pytest.skip("Not enough algebra elements")
+            perms = _sample(list(SymmetricGroup(4)), 6, rng)
+            for _ in range(3):
+                inputs = rng.choices(pool, k=4)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in perms:
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 5)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 5)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = fa.act(p.permute(sl), inputs)
+                        rhs = koszul * fa.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
 
 
 # ===========================================================================
@@ -962,30 +993,78 @@ class TestLayer4_S_ΩBH_Kd:
             mod = ta.module
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
-            Q2 = Q(2, R)
-            p_elems = list(Q2.graded_basis(p_deg))
+            p_elems = list(Q(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(ta.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a]
-            degrees = [a_deg, a_deg]
-            for sigma in SymmetricGroup(2):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                for p in _sample(p_elems, 3, rng):
-                    p_sigma = p.permute(sl)
-                    lhs = ta.act(p_sigma, inputs)
-                    rhs = koszul * ta.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
+            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            if len(pool) < 2:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(6):
+                inputs = rng.choices(pool, k=2)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(2):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = ta.act(p.permute(sl), inputs)
+                        rhs = koszul * ta.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0])
+        def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+            ta = layers.tensor_alg
+            mod = ta.module
+            R = layers.bar.module.base_ring()
+            Q = ta.operad_cls
+            p_elems = list(Q(3, R).graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No Q(3) elements at degree {p_deg}")
+            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            if len(pool) < 3:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(4):
+                inputs = rng.choices(pool, k=3)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(3):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = ta.act(p.permute(sl), inputs)
+                        rhs = koszul * ta.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-3, -2])
+        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+            ta = layers.tensor_alg
+            mod = ta.module
+            R = layers.bar.module.base_ring()
+            Q = ta.operad_cls
+            p_elems = list(Q(4, R).graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No Q(4) elements at degree {p_deg}")
+            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            if len(pool) < 4:
+                pytest.skip("Not enough algebra elements")
+            perms = _sample(list(SymmetricGroup(4)), 6, rng)
+            for _ in range(3):
+                inputs = rng.choices(pool, k=4)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in perms:
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 5)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 5)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = ta.act(p.permute(sl), inputs)
+                        rhs = koszul * ta.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
 
 
 # ===========================================================================
@@ -1388,30 +1467,25 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = pb.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            P2 = P(2, R)
-            p_elems = list(P2.graded_basis(p_deg))
+            p_elems = list(P(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a]
-            degrees = [a_deg, a_deg]
-            for sigma in SymmetricGroup(2):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                for p in _sample(p_elems, 3, rng):
-                    p_sigma = p.permute(sl)
-                    lhs = pb.act(p_sigma, inputs)
-                    rhs = koszul * pb.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
+            pool = _build_algebra_pool(mod, deg_range=range(-1, 4))
+            if len(pool) < 2:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(6):
+                inputs = rng.choices(pool, k=2)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(2):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = pb.act(p.permute(sl), inputs)
+                        rhs = koszul * pb.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1])
         def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
@@ -1419,61 +1493,25 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = pb.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            P3 = P(3, R)
-            p_elems = list(P3.graded_basis(p_deg))
+            p_elems = list(P(3, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a, a]
-            degrees = [a_deg, a_deg, a_deg]
-            for sigma in SymmetricGroup(3):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
-                for p in p_elems:
-                    p_sigma = p.permute(sl)
-                    lhs = pb.act(p_sigma, inputs)
-                    rhs = koszul * pb.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
-
-        @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1])
-        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
-            pb = layers.pulled_back
-            mod = pb.module
-            R = layers.bar.module.base_ring()
-            P = layers.OBXsLie
-            P4 = P(4, R)
-            p_elems = list(P4.graded_basis(p_deg))
-            if not p_elems:
-                pytest.skip(f"No P(4) elements at degree {p_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a = w1[0]
-            a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
-            inputs = [a, a, a, a]
-            degrees = [a_deg, a_deg, a_deg, a_deg]
-            for sigma in SymmetricGroup(4):
-                sigma_inv = sigma.inverse()
-                sl = list(sigma.tuple())
-                inv_0idx = [sigma_inv(i) - 1 for i in range(1, 5)]
-                koszul = koszul_sign_of_permutation(inv_0idx, degrees)
-                permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 5)]
-                for p in p_elems:
-                    p_sigma = p.permute(sl)
-                    lhs = pb.act(p_sigma, inputs)
-                    rhs = koszul * pb.act(p, permuted)
-                    assert _as_dict(lhs) == _as_dict(rhs)
+            pool = _build_algebra_pool(mod, deg_range=range(-1, 4))
+            if len(pool) < 3:
+                pytest.skip("Not enough algebra elements")
+            for _ in range(4):
+                inputs = rng.choices(pool, k=3)
+                degrees = [_elem_degree(mod, e) for e in inputs]
+                for sigma in SymmetricGroup(3):
+                    sigma_inv = sigma.inverse()
+                    sl = list(sigma.tuple())
+                    inv_0idx = [sigma_inv(i) - 1 for i in range(1, 4)]
+                    koszul = koszul_sign_of_permutation(inv_0idx, degrees)
+                    permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+                    for p in _sample(p_elems, 3, rng):
+                        lhs = pb.act(p.permute(sl), inputs)
+                        rhs = koszul * pb.act(p, permuted)
+                        assert _as_dict(lhs) == _as_dict(rhs)
 
 
 # ===========================================================================
