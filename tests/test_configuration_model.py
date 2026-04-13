@@ -1154,8 +1154,8 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
         def test_d_squared(self, dim, ring, layers: ConfigurationLayers, rng):
             mod = layers.bar.module
             for deg in range(-2, 4):
-                basis = list(mod.graded_basis_by_weight(deg, 4))
-                for elem in _sample(basis, 20, rng):
+                basis = mod.graded_basis_by_weight(deg, 4)
+                for elem in basis:
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
                     )
