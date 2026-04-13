@@ -62,6 +62,23 @@ from uconf.models import (
 from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 from uconf.wrappers import HadamardProduct, ShiftedCooperad, ShiftedOperad
 from uconf.homology import compute_chain_complex, homology_basis, compute_homology_representatives
+from uconf.sampling import (
+    random_surjection,
+    random_surjection_key,
+    random_planar_surjection,
+    random_planar_surjection_key,
+    random_sphere_admissible_surjection,
+    random_sphere_admissible_surjection_key,
+    random_lie_key,
+    random_lie_element,
+    random_hadamard_key,
+    sample_basis,
+    sample_operad_basis,
+    sample_hadamard_basis,
+    sample_algebra_pool,
+    sphere_nontrivial_surjection_iter,
+    sphere_nontrivial_operad_basis_iter,
+)
 from uconf.morphisms import (
     ass_to_com,
     lie_to_ass,
@@ -120,4 +137,19 @@ __all__ = [
     "compute_chain_complex",
     "compute_homology_representatives",
     "homology_basis",
+    "random_surjection",
+    "random_surjection_key",
+    "random_planar_surjection",
+    "random_planar_surjection_key",
+    "random_sphere_admissible_surjection",
+    "random_sphere_admissible_surjection_key",
+    "random_lie_key",
+    "random_lie_element",
+    "random_hadamard_key",
+    "sample_basis",
+    "sample_operad_basis",
+    "sample_hadamard_basis",
+    "sample_algebra_pool",
+    "sphere_nontrivial_surjection_iter",
+    "sphere_nontrivial_operad_basis_iter",
 ]
