@@ -261,9 +261,7 @@ class BarConstruction(UniqueRepresentation):
                 # Bar-degrees of original children (needed for Koszul sign
                 # when children are reordered by the vertex planarize σ_v).
                 old_ch_degrees = [
-                    subtree_degree(c, self._operad_cls, base_ring)
-                    if not is_leaf(c)
-                    else 0
+                    subtree_degree(c, self._operad_cls, base_ring) if not is_leaf(c) else 0
                     for c in old_ch
                 ]
                 results = []
@@ -276,9 +274,7 @@ class BarConstruction(UniqueRepresentation):
                     identity_tuple = tuple(range(1, k + 1))
                     if sigma_v_tuple != identity_tuple:
                         perm_0idx = [sigma_v_tuple[j] - 1 for j in range(k)]
-                        reorder_sign = koszul_sign_of_permutation(
-                            perm_0idx, old_ch_degrees
-                        )
+                        reorder_sign = koszul_sign_of_permutation(perm_0idx, old_ch_degrees)
                     else:
                         reorder_sign = 1
 

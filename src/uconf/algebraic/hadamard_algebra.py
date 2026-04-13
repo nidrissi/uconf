@@ -155,9 +155,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 for left_out_basis, left_out_coeff in left_value:
                     for right_out_basis, right_out_coeff in right_value:
                         combined_key = (left_out_basis, right_out_basis)
-                        combined_coeff = R(
-                            koszul_sign * scalar * left_out_coeff * right_out_coeff
-                        )
+                        combined_coeff = R(koszul_sign * scalar * left_out_coeff * right_out_coeff)
                         if combined_key in result_dict:
                             result_dict[combined_key] += combined_coeff
                         else:
