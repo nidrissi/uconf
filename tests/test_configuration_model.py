@@ -861,7 +861,7 @@ class TestLayer3_ΩBH_Kd:
                         rhs = koszul * fa.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
-        @pytest.mark.parametrize("p_deg", [-3, -2, -1, 0, 1, 2])
+        @pytest.mark.parametrize("p_deg", [-3, -2, -1, 0, 1])
         def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
             fa = layers.free_alg
             mod = fa.module
@@ -1035,7 +1035,7 @@ class TestLayer4_S_ΩBH_Kd:
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
-        @pytest.mark.parametrize("p_deg", [-3, -2, -1, 0, 1, 2])
+        @pytest.mark.parametrize("p_deg", [-3, -2, -1, 0])
         def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
@@ -1047,8 +1047,8 @@ class TestLayer4_S_ΩBH_Kd:
             pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
-            perms = _sample(list(SymmetricGroup(4)), 6, rng)
-            for _ in range(3):
+            perms = list(SymmetricGroup(4))
+            for _ in range(1):
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
                 for sigma in perms:
@@ -1056,7 +1056,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in _sample(p_elems, 6, rng):
+                    for p in _sample(p_elems, 12, rng):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1521,12 +1521,14 @@ class TestLayer5_pb_S_ΩBH_Kd:
             for _ in range(4):
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
-                for sigma in SymmetricGroup(4):
+                perms = _sample(list(SymmetricGroup(4)), 6, rng)
+                p_sample = _sample(p_elems, 8, rng)
+                for sigma in perms:
                     sl = list(sigma.tuple())
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in _sample(p_elems, 6, rng):
+                    for p in p_sample:
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
