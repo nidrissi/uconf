@@ -1047,7 +1047,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     assert _as_dict(pb.act(unit, [elem])) == _as_dict(elem)
 
     class TestAssociativityAction:
-        """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
+        """Tests the associativity axioms for the pullback algebra action."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers, rng):
@@ -1082,6 +1082,97 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     rhs *= rhs_sign
                     assert _as_dict(lhs) == _as_dict(rhs), (
                         f"Failed associativity at i=2 for p={p}, q={q}, a={a}, b={b}, c={c}"
+                    )
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        @pytest.mark.parametrize("q_deg", [-1, 0])
+        def test_pullback_algebra_associative_weight4_arity3_into_2(
+            self, p_deg, q_deg, layers: ConfigurationLayers, rng
+        ):
+            """γ(p ∘_i q; a,b,c,d) with p arity 3, q arity 2 (i=1,2,3): weight 4."""
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P3 = P(3, R)
+            P2 = P(2, R)
+            p_elems = list(P3.graded_basis(p_deg))
+            q_elems = list(P2.graded_basis(q_deg))
+            if not p_elems or not q_elems:
+                pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a, b, c, d = rng.choices(w1, k=4)
+            a_deg = mod.degree_on_basis(a.support()[0])
+            b_deg = mod.degree_on_basis(b.support()[0])
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(q_elems, 2, rng):
+                    q_deg_val = q.degree()
+                    # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b), c, d)
+                    lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
+                    rhs = pb.act(p, [pb.act(q, [a, b]), c, d])
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity (arity3 ∘_1 arity2) for p={p}, q={q}"
+                    )
+                    # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c), d)
+                    lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
+                    rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
+                        p, [a, pb.act(q, [b, c]), d]
+                    )
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity (arity3 ∘_2 arity2) for p={p}, q={q}"
+                    )
+                    # i=3: γ(p ∘_3 q; a,b,c,d) = (-1)^{(|a|+|b|)|q|} γ(p; a, b, γ(q; c,d))
+                    lhs = pb.act(P.compose(p, 3, q), [a, b, c, d])
+                    rhs = sign_from_exponent((a_deg + b_deg) * q_deg_val) * pb.act(
+                        p, [a, b, pb.act(q, [c, d])]
+                    )
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity (arity3 ∘_3 arity2) for p={p}, q={q}"
+                    )
+
+        @pytest.mark.parametrize("p_deg", [-1, 0])
+        @pytest.mark.parametrize("q_deg", [-1, 0])
+        def test_pullback_algebra_associative_weight4_arity2_into_3(
+            self, p_deg, q_deg, layers: ConfigurationLayers, rng
+        ):
+            """γ(p ∘_i q; a,b,c,d) with p arity 2, q arity 3 (i=1,2): weight 4."""
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P2 = P(2, R)
+            P3 = P(3, R)
+            p_elems = list(P2.graded_basis(p_deg))
+            q_elems = list(P3.graded_basis(q_deg))
+            if not p_elems or not q_elems:
+                pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a, b, c, d = rng.choices(w1, k=4)
+            a_deg = mod.degree_on_basis(a.support()[0])
+            for p in _sample(p_elems, 2, rng):
+                for q in _sample(q_elems, 2, rng):
+                    q_deg_val = q.degree()
+                    # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b,c), d)
+                    lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
+                    rhs = pb.act(p, [pb.act(q, [a, b, c]), d])
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity (arity2 ∘_1 arity3) for p={p}, q={q}"
+                    )
+                    # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c,d))
+                    lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
+                    rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
+                        p, [a, pb.act(q, [b, c, d])]
+                    )
+                    assert _as_dict(lhs) == _as_dict(rhs), (
+                        f"Failed associativity (arity2 ∘_2 arity3) for p={p}, q={q}"
                     )
 
     class TestLeibnizAction:
