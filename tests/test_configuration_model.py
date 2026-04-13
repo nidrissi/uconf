@@ -652,11 +652,21 @@ class TestLayer2_ΩBH:
                     elem.boundary().permute([2, 1])
                 )
 
-        @pytest.mark.parametrize("d", [-2, -1, 0])
+        @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in _sample(list(P(3, ring).graded_basis(d)), 8, rng):
+            for elem in P(3, ring).graded_basis(d):
                 for sigma in SymmetricGroup(3):
+                    sl = list(sigma.tuple())
+                    assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
+                        elem.boundary().permute(sl)
+                    )
+
+        @pytest.mark.parametrize("d", [-2, -1, 0, 1])
+        def test_d_commutes_arity4(self, d, layers: ConfigurationLayers, ring, rng):
+            P = layers.OBXsLie
+            for elem in P(4, ring).graded_basis(d):
+                for sigma in SymmetricGroup(4):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
                         elem.boundary().permute(sl)
@@ -674,14 +684,14 @@ class TestLayer2_ΩBH:
             for elem in P(2, ring).graded_basis(d):
                 assert _as_dict(elem.permute([2, 1]).permute([2, 1])) == _as_dict(elem)
 
-        @pytest.mark.parametrize("d", [-2, -1])
+        @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             basis = list(P(3, ring).graded_basis(d))
             perms = list(SymmetricGroup(3))
-            for elem in _sample(basis, 5, rng):
-                for sigma in _sample(perms, 3, rng):
-                    for tau in _sample(perms, 3, rng):
+            for elem in _sample(basis, 10, rng):
+                for sigma in perms:
+                    for tau in perms:
                         sl, tl = list(sigma.tuple()), list(tau.tuple())
                         cl = list((sigma * tau).tuple())
                         assert _as_dict(elem.permute(sl).permute(tl)) == _as_dict(elem.permute(cl))
