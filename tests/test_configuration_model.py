@@ -1049,7 +1049,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
     class TestAssociativityAction:
         """Tests the associativity axioms for the pullback algebra action."""
 
-        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2, 3])
         def test_pullback_algebra_associative(self, p_deg, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
@@ -1065,16 +1065,16 @@ class TestLayer5_pb_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a, b, c = rng.choices(w1, k=3)
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in p_elems:
+                for q in p_elems:
                     lhs = pb.act(P.compose(p, 1, q), [a, b, c])
                     rhs = pb.act(p, [pb.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs), (
                         f"Failed associativity at i=1 for p={p}, q={q}, a={a}, b={b}, c={c}"
                     )
 
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in p_elems:
+                for q in p_elems:
                     lhs = pb.act(P.compose(p, 2, q), [a, b, c])
                     rhs = pb.act(p, [a, pb.act(q, [b, c])])
                     # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
@@ -1084,8 +1084,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
                         f"Failed associativity at i=2 for p={p}, q={q}, a={a}, b={b}, c={c}"
                     )
 
-        @pytest.mark.parametrize("p_deg", [-1, 0])
-        @pytest.mark.parametrize("q_deg", [-1, 0])
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1])
+        @pytest.mark.parametrize("q_deg", [-1, 0, 1])
         def test_pullback_algebra_associative_weight4_arity3_into_2(
             self, p_deg, q_deg, layers: ConfigurationLayers, rng
         ):
@@ -1108,8 +1108,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             a, b, c, d = rng.choices(w1, k=4)
             a_deg = mod.degree_on_basis(a.support()[0])
             b_deg = mod.degree_on_basis(b.support()[0])
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(q_elems, 2, rng):
+            for p in p_elems:
+                for q in q_elems:
                     q_deg_val = q.degree()
                     # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b), c, d)
                     lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
