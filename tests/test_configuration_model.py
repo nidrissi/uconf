@@ -1180,7 +1180,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_leibniz(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_leibniz_arity2(self, p_deg, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1203,6 +1203,71 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 a_deg = mod.degree_on_basis(next(iter(a.monomial_coefficients())))
                 rhs += sign_from_exponent(p_deg_val) * pb.act(p, [da, a])
                 rhs += sign_from_exponent(p_deg_val + a_deg) * pb.act(p, [a, da])
+                assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0])
+        def test_leibniz_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P3 = P(3, R)
+            p_elems = list(P3.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(3) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a, b, c = rng.choices(w1, k=3)
+            a_deg = mod.degree_on_basis(a.support()[0])
+            b_deg = mod.degree_on_basis(b.support()[0])
+            da = mod.boundary(a)
+            db = mod.boundary(b)
+            dc = mod.boundary(c)
+            for p in p_elems:
+                lhs = mod.boundary(pb.act(p, [a, b, c]))
+                p_deg_val = p.degree()
+                rhs = pb.act(p.boundary(), [a, b, c])
+                rhs += sign_from_exponent(p_deg_val) * pb.act(p, [da, b, c])
+                rhs += sign_from_exponent(p_deg_val + a_deg) * pb.act(p, [a, db, c])
+                rhs += sign_from_exponent(p_deg_val + a_deg + b_deg) * pb.act(p, [a, b, dc])
+                assert _as_dict(lhs) == _as_dict(rhs)
+
+        @pytest.mark.parametrize("p_deg", [-3, -2, -1])
+        def test_leibniz_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+            pb = layers.pulled_back
+            mod = pb.module
+            R = layers.bar.module.base_ring()
+            P = layers.OBXsLie
+            P4 = P(4, R)
+            p_elems = list(P4.graded_basis(p_deg))
+            if not p_elems:
+                pytest.skip(f"No P(4) elements at degree {p_deg}")
+            w1 = []
+            for d_try in range(-1, 4):
+                w1.extend(mod.graded_basis_by_weight(d_try, 1))
+            if not w1:
+                pytest.skip("No weight-1 elements")
+            a, b, c, d = rng.choices(w1, k=4)
+            a_deg = mod.degree_on_basis(a.support()[0])
+            b_deg = mod.degree_on_basis(b.support()[0])
+            c_deg = mod.degree_on_basis(c.support()[0])
+            da = mod.boundary(a)
+            db = mod.boundary(b)
+            dc = mod.boundary(c)
+            dd = mod.boundary(d)
+            for p in p_elems:
+                lhs = mod.boundary(pb.act(p, [a, b, c, d]))
+                p_deg_val = p.degree()
+                rhs = pb.act(p.boundary(), [a, b, c, d])
+                rhs += sign_from_exponent(p_deg_val) * pb.act(p, [da, b, c, d])
+                rhs += sign_from_exponent(p_deg_val + a_deg) * pb.act(p, [a, db, c, d])
+                rhs += sign_from_exponent(p_deg_val + a_deg + b_deg) * pb.act(p, [a, b, dc, d])
+                rhs += sign_from_exponent(p_deg_val + a_deg + b_deg + c_deg) * pb.act(
+                    p, [a, b, c, dd]
+                )
                 assert _as_dict(lhs) == _as_dict(rhs)
 
 
