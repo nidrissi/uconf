@@ -48,6 +48,7 @@ from uconf.algebraic.configuration import (
     _build_layers,
 )
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
+from uconf.sampling import sample_basis, sample_algebra_pool
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -343,7 +344,7 @@ class TestLayer1_BH:
             C = layers.BXsLie
             Cn = C(n, ring)
             tested = 0
-            for elem in _sample(list(Cn.graded_basis(d)), 30, rng):
+            for elem in sample_basis(Cn, d, 30, rng):
                 tested += 1
                 assert elem.boundary().boundary() == Cn.zero()
             assert tested > 0, "No basis elements found (nontriviality check)"
@@ -382,7 +383,7 @@ class TestLayer1_BH:
         def test_arity4(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             C3 = C(3, ring)
-            for x in _sample(list(C(4, ring).graded_basis(d)), 10, rng):
+            for x in sample_basis(C(4, ring), d, 10, rng):
                 lhs = {}
                 for (a, dk), c1 in C.infinitesimal_cocompose(x, 1, 2, 3):
                     for (b, c), c2 in C.infinitesimal_cocompose(C3(dk), 1, 2, 2):
@@ -405,7 +406,7 @@ class TestLayer1_BH:
             C = layers.BXsLie
             C3 = C(3, ring)
             C2 = C(2, ring)
-            for x in _sample(list(C(4, ring).graded_basis(d)), 10, rng):
+            for x in sample_basis(C(4, ring), d, 10, rng):
                 lhs = {}
                 for (e, ck), c1 in C.infinitesimal_cocompose(x, 3, 3, 2):
                     for (a, b), c2 in C.infinitesimal_cocompose(C3(e), 1, 2, 2):
@@ -429,7 +430,7 @@ class TestLayer1_BH:
         def test_coderivation(self, n, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
             Cn = C(n, ring)
-            for x in _sample(list(Cn.graded_basis(d)), 15, rng):
+            for x in sample_basis(Cn, d, 15, rng):
                 dx = x.boundary()
                 for i, m, k in _all_decompositions(n):
                     Cm, Ck = C(m, ring), C(k, ring)
@@ -460,7 +461,7 @@ class TestLayer1_BH:
         @pytest.mark.parametrize("d", [-1, 0, 1])
         def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
-            for elem in _sample(list(C(3, ring).graded_basis(d)), 8, rng):
+            for elem in sample_basis(C(3, ring), d, 8, rng):
                 for sigma in SymmetricGroup(3):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -531,7 +532,7 @@ class TestLayer2_ΩBH:
         def test_left(self, n, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             unit = P.unit(ring)
-            for elem in _sample(list(P(n, ring).graded_basis(d)), 20, rng):
+            for elem in sample_basis(P(n, ring), d, 20, rng):
                 assert _as_dict(P.compose(unit, 1, elem)) == _as_dict(elem)
 
         @pytest.mark.parametrize("d", [-1, 0, 1])
@@ -546,7 +547,7 @@ class TestLayer2_ΩBH:
         def test_right_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
             unit = P.unit(ring)
-            for elem in _sample(list(P(3, ring).graded_basis(d)), 10, rng):
+            for elem in sample_basis(P(3, ring), d, 10, rng):
                 for i in [1, 2, 3]:
                     assert _as_dict(P.compose(elem, i, unit)) == _as_dict(elem)
 
@@ -820,7 +821,7 @@ class TestLayer3_ΩBH_Kd:
             p_elems = list(P(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod)
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 2:
                 pytest.skip("Not enough algebra elements")
             for _ in range(6):
@@ -845,7 +846,7 @@ class TestLayer3_ΩBH_Kd:
             p_elems = list(P(3, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod)
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 3:
                 pytest.skip("Not enough algebra elements")
             for _ in range(4):
@@ -870,7 +871,7 @@ class TestLayer3_ΩBH_Kd:
             p_elems = list(P(4, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod)
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
             perms = _sample(list(SymmetricGroup(4)), 6, rng)
@@ -993,7 +994,7 @@ class TestLayer4_S_ΩBH_Kd:
             p_elems = list(Q(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
-            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 2:
                 pytest.skip("Not enough algebra elements")
             for _ in range(6):
@@ -1019,7 +1020,7 @@ class TestLayer4_S_ΩBH_Kd:
             p_elems = list(Q(3, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No Q(3) elements at degree {p_deg}")
-            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 3:
                 pytest.skip("Not enough algebra elements")
             for _ in range(4):
@@ -1044,7 +1045,7 @@ class TestLayer4_S_ΩBH_Kd:
             p_elems = list(Q(4, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No Q(4) elements at degree {p_deg}")
-            pool = _build_algebra_pool(ta, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
             perms = list(SymmetricGroup(4))
@@ -1082,11 +1083,11 @@ class TestLayer4h_comodule_morphism:
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             Pn = P(n, R)
-            basis = list(Pn.graded_basis(deg))
+            basis = sample_basis(Pn, deg, 10, rng)
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             tested = 0
-            for p_elem in _sample(basis, 10, rng):
+            for p_elem in basis:
                 phi_dp = phi(p_elem.boundary())
                 d_phi_p = phi(p_elem).boundary()
                 tested += 1
@@ -1130,12 +1131,12 @@ class TestLayer4h_comodule_morphism:
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             Pn = P(n, R)
-            basis = list(Pn.graded_basis(deg))
+            basis = sample_basis(Pn, deg, 5, rng)
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             Sn = SymmetricGroup(n)
             tested = 0
-            for p_elem in _sample(basis, 5, rng):
+            for p_elem in basis:
                 for sigma in _sample(list(Sn), min(4, Sn.order()), rng):
                     p_sigma = p_elem.permute(sigma)
                     phi_p_sigma = phi(p_sigma)
@@ -1175,11 +1176,11 @@ class TestLayer4h_comodule_morphism:
             Pn = P(2, R)
             Q = phi.target
             Qn = Q(2, R)
-            basis = list(Pn.graded_basis(deg))
+            basis = sample_basis(Pn, deg, 5, rng)
             if not basis:
                 pytest.skip(f"No P(2) elements at degree {deg}")
             tested = 0
-            for p_elem in _sample(basis, 5, rng):
+            for p_elem in basis:
                 # Apply E-comodule morphism, then table-reduce left factor
                 delta_p = Delta(p_elem)
                 delta_parent = delta_p.parent()
@@ -1465,7 +1466,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             p_elems = list(P(2, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 2:
                 pytest.skip("Not enough algebra elements")
             for _ in range(6):
@@ -1490,7 +1491,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             p_elems = list(P(3, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 3:
                 pytest.skip("Not enough algebra elements")
             for _ in range(4):
@@ -1515,7 +1516,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             p_elems = list(P(4, R).graded_basis(p_deg))
             if not p_elems:
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
-            pool = _build_algebra_pool(mod, deg_range=range(-1, 4))
+            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
             for _ in range(4):
