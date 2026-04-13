@@ -205,6 +205,7 @@ class QuasiPlanarMixin(__quasi_planar_base):
         # Convert to Sage elements and filter zeros.
         # We need the sigma as a SymmetricGroup element for the caller.
         from sage.all import SymmetricGroup
+
         n = self.arity()
         S_n = SymmetricGroup(n)
 

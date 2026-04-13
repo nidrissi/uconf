@@ -98,9 +98,7 @@ class Surjection(CombinatorialFreeModule):
             if not isinstance(p, (int, Integer)):
                 raise TypeError(f"Basis key must be a tuple of integers. Got {p} ({type(p)}).")
             if p < 1 or p > arity:
-                raise ValueError(
-                    f"Surjection entries must lie in {{1, ..., {arity}}}. Got {p}."
-                )
+                raise ValueError(f"Surjection entries must lie in {{1, ..., {arity}}}. Got {p}.")
             if i > 0 and clean_tuple[i - 1] == p:
                 return None
 
