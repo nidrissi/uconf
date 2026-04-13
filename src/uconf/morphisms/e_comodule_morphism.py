@@ -333,16 +333,29 @@ def make_e_comodule_morphism(
 
         root_image = target_k._from_dict(root_dict, remove_zeros=True)
 
-        # Compose with child images from right to left (∘_k, ∘_{k-1}, ..., ∘_1)
-        # This preserves input positions 1, ..., j-1 at each step.
+        # Compose with child images from left to right (∘_1, ∘_2, ..., ∘_k).
+        #
+        # Left-to-right order is essential: the γ-composition (simultaneous
+        # grafting) in the Hadamard product E⊗Ω(C) carries a Koszul sign
+        # from the interchange law.  When implemented via sequential partial
+        # compositions ∘_i, left-to-right ordering reproduces this sign
+        # exactly, while right-to-left introduces extra (-1)^{|d_i|·|d_j|}
+        # terms from the free-operad after-degree A() accumulation.
+        #
+        # After composing child_j (arity a_j) at its current position, all
+        # positions to the right shift by (a_j − 1).  We track this offset.
         result = root_image
-        for j in range(k, 0, -1):
+        cumulative_shift = 0
+        for j in range(1, k + 1):
             child = kids[j - 1]
             if is_leaf(child):
-                # Composing with the unit is the identity, skip
+                # Composing with the unit is the identity, skip.
+                # Leaf arity is 1, so shift += 0.
                 continue
             child_image = _extend_tree(child, base_ring)
-            result = target_factory.compose(result, j, child_image)
+            compose_pos = j + cumulative_shift
+            result = target_factory.compose(result, compose_pos, child_image)
+            cumulative_shift += child._tree_arity - 1
 
         # Fix leaf ordering.  Operadic composition assigns consecutive
         # blocks of labels to each child: child_1 gets {1,…,a_1},
