@@ -3,7 +3,7 @@
 from random import Random
 
 import pytest
-from sage.all import QQ, GF
+from sage.all import QQ
 
 from uconf.models.surjection import Surjection
 from uconf.models.lie import Lie
