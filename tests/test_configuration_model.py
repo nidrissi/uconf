@@ -1084,8 +1084,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
                         f"Failed associativity at i=2 for p={p}, q={q}, a={a}, b={b}, c={c}"
                     )
 
-        @pytest.mark.parametrize("p_deg", [-1, 0, 1])
-        @pytest.mark.parametrize("q_deg", [-1, 0, 1])
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
+        @pytest.mark.parametrize("q_deg", [-1, 0, 1, 2])
         def test_pullback_algebra_associative_weight4_arity3_into_2(
             self, p_deg, q_deg, layers: ConfigurationLayers, rng
         ):
@@ -1096,8 +1096,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P3 = P(3, R)
             P2 = P(2, R)
-            p_elems = list(P3.graded_basis(p_deg))
-            q_elems = list(P2.graded_basis(q_deg))
+            p_elems = P3.graded_basis(p_deg)
+            q_elems = P2.graded_basis(q_deg)
             if not p_elems or not q_elems:
                 pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
             w1 = []
@@ -1134,8 +1134,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
                         f"Failed associativity (arity3 ∘_3 arity2) for p={p}, q={q}"
                     )
 
-        @pytest.mark.parametrize("p_deg", [-1, 0])
-        @pytest.mark.parametrize("q_deg", [-1, 0])
+        @pytest.mark.parametrize("p_deg", [-1, 0, 1])
+        @pytest.mark.parametrize("q_deg", [-1, 0, 1])
         def test_pullback_algebra_associative_weight4_arity2_into_3(
             self, p_deg, q_deg, layers: ConfigurationLayers, rng
         ):
@@ -1146,8 +1146,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P2 = P(2, R)
             P3 = P(3, R)
-            p_elems = list(P2.graded_basis(p_deg))
-            q_elems = list(P3.graded_basis(q_deg))
+            p_elems = P2.graded_basis(p_deg)
+            q_elems = P3.graded_basis(q_deg)
             if not p_elems or not q_elems:
                 pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
             w1 = []
@@ -1157,8 +1157,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 pytest.skip("No weight-1 elements")
             a, b, c, d = rng.choices(w1, k=4)
             a_deg = mod.degree_on_basis(a.support()[0])
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(q_elems, 2, rng):
+            for p in p_elems:
+                for q in q_elems:
                     q_deg_val = q.degree()
                     # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b,c), d)
                     lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
@@ -1195,7 +1195,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample(p_elems, 2, rng):
+            for p in p_elems:
                 lhs = mod.boundary(pb.act(p, [a, a]))
                 rhs = pb.act(p.boundary(), [a, a])
                 p_deg_val = p.degree()
