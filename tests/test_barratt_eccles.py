@@ -5,7 +5,7 @@ import math
 from random import Random
 
 import pytest
-from sage.all import ZZ, QQ
+from sage.all import ZZ, QQ, SymmetricGroup
 
 from uconf import BarrattEccles
 from tests.planarize_helpers import planarize_round_trip_ok
@@ -214,3 +214,16 @@ def test_barratt_eccles_planarize_round_trip(n: int, d: int) -> None:
     BEn = BarrattEccles(n, QQ)
     for x in BEn.basis_iter(d):
         assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"
+
+
+@pytest.mark.parametrize("r", range(2, 5))
+@pytest.mark.parametrize("d", range(0, 4))
+def test_table_reduction_equivariant(r: int, d: int) -> None:
+    Sr = SymmetricGroup(r)
+    for x in BarrattEccles(r, QQ).planar_basis_iter(d):
+        for sigma in Sr:
+            permuted_of_table = x.permute(sigma).table_reduction()
+            reduced_of_permuted = x.table_reduction().permute(sigma)
+            assert _as_dict(permuted_of_table) == _as_dict(reduced_of_permuted), (
+                f"Section failed for {permuted_of_table}, got {reduced_of_permuted} instead."
+            )
