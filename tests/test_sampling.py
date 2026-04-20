@@ -420,23 +420,13 @@ class TestRandomCobarElement:
 
 
 class TestRandomFreeAlgebraElement:
-    def test_basic(self, rng):
+    @pytest.mark.parametrize("weight", [1, 2])
+    def test_with_weight(self, weight, rng):
         from uconf.algebraic.configuration import _build_layers
 
         layers = _build_layers(QQ, 1)
         mod = layers.free_alg.module
-        elem = random_free_algebra_element(mod, 1, rng)
-        # May or may not succeed (depends on random choices), but shouldn't crash
-        # If it succeeds, should be a valid element
-        if elem is not None:
-            assert elem.parent() == mod
-
-    def test_with_weight(self, rng):
-        from uconf.algebraic.configuration import _build_layers
-
-        layers = _build_layers(QQ, 1)
-        mod = layers.free_alg.module
-        elem = random_free_algebra_element(mod, 1, rng, weight=1)
+        elem = random_free_algebra_element(mod, 1, rng, weight=weight)
         if elem is not None:
             assert elem.parent() == mod
 
