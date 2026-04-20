@@ -1136,7 +1136,7 @@ def random_cofree_coalgebra_element(parent, degree: int, rng: Random, *, weight:
     elif connectivity > 0:
         max_n = max(1, degree // connectivity + 1)
     else:
-        max_n = 10
+        max_n = 6  # cap to avoid combinatorial explosion in planar_basis_iter
 
     possible_n = list(range(1, max_n + 1))
     rng.shuffle(possible_n)
@@ -1224,7 +1224,7 @@ def random_tree_module_element(parent, degree: int, rng: Random, *, weight: int 
     elif connectivity > 0:
         max_n = max(1, (degree - vertex_shift) // connectivity + 2)
     else:
-        max_n = 10
+        max_n = 6  # cap to avoid combinatorial explosion in planar_basis_iter
 
     possible_n = list(range(1, max_n + 1))
     rng.shuffle(possible_n)
