@@ -187,12 +187,9 @@ class TestLayer0_H:
         def test_arity2(self, d_x: int, d_y: int, d_z: int, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             H2 = H(2, ring)
-            xs = H2.graded_basis(d_x)
-            ys = H2.graded_basis(d_y)
-            zs = H2.graded_basis(d_z)
-            for x in _sample(xs, 12, rng):
-                for y in _sample(ys, 12, rng):
-                    for z in _sample(zs, 12, rng):
+            for x in sample_basis(H2, d_x, 12, rng):
+                for y in sample_basis(H2, d_y, 12, rng):
+                    for z in sample_basis(H2, d_z, 12, rng):
                         for i in [1, 2]:
                             for j in [1, 2]:
                                 lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
@@ -205,12 +202,9 @@ class TestLayer0_H:
         def test_arity3_2(self, d_x, d_y, d_z, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y,z ∈ H(2)."""
             H = layers.XsLie
-            xs = H(3, ring).graded_basis(d_x)
-            ys = H(2, ring).graded_basis(d_y)
-            zs = H(2, ring).graded_basis(d_z)
-            for x in _sample(xs, 12, rng):
-                for y in _sample(ys, 12, rng):
-                    for z in _sample(zs, 12, rng):
+            for x in sample_basis(H(3, ring), d_x, 12, rng):
+                for y in sample_basis(H(2, ring), d_y, 12, rng):
+                    for z in sample_basis(H(2, ring), d_z, 12, rng):
                         for i in [1, 2, 3]:
                             for j in [1, 2]:
                                 lhs = H.compose(H.compose(x, i, y), i + j - 1, z)
@@ -242,12 +236,9 @@ class TestLayer0_H:
             """x ∈ H(3), y,z ∈ H(2): par-assoc for i < j ≤ arity(x)."""
             H = layers.XsLie
             m = 2  # arity of y
-            xs = list(H(3, ring).graded_basis(d_x))
-            ys = list(H(2, ring).graded_basis(d_y))
-            zs = list(H(2, ring).graded_basis(d_z))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
-                    for z in _sample(zs, 2, rng):
+            for x in sample_basis(H(3, ring), d_x, 3, rng):
+                for y in sample_basis(H(2, ring), d_y, 2, rng):
+                    for z in sample_basis(H(2, ring), d_z, 2, rng):
                         for i in range(1, 4):
                             for j in range(i + 1, 4):
                                 lhs = H.compose(H.compose(x, i, y), j + m - 1, z)
@@ -277,10 +268,8 @@ class TestLayer0_H:
         def test_arity3_2(self, d_x, d_y, layers: ConfigurationLayers, ring, rng):
             """x ∈ H(3), y ∈ H(2)."""
             H = layers.XsLie
-            xs = list(H(3, ring).graded_basis(d_x))
-            ys = list(H(2, ring).graded_basis(d_y))
-            for x in _sample(xs, 3, rng):
-                for y in _sample(ys, 2, rng):
+            for x in sample_basis(H(3, ring), d_x, 3, rng):
+                for y in sample_basis(H(2, ring), d_y, 2, rng):
                     for i in [1, 2, 3]:
                         lhs = H.compose(x, i, y).boundary()
                         rhs = H.compose(x.boundary(), i, y) + sign_from_exponent(
@@ -294,8 +283,7 @@ class TestLayer0_H:
         def test_d_commutes(self, n, d, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
             Hn = H(n, ring)
-            basis = list(Hn.graded_basis(d))
-            for elem in _sample(basis, 10, rng):
+            for elem in sample_basis(Hn, d, 10, rng):
                 for sigma in SymmetricGroup(n):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -317,9 +305,8 @@ class TestLayer0_H:
         @pytest.mark.parametrize("d", [-2, -1, 0])
         def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             H = layers.XsLie
-            basis = list(H(3, ring).graded_basis(d))
             perms = list(SymmetricGroup(3))
-            for elem in _sample(basis, 5, rng):
+            for elem in sample_basis(H(3, ring), d, 5, rng):
                 for sigma in _sample(perms, 3, rng):
                     for tau in _sample(perms, 3, rng):
                         sl, tl = list(sigma.tuple()), list(tau.tuple())
@@ -483,9 +470,8 @@ class TestLayer1_BH:
         @pytest.mark.parametrize("d", [-1, 0])
         def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             C = layers.BXsLie
-            basis = list(C(3, QQ).graded_basis(d))
             perms = list(SymmetricGroup(3))
-            for elem in _sample(basis, 5, rng):
+            for elem in sample_basis(C(3, QQ), d, 5, rng):
                 for sigma in _sample(perms, 3, rng):
                     for tau in _sample(perms, 3, rng):
                         sl, tl = list(sigma.tuple()), list(tau.tuple())
@@ -660,9 +646,9 @@ class TestLayer2_ΩBH:
 
     class TestEquivariance:
         @pytest.mark.parametrize("d", [-1, 0, 1])
-        def test_d_commutes_arity2(self, d, layers: ConfigurationLayers, ring):
+        def test_d_commutes_arity2(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in _sample(P(2, ring).graded_basis(d), 30, rng):
+            for elem in sample_basis(P(2, ring), d, 30, rng):
                 assert _as_dict(elem.permute([2, 1]).boundary()) == _as_dict(
                     elem.boundary().permute([2, 1])
                 )
@@ -670,7 +656,7 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_d_commutes_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in _sample(P(3, ring).graded_basis(d), 30, rng):
+            for elem in sample_basis(P(3, ring), d, 30, rng):
                 for sigma in SymmetricGroup(3):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -680,7 +666,7 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_d_commutes_arity4(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            for elem in _sample(P(4, ring).graded_basis(d), 30, rng):
+            for elem in sample_basis(P(4, ring), d, 30, rng):
                 for sigma in SymmetricGroup(4):
                     sl = list(sigma.tuple())
                     assert _as_dict(elem.permute(sl).boundary()) == _as_dict(
@@ -702,9 +688,8 @@ class TestLayer2_ΩBH:
         @pytest.mark.parametrize("d", [-2, -1, 0, 1])
         def test_group_action_arity3(self, d, layers: ConfigurationLayers, ring, rng):
             P = layers.OBXsLie
-            basis = list(P(3, ring).graded_basis(d))
             perms = list(SymmetricGroup(3))
-            for elem in _sample(basis, 10, rng):
+            for elem in sample_basis(P(3, ring), d, 10, rng):
                 for sigma in perms:
                     for tau in perms:
                         sl, tl = list(sigma.tuple()), list(tau.tuple())
@@ -754,8 +739,7 @@ class TestLayer3_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P2 = P(2, R)
-            p_elems = list(P2.graded_basis(p_deg))
-            if not p_elems:
+            if not list(P2.graded_basis(p_deg)):
                 pytest.skip("No P(2) elements at degree 0")
             # Weight-1 module has exactly 1 generator per dimension,
             # so use repeated copies which is algebraically valid.
@@ -765,16 +749,16 @@ class TestLayer3_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in sample_basis(P2, p_deg, 2, rng):
+                for q in sample_basis(P2, p_deg, 2, rng):
                     lhs = fa.act(P.compose(p, 1, q), [a, a, a])
                     rhs = fa.act(p, [fa.act(q, [a, a]), a])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
             # Also test with the second insertion position: p ∘_2 q
             # γ(p ∘_2 q; a,a,a) = (-1)^{|q|·|a|} γ(p; a, γ(q; a,a))
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in sample_basis(P2, p_deg, 2, rng):
+                for q in sample_basis(P2, p_deg, 2, rng):
                     lhs = fa.act(P.compose(p, 2, q), [a, a, a])
                     rhs = fa.act(p, [a, fa.act(q, [a, a])])
                     rhs *= sign_from_exponent(q.degree() * a.degree())
@@ -791,8 +775,7 @@ class TestLayer3_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P2 = P(2, R)
-            p_elems = list(P2.graded_basis(p_deg))
-            if not p_elems:
+            if not list(P2.graded_basis(p_deg)):
                 pytest.skip("No P(2) elements at degree 0")
             w1 = []
             for d_try in range(-1, 6):
@@ -800,7 +783,7 @@ class TestLayer3_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample(p_elems, 2, rng):
+            for p in sample_basis(P2, p_deg, 2, rng):
                 lhs = mod.boundary(fa.act(p, [a, a]))
                 rhs = fa.act(p.boundary(), [a, a])
                 p_deg = p.degree()
@@ -818,8 +801,8 @@ class TestLayer3_ΩBH_Kd:
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(2, R).graded_basis(p_deg))
-            if not p_elems:
+            P2 = P(2, R)
+            if not list(P2.graded_basis(p_deg)):
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 2:
@@ -832,7 +815,7 @@ class TestLayer3_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 3)]
-                    for p in _sample(p_elems, 12, rng):
+                    for p in sample_basis(P2, p_deg, 12, rng):
                         lhs = fa.act(p.permute(sl), inputs)
                         rhs = koszul * fa.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -843,8 +826,8 @@ class TestLayer3_ΩBH_Kd:
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(3, R).graded_basis(p_deg))
-            if not p_elems:
+            P3 = P(3, R)
+            if not list(P3.graded_basis(p_deg)):
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 3:
@@ -857,7 +840,7 @@ class TestLayer3_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in _sample(p_elems, 12, rng):
+                    for p in sample_basis(P3, p_deg, 12, rng):
                         lhs = fa.act(p.permute(sl), inputs)
                         rhs = koszul * fa.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -868,8 +851,8 @@ class TestLayer3_ΩBH_Kd:
             mod = fa.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(4, R).graded_basis(p_deg))
-            if not p_elems:
+            P4 = P(4, R)
+            if not list(P4.graded_basis(p_deg)):
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 4:
@@ -883,7 +866,7 @@ class TestLayer3_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in _sample(p_elems, 6, rng):
+                    for p in sample_basis(P4, p_deg, 6, rng):
                         lhs = fa.act(p.permute(sl), inputs)
                         rhs = koszul * fa.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -929,8 +912,7 @@ class TestLayer4_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
             Q2 = Q(2, R)
-            p_elems = list(Q2.graded_basis(p_deg))
-            if not p_elems:
+            if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
             w1 = []
             for d_try in range(-1, 4):
@@ -938,14 +920,14 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a, b, c = rng.choices(w1, k=3)
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng):
+                for q in sample_basis(Q2, p_deg, 2, rng):
                     lhs = ta.act(Q.compose(p, 1, q), [a, b, c])
                     rhs = ta.act(p, [ta.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-            for p in _sample(p_elems, 2, rng):
-                for q in _sample(p_elems, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng):
+                for q in sample_basis(Q2, p_deg, 2, rng):
                     lhs = ta.act(Q.compose(p, 2, q), [a, b, c])
                     rhs = ta.act(p, [a, ta.act(q, [b, c])])
                     # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
@@ -963,8 +945,7 @@ class TestLayer4_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
             Q2 = Q(2, R)
-            p_elems = list(Q2.graded_basis(p_deg))
-            if not p_elems:
+            if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
             w1 = []
             for d_try in range(-1, 4):
@@ -972,7 +953,7 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample(p_elems, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng):
                 lhs = ta.boundary(ta.act(p, [a, a]))
                 rhs = ta.act(p.boundary(), [a, a])
                 p_deg_val = p.degree()
@@ -991,8 +972,8 @@ class TestLayer4_S_ΩBH_Kd:
             mod = ta.module
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
-            p_elems = list(Q(2, R).graded_basis(p_deg))
-            if not p_elems:
+            Q2 = Q(2, R)
+            if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
             pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 2:
@@ -1006,7 +987,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                    for p in _sample(p_elems, 3, rng):
+                    for p in sample_basis(Q2, p_deg, 3, rng):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1017,8 +998,8 @@ class TestLayer4_S_ΩBH_Kd:
             mod = ta.module
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
-            p_elems = list(Q(3, R).graded_basis(p_deg))
-            if not p_elems:
+            Q3 = Q(3, R)
+            if not list(Q3.graded_basis(p_deg)):
                 pytest.skip(f"No Q(3) elements at degree {p_deg}")
             pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 3:
@@ -1031,7 +1012,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in _sample(p_elems, 12, rng):
+                    for p in sample_basis(Q3, p_deg, 12, rng):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1042,8 +1023,8 @@ class TestLayer4_S_ΩBH_Kd:
             mod = ta.module
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
-            p_elems = list(Q(4, R).graded_basis(p_deg))
-            if not p_elems:
+            Q4 = Q(4, R)
+            if not list(Q4.graded_basis(p_deg)):
                 pytest.skip(f"No Q(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
@@ -1057,7 +1038,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in _sample(p_elems, 12, rng):
+                    for p in sample_basis(Q4, p_deg, 12, rng):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1105,13 +1086,11 @@ class TestLayer4h_comodule_morphism:
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             P2 = P(2, R)
-            p_elems = list(P2.graded_basis(p_deg))
-            q_elems = list(P2.graded_basis(q_deg))
-            if not p_elems or not q_elems:
+            if not list(P2.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
             tested = 0
-            for p in _sample(p_elems, 3, rng):
-                for q in _sample(q_elems, 3, rng):
+            for p in sample_basis(P2, p_deg, 3, rng):
+                for q in sample_basis(P2, q_deg, 3, rng):
                     for i in [1, 2]:
                         lhs = phi(P.compose(p, i, q))
                         rhs = Q.compose(phi(p), i, phi(q))
@@ -1212,8 +1191,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = layers.pulled_back.module
             tested = 0
             for deg in range(-1, 6):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 30, rng):
+                for elem in sample_basis(mod, deg, 30, rng, weight=weight):
                     tested += 1
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
@@ -1463,8 +1441,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = pb.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(2, R).graded_basis(p_deg))
-            if not p_elems:
+            P2 = P(2, R)
+            if not list(P2.graded_basis(p_deg)):
                 pytest.skip(f"No P(2) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 2:
@@ -1477,7 +1455,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 3)]
-                    for p in _sample(p_elems, 3, rng):
+                    for p in sample_basis(P2, p_deg, 3, rng):
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1488,8 +1466,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = pb.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(3, R).graded_basis(p_deg))
-            if not p_elems:
+            P3 = P(3, R)
+            if not list(P3.graded_basis(p_deg)):
                 pytest.skip(f"No P(3) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 3:
@@ -1502,7 +1480,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in _sample(p_elems, 6, rng):
+                    for p in sample_basis(P3, p_deg, 6, rng):
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1513,8 +1491,8 @@ class TestLayer5_pb_S_ΩBH_Kd:
             mod = pb.module
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
-            p_elems = list(P(4, R).graded_basis(p_deg))
-            if not p_elems:
+            P4 = P(4, R)
+            if not list(P4.graded_basis(p_deg)):
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
@@ -1523,7 +1501,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
                 perms = _sample(list(SymmetricGroup(4)), 6, rng)
-                p_sample = _sample(p_elems, 8, rng)
+                p_sample = sample_basis(P4, p_deg, 8, rng)
                 for sigma in perms:
                     sl = list(sigma.tuple())
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
@@ -1562,8 +1540,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
         def test_d_squared(self, dim, ring, layers: ConfigurationLayers, rng):
             mod = layers.bar.module
             for deg in range(-1, 5):
-                basis = list(mod.graded_basis_by_weight(deg, 3))
-                for elem in _sample(basis, 30, rng):
+                for elem in sample_basis(mod, deg, 30, rng, weight=3):
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w=3 deg={deg} dim={dim} ring={ring}"
                     )
@@ -1599,8 +1576,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             """d_cofree² = 0."""
             mod = layers.bar.module
             for deg in range(-1, 5):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 20, rng):
+                for elem in sample_basis(mod, deg, 20, rng, weight=weight):
                     dd = mod.d_cofree(mod.d_cofree(elem))
                     assert dd == mod.zero(), (
                         f"d_cofree²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
@@ -1617,8 +1593,7 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             mod = layers.bar.module
             tested = 0
             for deg in range(-1, 5):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                for elem in _sample(basis, 20, rng):
+                for elem in sample_basis(mod, deg, 20, rng, weight=weight):
                     tested += 1
                     dd = mod.d_alpha(mod.d_alpha(elem))
                     cross = mod.d_cofree(mod.d_alpha(elem)) + mod.d_alpha(mod.d_cofree(elem))
