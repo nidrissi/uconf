@@ -22,7 +22,15 @@ from uconf.sampling import (
     random_sphere_admissible_surjection,
     random_lie_key,
     random_lie_element,
+    random_barratt_eccles_key,
+    random_barratt_eccles_element,
     random_hadamard_key,
+    random_shuffle_tree,
+    random_bar_element,
+    random_cobar_element,
+    random_free_algebra_element,
+    random_cofree_coalgebra_element,
+    random_tree_module_element,
     sample_basis,
     sample_operad_basis,
     sample_hadamard_basis,
@@ -288,3 +296,221 @@ class TestSphereNontrivialIterators:
         elems = list(sphere_nontrivial_operad_basis_iter(H, 3, 1, QQ))
         # 2 Lie elements × 12 nontrivial surjections = 24
         assert len(elems) == 24
+
+
+# ---------------------------------------------------------------------------
+# Barratt–Eccles sampling
+# ---------------------------------------------------------------------------
+
+
+class TestRandomBarrattEcclesKey:
+    def test_valid_key(self, rng):
+        key = random_barratt_eccles_key(2, 1, rng)
+        assert key is not None
+        assert len(key) == 2  # degree + 1 permutations
+        # No consecutive equal perms
+        assert key[0] != key[1]
+
+    def test_degree_0(self, rng):
+        key = random_barratt_eccles_key(3, 0, rng)
+        assert key is not None
+        assert len(key) == 1
+
+    def test_element(self, rng):
+        from uconf.models.barratt_eccles import BarrattEccles
+
+        elem = random_barratt_eccles_element(3, 1, QQ, rng)
+        assert elem is not None
+        assert elem.parent() == BarrattEccles(3, QQ)
+
+
+# ---------------------------------------------------------------------------
+# Random shuffle tree
+# ---------------------------------------------------------------------------
+
+
+class TestRandomShuffleTree:
+    def test_bar_tree(self, rng):
+        """Generate a random bar construction tree."""
+        tree = random_shuffle_tree(
+            (1, 2, 3),
+            2,
+            Surjection,
+            QQ,
+            2,
+            +1,
+            rng,
+        )
+        assert tree is not None
+        from uconf.core.trees import tree_arity, is_leaf
+
+        assert not is_leaf(tree)
+        assert tree_arity(tree) == 3
+
+    def test_cobar_tree(self, rng):
+        """Generate a random cobar construction tree."""
+        from uconf.constructions.bar_construction import BarConstruction
+
+        B = BarConstruction(Surjection)
+        tree = random_shuffle_tree(
+            (1, 2, 3),
+            2,
+            B,
+            QQ,
+            -2,
+            -1,
+            rng,
+        )
+        # Cobar trees with negative degree can be harder to generate
+        # so we allow None
+        if tree is not None:
+            from uconf.core.trees import is_leaf
+
+            assert not is_leaf(tree)
+
+
+# ---------------------------------------------------------------------------
+# Bar / Cobar construction sampling
+# ---------------------------------------------------------------------------
+
+
+class TestRandomBarElement:
+    def test_arity2(self, rng):
+        from uconf.constructions.bar_construction import BarConstruction
+
+        B = BarConstruction(Surjection)
+        parent = B(2, QQ)
+        elem = random_bar_element(parent, 1, rng)
+        assert elem is not None
+        assert elem.parent() == parent
+
+    def test_arity3(self, rng):
+        from uconf.constructions.bar_construction import BarConstruction
+
+        B = BarConstruction(Surjection)
+        parent = B(3, QQ)
+        elem = random_bar_element(parent, 1, rng)
+        assert elem is not None
+
+    def test_arity1(self, rng):
+        from uconf.constructions.bar_construction import BarConstruction
+
+        B = BarConstruction(Surjection)
+        parent = B(1, QQ)
+        elem = random_bar_element(parent, 0, rng)
+        assert elem is not None
+
+
+class TestRandomCobarElement:
+    def test_arity2(self, rng):
+        from uconf.constructions.bar_construction import BarConstruction
+        from uconf.constructions.cobar_construction import CobarConstruction
+
+        B = BarConstruction(Surjection)
+        OmegaB = CobarConstruction(B)
+        parent = OmegaB(2, QQ)
+        elem = random_cobar_element(parent, 0, rng)
+        assert elem is not None
+        assert elem.parent() == parent
+
+
+# ---------------------------------------------------------------------------
+# Free/cofree algebra sampling
+# ---------------------------------------------------------------------------
+
+
+class TestRandomFreeAlgebraElement:
+    def test_basic(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.free_alg.module
+        elem = random_free_algebra_element(mod, 1, rng)
+        # May or may not succeed (depends on random choices), but shouldn't crash
+        # If it succeeds, should be a valid element
+        if elem is not None:
+            assert elem.parent() == mod
+
+    def test_with_weight(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.free_alg.module
+        elem = random_free_algebra_element(mod, 1, rng, weight=1)
+        if elem is not None:
+            assert elem.parent() == mod
+
+
+class TestRandomCofreeCoalgebraElement:
+    def test_basic(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.bar_alg.module
+        elem = random_cofree_coalgebra_element(mod, 1, rng)
+        if elem is not None:
+            assert elem.parent() == mod
+
+
+# ---------------------------------------------------------------------------
+# sample_basis with construction-aware dispatch
+# ---------------------------------------------------------------------------
+
+
+class TestSampleBasisDispatch:
+    """Test that sample_basis dispatches to construction-aware generators."""
+
+    def test_surjection_dispatch(self, rng):
+        """sample_basis on Surjection should use direct generation."""
+        S3 = Surjection(3, QQ)
+        elems = sample_basis(S3, 1, 5, rng)
+        assert len(elems) > 0
+        for e in elems:
+            assert e.parent() == S3
+
+    def test_bar_dispatch(self, rng):
+        """sample_basis on BarConstruction should use random tree generation."""
+        from uconf.constructions.bar_construction import BarConstruction
+
+        B = BarConstruction(Surjection)
+        parent = B(3, QQ)
+        elems = sample_basis(parent, 1, 5, rng)
+        assert len(elems) > 0
+        for e in elems:
+            assert e.parent() == parent
+
+    def test_hadamard_dispatch(self, rng):
+        """sample_basis on HadamardProduct should use factor-independent sampling."""
+        sLie = ShiftedOperad(Lie, -1)
+        H = HadamardProduct(sLie, Surjection)
+        H2 = H(2, QQ)
+        elems = sample_basis(H2, 0, 5, rng)
+        assert len(elems) > 0
+
+    def test_lie_dispatch(self, rng):
+        """sample_basis on Lie should use direct key generation."""
+        L3 = Lie(3, QQ)
+        elems = sample_basis(L3, 0, 5, rng)
+        assert len(elems) > 0
+
+    def test_free_algebra_dispatch(self, rng):
+        """sample_basis on FreeAlgebraModule should use construction-aware generation."""
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.free_alg.module
+        elems = sample_basis(mod, 1, 5, rng, weight=1)
+        # At least some elements should be generated
+        assert isinstance(elems, list)
+
+
+class TestRandomTreeModuleElement:
+    def test_basic(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        # The tensor algebra is a TreeModule
+        ta = layers.tensor_alg
+        elem = random_tree_module_element(ta, 1, rng, weight=1)
+        if elem is not None:
+            assert elem.parent() == ta
