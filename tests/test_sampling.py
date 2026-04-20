@@ -433,10 +433,11 @@ class TestRandomFreeAlgebraElement:
 
 class TestRandomCofreeCoalgebraElement:
     def test_basic(self, rng):
-        from uconf.algebraic.configuration import _build_layers
+        from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
+        from uconf.algebraic.configuration import TrivialModule
 
-        layers = _build_layers(QQ, 1)
-        mod = layers.bar_alg.module
+        M = TrivialModule(1, QQ)
+        mod = CofreeCoalgebraModule(Surjection, M)
         elem = random_cofree_coalgebra_element(mod, 1, rng)
         if elem is not None:
             assert elem.parent() == mod
@@ -496,11 +497,11 @@ class TestSampleBasisDispatch:
 
 class TestRandomTreeModuleElement:
     def test_basic(self, rng):
-        from uconf.algebraic.configuration import _build_layers
+        from uconf.algebraic.tree_module import TreeModule
+        from uconf.algebraic.configuration import TrivialModule
 
-        layers = _build_layers(QQ, 1)
-        # The tensor algebra is a TreeModule
-        ta = layers.tensor_alg
-        elem = random_tree_module_element(ta, 1, rng, weight=1)
+        M = TrivialModule(1, QQ)
+        tm = TreeModule(Surjection, M, name="TestTM")
+        elem = random_tree_module_element(tm, 1, rng, weight=1)
         if elem is not None:
-            assert elem.parent() == ta
+            assert elem.parent() == tm
