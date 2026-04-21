@@ -906,7 +906,7 @@ class TestLayer4_S_ΩBH_Kd:
         """γ(p ∘_1 q; a, a, a) = γ(p; γ(q; a, a), a)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
-        def test_algebra_associative(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_algebra_associative(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
@@ -920,14 +920,14 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a, b, c = rng.choices(w1, k=3)
-            for p in sample_basis(Q2, p_deg, 2, rng):
-                for q in sample_basis(Q2, p_deg, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+                for q in sample_basis(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
                     lhs = ta.act(Q.compose(p, 1, q), [a, b, c])
                     rhs = ta.act(p, [ta.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-            for p in sample_basis(Q2, p_deg, 2, rng):
-                for q in sample_basis(Q2, p_deg, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+                for q in sample_basis(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
                     lhs = ta.act(Q.compose(p, 2, q), [a, b, c])
                     rhs = ta.act(p, [a, ta.act(q, [b, c])])
                     # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
@@ -940,7 +940,7 @@ class TestLayer4_S_ΩBH_Kd:
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
-        def test_leibniz(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_leibniz(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
@@ -953,7 +953,7 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in sample_basis(Q2, p_deg, 2, rng):
+            for p in sample_basis(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
                 lhs = ta.boundary(ta.act(p, [a, a]))
                 rhs = ta.act(p.boundary(), [a, a])
                 p_deg_val = p.degree()
@@ -967,7 +967,7 @@ class TestLayer4_S_ΩBH_Kd:
         """γ(p·σ; a₁,...,aₙ) = ε(σ⁻¹; a) · γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
-        def test_equivariance_arity2(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity2(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
@@ -987,13 +987,13 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                    for p in sample_basis(Q2, p_deg, 3, rng):
+                    for p in sample_basis(Q2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-2, -1, 0])
-        def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity3(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
@@ -1012,13 +1012,13 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in sample_basis(Q3, p_deg, 12, rng):
+                    for p in sample_basis(Q3, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-3, -2, -1, 0])
-        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity4(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
@@ -1038,7 +1038,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in sample_basis(Q4, p_deg, 12, rng):
+                    for p in sample_basis(Q4, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1059,12 +1059,12 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("deg", [-1, 0, 1, 2])
-        def test_chain_map(self, n, deg, layers: ConfigurationLayers, rng):
+        def test_chain_map(self, n, deg, dim, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             Pn = P(n, R)
-            basis = sample_basis(Pn, deg, 10, rng)
+            basis = sample_basis(Pn, deg, 10, rng, sphere_nontrivial=True, sphere_dim=dim)
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             tested = 0
@@ -1080,7 +1080,7 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
         @pytest.mark.parametrize("q_deg", [-1, 0])
-        def test_operad_map(self, p_deg, q_deg, layers: ConfigurationLayers, rng):
+        def test_operad_map(self, p_deg, q_deg, dim, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             Q = layers.comodule_morphism.target  # S ⊙ P
             phi = layers.comodule_morphism
@@ -1089,8 +1089,8 @@ class TestLayer4h_comodule_morphism:
             if not list(P2.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
             tested = 0
-            for p in sample_basis(P2, p_deg, 3, rng):
-                for q in sample_basis(P2, q_deg, 3, rng):
+            for p in sample_basis(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
+                for q in sample_basis(P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
                     for i in [1, 2]:
                         lhs = phi(P.compose(p, i, q))
                         rhs = Q.compose(phi(p), i, phi(q))
@@ -1105,12 +1105,12 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("deg", [-1, 0, 1])
-        def test_equivariance(self, n, deg, layers: ConfigurationLayers, rng):
+        def test_equivariance(self, n, deg, dim, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             Pn = P(n, R)
-            basis = sample_basis(Pn, deg, 5, rng)
+            basis = sample_basis(Pn, deg, 5, rng, sphere_nontrivial=True, sphere_dim=dim)
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             Sn = SymmetricGroup(n)
@@ -1144,7 +1144,7 @@ class TestLayer4h_comodule_morphism:
             )
 
         @pytest.mark.parametrize("deg", [-1, 0, 1])
-        def test_factorisation_through_e_comodule(self, deg, layers: ConfigurationLayers, rng):
+        def test_factorisation_through_e_comodule(self, deg, dim, layers: ConfigurationLayers, rng):
             """φ = (table_reduction ⊗ id) ∘ Δ — the morphism factorises correctly."""
             P = layers.OBXsLie
             phi = layers.comodule_morphism
@@ -1155,7 +1155,7 @@ class TestLayer4h_comodule_morphism:
             Pn = P(2, R)
             Q = phi.target
             Qn = Q(2, R)
-            basis = sample_basis(Pn, deg, 5, rng)
+            basis = sample_basis(Pn, deg, 5, rng, sphere_nontrivial=True, sphere_dim=dim)
             if not basis:
                 pytest.skip(f"No P(2) elements at degree {deg}")
             tested = 0
@@ -1436,7 +1436,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         """γ(p·σ; a₁,...,aₙ) = ε(σ⁻¹; a) · γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2, 3])
-        def test_equivariance_arity2(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity2(self, p_deg, dim, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1455,13 +1455,13 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 3)]
-                    for p in sample_basis(P2, p_deg, 3, rng):
+                    for p in sample_basis(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1, 2])
-        def test_equivariance_arity3(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity3(self, p_deg, dim, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1480,13 +1480,13 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in sample_basis(P3, p_deg, 6, rng):
+                    for p in sample_basis(P3, p_deg, 6, rng, sphere_nontrivial=True, sphere_dim=dim):
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
         @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1, 2])
-        def test_equivariance_arity4(self, p_deg, layers: ConfigurationLayers, rng):
+        def test_equivariance_arity4(self, p_deg, dim, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
             R = layers.bar.module.base_ring()
@@ -1501,7 +1501,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
                 perms = _sample(list(SymmetricGroup(4)), 6, rng)
-                p_sample = sample_basis(P4, p_deg, 8, rng)
+                p_sample = sample_basis(P4, p_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
                 for sigma in perms:
                     sl = list(sigma.tuple())
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
