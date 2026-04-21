@@ -1224,12 +1224,12 @@ def random_free_algebra_element(
         p_deg = rng.randint(min_p_deg, max_p_deg)
         m_deg = degree - p_deg
 
-        # Sample a random planar operad element
+        # Sample a random planar operad element.
+        # When sphere_nontrivial is True, bypass planar_basis_iter and use
+        # construction-aware sampling that propagates the sphere filter.
         comp_n = P(n, R)
-        # When sphere_nontrivial is True, bypass planar_basis_iter to use
-        # construction-aware sampling that propagates the sphere filter
         planar_iter = getattr(comp_n, "planar_basis_iter", None)
-        if planar_iter is not None and not sphere_nontrivial:
+        if planar_iter is not None and not sphere_nontrivial:  # use fast planar path
             p_elem = _random_from_planar_iter(comp_n, p_deg, rng)
         else:
             p_elem = _random_operad_element(
@@ -1354,10 +1354,10 @@ def random_cofree_coalgebra_element(
         m_deg = degree - c_deg
 
         comp_n = C(n, R)
-        # When sphere_nontrivial is True, bypass planar_basis_iter to use
-        # construction-aware sampling that propagates the sphere filter
+        # When sphere_nontrivial is True, bypass planar_basis_iter and use
+        # construction-aware sampling that propagates the sphere filter.
         planar_iter = getattr(comp_n, "planar_basis_iter", None)
-        if planar_iter is not None and not sphere_nontrivial:
+        if planar_iter is not None and not sphere_nontrivial:  # use fast planar path
             c_elem = _random_from_planar_iter(comp_n, c_deg, rng)
         else:
             c_elem = _random_operad_element(
