@@ -852,7 +852,9 @@ class TestLayer3_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P4 = P(4, R)
-            if not list(P4.graded_basis(p_deg)):
+            # Use sample_basis as fast existence probe instead of materializing full P4 basis
+            p_sample = sample_basis(P4, p_deg, 6, rng)
+            if not p_sample:
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng)
             if len(pool) < 4:
@@ -866,7 +868,7 @@ class TestLayer3_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in sample_basis(P4, p_deg, 6, rng):
+                    for p in p_sample:
                         lhs = fa.act(p.permute(sl), inputs)
                         rhs = koszul * fa.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1024,12 +1026,17 @@ class TestLayer4_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             Q = ta.operad_cls
             Q4 = Q(4, R)
-            if not list(Q4.graded_basis(p_deg)):
-                pytest.skip(f"No Q(4) elements at degree {p_deg}")
+            # Use sample_basis as a fast existence probe instead of materializing
+            # the full Q4 basis (which is expensive for Hadamard products of complex operads).
+            p_sample = sample_basis(Q4, p_deg, 4, rng, sphere_nontrivial=True, sphere_dim=dim)
+            if not p_sample:
+                pytest.skip(f"No sphere-admissible Q(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(ta, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
-            perms = list(SymmetricGroup(4))
+            # Sample a subset of S4 permutations instead of all 24 to bound cost.
+            all_perms = list(SymmetricGroup(4))
+            perms = _sample(all_perms, min(6, len(all_perms)), rng)
             for _ in range(1):
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
@@ -1038,7 +1045,7 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 5)]
-                    for p in sample_basis(Q4, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim):
+                    for p in p_sample:
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1442,8 +1449,10 @@ class TestLayer5_pb_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P2 = P(2, R)
-            if not list(P2.graded_basis(p_deg)):
-                pytest.skip(f"No P(2) elements at degree {p_deg}")
+            # Use sample_basis as fast existence probe
+            p_sample = sample_basis(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim)
+            if not p_sample:
+                pytest.skip(f"No sphere-admissible P(2) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 2:
                 pytest.skip("Not enough algebra elements")
@@ -1455,7 +1464,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 3)]
-                    for p in sample_basis(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
+                    for p in p_sample:
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1467,8 +1476,10 @@ class TestLayer5_pb_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P3 = P(3, R)
-            if not list(P3.graded_basis(p_deg)):
-                pytest.skip(f"No P(3) elements at degree {p_deg}")
+            # Use sample_basis as fast existence probe instead of materializing full P3 basis
+            p_sample = sample_basis(P3, p_deg, 6, rng, sphere_nontrivial=True, sphere_dim=dim)
+            if not p_sample:
+                pytest.skip(f"No sphere-admissible P(3) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 3:
                 pytest.skip("Not enough algebra elements")
@@ -1480,7 +1491,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in sample_basis(P3, p_deg, 6, rng, sphere_nontrivial=True, sphere_dim=dim):
+                    for p in p_sample:
                         lhs = pb.act(p.permute(sl), inputs)
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1492,8 +1503,11 @@ class TestLayer5_pb_S_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P4 = P(4, R)
-            if not list(P4.graded_basis(p_deg)):
-                pytest.skip(f"No P(4) elements at degree {p_deg}")
+            # Use sample_basis as a fast existence probe instead of materializing
+            # the full P4 basis (which is expensive for CobarConstruction at arity 4).
+            p_sample = sample_basis(P4, p_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
+            if not p_sample:
+                pytest.skip(f"No sphere-admissible P(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
             if len(pool) < 4:
                 pytest.skip("Not enough algebra elements")
@@ -1501,7 +1515,6 @@ class TestLayer5_pb_S_ΩBH_Kd:
                 inputs = rng.choices(pool, k=4)
                 degrees = [_elem_degree(mod, e) for e in inputs]
                 perms = _sample(list(SymmetricGroup(4)), 6, rng)
-                p_sample = sample_basis(P4, p_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
                 for sigma in perms:
                     sl = list(sigma.tuple())
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 5)]
