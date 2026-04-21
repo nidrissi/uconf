@@ -852,7 +852,8 @@ class TestLayer3_ΩBH_Kd:
             R = layers.bar.module.base_ring()
             P = layers.OBXsLie
             P4 = P(4, R)
-            # Use sample_basis as fast existence probe instead of materializing full P4 basis
+            # Use sample_basis as fast existence probe instead of materializing full P4 basis.
+            # No sphere_nontrivial filter here: that is only applied from Layer 4 onwards.
             p_sample = sample_basis(P4, p_deg, 6, rng)
             if not p_sample:
                 pytest.skip(f"No P(4) elements at degree {p_deg}")
