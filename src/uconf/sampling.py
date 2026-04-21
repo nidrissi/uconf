@@ -398,12 +398,30 @@ def random_barratt_eccles_element(n: int, degree: int, base_ring, rng: Random):
 # ---------------------------------------------------------------------------
 
 
-def _random_operad_element(parent, degree: int, rng: Random):
+def _random_operad_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a single random operad/cooperad element at the given degree.
 
     Dispatches to construction-aware generators when the parent type is
     recognized; falls back to sampling from ``basis_iter`` otherwise.
+
+    Parameters
+    ----------
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.  Propagated recursively through all
+        constructions.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
     """
+    from uconf.constructions.bar_construction import BarConstruction
+    from uconf.constructions.cobar_construction import CobarConstruction
     from uconf.models.surjection import Surjection
     from uconf.models.barratt_eccles import BarrattEccles
     from uconf.models.lie import Lie
@@ -415,6 +433,10 @@ def _random_operad_element(parent, degree: int, rng: Random):
     R = parent.base_ring()
 
     if isinstance(parent, Surjection):
+        if sphere_nontrivial:
+            if sphere_dim is None:
+                raise ValueError("sphere_dim is required when sphere_nontrivial=True")
+            return random_sphere_admissible_surjection(n, sphere_dim, R, rng)
         return random_surjection(n, degree, R, rng)
 
     if isinstance(parent, BarrattEccles):
@@ -429,7 +451,13 @@ def _random_operad_element(parent, degree: int, rng: Random):
     if isinstance(parent, ShiftedOperad.Component):
         shift = parent.factory.shift_degree
         base_degree = degree - shift * (n - 1)
-        base_elem = _random_operad_element(parent._base_parent, base_degree, rng)
+        base_elem = _random_operad_element(
+            parent._base_parent,
+            base_degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
         if base_elem is None:
             return None
         return parent.sum_of_terms((k, R(c)) for k, c in base_elem)
@@ -437,13 +465,43 @@ def _random_operad_element(parent, degree: int, rng: Random):
     if isinstance(parent, ShiftedCooperad.Component):
         shift = parent.factory.shift_degree
         base_degree = degree - shift * (n - 1)
-        base_elem = _random_operad_element(parent._base_parent, base_degree, rng)
+        base_elem = _random_operad_element(
+            parent._base_parent,
+            base_degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
         if base_elem is None:
             return None
         return parent.sum_of_terms((k, R(c)) for k, c in base_elem)
 
     if isinstance(parent, HadamardProduct.Component):
-        return random_hadamard_key(parent, degree, rng)
+        return random_hadamard_key(
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    if isinstance(parent, BarConstruction.Component):
+        return random_bar_element(
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    if isinstance(parent, CobarConstruction.Component):
+        return random_cobar_element(
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
 
     # Fallback: sample from basis_iter (materializes elements one at a time)
     return _random_from_iter(parent, degree, rng)
@@ -499,6 +557,8 @@ def random_hadamard_key(
     Element or None
         A random Hadamard product element, or ``None`` if sampling failed.
     """
+    from uconf.models.surjection import Surjection
+
     left_parent = hadamard_parent._left_parent
     right_parent = hadamard_parent._right_parent
     n = hadamard_parent._arity
@@ -506,24 +566,66 @@ def random_hadamard_key(
     if sphere_nontrivial:
         if sphere_dim is None:
             raise ValueError("sphere_dim is required when sphere_nontrivial=True")
-        # Right factor must be at degree d*(n-1)
+        # The Surjection factor is constrained to degree d*(n-1).
+        # Detect which factor is Surjection and apply the admissibility filter.
         surj_degree = sphere_dim * (n - 1)
-        # Left factor must be at degree (degree - surj_degree)
-        left_degree = degree - surj_degree
+        left_is_surj = isinstance(left_parent, Surjection)
+        right_is_surj = isinstance(right_parent, Surjection)
 
-        # Sample left factor directly
-        left_elem = _random_operad_element(left_parent, left_degree, rng)
-        if left_elem is None:
+        if left_is_surj:
+            # Left factor is Surjection: sample sphere-admissible, propagate right
+            right_degree = degree - surj_degree
+            left_elem = random_sphere_admissible_surjection(
+                n, sphere_dim, left_parent.base_ring(), rng
+            )
+            if left_elem is None:
+                return None
+            right_elem = _random_operad_element(
+                right_parent, right_degree, rng,
+                sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            )
+        elif right_is_surj:
+            # Right factor is Surjection: propagate left, sample sphere-admissible right
+            left_degree = degree - surj_degree
+            left_elem = _random_operad_element(
+                left_parent, left_degree, rng,
+                sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            )
+            if left_elem is None:
+                return None
+            right_elem = random_sphere_admissible_surjection(
+                n, sphere_dim, right_parent.base_ring(), rng
+            )
+        else:
+            # Neither factor is directly Surjection; propagate sphere_nontrivial to both
+            from uconf.wrappers.hadamard_operad import _min_component_degree
+            min_d_left = _min_component_degree(left_parent, n)
+            min_d_right = _min_component_degree(right_parent, n)
+            possible_splits = [
+                (d_left, degree - d_left)
+                for d_left in range(min_d_left, degree - min_d_right + 1)
+            ]
+            if not possible_splits:
+                return None
+            rng.shuffle(possible_splits)
+            for d_left, d_right in possible_splits[:10]:
+                left_elem = _random_operad_element(
+                    left_parent, d_left, rng,
+                    sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                )
+                if left_elem is None:
+                    continue
+                right_elem = _random_operad_element(
+                    right_parent, d_right, rng,
+                    sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                )
+                if right_elem is None:
+                    continue
+                return hadamard_parent.from_factors(left_elem, right_elem)
             return None
 
-        # Get nontrivial right elements (sphere-admissible surjections)
-        # Use direct construction for the right factor
-        right_elem = random_sphere_admissible_surjection(
-            n, sphere_dim, right_parent.base_ring(), rng
-        )
-        if right_elem is None:
+        if left_elem is None or right_elem is None:
             return None
-
         return hadamard_parent.from_factors(left_elem, right_elem)
 
     # General case: pick a random degree split
@@ -641,6 +743,8 @@ def random_shuffle_tree(
     rng: Random,
     *,
     max_attempts: int = 200,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
 ):
     r"""Generate a random decorated shuffle tree.
 
@@ -678,6 +782,8 @@ def random_shuffle_tree(
             vertex_offset,
             connectivity,
             rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
         if result is not None:
             return result
@@ -694,6 +800,9 @@ def _random_subtree(
     vertex_offset: int,
     connectivity: int,
     rng: Random,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
 ):
     """Recursively build a random subtree (internal helper)."""
     from uconf.core.trees import RootedTree
@@ -716,7 +825,13 @@ def _random_subtree(
             root_dec_deg = target_degree - vertex_offset
             if root_dec_deg < connectivity * (v_arity - 1):
                 continue
-            dec = _random_operad_element(root_parent, root_dec_deg, rng)
+            dec = _random_operad_element(
+                root_parent,
+                root_dec_deg,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
+            )
             if dec is None:
                 continue
             # Get a single basis key from the element
@@ -742,7 +857,13 @@ def _random_subtree(
 
             # Try a random root decoration degree
             root_dec_deg = rng.randint(min_root_dec_deg, max_root_dec_deg)
-            dec = _random_operad_element(root_parent, root_dec_deg, rng)
+            dec = _random_operad_element(
+                root_parent,
+                root_dec_deg,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
+            )
             if dec is None:
                 continue
             dec_key = _extract_key(dec)
@@ -761,6 +882,8 @@ def _random_subtree(
                 vertex_offset,
                 connectivity,
                 rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
             )
             if children_result is not None:
                 return RootedTree(dec_key, *children_result)
@@ -777,6 +900,9 @@ def _random_children(
     vertex_offset: int,
     connectivity: int,
     rng: Random,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
 ) -> list | None:
     """Build random children for each part, distributing total_deg among them."""
     k = len(parts)
@@ -833,6 +959,8 @@ def _random_children(
             vertex_offset,
             connectivity,
             rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
         if subtree is None:
             return None
@@ -851,7 +979,14 @@ def _extract_key(elem):
     return support[0]
 
 
-def random_bar_element(parent, degree: int, rng: Random):
+def random_bar_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a random bar construction element without materializing the full basis.
 
     Parameters
@@ -862,6 +997,11 @@ def random_bar_element(parent, degree: int, rng: Random):
         Target bar degree.
     rng : Random
         Random number generator.
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
 
     Returns
     -------
@@ -880,13 +1020,22 @@ def random_bar_element(parent, degree: int, rng: Random):
         degree,
         +1,  # bar degree convention
         rng,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
     )
     if tree is None:
         return None
     return parent(tree)
 
 
-def random_cobar_element(parent, degree: int, rng: Random):
+def random_cobar_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a random cobar construction element without materializing the full basis.
 
     Parameters
@@ -897,6 +1046,11 @@ def random_cobar_element(parent, degree: int, rng: Random):
         Target cobar degree.
     rng : Random
         Random number generator.
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
 
     Returns
     -------
@@ -915,6 +1069,8 @@ def random_cobar_element(parent, degree: int, rng: Random):
         degree,
         -1,  # cobar degree convention
         rng,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
     )
     if tree is None:
         return None
@@ -990,7 +1146,15 @@ def _random_m_tuple(module, n: int, total_deg: int, rng: Random) -> tuple | None
     return tuple(result)
 
 
-def random_free_algebra_element(parent, degree: int, rng: Random, *, weight: int | None = None):
+def random_free_algebra_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a random free algebra element without materializing the full basis.
 
     For ``P ∘ M``, samples a random arity ``n``, a random planar operad element
@@ -1006,6 +1170,11 @@ def random_free_algebra_element(parent, degree: int, rng: Random, *, weight: int
         Random number generator.
     weight : int or None
         If given, restrict to elements of this weight.
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
 
     Returns
     -------
@@ -1057,11 +1226,19 @@ def random_free_algebra_element(parent, degree: int, rng: Random, *, weight: int
 
         # Sample a random planar operad element
         comp_n = P(n, R)
+        # When sphere_nontrivial is True, bypass planar_basis_iter to use
+        # construction-aware sampling that propagates the sphere filter
         planar_iter = getattr(comp_n, "planar_basis_iter", None)
-        if planar_iter is not None:
+        if planar_iter is not None and not sphere_nontrivial:
             p_elem = _random_from_planar_iter(comp_n, p_deg, rng)
         else:
-            p_elem = _random_operad_element(comp_n, p_deg, rng)
+            p_elem = _random_operad_element(
+                comp_n,
+                p_deg,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
+            )
 
         if p_elem is None:
             continue
@@ -1102,7 +1279,15 @@ def _inner_weight_sum(module, m_tuple: tuple) -> int:
     return len(m_tuple)  # default: weight 1 per key
 
 
-def random_cofree_coalgebra_element(parent, degree: int, rng: Random, *, weight: int | None = None):
+def random_cofree_coalgebra_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a random cofree coalgebra element without materializing the full basis.
 
     For ``C ∘ M``, samples a random arity ``n``, a random planar cooperad element
@@ -1118,6 +1303,11 @@ def random_cofree_coalgebra_element(parent, degree: int, rng: Random, *, weight:
         Random number generator.
     weight : int or None
         If given, restrict to elements of this weight.
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
 
     Returns
     -------
@@ -1164,11 +1354,19 @@ def random_cofree_coalgebra_element(parent, degree: int, rng: Random, *, weight:
         m_deg = degree - c_deg
 
         comp_n = C(n, R)
+        # When sphere_nontrivial is True, bypass planar_basis_iter to use
+        # construction-aware sampling that propagates the sphere filter
         planar_iter = getattr(comp_n, "planar_basis_iter", None)
-        if planar_iter is not None:
+        if planar_iter is not None and not sphere_nontrivial:
             c_elem = _random_from_planar_iter(comp_n, c_deg, rng)
         else:
-            c_elem = _random_operad_element(comp_n, c_deg, rng)
+            c_elem = _random_operad_element(
+                comp_n,
+                c_deg,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
+            )
 
         if c_elem is None:
             continue
@@ -1189,7 +1387,15 @@ def random_cofree_coalgebra_element(parent, degree: int, rng: Random, *, weight:
     return None
 
 
-def random_tree_module_element(parent, degree: int, rng: Random, *, weight: int | None = None):
+def random_tree_module_element(
+    parent,
+    degree: int,
+    rng: Random,
+    *,
+    weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+):
     """Generate a random tree-module element without materializing the full basis.
 
     For tree-decorated composites ``S ∘ M``, generates a random decorated
@@ -1205,6 +1411,11 @@ def random_tree_module_element(parent, degree: int, rng: Random, *, weight: int 
         Random number generator.
     weight : int or None
         If given, restrict to elements of this weight.
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
 
     Returns
     -------
@@ -1262,6 +1473,8 @@ def random_tree_module_element(parent, degree: int, rng: Random, *, weight: int 
             tree_deg,
             vertex_shift,
             rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
         if tree is None:
             continue
@@ -1291,6 +1504,8 @@ def sample_basis(
     rng: Random,
     *,
     weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
 ) -> list:
     """Sample up to *k* random basis elements from *parent* at degree *degree*.
 
@@ -1312,11 +1527,26 @@ def sample_basis(
     weight : int or None
         If given, restrict to elements of this weight (uses
         ``graded_basis_by_weight``).
+    sphere_nontrivial : bool
+        If ``True``, only generate surjection factors that act nontrivially
+        on ``S^{sphere_dim}``.  Propagated recursively through all
+        constructions.
+    sphere_dim : int or None
+        Required when ``sphere_nontrivial=True``.
     """
     # Try construction-aware dispatch first
     direct_sampler = _get_direct_sampler(parent, weight)
     if direct_sampler is not None:
-        return _sample_via_direct(direct_sampler, parent, degree, k, rng, weight)
+        return _sample_via_direct(
+            direct_sampler,
+            parent,
+            degree,
+            k,
+            rng,
+            weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
 
     # Fallback to full-basis enumeration
     if weight is not None:
@@ -1385,7 +1615,7 @@ def _get_direct_sampler(parent, weight):
     return None
 
 
-def _sample_via_direct(sampler_type, parent, degree, k, rng, weight):
+def _sample_via_direct(sampler_type, parent, degree, k, rng, weight, *, sphere_nontrivial=False, sphere_dim=None):
     """Use a construction-aware sampler to generate up to *k* distinct elements."""
     seen = set()
     results = []
@@ -1395,7 +1625,15 @@ def _sample_via_direct(sampler_type, parent, degree, k, rng, weight):
         if len(results) >= k:
             break
 
-        elem = _invoke_direct_sampler(sampler_type, parent, degree, rng, weight)
+        elem = _invoke_direct_sampler(
+            sampler_type,
+            parent,
+            degree,
+            rng,
+            weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
         if elem is None:
             continue
 
@@ -1412,22 +1650,44 @@ def _sample_via_direct(sampler_type, parent, degree, k, rng, weight):
     return results
 
 
-def _invoke_direct_sampler(sampler_type, parent, degree, rng, weight):
+def _invoke_direct_sampler(sampler_type, parent, degree, rng, weight, *, sphere_nontrivial=False, sphere_dim=None):
     """Call the appropriate direct sampler."""
     if sampler_type == "bar":
-        return random_bar_element(parent, degree, rng)
+        return random_bar_element(
+            parent, degree, rng,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "cobar":
-        return random_cobar_element(parent, degree, rng)
+        return random_cobar_element(
+            parent, degree, rng,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "free_algebra":
-        return random_free_algebra_element(parent, degree, rng, weight=weight)
+        return random_free_algebra_element(
+            parent, degree, rng, weight=weight,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "cofree_coalgebra":
-        return random_cofree_coalgebra_element(parent, degree, rng, weight=weight)
+        return random_cofree_coalgebra_element(
+            parent, degree, rng, weight=weight,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "tree_module":
-        return random_tree_module_element(parent, degree, rng, weight=weight)
+        return random_tree_module_element(
+            parent, degree, rng, weight=weight,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "hadamard":
-        return random_hadamard_key(parent, degree, rng)
+        return random_hadamard_key(
+            parent, degree, rng,
+            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+        )
     if sampler_type == "surjection":
         n = parent.arity()
+        if sphere_nontrivial:
+            if sphere_dim is None:
+                raise ValueError("sphere_dim is required when sphere_nontrivial=True")
+            return random_sphere_admissible_surjection(n, sphere_dim, parent.base_ring(), rng)
         return random_surjection(n, degree, parent.base_ring(), rng)
     if sampler_type == "barratt_eccles":
         n = parent.arity()
@@ -1488,7 +1748,14 @@ def sample_operad_basis(
             sphere_dim=sphere_dim,
         )
 
-    return sample_basis(parent, degree, k, rng)
+    return sample_basis(
+        parent,
+        degree,
+        k,
+        rng,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    )
 
 
 # ---------------------------------------------------------------------------
