@@ -990,7 +990,9 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma_inv(i) - 1 for i in range(1, 3)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma_inv(i) - 1] for i in range(1, 3)]
-                    for p in sample_basis(Q2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
+                    for p in sample_basis(
+                        Q2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
+                    ):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
@@ -1015,7 +1017,9 @@ class TestLayer4_S_ΩBH_Kd:
                     sigma_0idx = [sigma(i) - 1 for i in range(1, 4)]
                     koszul = koszul_sign_of_permutation(sigma_0idx, degrees)
                     permuted = [inputs[sigma(i) - 1] for i in range(1, 4)]
-                    for p in sample_basis(Q3, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim):
+                    for p in sample_basis(
+                        Q3, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim
+                    ):
                         lhs = ta.act(p.permute(sl), inputs)
                         rhs = koszul * ta.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)

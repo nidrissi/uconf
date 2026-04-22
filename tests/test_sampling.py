@@ -276,9 +276,7 @@ class TestSampleBasisEmptyFastFail:
         t0 = time.time()
         elems = sample_basis(P2, -1, 10, rng, sphere_nontrivial=True, sphere_dim=2)
         assert elems == []
-        assert time.time() - t0 < 1.0, (
-            "sphere_nontrivial cobar at infeasible degree must fast-fail"
-        )
+        assert time.time() - t0 < 1.0, "sphere_nontrivial cobar at infeasible degree must fast-fail"
 
 
 # ---------------------------------------------------------------------------

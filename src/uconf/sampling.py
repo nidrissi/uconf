@@ -391,9 +391,7 @@ def _algebraic_module_feasibility(
 
     M = parent._inner_module
     c_M = int(getattr(M, "connectivity", 0))
-    c_S = _connectivity_effective(
-        S, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
-    )
+    c_S = _connectivity_effective(S, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim)
 
     if weight is not None:
         if weight < 1:
