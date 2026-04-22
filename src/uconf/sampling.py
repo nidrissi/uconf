@@ -40,8 +40,24 @@ from __future__ import annotations
 from random import Random
 from typing import Any, Iterator
 
-from uconf.algebraic.spherical import _extract_concatenated_permutations
+from sage.all import SymmetricGroup as SG
 
+from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
+from uconf.algebraic.free_algebra import FreeAlgebraModule
+from uconf.algebraic.spherical import (
+    _extract_concatenated_permutations,
+    _sphere_surjection_basis_sign,
+)
+from uconf.algebraic.tree_module import TreeModule, _module_basis_keys_in_degree
+from uconf.constructions.bar_construction import BarConstruction
+from uconf.constructions.cobar_construction import CobarConstruction
+from uconf.core.trees import RootedTree
+from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.lie import Lie
+from uconf.models.surjection import Surjection
+from uconf.wrappers.hadamard_operad import HadamardProduct, _min_component_degree
+from uconf.wrappers.shifted_cooperad import ShiftedCooperad
+from uconf.wrappers.shifted_operad import ShiftedOperad
 
 # ---------------------------------------------------------------------------
 # Surjection sampling
@@ -90,8 +106,6 @@ def random_surjection(n: int, degree: int, base_ring, rng: Random):
 
     Returns a single-term element or ``None`` if sampling fails.
     """
-    from uconf.models.surjection import Surjection
-
     key = random_surjection_key(n, degree, rng)
     if key is None:
         return None
@@ -132,8 +146,6 @@ def random_planar_surjection_key(n: int, degree: int, rng: Random) -> tuple[int,
 
 def random_planar_surjection(n: int, degree: int, base_ring, rng: Random):
     """Generate a random planar Surjection element."""
-    from uconf.models.surjection import Surjection
-
     key = random_planar_surjection_key(n, degree, rng)
     if key is None:
         return None
@@ -211,8 +223,6 @@ def random_sphere_admissible_surjection_key(
 
 def random_sphere_admissible_surjection(n: int, dim: int, base_ring, rng: Random):
     """Generate a random sphere-admissible Surjection element."""
-    from uconf.models.surjection import Surjection
-
     key = random_sphere_admissible_surjection_key(n, dim, rng)
     if key is None:
         return None
@@ -227,9 +237,6 @@ def sphere_nontrivial_surjection_iter(n: int, dim: int, base_ring) -> Iterator:
     Only surjections of degree ``d(n−1)`` with the sphere-admissible
     concatenation form are considered.  Yields ``(key, sign)`` pairs.
     """
-    from uconf.algebraic.spherical import _sphere_surjection_basis_sign
-    from uconf.models.surjection import Surjection
-
     d = dim
     degree = d * (n - 1)
     parent = Surjection(n, base_ring)
@@ -253,8 +260,6 @@ def sphere_nontrivial_operad_basis_iter(
     Works for ``HadamardProduct(_, Surjection)`` and plain ``Surjection``.
     For non-Hadamard operads, falls back to the full basis at degree ``d(n-1)``.
     """
-    from uconf.wrappers.hadamard_operad import HadamardProduct
-
     d = dim
     surj_degree = d * (n - 1)
 
@@ -277,8 +282,6 @@ def sphere_nontrivial_operad_basis_iter(
             return
 
         # Filter right elements to nontrivial ones
-        from uconf.algebraic.spherical import _sphere_surjection_basis_sign
-
         nontrivial_right = []
         for right_elem in right_elems:
             for right_key in right_elem.support():
@@ -291,8 +294,6 @@ def sphere_nontrivial_operad_basis_iter(
 
         # Enumerate left-factor elements across all available degrees
         # For shifted Lie at arity n, degree is -(n-1)
-        from uconf.wrappers.hadamard_operad import _min_component_degree
-
         min_d_left = _min_component_degree(left_parent, n)
         # The left factor typically lives in a single degree (e.g. Lie at deg 0,
         # shifted Lie at deg -(n-1)), so check a reasonable range
@@ -333,8 +334,6 @@ def random_lie_key(n: int, rng: Random) -> tuple[int, ...]:
 
 def random_lie_element(n: int, base_ring, rng: Random):
     """Generate a random Lie operad basis element at arity ``n``."""
-    from uconf.models.lie import Lie
-
     key = random_lie_key(n, rng)
     parent = Lie(n, base_ring)
     return parent.term(key)
@@ -356,8 +355,6 @@ def random_barratt_eccles_key(n: int, degree: int, rng: Random) -> tuple | None:
     """
     if degree < 0 or n < 1:
         return None
-
-    from sage.all import SymmetricGroup as SG
 
     Sn = SG(n)
     all_perms = list(Sn)
@@ -383,8 +380,6 @@ def random_barratt_eccles_element(n: int, degree: int, base_ring, rng: Random):
 
     Returns a single-term element or ``None`` if sampling fails.
     """
-    from uconf.models.barratt_eccles import BarrattEccles
-
     key = random_barratt_eccles_key(n, degree, rng)
     if key is None:
         return None
@@ -420,15 +415,6 @@ def _random_operad_element(
     sphere_dim : int or None
         Required when ``sphere_nontrivial=True``.
     """
-    from uconf.constructions.bar_construction import BarConstruction
-    from uconf.constructions.cobar_construction import CobarConstruction
-    from uconf.models.surjection import Surjection
-    from uconf.models.barratt_eccles import BarrattEccles
-    from uconf.models.lie import Lie
-    from uconf.wrappers.hadamard_operad import HadamardProduct
-    from uconf.wrappers.shifted_operad import ShiftedOperad
-    from uconf.wrappers.shifted_cooperad import ShiftedCooperad
-
     n = parent.arity() if hasattr(parent, "arity") else getattr(parent, "_arity", None)
     R = parent.base_ring()
 
@@ -557,8 +543,6 @@ def random_hadamard_key(
     Element or None
         A random Hadamard product element, or ``None`` if sampling failed.
     """
-    from uconf.models.surjection import Surjection
-
     left_parent = hadamard_parent._left_parent
     right_parent = hadamard_parent._right_parent
     n = hadamard_parent._arity
@@ -581,15 +565,21 @@ def random_hadamard_key(
             if left_elem is None:
                 return None
             right_elem = _random_operad_element(
-                right_parent, right_degree, rng,
-                sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                right_parent,
+                right_degree,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
             )
         elif right_is_surj:
             # Right factor is Surjection: propagate left, sample sphere-admissible right
             left_degree = degree - surj_degree
             left_elem = _random_operad_element(
-                left_parent, left_degree, rng,
-                sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                left_parent,
+                left_degree,
+                rng,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
             )
             if left_elem is None:
                 return None
@@ -598,26 +588,30 @@ def random_hadamard_key(
             )
         else:
             # Neither factor is directly Surjection; propagate sphere_nontrivial to both
-            from uconf.wrappers.hadamard_operad import _min_component_degree
             min_d_left = _min_component_degree(left_parent, n)
             min_d_right = _min_component_degree(right_parent, n)
             possible_splits = [
-                (d_left, degree - d_left)
-                for d_left in range(min_d_left, degree - min_d_right + 1)
+                (d_left, degree - d_left) for d_left in range(min_d_left, degree - min_d_right + 1)
             ]
             if not possible_splits:
                 return None
             rng.shuffle(possible_splits)
             for d_left, d_right in possible_splits[:10]:
                 left_elem = _random_operad_element(
-                    left_parent, d_left, rng,
-                    sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                    left_parent,
+                    d_left,
+                    rng,
+                    sphere_nontrivial=sphere_nontrivial,
+                    sphere_dim=sphere_dim,
                 )
                 if left_elem is None:
                     continue
                 right_elem = _random_operad_element(
-                    right_parent, d_right, rng,
-                    sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+                    right_parent,
+                    d_right,
+                    rng,
+                    sphere_nontrivial=sphere_nontrivial,
+                    sphere_dim=sphere_dim,
                 )
                 if right_elem is None:
                     continue
@@ -629,8 +623,6 @@ def random_hadamard_key(
         return hadamard_parent.from_factors(left_elem, right_elem)
 
     # General case: pick a random degree split
-    from uconf.wrappers.hadamard_operad import _min_component_degree
-
     min_d_left = _min_component_degree(left_parent, n)
     min_d_right = _min_component_degree(right_parent, n)
 
@@ -805,8 +797,6 @@ def _random_subtree(
     sphere_dim: int | None = None,
 ):
     """Recursively build a random subtree (internal helper)."""
-    from uconf.core.trees import RootedTree
-
     n = len(sorted_ls)
     if n == 1:
         return sorted_ls[0] if target_degree == 0 else None
@@ -1087,8 +1077,6 @@ def _random_module_key(module, degree: int, rng: Random):
 
     Uses reservoir sampling (one pass, O(1) memory).
     """
-    from uconf.algebraic.tree_module import _module_basis_keys_in_degree
-
     chosen = None
     count = 0
     for key in _module_basis_keys_in_degree(module, degree):
@@ -1581,16 +1569,6 @@ def sample_basis(
 
 def _get_direct_sampler(parent, weight):
     """Return a direct-sampling function for the given parent type, or None."""
-    from uconf.constructions.bar_construction import BarConstruction
-    from uconf.constructions.cobar_construction import CobarConstruction
-    from uconf.algebraic.free_algebra import FreeAlgebraModule
-    from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
-    from uconf.algebraic.tree_module import TreeModule
-    from uconf.wrappers.hadamard_operad import HadamardProduct
-    from uconf.models.surjection import Surjection
-    from uconf.models.barratt_eccles import BarrattEccles
-    from uconf.models.lie import Lie
-
     if isinstance(parent, BarConstruction.Component):
         return "bar"
     if isinstance(parent, CobarConstruction.Component):
@@ -1615,7 +1593,9 @@ def _get_direct_sampler(parent, weight):
     return None
 
 
-def _sample_via_direct(sampler_type, parent, degree, k, rng, weight, *, sphere_nontrivial=False, sphere_dim=None):
+def _sample_via_direct(
+    sampler_type, parent, degree, k, rng, weight, *, sphere_nontrivial=False, sphere_dim=None
+):
     """Use a construction-aware sampler to generate up to *k* distinct elements."""
     seen = set()
     results = []
@@ -1650,37 +1630,60 @@ def _sample_via_direct(sampler_type, parent, degree, k, rng, weight, *, sphere_n
     return results
 
 
-def _invoke_direct_sampler(sampler_type, parent, degree, rng, weight, *, sphere_nontrivial=False, sphere_dim=None):
+def _invoke_direct_sampler(
+    sampler_type, parent, degree, rng, weight, *, sphere_nontrivial=False, sphere_dim=None
+):
     """Call the appropriate direct sampler."""
     if sampler_type == "bar":
         return random_bar_element(
-            parent, degree, rng,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "cobar":
         return random_cobar_element(
-            parent, degree, rng,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "free_algebra":
         return random_free_algebra_element(
-            parent, degree, rng, weight=weight,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "cofree_coalgebra":
         return random_cofree_coalgebra_element(
-            parent, degree, rng, weight=weight,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "tree_module":
         return random_tree_module_element(
-            parent, degree, rng, weight=weight,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "hadamard":
         return random_hadamard_key(
-            parent, degree, rng,
-            sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim,
+            parent,
+            degree,
+            rng,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
         )
     if sampler_type == "surjection":
         n = parent.arity()
@@ -1734,8 +1737,6 @@ def sample_operad_basis(
     sphere_dim : int or None
         Required when ``sphere_nontrivial=True``.
     """
-    from uconf.wrappers.hadamard_operad import HadamardProduct
-
     parent = operad_cls(n, base_ring)
 
     if sphere_nontrivial and isinstance(parent, HadamardProduct.Component):
