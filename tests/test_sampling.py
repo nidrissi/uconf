@@ -244,6 +244,43 @@ class TestSampleOperadBasis:
         assert len(elems) == 2  # exactly 2 basis elems at S(2) deg 1
 
 
+class TestSampleBasisEmptyFastFail:
+    """Inputs with provably no basis elements must return [] without retrying."""
+
+    def test_lie_nonzero_degree(self, rng):
+        import time
+
+        L3 = Lie(3, QQ)
+        t0 = time.time()
+        elems = sample_basis(L3, 3, 10, rng)
+        assert elems == []
+        assert time.time() - t0 < 0.1
+
+    def test_surjection_negative_degree(self, rng):
+        import time
+
+        S3 = Surjection(3, QQ)
+        t0 = time.time()
+        elems = sample_basis(S3, -2, 10, rng)
+        assert elems == []
+        assert time.time() - t0 < 0.1
+
+    def test_sphere_nontrivial_wrong_degree(self, rng):
+        import time
+        from sage.all import GF
+
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(GF(2), 2)
+        P2 = layers.OBXsLie(2, layers.bar.module.base_ring())
+        t0 = time.time()
+        elems = sample_basis(P2, -1, 10, rng, sphere_nontrivial=True, sphere_dim=2)
+        assert elems == []
+        assert time.time() - t0 < 1.0, (
+            "sphere_nontrivial cobar at infeasible degree must fast-fail"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Algebra pool sampling
 # ---------------------------------------------------------------------------
