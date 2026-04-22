@@ -52,12 +52,404 @@ from uconf.algebraic.tree_module import TreeModule, _module_basis_keys_in_degree
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.trees import RootedTree
+from uconf.models.associative import Associative
 from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.commutative import Commutative
 from uconf.models.lie import Lie
+from uconf.models.simplicial import SimplicialChains, SimplicialCochains
 from uconf.models.surjection import Surjection
+from uconf.models.surjection_dual import SurjectionDual
 from uconf.wrappers.hadamard_operad import HadamardProduct, _min_component_degree
 from uconf.wrappers.shifted_cooperad import ShiftedCooperad
 from uconf.wrappers.shifted_operad import ShiftedOperad
+
+# ---------------------------------------------------------------------------
+# Feasibility probes (static emptiness detection)
+# ---------------------------------------------------------------------------
+
+
+def _connectivity_effective(
+    obj: Any,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+) -> int | None:
+    r"""Effective connectivity ``c`` such that basis elements at arity ``n`` have
+    degree bounded below by ``c * (n - 1)``.
+
+    Recognizes the base operad/cooperad classes and the wrappers
+    (``ShiftedOperad``, ``ShiftedCooperad``, ``HadamardProduct``,
+    ``BarConstruction``, ``CobarConstruction``).  Accepts either a factory
+    class / instance or an instantiated fixed-arity component.
+
+    Under ``sphere_nontrivial=True`` the Surjection factor is pinned to degree
+    ``sphere_dim * (n - 1)``, so its effective connectivity is ``sphere_dim``.
+
+    Returns ``None`` when the type is not recognized or when no linear lower
+    bound in ``(n - 1)`` is known (e.g. ``SurjectionDual``).
+    """
+    if obj is None:
+        return None
+
+    # SurjectionDual first: it is a subclass of Surjection but has non-positive
+    # degrees that are not bounded below by a linear connectivity.
+    if isinstance(obj, type):
+        if issubclass(obj, SurjectionDual):
+            return None
+        if issubclass(obj, Surjection):
+            return sphere_dim if sphere_nontrivial else 0
+        if issubclass(obj, BarrattEccles):
+            return 0
+        if issubclass(obj, Lie):
+            return 0
+        if issubclass(obj, (Associative, Commutative)):
+            return 0
+        c = getattr(obj, "connectivity", None)
+        return c if isinstance(c, int) else None
+
+    # Factory (UniqueRepresentation) instances that compose inner factories.
+    if isinstance(obj, ShiftedOperad):
+        base_c = _connectivity_effective(
+            obj.operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+        )
+        return None if base_c is None else base_c + obj.shift_degree
+    if isinstance(obj, ShiftedCooperad):
+        base_c = _connectivity_effective(
+            obj.cooperad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+        )
+        return None if base_c is None else base_c + obj.shift_degree
+    if isinstance(obj, HadamardProduct):
+        left_c = _connectivity_effective(
+            obj.left_operad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+        right_c = _connectivity_effective(
+            obj.right_operad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+        if left_c is None or right_c is None:
+            return None
+        return left_c + right_c
+    if isinstance(obj, BarConstruction):
+        return _connectivity_effective(
+            obj.operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+        )
+    if isinstance(obj, CobarConstruction):
+        return _connectivity_effective(
+            obj.cooperad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    # Fixed-arity components: delegate to their factory.
+    factory = getattr(obj, "factory", None)
+    if factory is not None:
+        return _connectivity_effective(
+            factory, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+        )
+    if isinstance(obj, BarConstruction.Component):
+        return _connectivity_effective(
+            obj._operad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+    if isinstance(obj, CobarConstruction.Component):
+        return _connectivity_effective(
+            obj._cooperad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    c = getattr(obj, "connectivity", None)
+    if callable(c):
+        try:
+            c = c()
+        except Exception:
+            c = None
+    return c if isinstance(c, int) else None
+
+
+def _is_basis_feasible(
+    parent: Any,
+    degree: int,
+    *,
+    weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+) -> bool:
+    r"""Return ``False`` iff the basis of ``parent`` at ``degree`` is provably empty.
+
+    This is a **lower-bound feasibility probe**: it returns ``False`` only when
+    the combination of arity, degree, and constraints is incompatible with
+    every known degree formula. When the type is unrecognized or the bound
+    is not tight, it returns ``True`` (i.e. "proceed; might be empty, might
+    not").
+
+    Used to short-circuit the sampling retry loops when the input is
+    mathematically impossible.
+    """
+    # --- Degree-concentrated leaf types ---
+    if isinstance(parent, (Associative, Commutative)):
+        return degree == 0
+    # Lie is degree-0 at every arity; check after Associative/Commutative in
+    # case of shared class hierarchy (none currently, but defensive).
+    if isinstance(parent, Lie):
+        return degree == 0
+
+    if isinstance(parent, SurjectionDual):
+        # Dual lives in non-positive degrees.
+        return degree <= 0
+
+    if isinstance(parent, Surjection):
+        n = parent._arity
+        if degree < 0:
+            return False
+        if n == 1:
+            return degree == 0
+        if sphere_nontrivial:
+            if sphere_dim is None:
+                return True  # let the sampler raise
+            return degree == sphere_dim * (n - 1)
+        return True
+
+    if isinstance(parent, BarrattEccles):
+        n = parent._arity
+        if degree < 0:
+            return False
+        if n == 1:
+            return degree == 0
+        return True
+
+    if isinstance(parent, SimplicialChains):
+        return degree >= 0
+    if isinstance(parent, SimplicialCochains):
+        N = getattr(parent, "_N", None)
+        if N is None:
+            return degree <= 0
+        return -N <= degree <= 0
+
+    # --- Wrappers: recurse with adjusted degree ---
+    if isinstance(parent, ShiftedOperad.Component):
+        n = parent._arity
+        inner_deg = degree - parent.factory.shift_degree * (n - 1)
+        return _is_basis_feasible(
+            parent._base_parent,
+            inner_deg,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+    if isinstance(parent, ShiftedCooperad.Component):
+        n = parent._arity
+        inner_deg = degree - parent.factory.shift_degree * (n - 1)
+        return _is_basis_feasible(
+            parent._base_parent,
+            inner_deg,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    if isinstance(parent, HadamardProduct.Component):
+        return _hadamard_feasibility(
+            parent,
+            degree,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    # --- Constructions: connectivity-based lower bound ---
+    if isinstance(parent, BarConstruction.Component):
+        n = parent._arity
+        if n == 1:
+            return degree == 0
+        c_P = _connectivity_effective(
+            parent._operad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+        if c_P is None:
+            return True
+        # Min bar degree = sum(min_dec) + r >= c_P*(n-1) + r, r >= 1 ⇒ c_P*(n-1) + 1.
+        min_bar = c_P * (n - 1) + 1
+        if degree < min_bar:
+            return False
+        return True
+
+    if isinstance(parent, CobarConstruction.Component):
+        n = parent._arity
+        if n == 1:
+            return degree == 0
+        c_C = _connectivity_effective(
+            parent._cooperad_cls,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+        if c_C is None:
+            return True
+        # Min cobar degree = sum(min_dec) - r >= c_C*(n-1) - r, r <= n-1 ⇒
+        # (c_C - 1)*(n-1).
+        min_cobar = (c_C - 1) * (n - 1)
+        if degree < min_cobar:
+            return False
+        # At arity 2 the only shape is the corolla, so the decoration-feasibility
+        # check is exact: the root decoration must live at degree + 1 in the
+        # inner cooperad.
+        if n == 2:
+            inner_parent = parent._cooperad_cls(n, parent.base_ring())
+            return _is_basis_feasible(
+                inner_parent,
+                degree + 1,
+                sphere_nontrivial=sphere_nontrivial,
+                sphere_dim=sphere_dim,
+            )
+        return True
+
+    # --- Free/cofree/tree modules ---
+    if isinstance(parent, (FreeAlgebraModule, CofreeCoalgebraModule, TreeModule)):
+        return _algebraic_module_feasibility(
+            parent,
+            degree,
+            weight=weight,
+            sphere_nontrivial=sphere_nontrivial,
+            sphere_dim=sphere_dim,
+        )
+
+    return True  # unknown parent type: assume feasible
+
+
+def _hadamard_feasibility(
+    parent,
+    degree: int,
+    *,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+) -> bool:
+    """Feasibility probe for ``HadamardProduct.Component``."""
+    n = parent._arity
+    left = parent._left_parent
+    right = parent._right_parent
+
+    if sphere_nontrivial:
+        if sphere_dim is None:
+            return True  # let downstream raise
+        surj_deg = sphere_dim * (n - 1)
+        if isinstance(left, Surjection) and not isinstance(left, SurjectionDual):
+            return _is_basis_feasible(
+                right,
+                degree - surj_deg,
+                sphere_nontrivial=False,
+                sphere_dim=sphere_dim,
+            )
+        if isinstance(right, Surjection) and not isinstance(right, SurjectionDual):
+            return _is_basis_feasible(
+                left,
+                degree - surj_deg,
+                sphere_nontrivial=False,
+                sphere_dim=sphere_dim,
+            )
+
+    # No direct Surjection factor under sphere (or sphere_nontrivial=False):
+    # use connectivity-based lower bound on each factor and check for a
+    # compatible split.
+    left_c = _connectivity_effective(
+        left, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    )
+    right_c = _connectivity_effective(
+        right, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    )
+    if left_c is None or right_c is None:
+        return True
+    return degree >= (left_c + right_c) * (n - 1)
+
+
+def _algebraic_module_feasibility(
+    parent,
+    degree: int,
+    *,
+    weight: int | None = None,
+    sphere_nontrivial: bool = False,
+    sphere_dim: int | None = None,
+) -> bool:
+    """Feasibility probe for ``FreeAlgebraModule`` / ``CofreeCoalgebraModule`` /
+    ``TreeModule``: check that some valid ``(n, operad_degree, module_degree)``
+    split exists.
+    """
+    if isinstance(parent, FreeAlgebraModule):
+        S = parent._operad_cls
+        vertex_shift = 0
+    elif isinstance(parent, CofreeCoalgebraModule):
+        S = parent._cooperad_cls
+        vertex_shift = 0
+    elif isinstance(parent, TreeModule):
+        S = parent._symmetric_sequence_cls
+        vertex_shift = int(getattr(parent, "_vertex_degree_shift", 0))
+    else:
+        return True
+
+    M = parent._inner_module
+    c_M = int(getattr(M, "connectivity", 0))
+    c_S = _connectivity_effective(
+        S, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    )
+
+    if weight is not None:
+        if weight < 1:
+            return degree == 0  # degenerate
+        max_n = weight
+    elif c_M > 0:
+        max_n = max(1, degree // c_M + 2)
+    elif c_S is not None and c_S > 0:
+        max_n = max(1, (degree - vertex_shift) // c_S + 2)
+    else:
+        max_n = 20
+
+    for n in range(1, max_n + 1):
+        min_s_deg = vertex_shift if n >= 2 else 0
+        if c_S is not None:
+            min_s_deg = vertex_shift + c_S * (n - 1) if n >= 2 else 0
+        min_m_total = n * c_M
+        if min_s_deg + min_m_total <= degree:
+            return True
+    return False
+
+
+def _graded_basis_cache_get(parent, degree: int, weight: int | None = None):
+    """Return the cached ``graded_basis(degree)`` result if already materialized.
+
+    Uses the SageMath ``@cached_method`` ``is_in_cache`` probe so no new
+    enumeration is triggered. Returns ``None`` if not cached or on any
+    introspection failure.
+    """
+    if weight is not None:
+        gbw = getattr(parent, "graded_basis_by_weight", None)
+        if gbw is None:
+            return None
+        is_in_cache = getattr(gbw, "is_in_cache", None)
+        if is_in_cache is None:
+            return None
+        try:
+            if is_in_cache(degree, weight):
+                return gbw(degree, weight)
+        except Exception:
+            return None
+        return None
+
+    gb = getattr(parent, "graded_basis", None)
+    if gb is None:
+        return None
+    is_in_cache = getattr(gb, "is_in_cache", None)
+    if is_in_cache is None:
+        return None
+    try:
+        if is_in_cache(degree):
+            return gb(degree)
+    except Exception:
+        return None
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Surjection sampling
@@ -418,6 +810,14 @@ def _random_operad_element(
     n = parent.arity() if hasattr(parent, "arity") else getattr(parent, "_arity", None)
     R = parent.base_ring()
 
+    if not _is_basis_feasible(
+        parent,
+        degree,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return None
+
     if isinstance(parent, Surjection):
         if sphere_nontrivial:
             if sphere_dim is None:
@@ -547,6 +947,14 @@ def random_hadamard_key(
     right_parent = hadamard_parent._right_parent
     n = hadamard_parent._arity
 
+    if not _is_basis_feasible(
+        hadamard_parent,
+        degree,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return None
+
     if sphere_nontrivial:
         if sphere_dim is None:
             raise ValueError("sphere_dim is required when sphere_nontrivial=True")
@@ -662,6 +1070,23 @@ def sample_hadamard_basis(
     If fewer than *k* distinct elements can be generated, returns all
     that were found.
     """
+    if not _is_basis_feasible(
+        hadamard_parent,
+        degree,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return []
+
+    cached = _graded_basis_cache_get(hadamard_parent, degree)
+    if cached is not None:
+        full = list(cached)
+        if not full:
+            return []
+        if len(full) <= k:
+            return list(full)
+        return rng.sample(full, k)
+
     seen = set()
     results = []
     max_attempts = k * 10
@@ -802,6 +1227,20 @@ def _random_subtree(
         return sorted_ls[0] if target_degree == 0 else None
     if max_weight < 1:
         return None
+
+    # Sphere-aware feasibility bound: the minimum tree degree at arity n is
+    # eff_conn*(n-1) + r*vertex_offset with r in [1, n-1].  The overall
+    # minimum is reached at r=1 when vertex_offset >= 0 and at r=n-1 otherwise.
+    eff_conn = _connectivity_effective(
+        operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    )
+    if eff_conn is not None:
+        if vertex_offset >= 0:
+            min_target = eff_conn * (n - 1) + vertex_offset
+        else:
+            min_target = (eff_conn + vertex_offset) * (n - 1)
+        if target_degree < min_target:
+            return None
 
     # Pick a random vertex arity
     possible_arities = list(range(2, n + 1))
@@ -998,6 +1437,10 @@ def random_bar_element(
     Element or None
         A random bar construction element.
     """
+    if not _is_basis_feasible(
+        parent, degree, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    ):
+        return None
     n = parent._arity
     if n == 1:
         return parent(1) if degree == 0 else None
@@ -1047,6 +1490,10 @@ def random_cobar_element(
     Element or None
         A random cobar construction element.
     """
+    if not _is_basis_feasible(
+        parent, degree, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+    ):
+        return None
     n = parent._arity
     if n == 1:
         return parent.term(1) if degree == 0 else None
@@ -1168,6 +1615,15 @@ def random_free_algebra_element(
     -------
     Element or None
     """
+    if not _is_basis_feasible(
+        parent,
+        degree,
+        weight=weight,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return None
+
     P = parent._operad_cls
     M = parent._inner_module
     R = parent.base_ring()
@@ -1301,6 +1757,15 @@ def random_cofree_coalgebra_element(
     -------
     Element or None
     """
+    if not _is_basis_feasible(
+        parent,
+        degree,
+        weight=weight,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return None
+
     C = parent._cooperad_cls
     M = parent._inner_module
     R = parent.base_ring()
@@ -1409,6 +1874,15 @@ def random_tree_module_element(
     -------
     Element or None
     """
+    if not _is_basis_feasible(
+        parent,
+        degree,
+        weight=weight,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return None
+
     S = parent._symmetric_sequence_cls
     M = parent._inner_module
     R = parent.base_ring()
@@ -1522,6 +1996,26 @@ def sample_basis(
     sphere_dim : int or None
         Required when ``sphere_nontrivial=True``.
     """
+    # Static feasibility probe: fail fast on provably empty inputs.
+    if not _is_basis_feasible(
+        parent,
+        degree,
+        weight=weight,
+        sphere_nontrivial=sphere_nontrivial,
+        sphere_dim=sphere_dim,
+    ):
+        return []
+
+    # If graded_basis is already cached for this degree, use it directly.
+    cached_graded = _graded_basis_cache_get(parent, degree, weight=weight)
+    if cached_graded is not None:
+        full = list(cached_graded)
+        if not full:
+            return []
+        if len(full) <= k:
+            return list(full)
+        return rng.sample(full, k)
+
     # Try construction-aware dispatch first
     direct_sampler = _get_direct_sampler(parent, weight)
     if direct_sampler is not None:
