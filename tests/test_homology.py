@@ -94,7 +94,7 @@ class TestChainComplex:
         with pytest.raises(ValueError, match="does not support the weight API"):
             compute_chain_complex(S2, degrees=range(3), weight=1)
 
-    def test_boundary_matrix_uses_on_basis_and_normalize_key(self) -> None:
+    def test_boundary_matrix_fast_path_with_normalization(self) -> None:
         """Chain-complex assembly should use the on-basis fast path and key normalization."""
 
         class _FakeElement:
@@ -103,9 +103,6 @@ class TestChainComplex:
 
             def leading_support(self):
                 return self._key
-
-            def support(self):
-                return [self._key]
 
             def __repr__(self) -> str:
                 return f"FakeElem({self._key!r})"
