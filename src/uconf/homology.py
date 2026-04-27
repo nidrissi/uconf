@@ -60,32 +60,36 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
-    boundary_on_basis = get_on_basis(module.boundary)
     normalize_key = getattr(module, "_normalize_key", None)
-    for j, key in enumerate(basis_source_keys):
-        if boundary_on_basis is not None:
-            bdry = boundary_on_basis(key)
-        else:
-            bdry = module.boundary(basis_source[j])
-        for bdry_key, coeff in bdry:
-            i = key_to_idx_target.get(bdry_key)
-            if i is not None:
-                M[i, j] += coeff
-                continue
-            if normalize_key is not None:
-                normalized_terms = normalize_key(bdry_key)
-                found_match = False
-                for norm_coeff, norm_key in normalized_terms:
-                    i = key_to_idx_target.get(norm_key)
-                    if i is not None:
-                        M[i, j] += coeff * norm_coeff
-                        found_match = True
-                if found_match:
-                    continue
-            raise ValueError(
-                f"Boundary of basis element {basis_source[j]} contains key {bdry_key} "
-                "not found in target basis keys"
-            )
+    boundary_on_basis = get_on_basis(module.boundary)
+
+    def add_boundary_term(j: int, bdry_key, coeff) -> None:
+        i = key_to_idx_target.get(bdry_key)
+        if i is not None:
+            M[i, j] += coeff
+            return
+        if normalize_key is not None:
+            found_match = False
+            for norm_coeff, norm_key in normalize_key(bdry_key):
+                i = key_to_idx_target.get(norm_key)
+                if i is not None:
+                    M[i, j] += coeff * norm_coeff
+                    found_match = True
+            if found_match:
+                return
+        raise ValueError(
+            f"Boundary of basis element {basis_source[j]} contains key {bdry_key} "
+            "not found in target basis keys"
+        )
+
+    if boundary_on_basis is not None:
+        for j, key in enumerate(basis_source_keys):
+            for bdry_key, coeff in boundary_on_basis(key):
+                add_boundary_term(j, bdry_key, coeff)
+    else:
+        for j, elem in enumerate(basis_source):
+            for bdry_key, coeff in module.boundary(elem):
+                add_boundary_term(j, bdry_key, coeff)
     return M
 
 
