@@ -320,8 +320,8 @@ On the weight-3 Euclidean configuration benchmark (`GF(2)`, `dim=2`):
 
 | Metric | Before | After |
 |--------|--------|-------|
-| `benchmark_detailed.py` full chain complex | 7.79 s | ~4.3 s |
-| `benchmark.py` (`cProfile`) total time | 15.80 s | ~6.8 s |
+| `benchmark_detailed.py` full chain complex | 7.79 s | 4.29 s |
+| `benchmark.py` (`cProfile`) total time | 15.80 s | 6.79 s |
 
 After this change, the dominant remaining cost is no longer chain-complex
 assembly overhead but the recursive Berger–Fresse E-comodule map
