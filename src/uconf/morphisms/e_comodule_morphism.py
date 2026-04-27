@@ -1,6 +1,6 @@
 """E-comodule morphism Δ: Ω(C) → E ⊗ Ω(C).
 
-For a quasi-planar cooperad C, the Berger–Fresse E-comodule structure gives
+For a quasi-planar cooperad C, the Le Grignou–Roca i Lucio E-comodule structure gives
 a chain map :math:`\\nu: C \\to E \\otimes C` at the cooperad level, where
 E = BarrattEccles is the Barratt–Eccles operad.  This is computed by
 :func:`e_comodule_on_generator`.
@@ -50,7 +50,7 @@ def _non_identity_perms(n: int) -> list:
 
 @cached_function
 def e_comodule_on_generator(dec_elem: Any) -> Any:
-    r"""Compute the Berger–Fresse E-comodule map on a cooperad element.
+    r"""Compute the Le Grignou–Roca i Lucio E-comodule map on a cooperad element.
 
     Given an element *dec_elem* :math:`c \in \mathcal{C}(n)` (planar or not),
     returns the E-comodule structure map
