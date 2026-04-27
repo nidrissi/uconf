@@ -35,6 +35,61 @@ from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
+def _sigma_as_tuple(sigma: Any) -> tuple[int, ...]:
+    """Return a permutation as a one-line tuple."""
+    if isinstance(sigma, tuple):
+        return sigma
+    if isinstance(sigma, list):
+        return tuple(sigma)
+    return tuple(sigma.tuple())
+
+
+def _permute_component_element_direct(
+    component: Any,
+    element: Any,
+    sigma: Any,
+    sigma_tuple: tuple[int, ...] | None = None,
+) -> Any:
+    """Permute an element via ``_permute_on_basis`` when available.
+
+    This avoids repeated ``result += ...`` element construction inside the
+    element-level ``permute`` wrappers, which is a hot path in the E-comodule
+    recursion.
+    """
+    permute_on_basis = getattr(component, "_permute_on_basis", None)
+    if permute_on_basis is None:
+        return element.permute(sigma)
+    if sigma_tuple is None:
+        sigma_tuple = _sigma_as_tuple(sigma)
+
+    result_dict: dict = {}
+    R = component.base_ring()
+    for basis_key, coeff in element:
+        permuted = permute_on_basis(basis_key, sigma_tuple)
+        for permuted_key, permuted_coeff in permuted:
+            combined = R(coeff * permuted_coeff)
+            if permuted_key in result_dict:
+                result_dict[permuted_key] += combined
+            else:
+                result_dict[permuted_key] = combined
+    return component._from_dict(result_dict, remove_zeros=True)
+
+
+def _permute_component_basis_direct(
+    component: Any,
+    basis_key: Any,
+    sigma: Any,
+    sigma_tuple: tuple[int, ...] | None = None,
+) -> Any:
+    """Permute a single basis key via ``_permute_on_basis`` when available."""
+    permute_on_basis = getattr(component, "_permute_on_basis", None)
+    if permute_on_basis is not None:
+        if sigma_tuple is None:
+            sigma_tuple = _sigma_as_tuple(sigma)
+        return permute_on_basis(basis_key, sigma_tuple)
+    return component.term(basis_key).permute(sigma)
+
+
 @cached_function
 def _non_identity_perms(n: int) -> list:
     """Return the list of non-identity elements of ``S_n`` in a fixed order.
@@ -142,19 +197,23 @@ def e_comodule_on_generator(dec_elem: Any) -> Any:
         else:
             # Accumulate acted result as dict to avoid repeated tensor construction
             acted_dict: dict = {}
+            sigma_tuple = _sigma_as_tuple(sigma)
             for (be_key, coop_key), t_coeff in planar_result:
                 # RIGHT action on BE: right-multiply each simplex element by σ.
                 be_right = tuple(p * sigma for p in be_key)
-                be_perm = be_component(be_right)
-                coop_perm = cooperad_component(coop_key).permute(sigma)
-                for be_k, be_c in be_perm:
-                    for cp_k, cp_c in coop_perm:
-                        pair = (be_k, cp_k)
-                        combined = t_coeff * be_c * cp_c
-                        if pair in acted_dict:
-                            acted_dict[pair] += combined
-                        else:
-                            acted_dict[pair] = combined
+                coop_perm = _permute_component_basis_direct(
+                    cooperad_component,
+                    coop_key,
+                    sigma,
+                    sigma_tuple,
+                )
+                for cp_k, cp_c in coop_perm:
+                    pair = (be_right, cp_k)
+                    combined = t_coeff * cp_c
+                    if pair in acted_dict:
+                        acted_dict[pair] += combined
+                    else:
+                        acted_dict[pair] = combined
             total_result += pl_coeff * target._from_dict(acted_dict, remove_zeros=True)
 
     return total_result
@@ -203,7 +262,7 @@ def _nu_on_planar(
     # repeated tensor element construction overhead.
     result_dict: dict = {}
 
-    def make_cooperad_factor(pl_elem, sigma_prod=None):
+    def make_cooperad_factor(pl_elem, sigma_prod=None, sigma_prod_tuple=None):
         """Build the cooperad factor for the formula.
 
         For k=0 (no permutations applied), returns the element as-is.
@@ -211,10 +270,15 @@ def _nu_on_planar(
         cooperad element via the S_n action: c ↦ c·σ_prod.
         """
         if sigma_prod is not None and sigma_prod != identity_n:
-            return pl_elem.permute(sigma_prod)
+            return _permute_component_element_direct(
+                cooperad_component,
+                pl_elem,
+                sigma_prod,
+                sigma_prod_tuple,
+            )
         return pl_elem
 
-    def recurse(current_d_elem, sigma_bar):
+    def recurse(current_d_elem, sigma_bar, sigma_prod, sigma_prod_tuple):
         """Accumulate contributions, pruning zero branches."""
         if not current_d_elem:
             return
@@ -233,11 +297,7 @@ def _nu_on_planar(
             be_elem = be_component.rho(list(sigma_bar))
 
             if be_elem:
-                sigma_prod = identity_n
-                for s in sigma_bar:
-                    sigma_prod = s * sigma_prod
-
-                coop_factor = make_cooperad_factor(current_d_elem, sigma_prod)
+                coop_factor = make_cooperad_factor(current_d_elem, sigma_prod, sigma_prod_tuple)
                 for be_key, be_coeff in be_elem:
                     for coop_key, coop_coeff in coop_factor:
                         pair = (be_key, coop_key)
@@ -252,9 +312,15 @@ def _nu_on_planar(
         decomp = cooperad_component.d_sigma_decompose(current_d_elem)
         for sigma, next_d in decomp.items():
             if sigma != identity_n:
-                recurse(next_d, sigma_bar + [sigma])
+                next_sigma_prod = sigma * sigma_prod
+                recurse(
+                    next_d,
+                    sigma_bar + [sigma],
+                    next_sigma_prod,
+                    _sigma_as_tuple(next_sigma_prod),
+                )
 
-    recurse(planar_elem, [])
+    recurse(planar_elem, [], identity_n, _sigma_as_tuple(identity_n))
 
     # Build the tensor element from accumulated dict, bypassing
     # the dict→items→dict round-trip of sum_of_terms(distinct=True).
@@ -286,42 +352,28 @@ def make_e_comodule_morphism(
     """
     cobar = CobarConstruction(cooperad_cls)
     target_factory = HadamardProduct(BarrattEccles, cobar)
+    root_image_cache: dict = {}
+    tree_image_cache: dict = {}
 
-    def _extend_tree(tree: Any, base_ring: Any) -> Any:
-        """Extend the morphism to a single tree by the free operad universal property."""
-        if is_leaf(tree):
-            return target_factory.unit(base_ring)
+    def _root_image_for_generator(dec: Any, k: int, base_ring: Any) -> Any:
+        cache_key = (base_ring, k, dec)
+        cached = root_image_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
-        dec = decoration(tree)
-        kids = children(tree)
-        k = vertex_arity(tree)
-
-        # Map the root generator via e_comodule_on_generator.
-        # This returns an element of E(k) ⊗ C(k) (cooperad level).
         cooperad_parent = cooperad_cls(k, base_ring)
         gen_elem = cooperad_parent(dec)
-
         root_tensor = e_comodule_on_generator(gen_elem)
 
-        # Embed C(k) into Ω(C)(k) via the canonical inclusion ι,
-        # then convert tensor([BE(k), Ω(C)(k)]) → HadamardProduct element.
         cobar_k = cobar(k, base_ring)
         target_k = target_factory(k, base_ring)
         be_component = BarrattEccles(k, base_ring)
 
-        # Accumulate as dict to avoid repeated element construction
         root_dict: dict = {}
         R = base_ring
-
         for (be_key, coop_key), t_coeff in root_tensor:
-            # Embed cooperad element as single-vertex cobar tree: (dec, 1, …, k)
-            # Use _from_validated_tree to skip redundant validation — this
-            # is a corolla with leaves 1..k and a known-valid cooperad key.
             cobar_tree = RootedTree(coop_key, *range(1, k + 1))
             cobar_elem = cobar_k._from_validated_tree(cobar_tree)
-            # Koszul sign from commuting the BE element (degree |e|) past
-            # the desuspension s⁻¹ (degree −1) in the inclusion ι: C ↪ Ω(C):
-            #   e ⊗ c  ↦  (−1)^{|e|} e ⊙ s⁻¹c
             koszul = sign_from_exponent(be_component.degree_on_basis(be_key))
             for cobar_key, c_coeff in cobar_elem:
                 combined_key = (be_key, cobar_key)
@@ -332,6 +384,26 @@ def make_e_comodule_morphism(
                     root_dict[combined_key] = combined_coeff
 
         root_image = target_k._from_dict(root_dict, remove_zeros=True)
+        root_image_cache[cache_key] = root_image
+        return root_image
+
+    def _extend_tree(tree: Any, base_ring: Any) -> Any:
+        """Extend the morphism to a single tree by the free operad universal property."""
+        if is_leaf(tree):
+            return target_factory.unit(base_ring)
+        cache_key = (base_ring, tree)
+        cached = tree_image_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        dec = decoration(tree)
+        kids = children(tree)
+        k = vertex_arity(tree)
+
+        # Map the root generator via the cached cooperad-level comodule map,
+        # then embed it into the cobar construction once per distinct
+        # generator decoration.
+        root_image = _root_image_for_generator(dec, k, base_ring)
 
         # Compose with child images from left to right (∘_1, ∘_2, ..., ∘_k).
         #
@@ -378,6 +450,7 @@ def make_e_comodule_morphism(
             if leaf_order != list(range(1, n + 1)):
                 result = result.permute(leaf_order)
 
+        tree_image_cache[cache_key] = result
         return result
 
     def _on_element(element: Any) -> Any:

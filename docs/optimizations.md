@@ -327,3 +327,40 @@ After this change, the dominant remaining cost is no longer chain-complex
 assembly overhead but the recursive Le Grignou-Roca i Lucio E-comodule map
 (`src/uconf/morphisms/e_comodule_morphism.py`) together with the `d_alpha`
 twisting-differential pipeline.
+
+### 18. Dynamic-programming fast paths in the Le Grignou–Roca i Lucio comodule map
+
+**File:** `src/uconf/morphisms/e_comodule_morphism.py`
+
+The recursive cooperad-level map still spent most of its time in two kinds
+of repeated work:
+
+1. recomputing the cumulative permutation product
+   `sigma_k * ... * sigma_1` from scratch at every recursion depth, and
+2. rebuilding the same generator/subtree images many times while traversing
+   cobar trees with repeated decorations.
+
+This was addressed in three places:
+
+- `_nu_on_planar.recurse` now threads the cumulative permutation product
+  through the recursion instead of recomputing it from `sigma_bar`.
+- The equivariant cooperad action uses direct `_permute_on_basis` fast paths
+  when available, avoiding repeated element-wrapper `permute()` overhead.
+- `make_e_comodule_morphism` memoizes both generator root images and full
+  subtree images, turning the tree extension step into a small dynamic
+  program over repeated decorations/subtrees.
+
+### Benchmark impact
+
+On the arity-3 comodule sub-benchmark in `benchmark_detailed.py`, the
+Le Grignou–Roca i Lucio map dropped from about **6.2 s** before this round
+to about **1–3 s** after it, depending on cache warmth and process startup.
+
+In an isolated `cProfile` run over all arity-3 basis elements:
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Total time | 5.05 s | 2.43 s |
+| `_extend_tree` cumtime | 4.59 s | 2.18 s |
+| `e_comodule_on_generator` cumtime | 3.76 s | 1.76 s |
+| `_nu_on_planar` cumtime | 1.40 s | 0.72 s |
