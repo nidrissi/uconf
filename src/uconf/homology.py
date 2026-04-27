@@ -63,13 +63,15 @@ def _boundary_matrix(
     normalize_key = getattr(module, "_normalize_key", None)
     boundary_on_basis = get_on_basis(module.boundary)
 
-    def add_boundary_term(j: int, bdry_key, coeff) -> None:
+    def add_boundary_term(j: int, bdry_key: Any, coeff: Any) -> None:
         i = key_to_idx_target.get(bdry_key)
         if i is not None:
             M[i, j] += coeff
             return
         if normalize_key is not None:
             found_match = False
+            # _normalize_key may expand one raw key into a genuine linear
+            # combination of canonical keys, so we must accumulate every match.
             for norm_coeff, norm_key in normalize_key(bdry_key):
                 i = key_to_idx_target.get(norm_key)
                 if i is not None:
