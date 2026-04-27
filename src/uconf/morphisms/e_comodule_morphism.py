@@ -356,7 +356,7 @@ def make_e_comodule_morphism(
     tree_image_cache: dict = {}
 
     def _root_image_for_generator(dec: Any, k: int, base_ring: Any) -> Any:
-        cache_key = (base_ring, k, dec)
+        cache_key = (dec, k, base_ring)
         cached = root_image_cache.get(cache_key)
         if cached is not None:
             return cached
@@ -391,7 +391,8 @@ def make_e_comodule_morphism(
         """Extend the morphism to a single tree by the free operad universal property."""
         if is_leaf(tree):
             return target_factory.unit(base_ring)
-        cache_key = (base_ring, tree)
+        # RootedTree is immutable and hashable, so subtree memoization is safe.
+        cache_key = (tree, base_ring)
         cached = tree_image_cache.get(cache_key)
         if cached is not None:
             return cached
