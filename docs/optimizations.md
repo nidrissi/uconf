@@ -324,6 +324,6 @@ On the weight-3 Euclidean configuration benchmark (`GF(2)`, `dim=2`):
 | `benchmark.py` (`cProfile`) total time | 15.80 s | 6.79 s |
 
 After this change, the dominant remaining cost is no longer chain-complex
-assembly overhead but the recursive Berger–Fresse E-comodule map
+assembly overhead but the recursive Le Grignou-Roca i Lucio E-comodule map
 (`src/uconf/morphisms/e_comodule_morphism.py`) together with the `d_alpha`
 twisting-differential pipeline.
