@@ -124,9 +124,11 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
             Σ coeff * c * ε(σ; degrees) * self.term((c_planar_key, σ · m_tuple))
 
-        where ``σ · m_tuple = (m_tuple[σ(1)−1], ..., m_tuple[σ(n)−1])``
-        and ``ε(σ; degrees)`` is the Koszul sign for the graded permutation
-        of the leaf-module elements.
+        where ``σ · m_tuple`` is the left action on the leaf tensor:
+
+            ``σ · (m_1, ..., m_n) = (m_{σ^{-1}(1)}, ..., m_{σ^{-1}(n)})``
+
+        and ``ε(σ; degrees)`` is the Koszul sign for that graded left action.
 
         This ensures all stored C-keys are in the planar basis.
 
@@ -147,11 +149,15 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         for c_key, c_coeff in c_elem:
             planarized = comp.planarize(comp.term(c_key))
             for (c_planar_key, sigma_key), pl_coeff in planarized:
-                sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
-                permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
+                sigma_tuple = tuple(int(s) for s in sigma_key)
+                sigma_inv = [0] * n
+                for pos, value in enumerate(sigma_tuple, start=1):
+                    sigma_inv[value - 1] = pos
+                sigma_inv_tuple = tuple(sigma_inv)
+                permuted_m = tuple(m_tuple[sigma_inv_tuple[i] - 1] for i in range(n))
                 # Koszul sign for permuting graded leaf-module elements.
-                if n > 1 and sigma_tuple != identity_tuple:
-                    perm_0idx = [s - 1 for s in sigma_tuple]
+                if n > 1 and sigma_inv_tuple != identity_tuple:
+                    perm_0idx = [s - 1 for s in sigma_inv_tuple]
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
