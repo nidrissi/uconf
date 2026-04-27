@@ -22,6 +22,8 @@ from typing import Any, Literal
 
 from sage.all import ChainComplex, matrix
 
+from uconf.core.signs import get_on_basis
+
 
 # ---------------------------------------------------------------------------
 # Boundary matrix
@@ -31,6 +33,7 @@ from sage.all import ChainComplex, matrix
 def _boundary_matrix(
     module: Any,
     basis_source: list,
+    basis_source_keys: list,
     key_to_idx_target: dict,
     n_target: int,
     *,
@@ -57,17 +60,32 @@ def _boundary_matrix(
     base_ring = module.base_ring()
     n_source = len(basis_source)
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
-    for j, elem in enumerate(basis_source):
-        bdry = module.boundary(elem)
-        for key, coeff in bdry:
-            i = key_to_idx_target.get(key)
+    boundary_on_basis = get_on_basis(module.boundary)
+    normalize_key = getattr(module, "_normalize_key", None)
+    for j, key in enumerate(basis_source_keys):
+        if boundary_on_basis is not None:
+            bdry = boundary_on_basis(key)
+        else:
+            bdry = module.boundary(basis_source[j])
+        for bdry_key, coeff in bdry:
+            i = key_to_idx_target.get(bdry_key)
             if i is not None:
                 M[i, j] += coeff
-            else:
-                raise ValueError(
-                    f"Boundary of basis element {elem} contains key {key} "
-                    "not found in target basis keys"
-                )
+                continue
+            if normalize_key is not None:
+                normalized_terms = normalize_key(bdry_key)
+                found_match = False
+                for norm_coeff, norm_key in normalized_terms:
+                    i = key_to_idx_target.get(norm_key)
+                    if i is not None:
+                        M[i, j] += coeff * norm_coeff
+                        found_match = True
+                if found_match:
+                    continue
+            raise ValueError(
+                f"Boundary of basis element {basis_source[j]} contains key {bdry_key} "
+                "not found in target basis keys"
+            )
     return M
 
 
@@ -206,7 +224,12 @@ def compute_chain_complex(
         if not source and n_target == 0:
             continue
         differentials[d] = _boundary_matrix(
-            module, source, key_to_idx[d - 1], n_target, sparse=sparse
+            module,
+            source,
+            keys_by_degree[d],
+            key_to_idx[d - 1],
+            n_target,
+            sparse=sparse,
         )
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)

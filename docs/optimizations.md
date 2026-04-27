@@ -291,3 +291,37 @@ and have been evaluated against the current profile:
   different basis elements are independent, the `_boundary_matrix` loop
   could be parallelised across multiple processes, though Sage's GIL
   constraints limit the benefit of threading.
+
+---
+
+## Optimizations applied 2026-04-27
+
+### 17. Direct `on_basis` path in `_boundary_matrix`
+
+**File:** `src/uconf/homology.py`
+
+`compute_chain_complex` used to assemble each differential column by calling
+`module.boundary(elem)` on a one-term basis element. Even when the module
+exposed an `on_basis` callback, Sage still paid the full
+`morphism.__call__ -> linear_combination` overhead for every column.
+
+`_boundary_matrix` now detects the underlying `on_basis` function with
+`get_on_basis()` and calls it directly on the source key. This preserves the
+existing fallback path for generic modules, while avoiding thousands of tiny
+single-term morphism evaluations during chain-complex assembly.
+
+To keep compatibility with modules that normalize keys only at construction
+time, `_boundary_matrix` still falls back to `module._normalize_key(...)`
+when a returned key is not already present in the target basis.
+
+### Benchmark impact
+
+On the weight-3 Euclidean configuration benchmark (`GF(2)`, `dim=2`):
+
+| Metric | Before | After |
+|--------|--------|-------|
+| `benchmark_detailed.py` full chain complex | 7.79 s | 4.78 s |
+| `benchmark.py` (`cProfile`) total time | 15.80 s | 6.79 s |
+
+After this change, the dominant remaining cost is no longer chain-complex
+assembly overhead but the recursive E-comodule / `d_alpha` pipeline.
