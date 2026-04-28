@@ -211,8 +211,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         Every key stored in this module has already been normalized, so when the
         differential only changes the inner-module tuple we can preserve the
         operad basis key unchanged and avoid a second planarization pass.
+
+        Returns a one-term tuple ``((coeff, normalized_key),)``.
         """
-        return [(self.base_ring().one(), key)]
+        return ((self.base_ring().one(), key),)
 
     # ------------------------------------------------------------------
     # Basis key validation
