@@ -157,7 +157,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         R = self.base_ring()
         if n == 1:
-            return [(R(pl_coeff), (p_planar_key, m_tuple)) for (p_planar_key, _sigma_key), pl_coeff in planarized]
+            return [
+                (R(pl_coeff), (p_planar_key, m_tuple))
+                for (p_planar_key, _sigma_key), pl_coeff in planarized
+            ]
 
         identity_tuple = tuple(range(1, n + 1))
         degrees = [self._inner_module.degree_on_basis(m_key) for m_key in m_tuple]
@@ -222,7 +225,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 if k is not None:
                     p_key_raw, m_tuple_raw = k
                     for norm_coeff, norm_key in self._normalize_key((p_key_raw, m_tuple_raw)):
-                        clean_dict[norm_key] = clean_dict.get(norm_key, zero) + R(coeff * norm_coeff)
+                        clean_dict[norm_key] = clean_dict.get(norm_key, zero) + R(
+                            coeff * norm_coeff
+                        )
             return self._from_dict(clean_dict, remove_zeros=True)
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
@@ -312,7 +317,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         inner_boundary_on_basis = get_on_basis(self._inner_module.boundary)
 
         # d_P term: keep raw operad keys (may be non-planar)
-        dp_elem = boundary_on_basis(p_key) if boundary_on_basis is not None else comp.boundary(comp.term(p_key))
+        dp_elem = (
+            boundary_on_basis(p_key)
+            if boundary_on_basis is not None
+            else comp.boundary(comp.term(p_key))
+        )
         for dp_key, dp_coeff in dp_elem:
             for norm_coeff, norm_key in self._normalize_key((dp_key, m_tuple)):
                 combined = R(dp_coeff * norm_coeff)
