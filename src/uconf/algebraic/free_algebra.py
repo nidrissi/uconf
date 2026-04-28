@@ -143,17 +143,30 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     @cached_method
     def _operad_planarize_on_basis(self, n: int):
-        """Return the arity-``n`` fast planarization hook when available."""
+        """Return the arity-``n`` fast planarization hook or ``None``.
+
+        When present, the returned callable takes a basis key of ``P(n)`` and
+        returns the planarization expansion as ``((planar_key, sigma_key), coeff)``
+        terms.
+        """
         return getattr(self._operad_cls(n, self.base_ring()), "_planarize_on_basis", None)
 
     @cached_method
     def _operad_boundary_on_basis(self, n: int):
-        """Return the arity-``n`` boundary-on-basis hook when available."""
+        """Return the arity-``n`` boundary-on-basis hook or ``None``.
+
+        When present, the returned callable takes a basis key of ``P(n)`` and
+        returns the boundary expansion as ``(basis_key, coeff)`` terms.
+        """
         return get_on_basis(self._operad_cls(n, self.base_ring()).boundary)
 
     @cached_method
     def _inner_boundary_on_basis(self):
-        """Return the inner-module boundary-on-basis hook when available."""
+        """Return the inner-module boundary-on-basis hook or ``None``.
+
+        When present, the returned callable takes an inner-module basis key and
+        returns the boundary expansion as ``(basis_key, coeff)`` terms.
+        """
         return get_on_basis(self._inner_module.boundary)
 
     def _normalize_key(self, key):
