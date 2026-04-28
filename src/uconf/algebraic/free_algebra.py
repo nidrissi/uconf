@@ -141,6 +141,21 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 result_dict[norm_key] = result_dict.get(norm_key, zero) + combined
         return self._from_dict(result_dict, remove_zeros=True)
 
+    @cached_method
+    def _operad_planarize_on_basis(self, n: int):
+        """Return the arity-``n`` fast planarization hook when available."""
+        return getattr(self._operad_cls(n, self.base_ring()), "_planarize_on_basis", None)
+
+    @cached_method
+    def _operad_boundary_on_basis(self, n: int):
+        """Return the arity-``n`` boundary-on-basis hook when available."""
+        return get_on_basis(self._operad_cls(n, self.base_ring()).boundary)
+
+    @cached_method
+    def _inner_boundary_on_basis(self):
+        """Return the inner-module boundary-on-basis hook when available."""
+        return get_on_basis(self._inner_module.boundary)
+
     def _normalize_key(self, key):
         """Normalize a single ``(p_key, m_tuple)`` to planar free-algebra keys.
 
@@ -149,7 +164,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         p_key, m_tuple = key
         n = len(m_tuple)
         comp = self._operad_cls(n, self.base_ring())
-        planarize_on_basis = getattr(comp, "_planarize_on_basis", None)
+        planarize_on_basis = self._operad_planarize_on_basis(n)
         if planarize_on_basis is not None:
             planarized = planarize_on_basis(p_key)
         else:
@@ -313,8 +328,8 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         R = self.base_ring()
         zero = R.zero()
         result_dict = {}
-        boundary_on_basis = get_on_basis(comp.boundary)
-        inner_boundary_on_basis = get_on_basis(self._inner_module.boundary)
+        boundary_on_basis = self._operad_boundary_on_basis(n)
+        inner_boundary_on_basis = self._inner_boundary_on_basis()
 
         # d_P term: keep raw operad keys (may be non-planar)
         dp_elem = (
