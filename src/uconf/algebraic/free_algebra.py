@@ -205,6 +205,15 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             result.append((R(pl_coeff * koszul), (p_planar_key, permuted_m)))
         return result
 
+    def _normalize_known_planar_key(self, key):
+        """Normalize a key whose operad part is already a stored planar basis key.
+
+        Every key stored in this module has already been normalized, so when the
+        differential only changes the inner-module tuple we can preserve the
+        operad basis key unchanged and avoid a second planarization pass.
+        """
+        return [(self.base_ring().one(), key)]
+
     # ------------------------------------------------------------------
     # Basis key validation
     # ------------------------------------------------------------------
@@ -367,8 +376,9 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             )
             for new_mk, m_coeff in m_boundary:
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result_key = (p_key, new_m)
-                result_dict[result_key] = result_dict.get(result_key, zero) + R(sign * m_coeff)
+                for norm_coeff, norm_key in self._normalize_known_planar_key((p_key, new_m)):
+                    combined = R(sign * m_coeff * norm_coeff)
+                    result_dict[norm_key] = result_dict.get(norm_key, zero) + combined
             cumulative += self._inner_module.degree_on_basis(mk)
 
         return self._from_dict(result_dict, remove_zeros=True)
