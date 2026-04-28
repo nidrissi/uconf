@@ -154,11 +154,12 @@ class TestLayer0_H:
         )
         def test_d_squared(self, n: int, d: int, layers: ConfigurationLayers, ring):
             Hn = layers.XsLie(n, ring)
-            basis = list(Hn.graded_basis(d))
-            if not basis:
-                pytest.skip(f"No H({n}) basis elements at degree {d}")
-            for elem in basis:
+            found_basis = False
+            for elem in Hn.graded_basis(d):
+                found_basis = True
                 assert elem.boundary().boundary() == Hn.zero()
+            if not found_basis:
+                pytest.skip(f"No H({n}) basis elements at degree {d}")
 
     class TestUnit:
         @pytest.mark.parametrize("n", [2, 3])
@@ -715,11 +716,8 @@ class TestLayer3_ΩBH_Kd:
             mod = layers.free_alg.module
             found_basis = False
             for deg in range(1, 7):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                if not basis:
-                    continue
-                found_basis = True
-                for elem in basis:
+                for elem in mod.graded_basis_by_weight(deg, weight):
+                    found_basis = True
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
                     )
@@ -896,11 +894,8 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             found_basis = False
             for deg in range(-1, 6):
-                basis = list(ta.graded_basis_by_weight(deg, weight))
-                if not basis:
-                    continue
-                found_basis = True
-                for elem in basis:
+                for elem in ta.graded_basis_by_weight(deg, weight):
+                    found_basis = True
                     assert ta.boundary(ta.boundary(elem)) == ta.module.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
                     )
@@ -1547,11 +1542,8 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             mod = layers.bar.module
             found_basis = False
             for deg in range(-1, 6):
-                basis = list(mod.graded_basis_by_weight(deg, weight))
-                if not basis:
-                    continue
-                found_basis = True
-                for elem in basis:
+                for elem in mod.graded_basis_by_weight(deg, weight):
+                    found_basis = True
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w={weight} deg={deg} dim={dim} ring={ring}"
                     )
