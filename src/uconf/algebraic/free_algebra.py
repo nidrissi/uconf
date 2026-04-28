@@ -42,8 +42,7 @@ from sage.all import (
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
 from uconf.core.display import latex_linear_combination
-from uconf.core.signs import sign_from_exponent
-from uconf.core.signs import koszul_sign_of_permutation
+from uconf.core.signs import get_on_basis, koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
@@ -133,26 +132,46 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             An element of ``self`` with planar P-keys.
 
         """
-        n = len(m_tuple)
-        comp = p_elem.parent()
-        M = self._inner_module
-        identity_tuple = tuple(range(1, n + 1))
-        # Pre-compute degrees only once if n > 1
-        if n > 1:
-            degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-        result = self.zero()
+        result_dict = {}
+        R = self.base_ring()
+        zero = R.zero()
         for p_key, p_coeff in p_elem:
+            for norm_coeff, norm_key in self._normalize_key((p_key, m_tuple)):
+                combined = R(p_coeff * norm_coeff)
+                result_dict[norm_key] = result_dict.get(norm_key, zero) + combined
+        return self._from_dict(result_dict, remove_zeros=True)
+
+    def _normalize_key(self, key):
+        """Normalize a single ``(p_key, m_tuple)`` to planar free-algebra keys.
+
+        Returns a list of ``(coeff, normalized_key)`` pairs.
+        """
+        p_key, m_tuple = key
+        n = len(m_tuple)
+        comp = self._operad_cls(n, self.base_ring())
+        planarize_on_basis = getattr(comp, "_planarize_on_basis", None)
+        if planarize_on_basis is not None:
+            planarized = planarize_on_basis(p_key)
+        else:
             planarized = comp.planarize(comp.term(p_key))
-            for (p_planar_key, sigma_key), pl_coeff in planarized:
-                sigma_tuple = tuple(sigma_key) if not isinstance(sigma_key, tuple) else sigma_key
-                permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
-                # Koszul sign for permuting graded leaf-module elements.
-                if n > 1 and sigma_tuple != identity_tuple:
-                    perm_0idx = [s - 1 for s in sigma_tuple]
-                    koszul = koszul_sign_of_permutation(perm_0idx, degrees)
-                else:
-                    koszul = 1
-                result += p_coeff * pl_coeff * koszul * self.term((p_planar_key, permuted_m))
+
+        R = self.base_ring()
+        if n == 1:
+            return [(R(pl_coeff), (p_planar_key, m_tuple)) for (p_planar_key, _sigma_key), pl_coeff in planarized]
+
+        identity_tuple = tuple(range(1, n + 1))
+        degrees = [self._inner_module.degree_on_basis(m_key) for m_key in m_tuple]
+        result = []
+        for (p_planar_key, sigma_key), pl_coeff in planarized:
+            sigma_tuple = sigma_key if isinstance(sigma_key, tuple) else tuple(sigma_key)
+            if sigma_tuple == identity_tuple:
+                result.append((R(pl_coeff), (p_planar_key, m_tuple)))
+                continue
+
+            permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
+            perm_0idx = [s - 1 for s in sigma_tuple]
+            koszul = koszul_sign_of_permutation(perm_0idx, degrees)
+            result.append((R(pl_coeff * koszul), (p_planar_key, permuted_m)))
         return result
 
     # ------------------------------------------------------------------
@@ -195,26 +214,28 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     def _element_constructor_(self, x):
         if isinstance(x, dict):
-            result = self.zero()
+            clean_dict = {}
+            R = self.base_ring()
+            zero = R.zero()
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
                     p_key_raw, m_tuple_raw = k
-                    n = len(m_tuple_raw)
-                    comp = self._operad_cls(n, self.base_ring())
-                    result += coeff * self._normalized_corolla_sum(
-                        comp.term(p_key_raw), m_tuple_raw
-                    )
-            return result
+                    for norm_coeff, norm_key in self._normalize_key((p_key_raw, m_tuple_raw)):
+                        clean_dict[norm_key] = clean_dict.get(norm_key, zero) + R(coeff * norm_coeff)
+            return self._from_dict(clean_dict, remove_zeros=True)
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             k = self._validate_basis_key(x)
             if k is None:
                 return self.zero()
             p_key_raw, m_tuple_raw = k
-            n = len(m_tuple_raw)
-            comp = self._operad_cls(n, self.base_ring())
-            return self._normalized_corolla_sum(comp.term(p_key_raw), m_tuple_raw)
+            clean_dict = {}
+            R = self.base_ring()
+            zero = R.zero()
+            for norm_coeff, norm_key in self._normalize_key((p_key_raw, m_tuple_raw)):
+                clean_dict[norm_key] = clean_dict.get(norm_key, zero) + norm_coeff
+            return self._from_dict(clean_dict, remove_zeros=True)
 
         raise TypeError(
             f"Cannot construct element from {x!r}. Expected a dict of basis keys to coefficients, or a single basis key tuple (p_key, m_tuple)."
@@ -284,25 +305,36 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         p_key, m_tuple = key
         n = len(m_tuple)
         comp = self._operad_cls(n, self.base_ring())
-        result = self.zero()
+        R = self.base_ring()
+        zero = R.zero()
+        result_dict = {}
+        boundary_on_basis = get_on_basis(comp.boundary)
+        inner_boundary_on_basis = get_on_basis(self._inner_module.boundary)
 
         # d_P term: keep raw operad keys (may be non-planar)
-        dp_elem = comp.boundary(comp(p_key))
+        dp_elem = boundary_on_basis(p_key) if boundary_on_basis is not None else comp.boundary(comp.term(p_key))
         for dp_key, dp_coeff in dp_elem:
-            result += dp_coeff * self((dp_key, m_tuple))
+            for norm_coeff, norm_key in self._normalize_key((dp_key, m_tuple)):
+                combined = R(dp_coeff * norm_coeff)
+                result_dict[norm_key] = result_dict.get(norm_key, zero) + combined
 
         # d_M terms with Koszul signs
         p_deg = comp.degree_on_basis(p_key)
         cumulative = p_deg
         for i, mk in enumerate(m_tuple):
             sign = sign_from_exponent(cumulative)
-            m_elem = self._inner_module.term(mk)
-            for new_mk, m_coeff in self._inner_module.boundary(m_elem):
+            m_boundary = (
+                inner_boundary_on_basis(mk)
+                if inner_boundary_on_basis is not None
+                else self._inner_module.boundary(self._inner_module.term(mk))
+            )
+            for new_mk, m_coeff in m_boundary:
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self((p_key, new_m))
+                result_key = (p_key, new_m)
+                result_dict[result_key] = result_dict.get(result_key, zero) + R(sign * m_coeff)
             cumulative += self._inner_module.degree_on_basis(mk)
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Basis iteration
