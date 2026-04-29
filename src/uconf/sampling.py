@@ -48,7 +48,11 @@ from uconf.algebraic.spherical import (
     _extract_concatenated_permutations,
     _sphere_surjection_basis_sign,
 )
-from uconf.algebraic.tree_module import TreeModule, _module_basis_keys_in_degree
+from uconf.algebraic.tree_module import (
+    TreeModule,
+    _module_basis_keys_in_degree,
+    _module_basis_keys_in_weight_and_degree,
+)
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.trees import RootedTree
