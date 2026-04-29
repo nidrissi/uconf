@@ -1671,10 +1671,10 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
             elem = next(
                 basis
                 for basis in mod.graded_basis_by_weight(3, 4)
-            if str(basis)
-            == "<([x1,x2] ⊙ {1 2}; 1, ([x1,x2] ⊙ {1 2 1 2}; 2, 3)); ɑ1 # <(([x1,x2] ⊙ {1 2 1}; 1, 2); 1, 2); β1, β1>, ɑ1 # <id; β1>, ɑ1 # <id; β1>>"
-        )
-        assert mod.boundary(mod.boundary(elem)) == mod.zero()
+                if str(basis)
+                == "<([x1,x2] ⊙ {1 2}; 1, ([x1,x2] ⊙ {1 2 1 2}; 2, 3)); ɑ1 # <(([x1,x2] ⊙ {1 2 1}; 1, 2); 1, 2); β1, β1>, ɑ1 # <id; β1>, ɑ1 # <id; β1>>"
+            )
+            assert mod.boundary(mod.boundary(elem)) == mod.zero()
 
     class TestDecomposedDSquared:
         """Test the components of d separately: d_cofree and d_alpha.
