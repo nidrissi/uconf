@@ -374,8 +374,8 @@ def homology_basis(
 
     Parameters
     ----------
-        module:
-            A dg-module (same requirements as :func:`compute_chain_complex`).
+    module:
+        A dg-module (same requirements as :func:`compute_chain_complex`).
     degree:
         The homological degree in which to compute homology.
     degrees:
