@@ -8,6 +8,7 @@ linear dual over a fixed standard simplex ``Δ^N``.
     For tensor products of chain modules use the native Sage ``tensor()``
     function::
 
+        from sage.all import QQ, tensor
         T = tensor([SimplicialChains(QQ), SimplicialChains(QQ)])
 """
 
