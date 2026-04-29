@@ -247,6 +247,7 @@ from uconf import euclidean_unordered_configuration_model
 from uconf.homology import compute_chain_complex
 
 model = euclidean_unordered_configuration_model(QQ, 2)
+# `model` is a BarAlgebra; compute_chain_complex works on its underlying dg-module.
 C = compute_chain_complex(model.module, degrees=range(-1, 4), weight=1)
 C.betti()
 # {-1: 0, 0: 0, 1: 0, 2: 1, 3: 0}

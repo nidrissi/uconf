@@ -15,7 +15,8 @@ EXAMPLES::
     sage: C = compute_chain_complex(S2, degrees=range(4))
     sage: 0 in C.betti()
     True
-    sage: homology_basis(S2, degree=0)  # doctest: +SKIP
+    sage: homology_basis(S2, degree=0)
+    [{2 1}]
 """
 
 from __future__ import annotations
@@ -400,7 +401,8 @@ def homology_basis(
         sage: from uconf import Surjection
         sage: from uconf.homology import homology_basis
         sage: S2 = Surjection(2, QQ)
-        sage: homology_basis(S2, 0)  # doctest: +SKIP
+        sage: homology_basis(S2, 0)
+        [{2 1}]
     """
     if degrees is None:
         degrees = range(degree - 1, degree + 2)
