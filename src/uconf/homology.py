@@ -1,19 +1,21 @@
-"""Chain complex construction and homology helpers for dg-modules.
+"""Chain-complex construction and homology helpers for dg-modules.
 
 Given any module exposing ``graded_basis(d)`` and ``boundary`` (as used by
 operad/cooperad components, bar/cobar constructions, free algebras, cofree
-coalgebras, etc.), this module builds a SageMath :class:`~sage.homology.chain_complex.ChainComplex`
-and provides helpers to extract homology representatives as native module
-elements.
+coalgebras, etc.), this module builds a SageMath
+:class:`~sage.homology.chain_complex.ChainComplex` and provides helpers to
+extract homology representatives as native module elements.
 
-Typical usage::
+EXAMPLES::
 
-    >>> from uconf import Surjection
-    >>> from uconf.homology import chain_complex, homology_basis
-    >>> S2 = Surjection(2, QQ)
-    >>> C = chain_complex(S2, degrees=range(4))
-    >>> C.homology()
-    >>> homology_basis(S2, degree=0)
+    sage: from sage.all import QQ
+    sage: from uconf import Surjection
+    sage: from uconf.homology import compute_chain_complex, homology_basis
+    sage: S2 = Surjection(2, QQ)
+    sage: C = compute_chain_complex(S2, degrees=range(4))
+    sage: 0 in C.betti()
+    True
+    sage: homology_basis(S2, degree=0)  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -180,14 +182,15 @@ def compute_chain_complex(
     A SageMath :class:`~sage.homology.chain_complex.ChainComplex` with
     ``degree_of_differential=-1``.
 
-    Examples
-    --------
-    >>> from sage.all import QQ
-    >>> from uconf import Surjection
-    >>> from uconf.homology import chain_complex
-    >>> S2 = Surjection(2, QQ)
-    >>> C = chain_complex(S2, degrees=range(4))
-    >>> C.homology()  # doctest: +SKIP
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Surjection
+        sage: from uconf.homology import compute_chain_complex
+        sage: S2 = Surjection(2, QQ)
+        sage: C = compute_chain_complex(S2, degrees=range(4))
+        sage: C.betti()[0]
+        1
     """
     base_ring = module.base_ring()
 
@@ -371,8 +374,8 @@ def homology_basis(
 
     Parameters
     ----------
-    module:
-        A dg-module (same requirements as :func:`chain_complex`).
+        module:
+            A dg-module (same requirements as :func:`compute_chain_complex`).
     degree:
         The homological degree in which to compute homology.
     degrees:
@@ -383,21 +386,21 @@ def homology_basis(
         ``range(degree - 1, degree + 2)`` is used (negative
         degrees are clamped to 0).  Pass a wider range if the module
         has non-trivial basis below ``degree - 1``.
-    weight:
-        Passed through to :func:`chain_complex`.  See its documentation.
+        weight:
+            Passed through to :func:`compute_chain_complex`. See its documentation.
 
     Returns
     -------
     A list of elements of *module* that are cycles (``boundary(x) == 0``)
     and whose homology classes form a basis of ``H_degree(module)``.
 
-    Examples
-    --------
-    >>> from sage.all import QQ
-    >>> from uconf import Surjection
-    >>> from uconf.homology import homology_basis
-    >>> S2 = Surjection(2, QQ)
-    >>> homology_basis(S2, 0)  # doctest: +SKIP
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Surjection
+        sage: from uconf.homology import homology_basis
+        sage: S2 = Surjection(2, QQ)
+        sage: homology_basis(S2, 0)  # doctest: +SKIP
     """
     if degrees is None:
         degrees = range(degree - 1, degree + 2)

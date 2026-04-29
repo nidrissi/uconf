@@ -61,7 +61,17 @@ def _min_component_degree(component, arity: int) -> int:
 
 
 class HadamardProduct(UniqueRepresentation):
-    """Factory for Hadamard-product operad components."""
+    r"""Factory for Hadamard-product operad components.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import HadamardProduct, Lie, Surjection
+        sage: H = HadamardProduct(Lie, Surjection)
+        sage: x = H(2, QQ)(((1,), (1, 2)))
+        sage: x.arity()
+        2
+    """
 
     def __init__(
         self,
@@ -92,9 +102,11 @@ class HadamardProduct(UniqueRepresentation):
         return k_left + k_right
 
     def __call__(self, n: int, base_ring) -> "HadamardProduct.Component":
+        """Return the arity-``n`` Hadamard component over ``base_ring``."""
         return HadamardProduct.Component(self, n, base_ring)
 
     def unit(self, base_ring) -> "HadamardProduct.Element":
+        """Return the diagonal operadic unit over ``base_ring``."""
         component = self(1, base_ring)
         return component.from_factors(
             self.left_operad_cls.unit(base_ring),
@@ -111,6 +123,7 @@ class HadamardProduct(UniqueRepresentation):
         i: int,
         y: "HadamardProduct.Element",
     ) -> "HadamardProduct.Element":
+        """Compose two Hadamard-product elements diagonally on both factors."""
         x_parent = x.parent()
         y_parent = y.parent()
 

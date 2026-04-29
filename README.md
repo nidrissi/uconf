@@ -4,15 +4,15 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 ## Repository structure
 
-- `uconf/`: main implementation (active API).
-  - `uconf/core/`: protocols and shared utilities (`operad`, `cooperad`, `signs`, `trees`).
-  - `uconf/models/`: concrete operad/cooperad/simplicial models.
-  - `uconf/algebraic/`: algebra/coalgebra wrappers, free/cofree constructions.
-  - `uconf/constructions/`: bar/cobar constructions and algebraic bar/cobar complexes.
-  - `uconf/wrappers/`: shifted and Hadamard operad/cooperad wrappers.
+- `src/uconf/`: main implementation (active API).
+  - `src/uconf/core/`: protocols and shared utilities (`operad`, `cooperad`, `signs`, `trees`).
+  - `src/uconf/models/`: concrete operad/cooperad/simplicial models.
+  - `src/uconf/algebraic/`: algebra/coalgebra wrappers, free/cofree constructions.
+  - `src/uconf/constructions/`: bar/cobar constructions and algebraic bar/cobar complexes.
+  - `src/uconf/wrappers/`: shifted and Hadamard operad/cooperad wrappers.
 - `tests/test_*.py`: main regression test suite.
-- `pytest.ini`: pytest configuration (`-q`, `test_*.py`).
-- `misc.py`, `misc.ipynb`: drafts/experiments.
+- `pyproject.toml`: packaging plus pytest/ruff configuration.
+- `docs/`: project notes and optimization writeups.
 - `old-computations/`: older notebooks/utilities kept for reference.
 - `article.tex`, `article.bib`: project-related scientific writing.
 
@@ -37,7 +37,15 @@ pip install -e ".[dev]"
 Then run tests:
 
 ```bash
-pytest
+conda run -n sage pytest
+```
+
+Useful validation commands:
+
+```bash
+conda run -n sage ruff check tests src
+conda run -n sage ruff format --check tests src
+conda run -n sage python -m compileall -q src tests
 ```
 
 ## `uconf` package
@@ -206,11 +214,11 @@ attribute on concrete models, property on wrappers) representing the constant
   Use `sparse=True` (the default) for substantially faster and lighter
   differential matrix assembly on typical sparse boundaries.
 
-  When *module* is the bar complex of a labelled configuration model, the
-  `n_factors` parameter restricts to elements with exactly that many
-  coefficient-module keys, giving a well-defined finite subcomplex.
+  For free algebras, cofree coalgebras, and configuration-model bar modules,
+  the `weight` parameter restricts to a fixed finite-weight summand, giving a
+  tractable subcomplex when unrestricted basis enumeration would be infinite.
 
-- `homology_basis(module, degree, *, degrees=None, n_factors=None)` — returns
+- `homology_basis(module, degree, *, degrees=None, weight=None)` — returns
   a list of elements of *module* that are cycles and whose homology classes
   form a basis of `H_degree(module)`.  When *degrees* is not given, a
   minimal range `[degree-1, degree+1]` is used.
@@ -218,10 +226,10 @@ attribute on concrete models, property on wrappers) representing the constant
 ```python
 from sage.all import QQ
 from uconf import Surjection
-from uconf.homology import chain_complex, homology_basis
+from uconf.homology import compute_chain_complex, homology_basis
 
 S2 = Surjection(2, QQ)
-C = chain_complex(S2, degrees=range(5))
+C = compute_chain_complex(S2, degrees=range(5))
 C.homology()
 # {0: Vector space of dimension 1 over Rational Field,
 #  1: …dimension 0…, 2: …dimension 0…, 3: …dimension 0…,
@@ -231,17 +239,17 @@ homology_basis(S2, 0, degrees=range(5))
 # [S2[(2, 1)]]
 ```
 
-For the configuration model, use `n_factors` to compute a specific subcomplex:
+For the configuration model, use `weight` to compute a finite subcomplex:
 
 ```python
 from sage.all import QQ
 from uconf import euclidean_unordered_configuration_model
-from uconf.homology import chain_complex
+from uconf.homology import compute_chain_complex
 
 model = euclidean_unordered_configuration_model(QQ, 2)
-C = chain_complex(model, degrees=range(4), n_factors=1)
+C = compute_chain_complex(model.module, degrees=range(-1, 4), weight=1)
 C.betti()
-# {0: 0, 1: 0, 2: 1}
+# {-1: 0, 0: 0, 1: 0, 2: 1, 3: 0}
 ```
 
 ### Simplicial models
@@ -250,15 +258,15 @@ C.betti()
   - `SimplicialChains`: normalized chains on standard simplices, basis = non-degenerate
     simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data raises.
-    - `SimplicialChains.fundamental_chain(n)` — the fundamental cycle `[0,…,n]`.
+    - `SimplicialChains.fundamental_chain(n, base_ring)` — the fundamental cycle `[0,…,n]`.
     - `SimplicialChains.basis_iter(N)` — iterator over all simplices in `Δ^N`.
     - `Element.boundary()` — simplicial boundary on arity-1 elements.
     - `Element.iterated_diagonal(times)` — AW diagonal; returns a native Sage
-      `tensor([SimplicialChains()]*(times+1))` element.
-  - `SimplicialCochains(N)`: dual cochains on `Δ^N`, same simplex-tuple basis as
+      `tensor([SimplicialChains(base_ring)]*(times+1))` element.
+  - `SimplicialCochains(N, base_ring)`: dual cochains on `Δ^N`, same simplex-tuple basis as
     `SimplicialChains`.
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data and vertices outside `\{0, ..., N\}` raise.
-    - `SimplicialCochains.volume_form(N)` — the volume form on `Δ^N`.
+    - `SimplicialCochains.volume_form(N, base_ring)` — the volume form on `Δ^N`.
     - `SimplicialCochains.evaluate(cochain, chain)` — Kronecker pairing.
     - `SimplicialCochains.dual_basis_it(N)` — iterator over dual basis.
     - `Element.coboundary()` — coboundary operator.
@@ -267,7 +275,7 @@ C.betti()
 
 - Canonical implementation lives in `uconf.algebraic.simplicial`:
   - `surjection_chain_action(u, x)` — action of `u ∈ S(r)` on a chain `x ∈ C`; returns
-    a native `tensor([SimplicialChains()]*r)` element (`r ≥ 2`) or `SimplicialChains`
+    a native `tensor([SimplicialChains(base_ring)]*r)` element (`r ≥ 2`) or `SimplicialChains`
     element (`r = 1`).
   - `surjection_cochain_action(u, (f_1, …, f_r))` — dual cochain action.
   - `SurjectionSimplicialChainCoalgebra(base_ring=QQ)` — coalgebra wrapper
@@ -278,14 +286,16 @@ C.betti()
 ### Surjection action examples
 
 ```python
+from sage.all import QQ, tensor
 from uconf import SimplicialChains, SimplicialCochains, Surjection
 from uconf.algebraic.simplicial import (
-    SurjectionSimplicialChainCoalgebra, SurjectionSimplicialCochainAlgebra
+    SurjectionSimplicialChainCoalgebra,
+    SurjectionSimplicialCochainAlgebra,
+    surjection_chain_action,
 )
-from sage.all import tensor
 
 # Chains
-SC = SimplicialChains()
+SC = SimplicialChains(QQ)
 x = SC((0, 1, 2))            # the 2-simplex [0,1,2]
 x.boundary()                  # ∂[0,1,2]
 x.iterated_diagonal(times=1) # Δ([0,1,2]) ∈ tensor([SC, SC])
@@ -293,19 +303,20 @@ x.iterated_diagonal(times=1) # Δ([0,1,2]) ∈ tensor([SC, SC])
 # Tensor-product boundary (for tensor([SC]*r) elements)
 T = tensor([SC, SC])
 y = x.iterated_diagonal(times=1)
+surjection_chain_action(Surjection(2, QQ)((1, 2, 1)), x)
 
 # Coalgebra (chain-side) wrapper
-coalg = SurjectionSimplicialChainCoalgebra(base_ring=SC.base_ring())
-u = Surjection(2)((1, 2, 1))  # degree-1 surjection
-coalg.coact(u, x)             # θ_u(x) ∈ tensor([SC, SC])
+coalg = SurjectionSimplicialChainCoalgebra(base_ring=QQ)
+u = Surjection(2, QQ)((1, 2, 1))  # degree-1 surjection
+coalg.coact(x, 2)             # δ_2(x) ∈ SurjectionDual(2) ⊗ SC ⊗ SC
 
 # Cochains
-Cco = SimplicialCochains(N=3)
+Cco = SimplicialCochains(N=3, base_ring=QQ)
 f = Cco((0, 1))               # the dual cochain [0,1]*
 SimplicialCochains.evaluate(f, SC((0, 1)))  # 1
 
 # Algebra (cochain-side) wrapper
-alg = SurjectionSimplicialCochainAlgebra(N=3, base_ring=Cco.base_ring())
+alg = SurjectionSimplicialCochainAlgebra(N=3, base_ring=QQ)
 alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 ```
 
@@ -503,22 +514,30 @@ omega_b = CobarConstruction(BarConstruction(surj_s_lie))
 ### Surjection action on simplicial chains/cochains
 
 ```python
+from sage.all import QQ
 from uconf import SimplicialChains, Surjection
+from uconf.algebraic.simplicial import (
+    SurjectionSimplicialChainCoalgebra,
+    surjection_chain_action,
+)
 
-u = Surjection(2)((1, 2, 1))
-x = SimplicialChains.fundamental_chain(3)
-coalg = SimplicialChains(r=1).as_surjection_coalgebra()
-res = coalg.act(u, x)
+u = Surjection(2, QQ)((1, 2, 1))
+x = SimplicialChains.fundamental_chain(3, QQ)
+theta = surjection_chain_action(u, x)
+coalg = SurjectionSimplicialChainCoalgebra(QQ)
+delta = coalg.coact(x, 2)
 ```
 
 ```python
+from sage.all import QQ
 from uconf import SimplicialCochains, Surjection
+from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
 
-u = Surjection(2)((1, 2, 1))
-C = SimplicialCochains(N=3, r=1)
+u = Surjection(2, QQ)((1, 2, 1))
+C = SimplicialCochains(N=3, base_ring=QQ)
 f1 = C(((0, 1),))
 f2 = C(((1, 2),))
-alg = C.as_surjection_algebra()
+alg = SurjectionSimplicialCochainAlgebra(N=3, base_ring=QQ)
 mu = alg.act(u, [f1, f2])
 ```
 
@@ -600,7 +619,7 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
 ### Chain complexes and homology
 
 - `test_homology.py`:
-  - `chain_complex`: Surjection/BarrattEccles/Lie Betti numbers, `d²=0` check, empty degrees.
+  - `compute_chain_complex`: Surjection/BarrattEccles/Lie Betti numbers, `d²=0` check, empty degrees.
   - `homology_basis`: cycle verification, dimension checks, default/invalid degree ranges.
 
 ### Simplicial and external compatibility
@@ -617,14 +636,14 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
 ## Useful commands
 
 - Run all tests:
-  - `pytest`
+  - `conda run -n sage pytest`
 - Run wrapper-focused tests:
-  - `pytest -q tests/test_shifted_operad.py tests/test_shifted_cooperad.py tests/test_hadamard_operad.py`
+  - `conda run -n sage pytest -q tests/test_shifted_operad.py tests/test_shifted_cooperad.py tests/test_hadamard_operad.py`
 - Run bar/cobar tests:
-  - `pytest -q tests/test_bar_cobar.py`
+  - `conda run -n sage pytest -q tests/test_bar_cobar.py`
 - Run core operad tests:
-  - `pytest -q tests/test_protocols.py tests/test_surjection.py tests/test_barratt_eccles.py tests/test_lie.py`
+  - `conda run -n sage pytest -q tests/test_protocols.py tests/test_surjection.py tests/test_barratt_eccles.py tests/test_lie.py`
 - Run simplicial tests:
-  - `pytest -q tests/test_simplicial.py`
+  - `conda run -n sage pytest -q tests/test_simplicial.py`
 - Run morphism tests:
-  - `pytest -q tests/test_morphisms.py`
+  - `conda run -n sage pytest -q tests/test_morphisms.py`
