@@ -2,7 +2,7 @@
 
 import itertools
 import pytest
-from sage.all import tensor, QQ
+from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, tensor, QQ
 
 from uconf import (
     BarConstruction,
@@ -17,6 +17,7 @@ from uconf import (
     Surjection,
     SurjectionDual,
 )
+from uconf.algebraic.cofree_coalgebra import CofreeCoalgebraModule
 from uconf.core.trees import (
     RootedTree,
     children,
@@ -1012,6 +1013,23 @@ class TestBarPlanarize:
         elem2 = B6(weight3_tree_arity6)
         assert elem2 != B6.zero()
         assert planarize_round_trip_ok(elem2)
+
+    def test_planarize_matches_cofree_leaf_normalization(self):
+        """Bar planarization must use the leaf permutation expected by cofree normalization."""
+        M = CombinatorialFreeModule(
+            QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ)
+        )
+        M.degree_on_basis = lambda _: 1
+        M.boundary = lambda _elem: M.zero()
+
+        XsLie = HadamardProduct(ShiftedOperad(Lie, -1), Surjection)
+        BXsLie = BarConstruction(XsLie)
+        cofree = CofreeCoalgebraModule(BXsLie, M)
+
+        tree = RootedTree(((1,), (1, 2, 1)), RootedTree(((1,), (1, 2)), 1, 2), 3)
+        elem = cofree((tree, (M("a"), M("b"), M("c"))))
+
+        assert elem.boundary().boundary() == cofree.zero()
 
     # ------------------------------------------------------------------
     # Barratt–Eccles

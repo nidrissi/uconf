@@ -334,6 +334,16 @@ class BarConstruction(UniqueRepresentation):
                         return False
             return True
 
+        def _leaf_tensor_permutation_from_planarize(self, sigma_tuple: tuple[int, ...]) -> tuple[int, ...]:
+            """Return the leaf-tensor permutation matching ``planarize``.
+
+            ``planarize`` records the global relabeling ``σ`` with
+            ``T = T_pl.permute(σ)``.  For bar shuffle trees this same global
+            leaf relabeling acts directly on the leaf tensor when passing to
+            coinvariants, rather than through ``σ⁻¹``.
+            """
+            return sigma_tuple
+
         def planar_basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
             """Iterate over planar basis elements of degree ``d``.
 
