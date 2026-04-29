@@ -18,7 +18,7 @@ from uconf.core.parented_element import ParentedElementMixin
 
 
 class Lie(CombinatorialFreeModule):
-    """Lie operad component in arity ``n``.
+    r"""Lie operad component in arity ``n``.
 
     Basis keys are permutations of ``(1, ..., n-1)`` and encode nested brackets
     ``[x_i, -]`` ending in ``x_n``.
@@ -30,6 +30,17 @@ class Lie(CombinatorialFreeModule):
     base_ring)`` always returns the same instance for a given ``(n, base_ring)`` pair,
     so these instance-level caches are automatically shared across all callers—including
     :meth:`compose`, which creates a new ``Lie`` parent on each invocation.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Lie
+        sage: L3 = Lie(3, QQ)
+        sage: x = L3((1, 2))
+        sage: x.arity()
+        3
+        sage: x.permute([2, 1, 3]).parent() is L3
+        True
     """
 
     name: ClassVar[str] = "Lie"
@@ -336,7 +347,19 @@ class Lie(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: "Lie.Element", i: int, y: "Lie.Element") -> "Lie.Element":
-        """Operadic composition ``x \\circ_i y`` in the Lie operad.
+        r"""Operadic composition ``x \circ_i y`` in the Lie operad.
+
+        Parameters
+        ----------
+        x, y:
+            Lie-operad elements over the same base ring.
+        i:
+            Input slot of ``x`` into which ``y`` is inserted.
+
+        Returns
+        -------
+        Lie.Element
+            The composite in arity ``x.arity() + y.arity() - 1``.
 
         The implementation follows the algorithmic approach described in
         Bremner–Dotsenko *Algebraic Operads: An Algorithmic Companion*:
@@ -349,6 +372,15 @@ class Lie(CombinatorialFreeModule):
            over the pre-aggregated word dicts.
         3. Recover the Lie coordinates via a pre-cached left-inverse matrix
            (one matrix–vector multiply) rather than a fresh linear solve.
+
+        EXAMPLES::
+
+            sage: from sage.all import QQ
+            sage: from uconf import Lie
+            sage: x = Lie(2, QQ)((1,))
+            sage: y = Lie(2, QQ)((1,))
+            sage: Lie.compose(x, 2, y).arity()
+            3
         """
         x_parent = x.parent()
         y_parent = y.parent()

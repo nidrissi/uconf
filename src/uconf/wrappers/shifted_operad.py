@@ -29,7 +29,7 @@ from uconf.core.signs import (
 
 
 class ShiftedOperad(UniqueRepresentation):
-    """Factory for shifted operad components.
+    r"""Factory for shifted operad components.
 
     Args:
         operad_cls: Base operad class (e.g. ``Lie`` or ``Surjection``).
@@ -41,6 +41,15 @@ class ShiftedOperad(UniqueRepresentation):
     - Composition twist
       ``(-1)^(d * ((i-1)(n-1) + (m-1)|y|))``
       with ``m = arity(x)``, ``n = arity(y)``, and ``|y|`` in the base operad.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Lie, ShiftedOperad
+        sage: sLie = ShiftedOperad(Lie, 1)
+        sage: x = sLie(2, QQ)((1,))
+        sage: x.arity()
+        2
 
     """
 
@@ -69,9 +78,11 @@ class ShiftedOperad(UniqueRepresentation):
         return base_k + self.shift_degree
 
     def __call__(self, n: int, base_ring) -> "ShiftedOperad.Component":
+        """Return the shifted operad component in arity ``n`` over ``base_ring``."""
         return ShiftedOperad.Component(self, n, base_ring)
 
     def unit(self, base_ring) -> "ShiftedOperad.Element":
+        """Return the shifted operadic unit over ``base_ring``."""
         component = self(1, base_ring)
         return component.from_base(self.operad_cls.unit(base_ring))
 
@@ -82,6 +93,7 @@ class ShiftedOperad(UniqueRepresentation):
     def compose(
         self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
     ) -> "ShiftedOperad.Element":
+        """Compose two shifted-operad elements in this wrapper."""
         x_parent = x.parent()
         y_parent = y.parent()
 
@@ -317,7 +329,12 @@ class ShiftedOperad(UniqueRepresentation):
             return self.factory.unit_key()
 
     class Element(ParentedElementMixin["ShiftedOperad.Component"], CombinatorialFreeModule.Element):
-        """Element wrapper carrying shifted operad structure maps."""
+        """Element wrapper carrying shifted signs and structure maps.
+
+        The stored basis keys are the same as in the underlying operad; the
+        shift only changes degrees and the signs in boundary, permutation, and
+        composition formulas.
+        """
 
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))

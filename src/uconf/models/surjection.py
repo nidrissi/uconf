@@ -24,11 +24,22 @@ from uconf.core.parented_element import ParentedElementMixin
 
 
 class Surjection(CombinatorialFreeModule):
-    """Surjection operad component in fixed arity.
+    r"""Surjection operad component in fixed arity.
 
     Basis elements are tuples ``u`` with values in ``{1, ..., n}`` that are
     surjective and have no consecutive equal entries. Degenerate inputs map to
     zero, while malformed inputs raise.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Surjection
+        sage: S2 = Surjection(2, QQ)
+        sage: u = S2((1, 2, 1))
+        sage: u.arity()
+        2
+        sage: S2.degree_on_basis((1, 2, 1))
+        1
     """
 
     name: ClassVar[str] = "𝒳"
@@ -221,7 +232,30 @@ class Surjection(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: Surjection.Element, i: int, y: Surjection.Element) -> Surjection.Element:
-        """Compose surjections by Berger--Fresse insertion at input ``i``."""
+        r"""Compose surjections by Berger--Fresse insertion at input ``i``.
+
+        Parameters
+        ----------
+        x, y:
+            Surjection elements over the same base ring.
+        i:
+            Input slot of ``x`` into which ``y`` is inserted.
+
+        Returns
+        -------
+        Surjection.Element
+            The composite ``x \circ_i y`` in arity
+            ``x.arity() + y.arity() - 1``.
+
+        EXAMPLES::
+
+            sage: from sage.all import QQ
+            sage: from uconf import Surjection
+            sage: x = Surjection(2, QQ)((1, 2))
+            sage: y = Surjection(2, QQ)((1, 2, 1))
+            sage: Surjection.compose(x, 2, y).arity()
+            3
+        """
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
         m = x.arity()

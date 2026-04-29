@@ -5,10 +5,10 @@ basis elements are **single** non-degenerate simplices (strictly-increasing
 tuples of non-negative integers), and :class:`SimplicialCochains`, the
 linear dual over a fixed standard simplex ``Δ^N``.
 
-For tensor products of chain modules use the native Sage ``tensor()``
-function::
+    For tensor products of chain modules use the native Sage ``tensor()``
+    function::
 
-    T = tensor([SimplicialChains(), SimplicialChains()])
+        T = tensor([SimplicialChains(QQ), SimplicialChains(QQ)])
 """
 
 from __future__ import annotations
@@ -206,7 +206,7 @@ class SimplicialChains(CombinatorialFreeModule):
 
             This method applies the diagonal ``times`` times, producing
             ``times + 1`` tensor factors.  Returns an element of
-            ``tensor([SimplicialChains()]*( times + 1))``.
+            ``tensor([SimplicialChains(SC.base_ring())] * (times + 1))``.
 
             Parameters
             ----------
