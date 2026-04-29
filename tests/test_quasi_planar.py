@@ -344,7 +344,7 @@ class TestComoduleAxioms:
 
     1. **Compatibility with the differential** (chain-map property):
        ``(d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(x)) = ν(∂_C(x))`` where ∂_C is the
-       cooperad differential.  This is the Berger–Fresse chain-map
+       cooperad differential.  This is the Le Grignou–Roca i Lucio chain-map
        property for the cooperad-level E-comodule map ν: C → E ⊗ C.
 
     2. **Coassociativity**:

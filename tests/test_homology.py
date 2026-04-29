@@ -94,6 +94,56 @@ class TestChainComplex:
         with pytest.raises(ValueError, match="does not support the weight API"):
             compute_chain_complex(S2, degrees=range(3), weight=1)
 
+    def test_boundary_matrix_fast_path_with_normalization(self) -> None:
+        """Chain-complex assembly should use the on-basis fast path and key normalization."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+            def __repr__(self) -> str:
+                return f"FakeElem({self._key!r})"
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+            def __call__(self, _elem):
+                raise AssertionError("compute_chain_complex should use the on_basis fast path")
+
+        class _FakeModule:
+            def __init__(self):
+                self._basis = {
+                    0: [_FakeElement("a")],
+                    1: [_FakeElement("b")],
+                }
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def graded_basis(self, d):
+                return self._basis.get(d, [])
+
+            def _boundary_on_basis(self, key):
+                if key == "b":
+                    return [("raw_a", QQ.one())]
+                return []
+
+            def _normalize_key(self, key):
+                if key == "raw_a":
+                    return [(QQ.one(), "a")]
+                return [(QQ.one(), key)]
+
+        C = compute_chain_complex(_FakeModule(), degrees=range(2), check=True)
+        assert C.differential(1)[0, 0] == 1
+
 
 # ---------------------------------------------------------------------------
 # homology_basis
