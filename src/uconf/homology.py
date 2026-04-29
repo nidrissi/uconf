@@ -386,8 +386,8 @@ def homology_basis(
         ``range(degree - 1, degree + 2)`` is used (negative
         degrees are clamped to 0).  Pass a wider range if the module
         has non-trivial basis below ``degree - 1``.
-        weight:
-            Passed through to :func:`compute_chain_complex`. See its documentation.
+    weight:
+        Passed through to :func:`compute_chain_complex`. See its documentation.
 
     Returns
     -------
