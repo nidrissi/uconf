@@ -290,6 +290,45 @@ class TestFreeOperadAlgebra:
         assert m_tuple == (mod("b"), mod("a"))
         assert coeff == -1
 
+    def test_non_planar_normalization_uses_left_tensor_action(self):
+        """Normalization uses the left ``S_n``-action on the leaf tensor.
+
+        For a right operad action, the coinvariant relation is
+        ``(p·σ, m) ~ (p, σ·m)``, and the left action on tensors is
+        ``σ·(m_1, ..., m_n) = (m_{σ^{-1}(1)}, ..., m_{σ^{-1}(n)})``.
+        This regression test uses a non-involutive permutation to distinguish
+        ``σ`` from ``σ^{-1}``.
+        """
+        from sage.all import CombinatorialFreeModule
+
+        mod = CombinatorialFreeModule(QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ))
+        mod.degree_on_basis = lambda _: 1
+        mod.boundary = lambda _elem: mod.zero()
+        F = FreeOperadAlgebra(Associative, mod)
+
+        elem = F.module(((2, 3, 1), (mod("a"), mod("b"), mod("c"))))
+        assert _as_dict(elem) == {((1, 2, 3), (mod("c"), mod("a"), mod("b"))): 1}
+
+    def test_equivariance_uses_sigma_inverse_on_inputs(self):
+        """γ(p·σ; a) = ε(σ⁻¹;a) γ(p; a_{σ⁻¹(1)},...,a_{σ⁻¹(n)})."""
+        from sage.all import CombinatorialFreeModule, SymmetricGroup
+
+        mod = CombinatorialFreeModule(QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ))
+        mod.degree_on_basis = lambda _: 1
+        mod.boundary = lambda _elem: mod.zero()
+        F = FreeOperadAlgebra(Associative, mod)
+
+        a, b, c = [F.include(mod(k)) for k in ["a", "b", "c"]]
+        inputs = [a, b, c]
+        p = Associative(3, QQ)((1, 2, 3))
+        sigma = SymmetricGroup(3)([2, 3, 1])
+        sigma_inv = sigma.inverse()
+
+        lhs = F.act(p.permute(list(sigma.tuple())), inputs)
+        rhs_inputs = [inputs[sigma_inv(i) - 1] for i in range(1, 4)]
+        rhs = F.act(p, rhs_inputs)
+        assert _as_dict(lhs) == _as_dict(rhs)
+
     def test_boundary_zero_trivial(self):
         """Differential is 0 for trivial Ass operad (deg=0) and trivial M."""
         M = _zero_diff_module()
@@ -330,6 +369,18 @@ class TestCofreeCoalgebraModule:
         mod = CofreeCoalgebraModule(CoAssociative, M)
         elem = mod(((1, 2), ((), ())))
         assert elem.boundary() == mod.zero()
+
+    def test_non_planar_normalization_uses_left_tensor_action(self):
+        """Cofree normalization uses the same left tensor action convention."""
+        from sage.all import CombinatorialFreeModule
+
+        mod_M = CombinatorialFreeModule(QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ))
+        mod_M.degree_on_basis = lambda _: 1
+        mod_M.boundary = lambda _elem: mod_M.zero()
+        mod = CofreeCoalgebraModule(CoAssociative, mod_M)
+
+        elem = mod(((2, 3, 1), (mod_M("a"), mod_M("b"), mod_M("c"))))
+        assert _as_dict(elem) == {((1, 2, 3), (mod_M("c"), mod_M("a"), mod_M("b"))): 1}
 
 
 # ===========================================================================

@@ -1087,7 +1087,7 @@ def sample_hadamard_basis(
 
     seen = set()
     results = []
-    max_attempts = k * 10
+    max_attempts = _direct_sampler_retry_budget(k)
 
     for _ in range(max_attempts):
         if len(results) >= k:
@@ -2059,6 +2059,18 @@ def sample_basis(
     return rng.sample(full, k)
 
 
+def _direct_sampler_retry_budget(k: int) -> int:
+    """Return a bounded retry budget for direct samplers.
+
+    We allow some oversampling to recover from duplicates and occasional
+    misses, but avoid the previous large budgets that spent a long time on
+    expensive recursive samplers when no element exists in practice.
+    """
+    if k <= 0:
+        return 0
+    return max(8, k, min(2 * k, 40))
+
+
 def _get_direct_sampler(parent, weight):
     """Return a direct-sampling function for the given parent type, or None."""
     if isinstance(parent, BarConstruction.Component):
@@ -2091,7 +2103,7 @@ def _sample_via_direct(
     """Use a construction-aware sampler to generate up to *k* distinct elements."""
     seen = set()
     results = []
-    max_attempts = k * 15  # generous retry budget
+    max_attempts = _direct_sampler_retry_budget(k)
 
     for _ in range(max_attempts):
         if len(results) >= k:
