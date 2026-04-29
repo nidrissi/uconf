@@ -171,10 +171,15 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     if not action_result:
                         continue
 
-                    # Koszul sign: (-1)^{|c_L|}
+                    # Koszul sign from moving the twisting coderivation
+                    # past the left cooperad factor, and from moving the
+                    # inserted operad element α(c_R) past the leaf factors
+                    # that occur before the contracted block.
                     c_L_comp = C(m, base_ring)
                     c_L_deg = c_L_comp.degree_on_basis(c_L_key)
-                    sign = sign_from_exponent(c_L_deg)
+                    prefix_deg = sum(M.degree_on_basis(m_tuple[j]) for j in range(i - 1))
+                    alpha_deg = alpha_c_R.degree()
+                    sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
 
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
@@ -224,10 +229,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             if not action_result:
                 continue
 
-            # Koszul sign: (-1)^{|c_L|}
+            # Koszul sign from moving the twisting coderivation past
+            # the left cooperad factor, and from moving the inserted
+            # operad element α(c_R) past the leaf factors that stay
+            # before the contracted block.
             c_L_comp = C(m, base_ring)
             c_L_deg = c_L_comp.degree_on_basis(c_L_key)
-            sign = sign_from_exponent(c_L_deg)
 
             # Build new m_tuple: order-preserving mapping from
             # original positions to the m-element result tuple.
@@ -236,6 +243,10 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             S_set = set(child_positions)
             min_S = child_positions[0]  # child_positions is sorted
             T = sorted(set(range(1, n + 1)) - S_set)
+            T_before = [t for t in T if t < min_S]
+            prefix_deg = sum(M.degree_on_basis(m_tuple[t - 1]) for t in T_before)
+            alpha_deg = alpha_c_R.degree()
+            sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
             top_positions = sorted(T + [min_S])  # maps to {1,...,m}
 
             # Koszul gathering sign from permuting algebra elements
@@ -245,7 +256,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             gathering_sign = 1
             if tuple(child_positions) != tuple(range(child_positions[0], child_positions[0] + n_r)):
                 # Non-contiguous: compute Koszul sign of gathering
-                T_before = [t for t in T if t < min_S]
                 T_after = [t for t in T if t > min_S]
                 gathered = T_before + list(child_positions) + T_after
                 # gathered is a permutation of (1,...,n)
