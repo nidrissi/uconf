@@ -66,6 +66,7 @@ def _sample(population, k, rng):
         return list(population)
     return rng.sample(list(population), k)
 
+
 def _sample_basis_or_skip(parent, degree, count, rng, **kwargs):
     """Sample basis elements and skip when the requested degree is empty."""
     basis = sample_basis(parent, degree, count, rng, **kwargs)
@@ -928,14 +929,22 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a, b, c = rng.choices(w1, k=3)
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     lhs = ta.act(Q.compose(p, 1, q), [a, b, c])
                     rhs = ta.act(p, [ta.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     lhs = ta.act(Q.compose(p, 2, q), [a, b, c])
                     rhs = ta.act(p, [a, ta.act(q, [b, c])])
                     # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
@@ -961,7 +970,9 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
                 lhs = ta.boundary(ta.act(p, [a, a]))
                 rhs = ta.act(p.boundary(), [a, a])
                 p_deg_val = p.degree()
@@ -1102,8 +1113,12 @@ class TestLayer4h_comodule_morphism:
             P2 = P(2, R)
             if not list(P2.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
-            for p in _sample_basis_or_skip(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     for i in [1, 2]:
                         lhs = phi(P.compose(p, i, q))
                         rhs = Q.compose(phi(p), i, phi(q))
@@ -1258,7 +1273,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         @pytest.mark.parametrize("p_deg", [-1, 0, 1, 2])
         @pytest.mark.parametrize("q_deg", [-1, 0, 1, 2])
         def test_pullback_algebra_associative_weight4_arity3_into_2(
-            self, p_deg, q_deg, dim, layers: ConfigurationLayers, rng
+            self, p_deg, q_deg, layers: ConfigurationLayers, rng
         ):
             """γ(p ∘_i q; a,b,c,d) with p arity 3, q arity 2 (i=1,2,3): weight 4."""
             pb = layers.pulled_back
@@ -1267,10 +1282,12 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P3 = P(3, R)
             P2 = P(2, R)
-            p_sample = _sample_basis_or_skip(P3, p_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
-            q_sample = _sample_basis_or_skip(P2, q_deg, 4, rng, sphere_nontrivial=True, sphere_dim=dim)
-            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4))
-            if len(pool) < 4:
+            p_sample = _sample_basis_or_skip(P3, p_deg, 8, rng)
+            q_sample = _sample_basis_or_skip(P2, q_deg, 4, rng)
+            pool = sample_algebra_pool(
+                mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4)
+            )
+            if not pool:
                 pytest.skip("Not enough weight-1 elements")
             for _ in range(3):
                 a, b, c, d = rng.choices(pool, k=4)
@@ -1305,7 +1322,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
         @pytest.mark.parametrize("p_deg", [-1, 0, 1])
         @pytest.mark.parametrize("q_deg", [-1, 0, 1])
         def test_pullback_algebra_associative_weight4_arity2_into_3(
-            self, p_deg, q_deg, dim, layers: ConfigurationLayers, rng
+            self, p_deg, q_deg, layers: ConfigurationLayers, rng
         ):
             """γ(p ∘_i q; a,b,c,d) with p arity 2, q arity 3 (i=1,2): weight 4."""
             pb = layers.pulled_back
@@ -1314,10 +1331,12 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P2 = P(2, R)
             P3 = P(3, R)
-            p_sample = _sample_basis_or_skip(P2, p_deg, 4, rng, sphere_nontrivial=True, sphere_dim=dim)
-            q_sample = _sample_basis_or_skip(P3, q_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
-            pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4))
-            if len(pool) < 4:
+            p_sample = _sample_basis_or_skip(P2, p_deg, 4, rng)
+            q_sample = _sample_basis_or_skip(P3, q_deg, 8, rng)
+            pool = sample_algebra_pool(
+                mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4)
+            )
+            if not pool:
                 pytest.skip("Not enough weight-1 elements")
             for _ in range(3):
                 a, b, c, d = rng.choices(pool, k=4)
