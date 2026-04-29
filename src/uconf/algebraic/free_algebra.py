@@ -118,9 +118,11 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
             Σ coeff * c * ε(σ; degrees) * self.term((p_planar_key, σ · m_tuple))
 
-        where ``σ · m_tuple = (m_tuple[σ(1)−1], ..., m_tuple[σ(n)−1])``
-        and ``ε(σ; degrees)`` is the Koszul sign for the graded permutation
-        of the leaf-module elements.
+        where ``σ · m_tuple`` is the left action on the leaf tensor:
+
+            ``σ · (m_1, ..., m_n) = (m_{σ^{-1}(1)}, ..., m_{σ^{-1}(n)})``
+
+        and ``ε(σ; degrees)`` is the Koszul sign for that graded left action.
 
         This ensures all stored P-keys are in the planar basis.
 
@@ -198,9 +200,12 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             if sigma_tuple == identity_tuple:
                 result.append((R(pl_coeff), (p_planar_key, m_tuple)))
                 continue
-
-            permuted_m = tuple(m_tuple[sigma_tuple[i] - 1] for i in range(n))
-            perm_0idx = [s - 1 for s in sigma_tuple]
+            sigma_inv = [0] * n
+            for pos, value in enumerate(sigma_tuple, start=1):
+                sigma_inv[value - 1] = pos
+            sigma_inv_tuple = tuple(sigma_inv)
+            permuted_m = tuple(m_tuple[sigma_inv_tuple[i] - 1] for i in range(n))
+            perm_0idx = [s - 1 for s in sigma_inv_tuple]
             koszul = koszul_sign_of_permutation(perm_0idx, degrees)
             result.append((R(pl_coeff * koszul), (p_planar_key, permuted_m)))
         return result

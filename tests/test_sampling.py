@@ -278,6 +278,24 @@ class TestSampleBasisEmptyFastFail:
         assert elems == []
         assert time.time() - t0 < 1.0, "sphere_nontrivial cobar at infeasible degree must fast-fail"
 
+    def test_direct_sampler_retry_budget_is_capped(self, monkeypatch, rng):
+        import uconf.sampling as sampling
+
+        calls = 0
+
+        def fake_invoke(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            return None
+
+        monkeypatch.setattr(sampling, "_graded_basis_cache_get", lambda *args, **kwargs: None)
+        monkeypatch.setattr(sampling, "_invoke_direct_sampler", fake_invoke)
+
+        elems = sampling.sample_basis(Surjection(2, QQ), 1, 10, rng)
+
+        assert elems == []
+        assert calls == sampling._direct_sampler_retry_budget(10)
+
 
 # ---------------------------------------------------------------------------
 # Algebra pool sampling
