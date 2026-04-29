@@ -785,6 +785,25 @@ class TestLayer3_ΩBH_Kd:
                     rhs *= sign_from_exponent(q.degree() * a.degree())
                     assert _as_dict(lhs) == _as_dict(rhs)
 
+        def test_regression_left_to_right_substitution(self, dim, ring, layers: ConfigurationLayers):
+            """Exact regression for the cobar free-algebra substitution order bug."""
+            if dim != 1 or ring != QQ:
+                pytest.skip("This exact counterexample is specific to d=1 over QQ")
+
+            fa = layers.free_alg
+            P = layers.OBXsLie
+            p = next(
+                elem
+                for elem in P(2, ring).graded_basis(-1)
+                if str(elem) == "(([x1,x2] ⊙ {1 2}; 1, 2); 1, 2)"
+            )
+            a = next(iter(fa.module.graded_basis_by_weight(0, 1)))
+            c = fa.act(p, [a, a])
+
+            lhs = fa.act(P.compose(p, 1, p), [a, a, c])
+            rhs = fa.act(p, [fa.act(p, [a, a]), c])
+            assert _as_dict(lhs) == _as_dict(rhs)
+
     class TestLeibnizAction:
         """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""

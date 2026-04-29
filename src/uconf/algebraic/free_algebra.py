@@ -663,16 +663,24 @@ class FreeOperadAlgebra(OperadAlgebra):
                 for _, c in term_combo:
                     coeff = coeff * c
 
-                # Full substitution: compose q with each p_i from right to left
+                # Full substitution: compose q with each p_i from left to right.
+                #
+                # For sign-sensitive operads such as cobar constructions,
+                # right-to-left nesting changes the intermediate "after-degree"
+                # seen by later partial compositions and introduces spurious
+                # Koszul signs.  The operadic substitution γ(q; p₁, ..., p_k)
+                # is reproduced by sequential partial compositions
+                # ∘_1, ∘_2, ..., ∘_k with cumulative position tracking.
                 n_list = [len(ik[1]) for ik in input_keys]
                 composed_elem = P(k, R).term(q_key)
-
-                for j in range(k - 1, -1, -1):
+                cumulative_shift = 0
+                for j in range(k):
                     p_j_key, m_j_tuple = input_keys[j]
                     n_j = n_list[j]
                     p_j_elem = P(n_j, R).term(p_j_key)
-                    pos = j + 1  # 1-indexed position
+                    pos = j + 1 + cumulative_shift  # 1-indexed position
                     composed_elem = P.compose(composed_elem, pos, p_j_elem)
+                    cumulative_shift += n_j - 1
 
                 # Koszul sign from rearranging
                 #   q ⊗ (p₁⊗m₁) ⊗ … ⊗ (pₖ⊗mₖ)
