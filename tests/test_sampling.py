@@ -495,6 +495,16 @@ class TestRandomCofreeCoalgebraElement:
         if elem is not None:
             assert elem.parent() == mod
 
+    def test_weighted_nested_module(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.bar.module
+        elem = random_cofree_coalgebra_element(mod, 1, rng, weight=3)
+        assert elem is not None
+        key = next(iter(elem.support()))
+        assert mod._weight_on_basis(key) == 3
+
 
 # ---------------------------------------------------------------------------
 # sample_basis with construction-aware dispatch
@@ -546,6 +556,18 @@ class TestSampleBasisDispatch:
         elems = sample_basis(mod, 1, 5, rng, weight=1)
         # At least some elements should be generated
         assert isinstance(elems, list)
+
+    def test_weighted_nested_cofree_dispatch(self, rng):
+        """Weighted cofree sampling should avoid unbounded inner basis_iter calls."""
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.bar.module
+        elems = sample_basis(mod, 1, 5, rng, weight=3)
+        assert len(elems) > 0
+        for elem in elems:
+            key = next(iter(elem.support()))
+            assert mod._weight_on_basis(key) == 3
 
 
 class TestRandomTreeModuleElement:
