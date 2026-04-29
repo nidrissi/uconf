@@ -1120,7 +1120,7 @@ class TestLayer4h_comodule_morphism:
 
         @pytest.mark.parametrize("p_deg", [-1, 0])
         @pytest.mark.parametrize("q_deg", [-1, 0])
-        def test_operad_map(self, p_deg, q_deg, dim, layers: ConfigurationLayers, rng):
+        def test_operad_map_arity2(self, p_deg, q_deg, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             Q = layers.comodule_morphism.target  # S ⊙ P
             phi = layers.comodule_morphism
@@ -1128,12 +1128,8 @@ class TestLayer4h_comodule_morphism:
             P2 = P(2, R)
             if not list(P2.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
-            for p in _sample_basis_or_skip(
-                P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
-            ):
-                for q in _sample_basis_or_skip(
-                    P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
-                ):
+            for p in _sample_basis_or_skip(P2, p_deg, 3, rng):
+                for q in _sample_basis_or_skip(P2, q_deg, 3, rng):
                     for i in [1, 2]:
                         lhs = phi(P.compose(p, i, q))
                         rhs = Q.compose(phi(p), i, phi(q))
@@ -1141,17 +1137,59 @@ class TestLayer4h_comodule_morphism:
                             f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at p_deg={p_deg}, q_deg={q_deg}"
                         )
 
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0])
+        @pytest.mark.parametrize("q_deg", [-1, 0])
+        def test_operad_map_arity3(self, p_deg, q_deg, layers: ConfigurationLayers, rng):
+            """p ∈ P(3), q ∈ P(2): verify φ(p ∘ᵢ q) = φ(p) ∘ᵢ φ(q) for i=1,2,3."""
+            P = layers.OBXsLie
+            Q = layers.comodule_morphism.target  # S ⊙ P
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            P3 = P(3, R)
+            P2 = P(2, R)
+            if not list(P3.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
+                pytest.skip(f"No P(3) elements at deg {p_deg} or P(2) elements at deg {q_deg}")
+            for p in _sample_basis_or_skip(P3, p_deg, 3, rng):
+                for q in _sample_basis_or_skip(P2, q_deg, 3, rng):
+                    for i in [1, 2, 3]:
+                        lhs = phi(P.compose(p, i, q))
+                        rhs = Q.compose(phi(p), i, phi(q))
+                        assert lhs == rhs, (
+                            f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at arity(p)=3, p_deg={p_deg}, q_deg={q_deg}"
+                        )
+
+        @pytest.mark.parametrize("p_deg", [-3, -2, -1])
+        @pytest.mark.parametrize("q_deg", [-1, 0])
+        def test_operad_map_arity4(self, p_deg, q_deg, layers: ConfigurationLayers, rng):
+            """p ∈ P(4), q ∈ P(2): verify φ(p ∘ᵢ q) = φ(p) ∘ᵢ φ(q) for i=1,2,3,4."""
+            P = layers.OBXsLie
+            Q = layers.comodule_morphism.target  # S ⊙ P
+            phi = layers.comodule_morphism
+            R = layers.bar.module.base_ring()
+            P4 = P(4, R)
+            P2 = P(2, R)
+            if not list(P4.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
+                pytest.skip(f"No P(4) elements at deg {p_deg} or P(2) elements at deg {q_deg}")
+            for p in _sample_basis_or_skip(P4, p_deg, 2, rng):
+                for q in _sample_basis_or_skip(P2, q_deg, 3, rng):
+                    for i in [1, 2, 3, 4]:
+                        lhs = phi(P.compose(p, i, q))
+                        rhs = Q.compose(phi(p), i, phi(q))
+                        assert lhs == rhs, (
+                            f"φ(p ∘_{i} q) ≠ φ(p) ∘_{i} φ(q) at arity(p)=4, p_deg={p_deg}, q_deg={q_deg}"
+                        )
+
     class TestEquivariance:
         """φ(p · σ) = φ(p) · σ — the morphism respects symmetric group action."""
 
         @pytest.mark.parametrize("n", [2, 3])
         @pytest.mark.parametrize("deg", [-1, 0, 1])
-        def test_equivariance(self, n, deg, dim, layers: ConfigurationLayers, rng):
+        def test_equivariance(self, n, deg, layers: ConfigurationLayers, rng):
             P = layers.OBXsLie
             phi = layers.comodule_morphism
             R = layers.bar.module.base_ring()
             Pn = P(n, R)
-            basis = sample_basis(Pn, deg, 5, rng, sphere_nontrivial=True, sphere_dim=dim)
+            basis = sample_basis(Pn, deg, 30, rng)
             if not basis:
                 pytest.skip(f"No P({n}) elements at degree {deg}")
             Sn = SymmetricGroup(n)
@@ -1193,7 +1231,7 @@ class TestLayer4h_comodule_morphism:
             Pn = P(2, R)
             Q = phi.target
             Qn = Q(2, R)
-            basis = sample_basis(Pn, deg, 5, rng, sphere_nontrivial=True, sphere_dim=dim)
+            basis = sample_basis(Pn, deg, 30, rng)
             if not basis:
                 pytest.skip(f"No P(2) elements at degree {deg}")
             for p_elem in basis:
@@ -1522,7 +1560,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
                         rhs = koszul * pb.act(p, permuted)
                         assert _as_dict(lhs) == _as_dict(rhs)
 
-        @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1, 2])
+        @pytest.mark.parametrize("p_deg", [-2, -1, 0, 1, 2, 3])
         def test_equivariance_arity4(self, p_deg, dim, layers: ConfigurationLayers, rng):
             pb = layers.pulled_back
             mod = pb.module
@@ -1531,7 +1569,7 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P4 = P(4, R)
             # Use sample_basis as a fast existence probe instead of materializing
             # the full P4 basis (which is expensive for CobarConstruction at arity 4).
-            p_sample = sample_basis(P4, p_deg, 8, rng, sphere_nontrivial=True, sphere_dim=dim)
+            p_sample = sample_basis(P4, p_deg, 12, rng, sphere_nontrivial=True, sphere_dim=dim)
             if not p_sample:
                 pytest.skip(f"No sphere-admissible P(4) elements at degree {p_deg}")
             pool = sample_algebra_pool(mod, k_per_bucket=30, rng=rng, deg_range=range(-1, 4))
