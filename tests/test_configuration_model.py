@@ -1661,6 +1661,21 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
                         f"d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
                     )
 
+        def test_regression_remaining_weight4_counterexample(self, dim, ring, layers):
+            """Exact regression for the last rational weight-4 sign mismatch."""
+            if dim != 1 or ring != QQ:
+                pytest.skip("This exact counterexample is specific to d=1 over QQ")
+
+            mod = layers.bar.module
+
+            elem = next(
+                basis
+                for basis in mod.graded_basis_by_weight(3, 4)
+            if str(basis)
+            == "<([x1,x2] ⊙ {1 2}; 1, ([x1,x2] ⊙ {1 2 1 2}; 2, 3)); ɑ1 # <(([x1,x2] ⊙ {1 2 1}; 1, 2); 1, 2); β1, β1>, ɑ1 # <id; β1>, ɑ1 # <id; β1>>"
+        )
+        assert mod.boundary(mod.boundary(elem)) == mod.zero()
+
     class TestDecomposedDSquared:
         """Test the components of d separately: d_cofree and d_alpha.
 
