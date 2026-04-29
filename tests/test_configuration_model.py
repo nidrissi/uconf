@@ -104,6 +104,10 @@ def _elem_degree(mod, elem):
 # ---------------------------------------------------------------------------
 
 _SEED = 20260330
+_WEIGHT1_POOL_SIZE = 30
+_P3_ASSOC_SAMPLE_SIZE = 8
+_P2_ASSOC_SAMPLE_SIZE = 4
+_ASSOC_INPUT_SAMPLE_ROUNDS = 3
 
 
 @pytest.fixture
@@ -125,6 +129,17 @@ def dim(request):
 def layers(dim: int, ring):
     """All configuration model layers at given dimension and ring."""
     return _build_layers(ring, dim)
+
+
+def _sample_weight1_pool(mod, rng):
+    """Sample a bounded pool of weight-1 algebra elements."""
+    return sample_algebra_pool(
+        mod,
+        k_per_bucket=_WEIGHT1_POOL_SIZE,
+        rng=rng,
+        weights=(1,),
+        deg_range=range(-1, 4),
+    )
 
 
 # ===========================================================================
@@ -1282,14 +1297,12 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P3 = P(3, R)
             P2 = P(2, R)
-            p_sample = _sample_basis_or_skip(P3, p_deg, 8, rng)
-            q_sample = _sample_basis_or_skip(P2, q_deg, 4, rng)
-            pool = sample_algebra_pool(
-                mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4)
-            )
+            p_sample = _sample_basis_or_skip(P3, p_deg, _P3_ASSOC_SAMPLE_SIZE, rng)
+            q_sample = _sample_basis_or_skip(P2, q_deg, _P2_ASSOC_SAMPLE_SIZE, rng)
+            pool = _sample_weight1_pool(mod, rng)
             if not pool:
                 pytest.skip("Not enough weight-1 elements")
-            for _ in range(3):
+            for _ in range(_ASSOC_INPUT_SAMPLE_ROUNDS):
                 a, b, c, d = rng.choices(pool, k=4)
                 a_deg = _elem_degree(mod, a)
                 b_deg = _elem_degree(mod, b)
@@ -1331,14 +1344,12 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P2 = P(2, R)
             P3 = P(3, R)
-            p_sample = _sample_basis_or_skip(P2, p_deg, 4, rng)
-            q_sample = _sample_basis_or_skip(P3, q_deg, 8, rng)
-            pool = sample_algebra_pool(
-                mod, k_per_bucket=30, rng=rng, weights=(1,), deg_range=range(-1, 4)
-            )
+            p_sample = _sample_basis_or_skip(P2, p_deg, _P2_ASSOC_SAMPLE_SIZE, rng)
+            q_sample = _sample_basis_or_skip(P3, q_deg, _P3_ASSOC_SAMPLE_SIZE, rng)
+            pool = _sample_weight1_pool(mod, rng)
             if not pool:
                 pytest.skip("Not enough weight-1 elements")
-            for _ in range(3):
+            for _ in range(_ASSOC_INPUT_SAMPLE_ROUNDS):
                 a, b, c, d = rng.choices(pool, k=4)
                 a_deg = _elem_degree(mod, a)
                 for p in p_sample:
