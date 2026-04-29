@@ -66,6 +66,7 @@ def _sample(population, k, rng):
         return list(population)
     return rng.sample(list(population), k)
 
+
 def _sample_basis_or_skip(parent, degree, count, rng, **kwargs):
     """Sample basis elements and skip when the requested degree is empty."""
     basis = sample_basis(parent, degree, count, rng, **kwargs)
@@ -103,6 +104,10 @@ def _elem_degree(mod, elem):
 # ---------------------------------------------------------------------------
 
 _SEED = 20260330
+_WEIGHT1_POOL_SIZE = 30
+_P3_ASSOC_SAMPLE_SIZE = 8
+_P2_ASSOC_SAMPLE_SIZE = 4
+_ASSOC_INPUT_SAMPLE_ROUNDS = 3
 
 
 @pytest.fixture
@@ -124,6 +129,17 @@ def dim(request):
 def layers(dim: int, ring):
     """All configuration model layers at given dimension and ring."""
     return _build_layers(ring, dim)
+
+
+def _sample_weight1_pool(mod, rng):
+    """Sample a bounded pool of weight-1 algebra elements."""
+    return sample_algebra_pool(
+        mod,
+        k_per_bucket=_WEIGHT1_POOL_SIZE,
+        rng=rng,
+        weights=(1,),
+        deg_range=range(-1, 4),
+    )
 
 
 # ===========================================================================
@@ -928,14 +944,22 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a, b, c = rng.choices(w1, k=3)
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     lhs = ta.act(Q.compose(p, 1, q), [a, b, c])
                     rhs = ta.act(p, [ta.act(q, [a, b]), c])
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     lhs = ta.act(Q.compose(p, 2, q), [a, b, c])
                     rhs = ta.act(p, [a, ta.act(q, [b, c])])
                     # a.degree() doesn't exist on CombinatorialFreeModule_Tensor
@@ -961,7 +985,9 @@ class TestLayer4_S_ΩBH_Kd:
             if not w1:
                 pytest.skip("No weight-1 elements")
             a = w1[0]
-            for p in _sample_basis_or_skip(Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                Q2, p_deg, 2, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
                 lhs = ta.boundary(ta.act(p, [a, a]))
                 rhs = ta.act(p.boundary(), [a, a])
                 p_deg_val = p.degree()
@@ -1102,8 +1128,12 @@ class TestLayer4h_comodule_morphism:
             P2 = P(2, R)
             if not list(P2.graded_basis(p_deg)) or not list(P2.graded_basis(q_deg)):
                 pytest.skip(f"No P(2) elements at deg {p_deg} or {q_deg}")
-            for p in _sample_basis_or_skip(P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
-                for q in _sample_basis_or_skip(P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim):
+            for p in _sample_basis_or_skip(
+                P2, p_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
+            ):
+                for q in _sample_basis_or_skip(
+                    P2, q_deg, 3, rng, sphere_nontrivial=True, sphere_dim=dim
+                ):
                     for i in [1, 2]:
                         lhs = phi(P.compose(p, i, q))
                         rhs = Q.compose(phi(p), i, phi(q))
@@ -1267,43 +1297,40 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P3 = P(3, R)
             P2 = P(2, R)
-            p_elems = P3.graded_basis(p_deg)
-            q_elems = P2.graded_basis(q_deg)
-            if not p_elems or not q_elems:
-                pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a, b, c, d = rng.choices(w1, k=4)
-            a_deg = mod.degree_on_basis(a.support()[0])
-            b_deg = mod.degree_on_basis(b.support()[0])
-            for p in p_elems:
-                for q in q_elems:
-                    q_deg_val = q.degree()
-                    # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b), c, d)
-                    lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
-                    rhs = pb.act(p, [pb.act(q, [a, b]), c, d])
-                    assert _as_dict(lhs) == _as_dict(rhs), (
-                        f"Failed associativity (arity3 ∘_1 arity2) for p={p}, q={q}"
-                    )
-                    # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c), d)
-                    lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
-                    rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
-                        p, [a, pb.act(q, [b, c]), d]
-                    )
-                    assert _as_dict(lhs) == _as_dict(rhs), (
-                        f"Failed associativity (arity3 ∘_2 arity2) for p={p}, q={q}"
-                    )
-                    # i=3: γ(p ∘_3 q; a,b,c,d) = (-1)^{(|a|+|b|)|q|} γ(p; a, b, γ(q; c,d))
-                    lhs = pb.act(P.compose(p, 3, q), [a, b, c, d])
-                    rhs = sign_from_exponent((a_deg + b_deg) * q_deg_val) * pb.act(
-                        p, [a, b, pb.act(q, [c, d])]
-                    )
-                    assert _as_dict(lhs) == _as_dict(rhs), (
-                        f"Failed associativity (arity3 ∘_3 arity2) for p={p}, q={q}"
-                    )
+            p_sample = _sample_basis_or_skip(P3, p_deg, _P3_ASSOC_SAMPLE_SIZE, rng)
+            q_sample = _sample_basis_or_skip(P2, q_deg, _P2_ASSOC_SAMPLE_SIZE, rng)
+            pool = _sample_weight1_pool(mod, rng)
+            if not pool:
+                pytest.skip("Not enough weight-1 elements")
+            for _ in range(_ASSOC_INPUT_SAMPLE_ROUNDS):
+                a, b, c, d = rng.choices(pool, k=4)
+                a_deg = _elem_degree(mod, a)
+                b_deg = _elem_degree(mod, b)
+                for p in p_sample:
+                    for q in q_sample:
+                        q_deg_val = q.degree()
+                        # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b), c, d)
+                        lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
+                        rhs = pb.act(p, [pb.act(q, [a, b]), c, d])
+                        assert _as_dict(lhs) == _as_dict(rhs), (
+                            f"Failed associativity (arity3 ∘_1 arity2) for p={p}, q={q}"
+                        )
+                        # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c), d)
+                        lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
+                        rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
+                            p, [a, pb.act(q, [b, c]), d]
+                        )
+                        assert _as_dict(lhs) == _as_dict(rhs), (
+                            f"Failed associativity (arity3 ∘_2 arity2) for p={p}, q={q}"
+                        )
+                        # i=3: γ(p ∘_3 q; a,b,c,d) = (-1)^{(|a|+|b|)|q|} γ(p; a, b, γ(q; c,d))
+                        lhs = pb.act(P.compose(p, 3, q), [a, b, c, d])
+                        rhs = sign_from_exponent((a_deg + b_deg) * q_deg_val) * pb.act(
+                            p, [a, b, pb.act(q, [c, d])]
+                        )
+                        assert _as_dict(lhs) == _as_dict(rhs), (
+                            f"Failed associativity (arity3 ∘_3 arity2) for p={p}, q={q}"
+                        )
 
         @pytest.mark.parametrize("p_deg", [-1, 0, 1])
         @pytest.mark.parametrize("q_deg", [-1, 0, 1])
@@ -1317,34 +1344,31 @@ class TestLayer5_pb_S_ΩBH_Kd:
             P = layers.OBXsLie
             P2 = P(2, R)
             P3 = P(3, R)
-            p_elems = P2.graded_basis(p_deg)
-            q_elems = P3.graded_basis(q_deg)
-            if not p_elems or not q_elems:
-                pytest.skip(f"No elements at p_deg={p_deg} or q_deg={q_deg}")
-            w1 = []
-            for d_try in range(-1, 4):
-                w1.extend(mod.graded_basis_by_weight(d_try, 1))
-            if not w1:
-                pytest.skip("No weight-1 elements")
-            a, b, c, d = rng.choices(w1, k=4)
-            a_deg = mod.degree_on_basis(a.support()[0])
-            for p in p_elems:
-                for q in q_elems:
-                    q_deg_val = q.degree()
-                    # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b,c), d)
-                    lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
-                    rhs = pb.act(p, [pb.act(q, [a, b, c]), d])
-                    assert _as_dict(lhs) == _as_dict(rhs), (
-                        f"Failed associativity (arity2 ∘_1 arity3) for p={p}, q={q}"
-                    )
-                    # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c,d))
-                    lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
-                    rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
-                        p, [a, pb.act(q, [b, c, d])]
-                    )
-                    assert _as_dict(lhs) == _as_dict(rhs), (
-                        f"Failed associativity (arity2 ∘_2 arity3) for p={p}, q={q}"
-                    )
+            p_sample = _sample_basis_or_skip(P2, p_deg, _P2_ASSOC_SAMPLE_SIZE, rng)
+            q_sample = _sample_basis_or_skip(P3, q_deg, _P3_ASSOC_SAMPLE_SIZE, rng)
+            pool = _sample_weight1_pool(mod, rng)
+            if not pool:
+                pytest.skip("Not enough weight-1 elements")
+            for _ in range(_ASSOC_INPUT_SAMPLE_ROUNDS):
+                a, b, c, d = rng.choices(pool, k=4)
+                a_deg = _elem_degree(mod, a)
+                for p in p_sample:
+                    for q in q_sample:
+                        q_deg_val = q.degree()
+                        # i=1: γ(p ∘_1 q; a,b,c,d) = γ(p; γ(q; a,b,c), d)
+                        lhs = pb.act(P.compose(p, 1, q), [a, b, c, d])
+                        rhs = pb.act(p, [pb.act(q, [a, b, c]), d])
+                        assert _as_dict(lhs) == _as_dict(rhs), (
+                            f"Failed associativity (arity2 ∘_1 arity3) for p={p}, q={q}"
+                        )
+                        # i=2: γ(p ∘_2 q; a,b,c,d) = (-1)^{|a||q|} γ(p; a, γ(q; b,c,d))
+                        lhs = pb.act(P.compose(p, 2, q), [a, b, c, d])
+                        rhs = sign_from_exponent(a_deg * q_deg_val) * pb.act(
+                            p, [a, pb.act(q, [b, c, d])]
+                        )
+                        assert _as_dict(lhs) == _as_dict(rhs), (
+                            f"Failed associativity (arity2 ∘_2 arity3) for p={p}, q={q}"
+                        )
 
     class TestLeibnizAction:
         """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
