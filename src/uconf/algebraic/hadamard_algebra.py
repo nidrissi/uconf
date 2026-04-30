@@ -87,6 +87,53 @@ class HadamardTensorAlgebra(OperadAlgebra):
             + _inner_weight_on_key(self.right_module, key[1])
         )
 
+    @cached_method
+    def _act_on_basis_tuple(self, had_basis, tensor_basis_tuple: tuple):
+        """Return the Hadamard action on basis inputs."""
+        left_basis, right_basis = had_basis
+        arity = len(tensor_basis_tuple)
+        base_ring = self.module.base_ring()
+        left_operad_parent = self.left_algebra.operad_cls(arity, base_ring)
+        right_operad_parent = self.right_algebra.operad_cls(arity, base_ring)
+
+        left_op = left_operad_parent.term(left_basis)
+        right_op = right_operad_parent.term(right_basis)
+        right_op_deg = right_operad_parent.degree_on_basis(right_basis)
+
+        left_inputs = []
+        right_inputs = []
+        left_degs = []
+        right_degs = []
+        left_deg = self.left_module.degree_on_basis
+        right_deg = self.right_module.degree_on_basis
+
+        for tensor_basis in tensor_basis_tuple:
+            left_key, right_key = tensor_basis
+            left_inputs.append(self.left_module.term(left_key))
+            right_inputs.append(self.right_module.term(right_key))
+            left_degs.append(left_deg(left_key))
+            right_degs.append(right_deg(right_key))
+
+        sign_exponent = right_op_deg * sum(left_degs)
+        for i, right_degree in enumerate(right_degs):
+            for left_degree in left_degs[i + 1 :]:
+                sign_exponent += right_degree * left_degree
+        koszul_sign = sign_from_exponent(sign_exponent)
+
+        left_value = self.left_algebra.act(left_op, left_inputs)
+        right_value = self.right_algebra.act(right_op, right_inputs)
+
+        result_dict: dict = {}
+        R = self.module.base_ring()
+        zero = R.zero()
+        for left_out_basis, left_out_coeff in left_value:
+            for right_out_basis, right_out_coeff in right_value:
+                combined_key = (left_out_basis, right_out_basis)
+                combined_coeff = R(koszul_sign * left_out_coeff * right_out_coeff)
+                result_dict[combined_key] = result_dict.get(combined_key, zero) + combined_coeff
+
+        return self.module._from_dict(result_dict, remove_zeros=True)
+
     def _act_impl(self, p_element, algebra_elements):
         if p_element.parent().factory is not self.operad_cls:
             raise TypeError("p_element must belong to this Hadamard operad.")
@@ -99,10 +146,6 @@ class HadamardTensorAlgebra(OperadAlgebra):
             if a.parent() != self.module:
                 raise TypeError("All algebra elements must lie in the tensor module.")
 
-        arity = p_element.arity()
-        left_operad_parent = self.left_algebra.operad_cls(arity, self.module.base_ring())
-        right_operad_parent = self.right_algebra.operad_cls(arity, self.module.base_ring())
-
         # Pre-expand tensor_args into (basis_key, coeff) lists to avoid repeated iteration
         arg_expansions = [list(arg) for arg in tensor_args]
 
@@ -111,55 +154,25 @@ class HadamardTensorAlgebra(OperadAlgebra):
         result_dict: dict = {}
         R = self.module.base_ring()
 
-        # Pre-compute left/right degree_on_basis functions
-        left_deg = self.left_module.degree_on_basis
-        right_deg = self.right_module.degree_on_basis
-
         for had_basis, had_coeff in p_element:
-            left_basis, right_basis = had_basis
-            left_op = left_operad_parent(left_basis)
-            right_op = right_operad_parent(right_basis)
-            right_op_deg = right_operad_parent.degree_on_basis(right_basis)
-
             for selected_terms in itertools.product(*arg_expansions):
                 scalar = had_coeff
-                left_inputs = []
-                right_inputs = []
-                left_degs = []
-                right_degs = []
-
                 for tensor_basis, tensor_coeff in selected_terms:
-                    left_key, right_key = tensor_basis
-                    left_inputs.append(self.left_module.term(left_key))
-                    right_inputs.append(self.right_module.term(right_key))
-                    left_degs.append(left_deg(left_key))
-                    right_degs.append(right_deg(right_key))
                     scalar *= tensor_coeff
 
                 if scalar == 0:
                     continue
 
-                # Koszul sign from graded interchange
-                n = len(left_degs)
-                sign_exponent = right_op_deg * sum(left_degs)
-                for i in range(n):
-                    for j in range(i + 1, n):
-                        sign_exponent += right_degs[i] * left_degs[j]
-                koszul_sign = sign_from_exponent(sign_exponent)
-
-                left_value = self.left_algebra.act(left_op, left_inputs)
-                right_value = self.right_algebra.act(right_op, right_inputs)
-
-                # Use self.module.term() directly instead of tensor() to avoid
-                # Sage's tensor product construction overhead.
-                for left_out_basis, left_out_coeff in left_value:
-                    for right_out_basis, right_out_coeff in right_value:
-                        combined_key = (left_out_basis, right_out_basis)
-                        combined_coeff = R(koszul_sign * scalar * left_out_coeff * right_out_coeff)
-                        if combined_key in result_dict:
-                            result_dict[combined_key] += combined_coeff
-                        else:
-                            result_dict[combined_key] = combined_coeff
+                basis_result = self._act_on_basis_tuple(
+                    had_basis,
+                    tuple(tensor_basis for tensor_basis, _ in selected_terms),
+                )
+                for out_key, out_coeff in basis_result:
+                    combined_coeff = R(scalar * out_coeff)
+                    if out_key in result_dict:
+                        result_dict[out_key] += combined_coeff
+                    else:
+                        result_dict[out_key] = combined_coeff
 
         # Build result directly from dict, bypassing the
         # dict→items→dict round-trip of sum_of_terms(distinct=True).

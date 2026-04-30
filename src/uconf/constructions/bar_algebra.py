@@ -143,6 +143,18 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         return self._dalpha_contiguous(c_key, m_tuple, n, base_ring, c_comp)
 
+    @cached_method
+    def _alpha_on_basis(self, arity, c_key):
+        """Return ``α(c_key)`` for a cooperad basis key."""
+        c_comp = self._cooperad_cls(arity, self.base_ring())
+        return self._alpha(c_comp.term(c_key))
+
+    @cached_method
+    def _normalized_left_corolla(self, arity, c_left_key, new_m):
+        """Return the normalized corolla for a cached left cooperad factor."""
+        c_left_comp = self._cooperad_cls(arity, self.base_ring())
+        return self._normalized_corolla_sum(c_left_comp.term(c_left_key), new_m)
+
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
@@ -154,8 +166,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         m_prefix_degrees = [0]
         for m_key in m_tuple:
             m_prefix_degrees.append(m_prefix_degrees[-1] + M.degree_on_basis(m_key))
-        alpha_cache: dict = {}
-        c_left_term_cache: dict = {}
+        action_cache: dict = {}
 
         for n_r in range(1, n + 1):
             m = n - n_r + 1
@@ -165,20 +176,18 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
                 for (c_L_key, c_R_key), coeff in cocomp:
                     # Apply α to c_R
-                    alpha_cache_key = (n_r, c_R_key)
-                    alpha_c_R = alpha_cache.get(alpha_cache_key)
-                    if alpha_c_R is None:
-                        c_R_comp = C(n_r, base_ring)
-                        c_R_elem = c_R_comp.term(c_R_key)
-                        alpha_c_R = self._alpha(c_R_elem)
-                        alpha_cache[alpha_cache_key] = alpha_c_R
+                    alpha_c_R = self._alpha_on_basis(n_r, c_R_key)
 
                     if not alpha_c_R:
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    a_slice = m_terms[i - 1 : i + n_r - 1]
-                    action_result = self._algebra.act(alpha_c_R, a_slice)
+                    action_cache_key = (c_R_key, i)
+                    action_result = action_cache.get(action_cache_key)
+                    if action_result is None:
+                        a_slice = m_terms[i - 1 : i + n_r - 1]
+                        action_result = self._algebra.act(alpha_c_R, a_slice)
+                        action_cache[action_cache_key] = action_result
 
                     if not action_result:
                         continue
@@ -192,14 +201,10 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     prefix_deg = m_prefix_degrees[i - 1]
                     alpha_deg = alpha_c_R.degree()
                     sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
-                    c_left_term = c_left_term_cache.get((m, c_L_key))
-                    if c_left_term is None:
-                        c_left_term = c_L_comp.term(c_L_key)
-                        c_left_term_cache[(m, c_L_key)] = c_left_term
 
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        normalized = self._normalized_corolla_sum(c_left_term, new_m)
+                        normalized = self._normalized_left_corolla(m, c_L_key, new_m)
                         scale = sign * coeff * a_coeff
                         for out_key, out_coeff in normalized:
                             # Sage's free-module constructors do not always
@@ -229,23 +234,15 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         zero = base_ring.zero()
         m_terms = [M.term(m_key) for m_key in m_tuple]
         m_degrees = [M.degree_on_basis(m_key) for m_key in m_tuple]
-        alpha_cache: dict = {}
         action_cache: dict = {}
         split_cache: dict = {}
-        c_left_term_cache: dict = {}
 
         for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
             n_r = len(child_positions)
             m = n - n_r + 1
 
             # Apply α to c_R
-            alpha_cache_key = (n_r, c_R_key)
-            alpha_c_R = alpha_cache.get(alpha_cache_key)
-            if alpha_c_R is None:
-                c_R_comp = C(n_r, base_ring)
-                c_R_elem = c_R_comp.term(c_R_key)
-                alpha_c_R = self._alpha(c_R_elem)
-                alpha_cache[alpha_cache_key] = alpha_c_R
+            alpha_c_R = self._alpha_on_basis(n_r, c_R_key)
 
             if not alpha_c_R:
                 continue
@@ -267,10 +264,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             # before the contracted block.
             c_L_comp = C(m, base_ring)
             c_L_deg = c_L_comp.degree_on_basis(c_L_key)
-            c_left_term = c_left_term_cache.get((m, c_L_key))
-            if c_left_term is None:
-                c_left_term = c_L_comp.term(c_L_key)
-                c_left_term_cache[(m, c_L_key)] = c_left_term
 
             # Build new m_tuple: order-preserving mapping from
             # original positions to the m-element result tuple.
@@ -304,7 +297,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 new_m = tuple(
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
-                normalized = self._normalized_corolla_sum(c_left_term, new_m)
+                normalized = self._normalized_left_corolla(m, c_L_key, new_m)
                 scale = sign * coop_sign * gathering_sign * a_coeff
                 for out_key, out_coeff in normalized:
                     # Sage's free-module constructors do not always coerce

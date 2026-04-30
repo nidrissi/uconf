@@ -44,6 +44,11 @@ def _sigma_as_tuple(sigma: Any) -> tuple[int, ...]:
     return tuple(sigma.tuple())
 
 
+def _element_cache_key(element: Any) -> tuple:
+    """Return a hashable cache key for a free-module element."""
+    return tuple(element)
+
+
 def _permute_component_element_direct(
     component: Any,
     element: Any,
@@ -261,6 +266,9 @@ def _nu_on_planar(
     # Accumulate as {(be_key, coop_key): coeff} dict to avoid
     # repeated tensor element construction overhead.
     result_dict: dict = {}
+    cooperad_factor_cache: dict = {}
+    decompose_cache: dict = {}
+    rho_cache: dict = {}
 
     def make_cooperad_factor(pl_elem, sigma_prod=None, sigma_prod_tuple=None):
         """Build the cooperad factor for the formula.
@@ -270,12 +278,19 @@ def _nu_on_planar(
         cooperad element via the S_n action: c ↦ c·σ_prod.
         """
         if sigma_prod is not None and sigma_prod != identity_n:
-            return _permute_component_element_direct(
+            elem_key = _element_cache_key(pl_elem)
+            cache_key = (elem_key, sigma_prod_tuple)
+            cached = cooperad_factor_cache.get(cache_key)
+            if cached is not None:
+                return cached
+            coop_factor = _permute_component_element_direct(
                 cooperad_component,
                 pl_elem,
                 sigma_prod,
                 sigma_prod_tuple,
             )
+            cooperad_factor_cache[cache_key] = coop_factor
+            return coop_factor
         return pl_elem
 
     def recurse(current_d_elem, sigma_bar, sigma_prod, sigma_prod_tuple):
@@ -294,7 +309,11 @@ def _nu_on_planar(
                 else:
                     result_dict[pair] = coop_coeff
         else:
-            be_elem = be_component.rho(list(sigma_bar))
+            sigma_bar_key = tuple(_sigma_as_tuple(sigma) for sigma in sigma_bar)
+            be_elem = rho_cache.get(sigma_bar_key)
+            if be_elem is None:
+                be_elem = be_component.rho(list(sigma_bar))
+                rho_cache[sigma_bar_key] = be_elem
 
             if be_elem:
                 coop_factor = make_cooperad_factor(current_d_elem, sigma_prod, sigma_prod_tuple)
@@ -309,7 +328,11 @@ def _nu_on_planar(
 
         # Compute all d_sigma components at once (one boundary+planarize
         # call) instead of once per permutation.
-        decomp = cooperad_component.d_sigma_decompose(current_d_elem)
+        elem_key = _element_cache_key(current_d_elem)
+        decomp = decompose_cache.get(elem_key)
+        if decomp is None:
+            decomp = cooperad_component.d_sigma_decompose(current_d_elem)
+            decompose_cache[elem_key] = decomp
         for sigma, next_d in decomp.items():
             if sigma != identity_n:
                 next_sigma_prod = sigma * sigma_prod
