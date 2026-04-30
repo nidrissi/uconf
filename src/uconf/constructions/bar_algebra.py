@@ -279,7 +279,9 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             if split_data is None:
                 selected = set(child_positions)
                 min_S = child_positions[0]
-                top_positions = tuple(pos for pos in range(1, n + 1) if pos not in selected or pos == min_S)
+                top_positions = tuple(
+                    pos for pos in range(1, n + 1) if pos not in selected or pos == min_S
+                )
                 prefix_deg = sum(
                     m_degrees[pos - 1] for pos in range(1, min_S) if pos not in selected
                 )

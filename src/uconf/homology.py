@@ -215,7 +215,9 @@ def _boundary_matrix(
         return _build_matrix_from_entries(base_ring, n_target, n_source, entries, sparse=sparse)
 
     if basis_source is None:
-        raise ValueError("basis_source elements are required when module.boundary lacks an on_basis fast path")
+        raise ValueError(
+            "basis_source elements are required when module.boundary lacks an on_basis fast path"
+        )
 
     M = matrix(base_ring, n_target, n_source, sparse=sparse)
     for j, elem in enumerate(basis_source):
