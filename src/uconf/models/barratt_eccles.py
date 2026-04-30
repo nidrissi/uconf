@@ -25,10 +25,21 @@ from uconf.core.parented_element import ParentedElementMixin
 
 
 class BarrattEccles(CombinatorialFreeModule):
-    """Barratt--Eccles operad component in fixed arity.
+    r"""Barratt--Eccles operad component in fixed arity.
 
     Basis elements are tuples of permutations in ``S_n`` with no consecutive
     duplicates. Degenerate inputs map to zero, while malformed inputs raise.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import BarrattEccles
+        sage: E2 = BarrattEccles(2, QQ)
+        sage: x = E2(((1, 2), (2, 1)))
+        sage: x.arity()
+        2
+        sage: E2.degree_on_basis(next(iter(x.support())))
+        1
     """
 
     name: ClassVar[str] = "ℰ"
@@ -230,7 +241,29 @@ class BarrattEccles(CombinatorialFreeModule):
 
     @staticmethod
     def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
-        """Operadic composition ``x \\circ_i y`` using shuffle/EZ lifting."""
+        r"""Operadic composition ``x \circ_i y`` using shuffle/EZ lifting.
+
+        Parameters
+        ----------
+        x, y:
+            Barratt--Eccles elements over the same base ring.
+        i:
+            Input slot of ``x`` into which ``y`` is inserted.
+
+        Returns
+        -------
+        BarrattEccles.Element
+            The composite in arity ``x.arity() + y.arity() - 1``.
+
+        EXAMPLES::
+
+            sage: from sage.all import QQ
+            sage: from uconf import BarrattEccles
+            sage: x = BarrattEccles(2, QQ)(((1, 2),))
+            sage: y = BarrattEccles(2, QQ)(((1, 2), (2, 1)))
+            sage: BarrattEccles.compose(x, 1, y).arity()
+            3
+        """
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
         m = x.parent().arity()
