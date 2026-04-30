@@ -169,6 +169,8 @@ def _boundary_matrix(
             and os.name == "posix"
             and "fork" in multiprocessing.get_all_start_methods()
         ):
+            # Use several chunks per worker so the pool can rebalance uneven
+            # boundary costs without paying per-column scheduling overhead.
             chunk_size = max(1, (n_source + 8 * n_jobs - 1) // (8 * n_jobs))
             _BOUNDARY_MATRIX_STATE.clear()
             _BOUNDARY_MATRIX_STATE.update(

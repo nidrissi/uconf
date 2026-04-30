@@ -233,7 +233,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         c_left_term_cache: dict = {}
 
         for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
-            child_positions = tuple(child_positions)
             n_r = len(child_positions)
             m = n - n_r + 1
 
@@ -292,13 +291,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     gathered = t_before + list(child_positions) + t_after
                     perm_0idx = [g - 1 for g in gathered]
                     gathering_sign = koszul_sign_of_permutation(perm_0idx, m_degrees)
-                split_data = (top_positions, prefix_deg, gathering_sign)
+                split_data = (top_positions, prefix_deg, gathering_sign, min_S)
                 split_cache[child_positions] = split_data
-            top_positions, prefix_deg, gathering_sign = split_data
+            top_positions, prefix_deg, gathering_sign, min_S = split_data
 
             alpha_deg = alpha_c_R.degree()
             sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
-            min_S = child_positions[0]
 
             for a_new_key, a_coeff in action_result:
                 new_m = tuple(
