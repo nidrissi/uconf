@@ -1550,10 +1550,16 @@ def _random_m_tuple(
     *,
     total_weight: int | None = None,
 ) -> tuple | None:
-    """Generate a random n-tuple of module basis keys with given total degree.
+    """Generate a random n-tuple of module basis keys with prescribed totals.
 
-    Uses a simple strategy: for each position, pick a random valid degree
-    and sample a key at that degree.
+    This performs a backtracking search over feasible splits of the total
+    degree across the ``n`` slots. When ``total_weight`` is provided, it
+    simultaneously searches over degree/weight splits, samples a basis key
+    for the current slot, and then recurses on the remaining slots.
+
+    If ``total_weight`` is not ``None``, each slot is assigned positive
+    weight (at least ``1``), so the total weight must be distributable among
+    all ``n`` slots as a sum of positive integers.
     """
     if n == 0:
         want_zero_weight = total_weight in (None, 0)
