@@ -137,6 +137,7 @@ def _boundary_entries_for_key(
     boundary_terms: Any,
     key_to_idx_target: dict,
     normalize_key: Any,
+    normalization_cache: dict | None = None,
 ) -> dict[tuple[int, int], Any]:
     """Return the sparse matrix entries contributed by one source key."""
     entries: dict[tuple[int, int], Any] = {}
@@ -150,18 +151,26 @@ def _boundary_entries_for_key(
                 entries[ij] = coeff
             continue
         if normalize_key is not None:
-            found_match = False
-            for norm_coeff, norm_key in normalize_key(bdry_key):
-                i = key_to_idx_target.get(norm_key)
-                if i is not None:
+            cached_matches = (
+                normalization_cache.get(bdry_key) if normalization_cache is not None else None
+            )
+            if cached_matches is None:
+                matches = []
+                for norm_coeff, norm_key in normalize_key(bdry_key):
+                    i = key_to_idx_target.get(norm_key)
+                    if i is not None:
+                        matches.append((i, norm_coeff))
+                cached_matches = tuple(matches)
+                if normalization_cache is not None:
+                    normalization_cache[bdry_key] = cached_matches
+            if cached_matches:
+                for i, norm_coeff in cached_matches:
                     ij = (i, j)
                     combined = coeff * norm_coeff
                     if ij in entries:
                         entries[ij] += combined
                     else:
                         entries[ij] = combined
-                    found_match = True
-            if found_match:
                 continue
         raise ValueError(
             f"Boundary of basis key {key!r} contains key {bdry_key!r} "
@@ -178,6 +187,7 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     boundary_on_basis = state["boundary_on_basis"]
     key_to_idx_target = state["key_to_idx_target"]
     normalize_key = state["normalize_key"]
+    normalization_cache: dict = {}
     profile_path = None
     worker_profile = state["worker_profile"]
     parent_profiler = state["parent_profiler"]
@@ -198,6 +208,7 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
                 boundary_terms=boundary_on_basis(key),
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
+                normalization_cache=normalization_cache,
             )
             for ij, coeff in column_entries.items():
                 if ij in entries:
@@ -327,6 +338,7 @@ def _boundary_matrix(
             )
 
         serial_entries: dict[tuple[int, int], Any] = {}
+        normalization_cache: dict = {}
         for j, key in enumerate(basis_source_keys):
             column_entries = _boundary_entries_for_key(
                 key,
@@ -334,6 +346,7 @@ def _boundary_matrix(
                 boundary_terms=boundary_on_basis(key),
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
+                normalization_cache=normalization_cache,
             )
             _merge_sparse_entries(serial_entries, column_entries)
             if progress is not None:

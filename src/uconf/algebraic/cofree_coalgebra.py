@@ -150,9 +150,15 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         identity_tuple = tuple(range(1, n + 1))
         if n > 1:
             degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-        result = self.zero()
+        result_dict = {}
+        R = self.base_ring()
+        zero = R.zero()
+        planarize_on_basis = self._cooperad_planarize_on_basis(n)
         for c_key, c_coeff in c_elem:
-            planarized = comp.planarize(comp.term(c_key))
+            if planarize_on_basis is not None:
+                planarized = planarize_on_basis(c_key)
+            else:
+                planarized = comp.planarize(comp.term(c_key))
             for (c_planar_key, sigma_key), pl_coeff in planarized:
                 sigma_tuple = tuple(int(s) for s in sigma_key)
                 permute_leaf_tuple = getattr(comp, "_leaf_tensor_permutation_from_planarize", None)
@@ -170,8 +176,15 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
-                result += c_coeff * pl_coeff * koszul * self.term((c_planar_key, permuted_m))
-        return result
+                combined = R(c_coeff * pl_coeff * koszul)
+                out_key = (c_planar_key, permuted_m)
+                result_dict[out_key] = result_dict.get(out_key, zero) + combined
+        return self._from_dict(result_dict, remove_zeros=True)
+
+    @cached_method
+    def _cooperad_planarize_on_basis(self, n: int):
+        """Return the arity-``n`` fast planarization hook or ``None``."""
+        return getattr(self._cooperad_cls(n, self.base_ring()), "_planarize_on_basis", None)
 
     # ------------------------------------------------------------------
     # Basis key validation
@@ -211,17 +224,20 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     def _element_constructor_(self, x):
         if isinstance(x, dict):
-            result = self.zero()
+            result_dict = {}
+            R = self.base_ring()
+            zero = R.zero()
             for key, coeff in x.items():
                 k = self._validate_basis_key(key)
                 if k is not None:
                     c_key_raw, m_tuple_raw = k
                     n = len(m_tuple_raw)
                     comp = self._cooperad_cls(n, self.base_ring())
-                    result += coeff * self._normalized_corolla_sum(
-                        comp.term(c_key_raw), m_tuple_raw
-                    )
-            return result
+                    normalized = self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
+                    for out_key, out_coeff in normalized:
+                        combined = R(coeff * out_coeff)
+                        result_dict[out_key] = result_dict.get(out_key, zero) + combined
+            return self._from_dict(result_dict, remove_zeros=True)
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             k = self._validate_basis_key(x)
@@ -306,7 +322,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         c_key, m_tuple = key
         n = len(m_tuple)
         comp = self._cooperad_cls(n, self.base_ring())
-        result = self.zero()
+        R = self.base_ring()
+        zero = R.zero()
+        result_dict = {}
 
         # d_C term: normalise non-planar keys via _normalized_corolla_sum.
         dc_on_basis = getattr(comp, "_boundary_on_basis", None)
@@ -314,7 +332,9 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             dc_elem = dc_on_basis(c_key)
         else:
             dc_elem = comp.boundary(comp.term(c_key))
-        result += self._normalized_corolla_sum(dc_elem, m_tuple)
+        normalized_dc = self._normalized_corolla_sum(dc_elem, m_tuple)
+        for out_key, out_coeff in normalized_dc:
+            result_dict[out_key] = result_dict.get(out_key, zero) + R(out_coeff)
 
         # d_M terms with Koszul signs.
         # The cooperad key c_key is already planar (from basis iteration),
@@ -337,10 +357,12 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 dm = m_bdry(M.term(mk))
             for new_mk, m_coeff in dm:
                 new_m = m_tuple[:i] + (new_mk,) + m_tuple[i + 1 :]
-                result += sign * m_coeff * self.term((c_key, new_m))
+                out_key = (c_key, new_m)
+                combined = R(sign * m_coeff)
+                result_dict[out_key] = result_dict.get(out_key, zero) + combined
             cumulative += M.degree_on_basis(mk)
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Basis iteration

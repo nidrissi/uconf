@@ -631,6 +631,43 @@ class FreeOperadAlgebra(OperadAlgebra):
         self._inner_module = inner_module
         self._base_ring = inner_module.base_ring()
 
+    @cached_method
+    def _act_on_basis_tuple(self, q_key, input_keys: tuple):
+        """Return ``γ(q; a_1, ..., a_k)`` for basis inputs."""
+        k = len(input_keys)
+        P = self.operad_cls
+        R = self._base_ring
+
+        # Full substitution: compose q with each p_i from left to right.
+        n_list = [len(input_key[1]) for input_key in input_keys]
+        composed_elem = P(k, R).term(q_key)
+        cumulative_shift = 0
+        for j, input_key in enumerate(input_keys):
+            p_j_key, _m_j_tuple = input_key
+            n_j = n_list[j]
+            p_j_elem = P(n_j, R).term(p_j_key)
+            pos = j + 1 + cumulative_shift
+            composed_elem = P.compose(composed_elem, pos, p_j_elem)
+            cumulative_shift += n_j - 1
+
+        # Koszul sign from rearranging
+        #   q ⊗ (p₁⊗m₁) ⊗ … ⊗ (pₖ⊗mₖ)
+        # into
+        #   (q ⊗ p₁ ⊗ … ⊗ pₖ) ⊗ (m₁ ⊗ … ⊗ mₖ).
+        inner_mod = self._inner_module
+        sign_exp = 0
+        for j in range(k - 1):
+            _p_j_key, m_j_tuple = input_keys[j]
+            m_deg_j = sum(inner_mod.degree_on_basis(mk) for mk in m_j_tuple)
+            for l in range(j + 1, k):
+                p_l_key = input_keys[l][0]
+                p_l_deg = P(n_list[l], R).degree_on_basis(p_l_key)
+                sign_exp += m_deg_j * p_l_deg
+        koszul = sign_from_exponent(sign_exp)
+
+        m_concat = tuple(mk for input_key in input_keys for mk in input_key[1])
+        return koszul * self.module._normalized_corolla_sum(composed_elem, m_concat)
+
     def _act_impl(self, p_element, algebra_elements):
         """P-algebra action γ(q; a_1, ..., a_k) via full operad substitution.
 
@@ -652,10 +689,10 @@ class FreeOperadAlgebra(OperadAlgebra):
         if len(inputs) != k:
             raise ValueError(f"Expected {k} inputs for P({k}) action, got {len(inputs)}.")
 
-        P = self.operad_cls
         R = self._base_ring
-        result = self.module.zero()
         input_term_lists = [list(x) for x in inputs]
+        result_dict: dict = {}
+        zero = R.zero()
 
         for q_key, q_coeff in p_element:
             for term_combo in itertools.product(*input_term_lists):
@@ -663,52 +700,14 @@ class FreeOperadAlgebra(OperadAlgebra):
                 coeff = q_coeff
                 for _, c in term_combo:
                     coeff = coeff * c
+                if coeff == zero:
+                    continue
+                basis_result = self._act_on_basis_tuple(q_key, tuple(input_keys))
+                for out_key, out_coeff in basis_result:
+                    combined = R(coeff * out_coeff)
+                    result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
-                # Full substitution: compose q with each p_i from left to right.
-                #
-                # For sign-sensitive operads such as cobar constructions,
-                # right-to-left nesting changes the intermediate "after-degree"
-                # seen by later partial compositions and introduces spurious
-                # Koszul signs.  The operadic substitution γ(q; p₁, ..., p_k)
-                # is reproduced by sequential partial compositions
-                # ∘_1, ∘_2, ..., ∘_k with cumulative position tracking.
-                n_list = [len(ik[1]) for ik in input_keys]
-                composed_elem = P(k, R).term(q_key)
-                cumulative_shift = 0
-                for j in range(k):
-                    p_j_key, m_j_tuple = input_keys[j]
-                    n_j = n_list[j]
-                    p_j_elem = P(n_j, R).term(p_j_key)
-                    pos = j + 1 + cumulative_shift  # 1-indexed position
-                    composed_elem = P.compose(composed_elem, pos, p_j_elem)
-                    cumulative_shift += n_j - 1
-
-                # Koszul sign from rearranging
-                #   q ⊗ (p₁⊗m₁) ⊗ … ⊗ (pₖ⊗mₖ)
-                # into
-                #   (q ⊗ p₁ ⊗ … ⊗ pₖ) ⊗ (m₁ ⊗ … ⊗ mₖ):
-                #
-                # ε = (-1)^{Σ_{j<l} |mⱼ| · |pₗ|}
-                inner_mod = self._inner_module
-                sign_exp = 0
-                for j in range(k - 1):
-                    p_j_key_j, m_j_tuple_j = input_keys[j]
-                    m_deg_j = sum(inner_mod.degree_on_basis(mk) for mk in m_j_tuple_j)
-                    for l in range(j + 1, k):
-                        p_l_key = input_keys[l][0]
-                        p_l_deg = P(n_list[l], R).degree_on_basis(p_l_key)
-                        sign_exp += m_deg_j * p_l_deg
-                koszul = sign_from_exponent(sign_exp)
-
-                # Concatenate the M-tuples
-                m_concat = tuple(mk for ik in input_keys for mk in ik[1])
-
-                # Normalise: planarize composed_elem and permute m_concat
-                result += (
-                    koszul * coeff * self.module._normalized_corolla_sum(composed_elem, m_concat)
-                )
-
-        return result
+        return self.module._from_dict(result_dict, remove_zeros=True)
 
     def include(self, m_key):
         """Return the image of ``m_key`` under the inclusion η: M → P ∘ M.
