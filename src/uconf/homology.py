@@ -21,7 +21,11 @@ EXAMPLES::
 
 from __future__ import annotations
 
+import cProfile
 import os
+import sys
+import tempfile
+import time
 from typing import Any, Literal
 
 import multiprocessing
@@ -31,8 +35,69 @@ from uconf.core.signs import get_on_basis
 
 
 # Keep multiprocessing helpers at module scope so forked workers can reuse the
-# same top-level functions and inherited state without re-serializing the model.
+# same top-level functions and per-call inherited state without re-serializing
+# the model.
 _BOUNDARY_MATRIX_STATE: dict[str, Any] = {}
+_BOUNDARY_MATRIX_CHUNKS_PER_WORKER = 8
+
+
+class _ChainComplexProgressReporter:
+    """Low-overhead progress reporting for chain-complex assembly."""
+
+    def __init__(self, total_columns: int, *, enabled: bool, stream=None, min_interval: float = 0.2):
+        self._total_columns = total_columns
+        self._enabled = enabled and total_columns > 0
+        self._stream = stream if stream is not None else sys.stderr
+        self._min_interval = min_interval
+        self._completed = 0
+        self._last_emit = 0.0
+        self._interactive = bool(
+            hasattr(self._stream, "isatty") and callable(self._stream.isatty) and self._stream.isatty()
+        )
+        self._last_width = 0
+
+    def update(self, n_columns: int, *, degree: int | None) -> None:
+        """Advance the progress display by ``n_columns`` columns."""
+        if not self._enabled or n_columns <= 0:
+            return
+        self._completed += n_columns
+        now = time.monotonic()
+        if (
+            self._completed < self._total_columns
+            and now - self._last_emit < self._min_interval
+        ):
+            return
+        self._last_emit = now
+        self._emit(degree)
+
+    def close(self) -> None:
+        """Finish the progress display."""
+        if not self._enabled:
+            return
+        if self._completed < self._total_columns:
+            self._completed = self._total_columns
+            self._emit(None)
+        if self._interactive:
+            print(file=self._stream, flush=True)
+
+    def _emit(self, degree: int | None) -> None:
+        pct = int((100 * self._completed) / self._total_columns)
+        degree_msg = f", degree {degree}" if degree is not None else ""
+        message = (
+            "compute_chain_complex: "
+            f"{self._completed}/{self._total_columns} columns ({pct}%){degree_msg}"
+        )
+        if self._interactive:
+            width = max(self._last_width, len(message))
+            self._last_width = width
+            print(
+                f"\r{message.ljust(width)}",
+                end="",
+                file=self._stream,
+                flush=True,
+            )
+            return
+        print(message, file=self._stream, flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -107,28 +172,65 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     boundary_on_basis = state["boundary_on_basis"]
     key_to_idx_target = state["key_to_idx_target"]
     normalize_key = state["normalize_key"]
+    profile_path = None
+    worker_profile = state["worker_profile"]
+    profiler = None
 
-    entries: dict[tuple[int, int], Any] = {}
-    for j in range(start, stop):
-        key = source_keys[j]
-        column_entries = _boundary_entries_for_key(
-            key,
-            j,
-            boundary_terms=boundary_on_basis(key),
-            key_to_idx_target=key_to_idx_target,
-            normalize_key=normalize_key,
-        )
-        for ij, coeff in column_entries.items():
-            if ij in entries:
-                entries[ij] += coeff
-            else:
-                entries[ij] = coeff
-    return entries
+    if worker_profile:
+        inherited_profile = sys.getprofile()
+        if inherited_profile is not None:
+            sys.setprofile(None)
+        profiler = cProfile.Profile()
+        profiler.enable()
+
+    try:
+        entries: dict[tuple[int, int], Any] = {}
+        for j in range(start, stop):
+            key = source_keys[j]
+            column_entries = _boundary_entries_for_key(
+                key,
+                j,
+                boundary_terms=boundary_on_basis(key),
+                key_to_idx_target=key_to_idx_target,
+                normalize_key=normalize_key,
+            )
+            for ij, coeff in column_entries.items():
+                if ij in entries:
+                    entries[ij] += coeff
+                else:
+                    entries[ij] = coeff
+    finally:
+        if profiler is not None:
+            profiler.disable()
+            fd, profile_path = tempfile.mkstemp(
+                prefix="uconf-chain-complex-worker-",
+                suffix=".prof",
+            )
+            os.close(fd)
+            profiler.dump_stats(profile_path)
+
+    return {
+        "entries": entries,
+        "profile_path": profile_path,
+        "columns_done": stop - start,
+    }
 
 
 def _chunk_ranges(n_items: int, chunk_size: int) -> list[tuple[int, int]]:
     """Return contiguous chunk ranges covering ``range(n_items)``."""
     return [(start, min(start + chunk_size, n_items)) for start in range(0, n_items, chunk_size)]
+
+
+def _merge_sparse_entries(
+    entries: dict[tuple[int, int], Any],
+    new_entries: dict[tuple[int, int], Any],
+) -> None:
+    """Accumulate sparse entries in-place."""
+    for ij, coeff in new_entries.items():
+        if ij in entries:
+            entries[ij] += coeff
+        else:
+            entries[ij] = coeff
 
 
 def _boundary_matrix(
@@ -140,6 +242,9 @@ def _boundary_matrix(
     sparse: bool,
     n_jobs: int = 1,
     basis_source: list | None = None,
+    progress: _ChainComplexProgressReporter | None = None,
+    degree: int | None = None,
+    worker_profile_paths: list[str] | None = None,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -173,7 +278,11 @@ def _boundary_matrix(
         ):
             # Use several chunks per worker so the pool can rebalance uneven
             # boundary costs without paying per-column scheduling overhead.
-            chunk_size = max(1, (n_source + 8 * n_jobs - 1) // (8 * n_jobs))
+            chunk_size = max(
+                1,
+                (n_source + _BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs - 1)
+                // (_BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs),
+            )
             _BOUNDARY_MATRIX_STATE.clear()
             _BOUNDARY_MATRIX_STATE.update(
                 {
@@ -181,6 +290,7 @@ def _boundary_matrix(
                     "boundary_on_basis": boundary_on_basis,
                     "key_to_idx_target": key_to_idx_target,
                     "normalize_key": normalize_key,
+                    "worker_profile": worker_profile_paths is not None,
                 }
             )
             entries: dict[tuple[int, int], Any] = {}
@@ -191,11 +301,11 @@ def _boundary_matrix(
                         _boundary_matrix_worker,
                         _chunk_ranges(n_source, chunk_size),
                     ):
-                        for ij, coeff in chunk_entries.items():
-                            if ij in entries:
-                                entries[ij] += coeff
-                            else:
-                                entries[ij] = coeff
+                        _merge_sparse_entries(entries, chunk_entries["entries"])
+                        if worker_profile_paths is not None and chunk_entries["profile_path"] is not None:
+                            worker_profile_paths.append(chunk_entries["profile_path"])
+                        if progress is not None:
+                            progress.update(chunk_entries["columns_done"], degree=degree)
             finally:
                 _BOUNDARY_MATRIX_STATE.clear()
             return _build_matrix_from_entries(
@@ -215,7 +325,9 @@ def _boundary_matrix(
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
             )
-            serial_entries.update(column_entries)
+            _merge_sparse_entries(serial_entries, column_entries)
+            if progress is not None:
+                progress.update(1, degree=degree)
         return _build_matrix_from_entries(
             base_ring,
             n_target,
@@ -249,6 +361,8 @@ def _boundary_matrix(
                 f"Boundary of basis element {elem} contains key {bdry_key} "
                 "not found in target basis keys"
             )
+        if progress is not None:
+            progress.update(1, degree=degree)
     return M
 
 
@@ -310,6 +424,8 @@ def compute_chain_complex(
     check: bool = False,
     sparse: bool = True,
     n_jobs: int = 1,
+    progress: bool = False,
+    worker_profile_paths: list[str] | None = None,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -344,6 +460,13 @@ def compute_chain_complex(
         ``on_basis`` fast path.  Values above ``1`` currently use POSIX
         ``fork``-based multiprocessing and otherwise fall back to serial
         assembly.
+    progress:
+        When ``True``, emit a low-overhead progress indicator showing how many
+        boundary columns have been assembled across all requested degrees.
+    worker_profile_paths:
+        Optional mutable list that receives per-worker ``.prof`` files when
+        parallel boundary assembly is active.  These files can be merged into a
+        parent :mod:`pstats` report with ``Stats.add(*worker_profile_paths)``.
 
     Returns
     -------
@@ -397,26 +520,36 @@ def compute_chain_complex(
 
     # Build differential matrices: d_n : C_n -> C_{n-1}
     differentials: dict[int, Any] = {}
-    for d in extended_degrees:
-        if d - 1 not in key_to_idx:
-            # Target degree not in range; if there are source basis elements,
-            # we still need a zero matrix so the complex knows the rank of C_d.
-            if basis_by_degree[d]:
-                differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]), sparse=sparse)
-            continue
-        n_target = len(keys_by_degree[d - 1])
-        source = basis_by_degree[d]
-        if not source and n_target == 0:
-            continue
-        differentials[d] = _boundary_matrix(
-            module,
-            keys_by_degree[d],
-            key_to_idx[d - 1],
-            n_target,
-            sparse=sparse,
-            n_jobs=n_jobs,
-            basis_source=source,
-        )
+    total_columns = sum(
+        len(keys_by_degree[d]) for d in extended_degrees if d - 1 in key_to_idx
+    )
+    progress_reporter = _ChainComplexProgressReporter(total_columns, enabled=progress)
+    try:
+        for d in extended_degrees:
+            if d - 1 not in key_to_idx:
+                # Target degree not in range; if there are source basis elements,
+                # we still need a zero matrix so the complex knows the rank of C_d.
+                if basis_by_degree[d]:
+                    differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]), sparse=sparse)
+                continue
+            n_target = len(keys_by_degree[d - 1])
+            source = basis_by_degree[d]
+            if not source and n_target == 0:
+                continue
+            differentials[d] = _boundary_matrix(
+                module,
+                keys_by_degree[d],
+                key_to_idx[d - 1],
+                n_target,
+                sparse=sparse,
+                n_jobs=n_jobs,
+                basis_source=source,
+                progress=progress_reporter,
+                degree=d,
+                worker_profile_paths=worker_profile_paths,
+            )
+    finally:
+        progress_reporter.close()
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
@@ -482,7 +615,7 @@ def _compute_homology_representatives_fast(
     module: Any, degree: int, weight: int | None, cc
 ) -> list:
     """Fast linear-algebra implementation; see :func:`compute_homology_representatives`."""
-    basis_elems, _ = _get_basis_elements(module, degree, weight)
+    basis_elems, _ = _get_basis_elements(module, degree, weight, keep_elements=True)
     if not basis_elems:
         return []
 
@@ -522,7 +655,7 @@ def _compute_homology_representatives_sage(
     module: Any, degree: int, weight: int | None, cc
 ) -> list:
     """SageMath ``generators=True`` implementation; see :func:`compute_homology_representatives`."""
-    basis_elems, _ = _get_basis_elements(module, degree, weight)
+    basis_elems, _ = _get_basis_elements(module, degree, weight, keep_elements=True)
 
     ho = cc.homology(degree, generators=True)
     # cc.homology returns a bare tuple (not a list) when there are no
