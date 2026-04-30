@@ -1745,7 +1745,7 @@ class TestFullModel:
                 [cc.betti(deg) for deg in range(-1, dmax)],
                 f"Expected dimensions: {[self._count(deg, w) for deg in range(-1, dmax)]}",
             )
-            for deg in range(-1, 3):
+            for deg in range(-1, dmax):
                 assert cc.betti(deg) == self._count(deg, w), (
                     f"Betti number mismatch at deg={deg}, weight={w}"
                 )
