@@ -41,6 +41,7 @@ from sage.all import (
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.tree_module import _module_basis_keys_in_degree, _tuples_in_degree
+from uconf.algebraic.tree_module import _basis_support_keys
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import get_on_basis, koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
@@ -549,16 +550,16 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             d_m_needed = d - d_p
             if d_m_needed < 0:
                 continue
-            p_elems = list(getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_p))
-            if not p_elems:
+            p_keys = tuple(
+                _basis_support_keys(
+                    getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_p)
+                )
+            )
+            if not p_keys:
                 continue
-            m_tuples = list(_tuples_in_degree(m_keys_by_deg, w, d_m_needed))
-            if not m_tuples:
-                continue
-            for p_elem in p_elems:
-                for p_key in p_elem.support():
-                    for m_tuple in m_tuples:
-                        yield self.term((p_key, m_tuple))
+            for m_tuple in _tuples_in_degree(m_keys_by_deg, w, d_m_needed):
+                for p_key in p_keys:
+                    yield self.term((p_key, m_tuple))
 
     @cached_method
     def graded_basis_by_weight(self, d: int, w: int):

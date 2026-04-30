@@ -144,6 +144,62 @@ class TestChainComplex:
         C = compute_chain_complex(_FakeModule(), degrees=range(2), check=True)
         assert C.differential(1)[0, 0] == 1
 
+    def test_boundary_matrix_parallel_fast_path_matches_serial(self) -> None:
+        """Parallel boundary assembly should agree with the serial on-basis path."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _FakeModule:
+            def __init__(self):
+                self._basis = {
+                    0: [_FakeElement("a"), _FakeElement("b")],
+                    1: [_FakeElement("x"), _FakeElement("y")],
+                }
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return GF(2)
+
+            def graded_basis(self, d):
+                return self._basis.get(d, [])
+
+            def _boundary_on_basis(self, key):
+                if key == "x":
+                    return [("raw_a", GF(2).one())]
+                if key == "y":
+                    return [("raw_b", GF(2).one())]
+                return []
+
+            def _normalize_key(self, key):
+                if key == "raw_a":
+                    return [(GF(2).one(), "a")]
+                if key == "raw_b":
+                    return [(GF(2).one(), "b")]
+                return [(GF(2).one(), key)]
+
+        module = _FakeModule()
+        serial = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=1)
+        parallel = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=2)
+        assert parallel.differential(1) == serial.differential(1)
+
+    def test_invalid_n_jobs_raises(self) -> None:
+        """n_jobs must be positive."""
+        S2 = Surjection(2, QQ)
+        with pytest.raises(ValueError, match="n_jobs must be >= 1"):
+            compute_chain_complex(S2, degrees=range(2), n_jobs=0)
+
 
 # ---------------------------------------------------------------------------
 # homology_basis
