@@ -26,7 +26,7 @@ import os
 import sys
 import tempfile
 import time
-from typing import Any, Literal
+from typing import Any, Literal, TextIO
 
 import multiprocessing
 from sage.all import ChainComplex, matrix
@@ -45,7 +45,12 @@ class _ChainComplexProgressReporter:
     """Low-overhead progress reporting for chain-complex assembly."""
 
     def __init__(
-        self, total_columns: int, *, enabled: bool, stream=None, min_interval: float = 0.2
+        self,
+        total_columns: int,
+        *,
+        enabled: bool,
+        stream: TextIO | None = None,
+        min_interval: float = 0.2,
     ):
         self._total_columns = total_columns
         self._enabled = enabled and total_columns > 0
@@ -207,7 +212,10 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
                 prefix="uconf-chain-complex-worker-",
                 suffix=".prof",
             )
-            os.close(fd)
+            try:
+                pass
+            finally:
+                os.close(fd)
             profiler.dump_stats(profile_path)
 
     return {
