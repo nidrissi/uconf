@@ -1024,10 +1024,16 @@ class TestBarPlanarize:
         BXsLie = BarConstruction(XsLie)
         cofree = CofreeCoalgebraModule(BXsLie, M)
 
-        tree = RootedTree(((1,), (1, 2, 1)), RootedTree(((1,), (1, 2)), 1, 2), 3)
-        elem = cofree((tree, (M("a"), M("b"), M("c"))))
+        BXsLie3 = BXsLie(3, QQ)
+        planar_key = RootedTree(
+            ((1,), (1, 2, 1)), RootedTree(((1,), (1, 2)), 1, 2), 3
+        )
+        planar = BXsLie3(planar_key)
+        nonplanar = planar.permute([2, 3, 1])
+        nonplanar_key = next(iter(nonplanar.support()))
+        normalized = cofree((nonplanar_key, ("a", "b", "c")))
 
-        assert elem.boundary().boundary() == cofree.zero()
+        assert list(normalized.support()) == [(planar_key, ("b", "c", "a"))]
 
     # ------------------------------------------------------------------
     # Barratt–Eccles
