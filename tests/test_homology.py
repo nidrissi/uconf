@@ -1,5 +1,9 @@
 """Tests for chain complex construction and homology helpers."""
 
+import cProfile
+import os
+import pstats
+
 import pytest
 from sage.all import GF, QQ
 
@@ -199,6 +203,112 @@ class TestChainComplex:
         S2 = Surjection(2, QQ)
         with pytest.raises(ValueError, match="n_jobs must be >= 1"):
             compute_chain_complex(S2, degrees=range(2), n_jobs=0)
+
+    def test_parallel_worker_profiles_can_be_merged(self) -> None:
+        """Parallel worker profiling should emit mergeable pstats files."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _FakeModule:
+            def __init__(self):
+                self._basis = {
+                    0: [_FakeElement("a"), _FakeElement("b")],
+                    1: [_FakeElement("x"), _FakeElement("y"), _FakeElement("z")],
+                }
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def graded_basis(self, d):
+                return self._basis.get(d, [])
+
+            def _boundary_on_basis(self, key):
+                if key == "x":
+                    return [("a", QQ.one())]
+                if key == "y":
+                    return [("b", QQ.one())]
+                if key == "z":
+                    return [("a", QQ.one()), ("b", QQ.one())]
+                return []
+
+        worker_profile_paths: list[str] = []
+        profile = cProfile.Profile()
+        profile.enable()
+        compute_chain_complex(
+            _FakeModule(),
+            degrees=range(2),
+            check=True,
+            n_jobs=2,
+            worker_profile_paths=worker_profile_paths,
+        )
+        profile.disable()
+
+        try:
+            assert worker_profile_paths
+            merged = pstats.Stats(profile)
+            merged.add(*worker_profile_paths)
+        finally:
+            for path in worker_profile_paths:
+                if os.path.exists(path):
+                    os.unlink(path)
+
+        assert merged.total_calls > 0
+
+    def test_progress_reporting_writes_status(self, capsys) -> None:
+        """Optional progress reporting should emit visible status updates."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _FakeModule:
+            def __init__(self):
+                self._basis = {
+                    0: [_FakeElement("a"), _FakeElement("b")],
+                    1: [_FakeElement("x"), _FakeElement("y")],
+                }
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def graded_basis(self, d):
+                return self._basis.get(d, [])
+
+            def _boundary_on_basis(self, key):
+                if key == "x":
+                    return [("a", QQ.one())]
+                if key == "y":
+                    return [("b", QQ.one())]
+                return []
+
+        compute_chain_complex(_FakeModule(), degrees=range(2), progress=True)
+        captured = capsys.readouterr()
+        assert "compute_chain_complex:" in captured.err
+        assert "100%" in captured.err
 
 
 # ---------------------------------------------------------------------------
