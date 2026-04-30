@@ -122,13 +122,17 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         For each basis term ``(c_key, coeff)`` of ``c_elem ∈ C(n)``, applies
         ``planarize`` to obtain ``Σ (c_planar_key ⊗ σ) * c`` and returns::
 
-            Σ coeff * c * ε(σ; degrees) * self.term((c_planar_key, σ · m_tuple))
+            Σ coeff * c * ε(leaf_perm; degrees) * self.term((c_planar_key, permute(m_tuple)))
 
-        where ``σ · m_tuple`` is the left action on the leaf tensor:
+        Here ``permute(m_tuple)`` is the leaf-tensor reordering induced by
+        ``planarize``.  By default it is the usual left action of ``σ``:
 
             ``σ · (m_1, ..., m_n) = (m_{σ^{-1}(1)}, ..., m_{σ^{-1}(n)})``
 
-        and ``ε(σ; degrees)`` is the Koszul sign for that graded left action.
+        but cooperad components may override this convention via
+        ``_leaf_tensor_permutation_from_planarize`` when their planarization
+        stores the global leaf relabeling differently.  ``ε(leaf_perm;
+        degrees)`` is the Koszul sign for the resulting graded leaf action.
 
         This ensures all stored C-keys are in the planar basis.
 

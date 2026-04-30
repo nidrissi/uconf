@@ -105,18 +105,19 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         For a basis key ``(c_key, (a_1, …, a_n))`` with n = m + n_r - 1:
 
-            d_α(c ⊗ a_1 ⊗ … ⊗ a_n) = Σ_{i,m,n_r} (-1)^{|c_L|}
+            d_α(c ⊗ a_1 ⊗ … ⊗ a_n) = Σ_{i,m,n_r}
+                (-1)^{|c_L| + |α(c_R)|(|a_1| + … + |a_{i-1}|)}
                 (c_L ⊗ a_1 ⊗ … ⊗ γ(α(c_R); a_i,…,a_{i+n_r-1}) ⊗ … ⊗ a_n)
 
         where Δ^{i;m,n_r}(c) = Σ c_L ⊗ c_R is the cooperad's infinitesimal
         cocomposition, α(c_R) ∈ P(n_r) is the twisting morphism, and
         γ is the algebra action.
 
-        The Koszul sign ``(-1)^{|c_L|}`` comes from commuting d_α (which has
+        The first factor ``(-1)^{|c_L|}`` comes from commuting d_α (which has
         degree -1) past the cooperad element c_L in the cofree coalgebra
-        decomposition.  The algebra elements a_i do *not* contribute to the
-        sign because the cofree coalgebra decomposition Δ_{(1)} preserves the
-        left-to-right ordering of the A-factors.
+        decomposition.  The second factor records the further Koszul sign from
+        moving the inserted operad element α(c_R) past the preceding algebra
+        inputs ``a_1, …, a_{i-1}`` before applying γ to the contracted block.
 
         When the cooperad is a bar/cofree cooperad whose elements may have
         non-contiguous leaf orderings, this method uses ``_iter_all_splits``
