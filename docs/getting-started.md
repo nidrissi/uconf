@@ -17,8 +17,7 @@ Build the HTML site:
 conda run -n sage sphinx-build --keep-going -b html docs docs/_build/html
 ```
 
-The generated site is written to
-`/home/runner/work/najib-victor/najib-victor/docs/_build/html`.
+The generated site is written to `docs/_build/html`.
 
 ## What is included
 

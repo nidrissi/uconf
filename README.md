@@ -50,8 +50,7 @@ conda run -n sage python -m compileall -q src tests
 
 ## HTML documentation
 
-The repository now includes a Sphinx configuration in
-`/home/runner/work/najib-victor/najib-victor/docs` that builds HTML
+The repository now includes a Sphinx configuration in `docs/` that builds HTML
 documentation from the existing docstrings.
 
 Install the documentation dependencies:
