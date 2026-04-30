@@ -632,7 +632,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         self._base_ring = inner_module.base_ring()
 
     @cached_method
-    def _act_on_basis_tuple(self, q_key, input_keys: tuple):
+    def _act_on_basis_tuple(self, q_key: Any, input_keys: tuple):
         """Return ``γ(q; a_1, ..., a_k)`` for basis inputs."""
         k = len(input_keys)
         P = self.operad_cls
