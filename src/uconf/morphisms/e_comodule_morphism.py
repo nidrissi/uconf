@@ -266,8 +266,8 @@ def _nu_on_planar(
     # Accumulate as {(be_key, coop_key): coeff} dict to avoid
     # repeated tensor element construction overhead.
     result_dict: dict[tuple[Any, Any], Any] = {}
-    cooperad_factor_cache: dict[tuple[tuple, tuple[int, ...]], Any] = {}
-    decompose_cache: dict[tuple, dict[Any, Any]] = {}
+    cooperad_factor_cache: dict[tuple[tuple[Any, ...], tuple[int, ...]], Any] = {}
+    decompose_cache: dict[tuple[Any, ...], dict[Any, Any]] = {}
     rho_cache: dict[tuple[tuple[int, ...], ...], Any] = {}
 
     def make_cooperad_factor(pl_elem, sigma_prod=None, sigma_prod_tuple=None):
