@@ -24,5 +24,6 @@ __pycache__
 coverage.json
 *.prof
 *.sobj
+benchmark_profile*.txt
 docs/_build/
 docs/api/generated/
