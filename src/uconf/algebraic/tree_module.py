@@ -130,6 +130,12 @@ def _module_basis_keys_in_weight_and_degree(module, d: int, w: int) -> Iterator:
         yield from _module_basis_keys_in_degree(module, d)
 
 
+def _basis_support_keys(iterable: Iterator[Any]) -> Iterator[Any]:
+    """Yield support keys from an iterable of one-term basis elements."""
+    for elem in iterable:
+        yield from elem.support()
+
+
 def _tuples_in_degree_and_weight(keys_by_dw: dict, n: int, d: int, w: int) -> Iterator[tuple]:
     """Yield all ``n``-tuples of keys with total degree ``d`` and total weight ``w``."""
     if n == 0:
@@ -536,19 +542,21 @@ class TreeModule(CombinatorialFreeModule):
             max_tree_weight = n - 1
             for d_M in range(max_m_deg + 1):
                 d_tree = d - d_M
-                m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_M, w))
-                if not m_tuples:
+                trees = tuple(
+                    enumerate_planar_trees_generic_in_degree(
+                        n,
+                        max_tree_weight,
+                        S,
+                        R,
+                        d_tree,
+                        self._vertex_degree_shift,
+                        use_planar_decs=True,
+                    )
+                )
+                if not trees:
                     continue
-                for tree in enumerate_planar_trees_generic_in_degree(
-                    n,
-                    max_tree_weight,
-                    S,
-                    R,
-                    d_tree,
-                    self._vertex_degree_shift,
-                    use_planar_decs=True,
-                ):
-                    for m_tuple in m_tuples:
+                for m_tuple in _tuples_in_degree_and_weight(keys_by_dw, n, d_M, w):
+                    for tree in trees:
                         yield self((tree, m_tuple))
 
     @cached_method

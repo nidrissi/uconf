@@ -147,8 +147,15 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
         M = self._inner_module
-        result = self.zero()
+        result_dict: dict = {}
+        zero = base_ring.zero()
         c_elem = c_comp.term(c_key)
+        m_terms = [M.term(m_key) for m_key in m_tuple]
+        m_prefix_degrees = [0]
+        for m_key in m_tuple:
+            m_prefix_degrees.append(m_prefix_degrees[-1] + M.degree_on_basis(m_key))
+        alpha_cache: dict = {}
+        c_left_term_cache: dict = {}
 
         for n_r in range(1, n + 1):
             m = n - n_r + 1
@@ -158,15 +165,19 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
                 for (c_L_key, c_R_key), coeff in cocomp:
                     # Apply α to c_R
-                    c_R_comp = C(n_r, base_ring)
-                    c_R_elem = c_R_comp.term(c_R_key)
-                    alpha_c_R = self._alpha(c_R_elem)
+                    alpha_cache_key = (n_r, c_R_key)
+                    alpha_c_R = alpha_cache.get(alpha_cache_key)
+                    if alpha_c_R is None:
+                        c_R_comp = C(n_r, base_ring)
+                        c_R_elem = c_R_comp.term(c_R_key)
+                        alpha_c_R = self._alpha(c_R_elem)
+                        alpha_cache[alpha_cache_key] = alpha_c_R
 
                     if not alpha_c_R:
                         continue
 
                     # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    a_slice = [M.term(m_tuple[j]) for j in range(i - 1, i + n_r - 1)]
+                    a_slice = m_terms[i - 1 : i + n_r - 1]
                     action_result = self._algebra.act(alpha_c_R, a_slice)
 
                     if not action_result:
@@ -178,20 +189,23 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # that occur before the contracted block.
                     c_L_comp = C(m, base_ring)
                     c_L_deg = c_L_comp.degree_on_basis(c_L_key)
-                    prefix_deg = sum(M.degree_on_basis(m_tuple[j]) for j in range(i - 1))
+                    prefix_deg = m_prefix_degrees[i - 1]
                     alpha_deg = alpha_c_R.degree()
                     sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
+                    c_left_term = c_left_term_cache.get((m, c_L_key))
+                    if c_left_term is None:
+                        c_left_term = c_L_comp.term(c_L_key)
+                        c_left_term_cache[(m, c_L_key)] = c_left_term
 
                     for a_new_key, a_coeff in action_result:
                         new_m = m_tuple[: i - 1] + (a_new_key,) + m_tuple[i + n_r - 1 :]
-                        result += (
-                            sign
-                            * coeff
-                            * a_coeff
-                            * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
-                        )
+                        normalized = self._normalized_corolla_sum(c_left_term, new_m)
+                        scale = sign * coeff * a_coeff
+                        for out_key, out_coeff in normalized:
+                            combined = base_ring(scale * out_coeff)
+                            result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     def _dalpha_all_splits(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via _iter_all_splits (handles non-contiguous leaf subsets).
@@ -209,23 +223,39 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         """
         C = self._cooperad_cls
         M = self._inner_module
-        result = self.zero()
+        result_dict: dict = {}
+        zero = base_ring.zero()
+        m_terms = [M.term(m_key) for m_key in m_tuple]
+        m_degrees = [M.degree_on_basis(m_key) for m_key in m_tuple]
+        alpha_cache: dict = {}
+        action_cache: dict = {}
+        split_cache: dict = {}
+        c_left_term_cache: dict = {}
 
         for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
+            child_positions = tuple(child_positions)
             n_r = len(child_positions)
             m = n - n_r + 1
 
             # Apply α to c_R
-            c_R_comp = C(n_r, base_ring)
-            c_R_elem = c_R_comp.term(c_R_key)
-            alpha_c_R = self._alpha(c_R_elem)
+            alpha_cache_key = (n_r, c_R_key)
+            alpha_c_R = alpha_cache.get(alpha_cache_key)
+            if alpha_c_R is None:
+                c_R_comp = C(n_r, base_ring)
+                c_R_elem = c_R_comp.term(c_R_key)
+                alpha_c_R = self._alpha(c_R_elem)
+                alpha_cache[alpha_cache_key] = alpha_c_R
 
             if not alpha_c_R:
                 continue
 
             # Algebra slice at the ACTUAL (possibly non-contiguous) positions
-            a_slice = [M.term(m_tuple[s - 1]) for s in child_positions]
-            action_result = self._algebra.act(alpha_c_R, a_slice)
+            action_cache_key = (child_positions, c_R_key)
+            action_result = action_cache.get(action_cache_key)
+            if action_result is None:
+                a_slice = [m_terms[s - 1] for s in child_positions]
+                action_result = self._algebra.act(alpha_c_R, a_slice)
+                action_cache[action_cache_key] = action_result
 
             if not action_result:
                 continue
@@ -236,47 +266,49 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             # before the contracted block.
             c_L_comp = C(m, base_ring)
             c_L_deg = c_L_comp.degree_on_basis(c_L_key)
+            c_left_term = c_left_term_cache.get((m, c_L_key))
+            if c_left_term is None:
+                c_left_term = c_L_comp.term(c_L_key)
+                c_left_term_cache[(m, c_L_key)] = c_left_term
 
             # Build new m_tuple: order-preserving mapping from
             # original positions to the m-element result tuple.
             # Placeholder position gets the action result; other
             # positions keep their original algebra elements.
-            S_set = set(child_positions)
-            min_S = child_positions[0]  # child_positions is sorted
-            T = sorted(set(range(1, n + 1)) - S_set)
-            T_before = [t for t in T if t < min_S]
-            prefix_deg = sum(M.degree_on_basis(m_tuple[t - 1]) for t in T_before)
+            split_data = split_cache.get(child_positions)
+            if split_data is None:
+                selected = set(child_positions)
+                min_S = child_positions[0]
+                top_positions = tuple(pos for pos in range(1, n + 1) if pos not in selected or pos == min_S)
+                prefix_deg = sum(
+                    m_degrees[pos - 1] for pos in range(1, min_S) if pos not in selected
+                )
+                gathering_sign = 1
+                if child_positions != tuple(range(min_S, min_S + n_r)):
+                    t_before = [pos for pos in range(1, min_S) if pos not in selected]
+                    t_after = [pos for pos in range(min_S + 1, n + 1) if pos not in selected]
+                    gathered = t_before + list(child_positions) + t_after
+                    perm_0idx = [g - 1 for g in gathered]
+                    gathering_sign = koszul_sign_of_permutation(perm_0idx, m_degrees)
+                split_data = (top_positions, prefix_deg, gathering_sign)
+                split_cache[child_positions] = split_data
+            top_positions, prefix_deg, gathering_sign = split_data
+
             alpha_deg = alpha_c_R.degree()
             sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
-            top_positions = sorted(T + [min_S])  # maps to {1,...,m}
-
-            # Koszul gathering sign from permuting algebra elements
-            # to group the non-contiguous S positions together.
-            # The gathering permutation maps (1,...,n) to
-            # (T<min_S, S_1,...,S_k, T≥min_S).
-            gathering_sign = 1
-            if tuple(child_positions) != tuple(range(child_positions[0], child_positions[0] + n_r)):
-                # Non-contiguous: compute Koszul sign of gathering
-                T_after = [t for t in T if t > min_S]
-                gathered = T_before + list(child_positions) + T_after
-                # gathered is a permutation of (1,...,n)
-                perm_0idx = [g - 1 for g in gathered]
-                degrees = [M.degree_on_basis(m_tuple[j]) for j in range(n)]
-                gathering_sign = koszul_sign_of_permutation(perm_0idx, degrees)
+            min_S = child_positions[0]
 
             for a_new_key, a_coeff in action_result:
                 new_m = tuple(
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
-                result += (
-                    sign
-                    * coop_sign
-                    * gathering_sign
-                    * a_coeff
-                    * self._normalized_corolla_sum(c_L_comp.term(c_L_key), new_m)
-                )
+                normalized = self._normalized_corolla_sum(c_left_term, new_m)
+                scale = sign * coop_sign * gathering_sign * a_coeff
+                for out_key, out_coeff in normalized:
+                    combined = base_ring(scale * out_coeff)
+                    result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
-        return result
+        return self._from_dict(result_dict, remove_zeros=True)
 
     # ------------------------------------------------------------------
     # Expose component differentials for debugging

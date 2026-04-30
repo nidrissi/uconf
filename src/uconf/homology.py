@@ -21,6 +21,8 @@ EXAMPLES::
 
 from __future__ import annotations
 
+import multiprocessing
+import os
 from typing import Any, Literal
 
 from sage.all import ChainComplex, matrix
@@ -28,19 +30,114 @@ from sage.all import ChainComplex, matrix
 from uconf.core.signs import get_on_basis
 
 
+_BOUNDARY_MATRIX_STATE: dict[str, Any] = {}
+
+
 # ---------------------------------------------------------------------------
 # Boundary matrix
 # ---------------------------------------------------------------------------
 
 
+def _build_matrix_from_entries(
+    base_ring: Any,
+    n_target: int,
+    n_source: int,
+    entries: dict[tuple[int, int], Any],
+    *,
+    sparse: bool,
+) -> Any:
+    """Build a Sage matrix from sparse ``(row, col) -> coeff`` entries."""
+    if not entries:
+        return matrix(base_ring, n_target, n_source, sparse=sparse)
+    if sparse:
+        return matrix(base_ring, n_target, n_source, entries, sparse=True)
+    M = matrix(base_ring, n_target, n_source, sparse=False)
+    for (i, j), coeff in entries.items():
+        M[i, j] = coeff
+    return M
+
+
+def _boundary_entries_for_key(
+    key: Any,
+    j: int,
+    *,
+    boundary_terms: Any,
+    key_to_idx_target: dict,
+    normalize_key: Any,
+) -> dict[tuple[int, int], Any]:
+    """Return the sparse matrix entries contributed by one source key."""
+    entries: dict[tuple[int, int], Any] = {}
+    for bdry_key, coeff in boundary_terms:
+        i = key_to_idx_target.get(bdry_key)
+        if i is not None:
+            ij = (i, j)
+            if ij in entries:
+                entries[ij] += coeff
+            else:
+                entries[ij] = coeff
+            continue
+        if normalize_key is not None:
+            found_match = False
+            for norm_coeff, norm_key in normalize_key(bdry_key):
+                i = key_to_idx_target.get(norm_key)
+                if i is not None:
+                    ij = (i, j)
+                    combined = coeff * norm_coeff
+                    if ij in entries:
+                        entries[ij] += combined
+                    else:
+                        entries[ij] = combined
+                    found_match = True
+            if found_match:
+                continue
+        raise ValueError(
+            f"Boundary of basis key {key!r} contains key {bdry_key!r} "
+            "not found in target basis keys"
+        )
+    return entries
+
+
+def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]:
+    """Compute sparse boundary entries for a chunk of source columns."""
+    start, stop = task
+    state = _BOUNDARY_MATRIX_STATE
+    source_keys = state["source_keys"]
+    boundary_on_basis = state["boundary_on_basis"]
+    key_to_idx_target = state["key_to_idx_target"]
+    normalize_key = state["normalize_key"]
+
+    entries: dict[tuple[int, int], Any] = {}
+    for j in range(start, stop):
+        key = source_keys[j]
+        column_entries = _boundary_entries_for_key(
+            key,
+            j,
+            boundary_terms=boundary_on_basis(key),
+            key_to_idx_target=key_to_idx_target,
+            normalize_key=normalize_key,
+        )
+        for ij, coeff in column_entries.items():
+            if ij in entries:
+                entries[ij] += coeff
+            else:
+                entries[ij] = coeff
+    return entries
+
+
+def _chunk_ranges(n_items: int, chunk_size: int) -> list[tuple[int, int]]:
+    """Return contiguous chunk ranges covering ``range(n_items)``."""
+    return [(start, min(start + chunk_size, n_items)) for start in range(0, n_items, chunk_size)]
+
+
 def _boundary_matrix(
     module: Any,
-    basis_source: list,
     basis_source_keys: list,
     key_to_idx_target: dict,
     n_target: int,
     *,
     sparse: bool,
+    n_jobs: int = 1,
+    basis_source: list | None = None,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -61,45 +158,96 @@ def _boundary_matrix(
     base ring of *module*.
     """
     base_ring = module.base_ring()
-    n_source = len(basis_source)
-    M = matrix(base_ring, n_target, n_source, sparse=sparse)
+    n_source = len(basis_source_keys)
     normalize_key = getattr(module, "_normalize_key", None)
     boundary_on_basis = get_on_basis(module.boundary)
 
-    def add_boundary_term(j: int, bdry_key: Any, coeff: Any) -> None:
-        i = key_to_idx_target.get(bdry_key)
-        if i is not None:
-            M[i, j] += coeff
-            return
-        if normalize_key is not None:
-            found_match = False
-            # _normalize_key may expand one raw key into a genuine linear
-            # combination of canonical keys, so we must accumulate every match.
-            for norm_coeff, norm_key in normalize_key(bdry_key):
-                i = key_to_idx_target.get(norm_key)
-                if i is not None:
-                    M[i, j] += coeff * norm_coeff
-                    found_match = True
-            if found_match:
-                return
-        raise ValueError(
-            f"Boundary of basis element {basis_source[j]} contains key {bdry_key} "
-            "not found in target basis keys"
-        )
-
     if boundary_on_basis is not None:
+        if (
+            n_jobs > 1
+            and n_source > 0
+            and os.name == "posix"
+            and "fork" in multiprocessing.get_all_start_methods()
+        ):
+            chunk_size = max(1, (n_source + 8 * n_jobs - 1) // (8 * n_jobs))
+            _BOUNDARY_MATRIX_STATE.clear()
+            _BOUNDARY_MATRIX_STATE.update(
+                {
+                    "source_keys": basis_source_keys,
+                    "boundary_on_basis": boundary_on_basis,
+                    "key_to_idx_target": key_to_idx_target,
+                    "normalize_key": normalize_key,
+                }
+            )
+            entries: dict[tuple[int, int], Any] = {}
+            ctx = multiprocessing.get_context("fork")
+            try:
+                with ctx.Pool(processes=n_jobs) as pool:
+                    for chunk_entries in pool.imap_unordered(
+                        _boundary_matrix_worker,
+                        _chunk_ranges(n_source, chunk_size),
+                    ):
+                        for ij, coeff in chunk_entries.items():
+                            if ij in entries:
+                                entries[ij] += coeff
+                            else:
+                                entries[ij] = coeff
+            finally:
+                _BOUNDARY_MATRIX_STATE.clear()
+            return _build_matrix_from_entries(
+                base_ring,
+                n_target,
+                n_source,
+                entries,
+                sparse=sparse,
+            )
+
+        entries: dict[tuple[int, int], Any] = {}
         for j, key in enumerate(basis_source_keys):
-            for bdry_key, coeff in boundary_on_basis(key):
-                add_boundary_term(j, bdry_key, coeff)
-    else:
-        for j, elem in enumerate(basis_source):
-            for bdry_key, coeff in module.boundary(elem):
-                add_boundary_term(j, bdry_key, coeff)
+            column_entries = _boundary_entries_for_key(
+                key,
+                j,
+                boundary_terms=boundary_on_basis(key),
+                key_to_idx_target=key_to_idx_target,
+                normalize_key=normalize_key,
+            )
+            entries.update(column_entries)
+        return _build_matrix_from_entries(base_ring, n_target, n_source, entries, sparse=sparse)
+
+    if basis_source is None:
+        raise ValueError("basis_source elements are required when module.boundary lacks an on_basis fast path")
+
+    M = matrix(base_ring, n_target, n_source, sparse=sparse)
+    for j, elem in enumerate(basis_source):
+        for bdry_key, coeff in module.boundary(elem):
+            i = key_to_idx_target.get(bdry_key)
+            if i is not None:
+                M[i, j] += coeff
+                continue
+            if normalize_key is not None:
+                found_match = False
+                for norm_coeff, norm_key in normalize_key(bdry_key):
+                    i = key_to_idx_target.get(norm_key)
+                    if i is not None:
+                        M[i, j] += coeff * norm_coeff
+                        found_match = True
+                if found_match:
+                    continue
+            raise ValueError(
+                f"Boundary of basis element {elem} contains key {bdry_key} "
+                "not found in target basis keys"
+            )
     return M
 
 
-def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple[list, list]:
-    """Return (basis_elements, basis_keys).
+def _get_basis_elements(
+    module: Any,
+    d: int,
+    weight: int | None = None,
+    *,
+    keep_elements: bool,
+) -> tuple[list | None, list]:
+    """Return ``(basis_elements_or_none, basis_keys)``.
 
     When *weight* is ``None``, we apply a ``connectivity`` short-circuit:
     if *d* is below the module's reported connectivity, the result is
@@ -114,7 +262,7 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
             return [], []
 
     seen: set = set()
-    elems: list = []
+    elems: list | None = [] if keep_elements else None
     keys: list = []
     if weight is not None:
         family = module.graded_basis_by_weight(d, weight)
@@ -132,7 +280,8 @@ def _get_basis_elements(module: Any, d: int, weight: int | None = None) -> tuple
             continue
         if key not in seen:
             seen.add(key)
-            elems.append(b)
+            if elems is not None:
+                elems.append(b)
             keys.append(key)
         else:
             raise ValueError(
@@ -148,6 +297,7 @@ def compute_chain_complex(
     weight: int | None = None,
     check: bool = False,
     sparse: bool = True,
+    n_jobs: int = 1,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -177,6 +327,11 @@ def compute_chain_complex(
         Whether to build differential matrices in sparse format.  This is
         usually faster and significantly lighter in memory for dg-modules
         with sparse boundaries.
+    n_jobs:
+        Number of worker processes to use for boundary-matrix assembly on the
+        ``on_basis`` fast path.  Values above ``1`` currently use POSIX
+        ``fork``-based multiprocessing and otherwise fall back to serial
+        assembly.
 
     Returns
     -------
@@ -194,6 +349,8 @@ def compute_chain_complex(
         1
     """
     base_ring = module.base_ring()
+    if n_jobs < 1:
+        raise ValueError(f"n_jobs must be >= 1, got {n_jobs}.")
 
     if not degrees:
         return ChainComplex({}, base_ring=base_ring, degree_of_differential=-1)
@@ -213,9 +370,15 @@ def compute_chain_complex(
     basis_by_degree: dict[int, list] = {}
     keys_by_degree: dict[int, list] = {}
     key_to_idx: dict[int, dict] = {}
+    use_boundary_fast_path = get_on_basis(module.boundary) is not None
 
     for d in extended_degrees:
-        basis_elems, basis_keys = _get_basis_elements(module, d, weight)
+        basis_elems, basis_keys = _get_basis_elements(
+            module,
+            d,
+            weight,
+            keep_elements=not use_boundary_fast_path,
+        )
         basis_by_degree[d] = basis_elems
         keys_by_degree[d] = basis_keys
         key_to_idx[d] = {k: i for i, k in enumerate(basis_keys)}
@@ -235,11 +398,12 @@ def compute_chain_complex(
             continue
         differentials[d] = _boundary_matrix(
             module,
-            source,
             keys_by_degree[d],
             key_to_idx[d - 1],
             n_target,
             sparse=sparse,
+            n_jobs=n_jobs,
+            basis_source=source,
         )
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)

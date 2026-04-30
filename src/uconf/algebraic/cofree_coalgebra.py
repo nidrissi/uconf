@@ -41,6 +41,7 @@ from sage.all import (
 
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.tree_module import (
+    _basis_support_keys,
     _inner_weight_on_key,
     _module_basis_keys_in_degree,
     _module_basis_keys_in_weight_and_degree,
@@ -484,18 +485,16 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 d_m_needed = d - d_c
                 if d_m_needed < 0:
                     continue
-                c_elems = list(
-                    getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_c)
+                c_keys = tuple(
+                    _basis_support_keys(
+                        getattr(comp_n, "graded_planar_basis", comp_n.planar_basis_iter)(d_c)
+                    )
                 )
-                if not c_elems:
+                if not c_keys:
                     continue
-                m_tuples = list(_tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w))
-                if not m_tuples:
-                    continue
-                for c_elem in c_elems:
-                    for c_key in c_elem.support():
-                        for m_tuple in m_tuples:
-                            yield self.term((c_key, m_tuple))
+                for m_tuple in _tuples_in_degree_and_weight(keys_by_dw, n, d_m_needed, w):
+                    for c_key in c_keys:
+                        yield self.term((c_key, m_tuple))
 
     @cached_method
     def graded_basis(self, d: int):

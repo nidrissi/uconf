@@ -224,7 +224,7 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Chain complexes and homology (`homology.py`)
 
-- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True)` — builds a SageMath
+- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True, n_jobs=1)` — builds a SageMath
   `ChainComplex` from any dg-module that exposes `graded_basis(d)`,
   `boundary`, and `base_ring()`.  This includes all operad/cooperad
   components, bar/cobar constructions, free algebras, cofree coalgebras,
@@ -236,6 +236,11 @@ attribute on concrete models, property on wrappers) representing the constant
   For free algebras, cofree coalgebras, and configuration-model bar modules,
   the `weight` parameter restricts to a fixed finite-weight summand, giving a
   tractable subcomplex when unrestricted basis enumeration would be infinite.
+
+  When the module exposes an `on_basis` boundary fast path, `n_jobs>1`
+  parallelizes differential-matrix assembly with POSIX `fork`-based
+  multiprocessing.  Start modestly (for example `n_jobs=8` or `16`) on
+  large configuration-model jobs; the workload is memory-bandwidth-heavy.
 
 - `homology_basis(module, degree, *, degrees=None, weight=None)` — returns
   a list of elements of *module* that are cycles and whose homology classes
@@ -267,7 +272,7 @@ from uconf.homology import compute_chain_complex
 
 model = euclidean_unordered_configuration_model(QQ, 2)
 # `model` is a BarAlgebra; compute_chain_complex works on its underlying dg-module.
-C = compute_chain_complex(model.module, degrees=range(-1, 4), weight=1)
+C = compute_chain_complex(model.module, degrees=range(-1, 4), weight=1, n_jobs=8)
 C.betti()
 # {-1: 0, 0: 0, 1: 0, 2: 1, 3: 0}
 ```
