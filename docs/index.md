@@ -5,8 +5,8 @@ cooperad models used in algebraic topology and configuration-space
 computations.
 
 The initial HTML documentation is built directly from the docstrings in
-`/home/runner/work/najib-victor/najib-victor/src/uconf`, with a small amount of
-hand-written structure around the generated API pages.
+`src/uconf`, with a small amount of handwritten structure around the generated
+API pages.
 
 ```{toctree}
 :maxdepth: 2
