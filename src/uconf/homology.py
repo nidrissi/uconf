@@ -180,11 +180,11 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     normalize_key = state["normalize_key"]
     profile_path = None
     worker_profile = state["worker_profile"]
+    parent_profiler = state["parent_profiler"]
     profiler = None
     if worker_profile:
-        inherited_profile = sys.getprofile()
-        if inherited_profile is not None:
-            sys.setprofile(None)
+        if parent_profiler is not None:
+            parent_profiler.disable()
         profiler = cProfile.Profile()
         profiler.enable()
 
@@ -250,6 +250,7 @@ def _boundary_matrix(
     progress: _ChainComplexProgressReporter | None = None,
     degree: int | None = None,
     worker_profile_paths: list[str] | None = None,
+    worker_profile_parent: cProfile.Profile | None = None,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -296,6 +297,7 @@ def _boundary_matrix(
                     "key_to_idx_target": key_to_idx_target,
                     "normalize_key": normalize_key,
                     "worker_profile": worker_profile_paths is not None,
+                    "parent_profiler": worker_profile_parent,
                 }
             )
             entries: dict[tuple[int, int], Any] = {}
@@ -434,6 +436,7 @@ def compute_chain_complex(
     n_jobs: int = 1,
     progress: bool = False,
     worker_profile_paths: list[str] | None = None,
+    worker_profile_parent: cProfile.Profile | None = None,
 ) -> Any:
     """Build a SageMath :class:`ChainComplex` from a dg-module.
 
@@ -475,6 +478,10 @@ def compute_chain_complex(
         Optional mutable list that receives per-worker ``.prof`` files when
         parallel boundary assembly is active.  These files can be merged into a
         parent :mod:`pstats` report with ``Stats.add(*worker_profile_paths)``.
+    worker_profile_parent:
+        Optional active top-level :class:`cProfile.Profile`.  When provided for
+        a parallel run, forked workers disable their inherited copy before
+        starting a per-worker profiler.
 
     Returns
     -------
@@ -553,6 +560,7 @@ def compute_chain_complex(
                 progress=progress_reporter,
                 degree=d,
                 worker_profile_paths=worker_profile_paths,
+                worker_profile_parent=worker_profile_parent,
             )
     finally:
         progress_reporter.close()
