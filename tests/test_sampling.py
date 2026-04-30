@@ -5,6 +5,7 @@ from random import Random
 import pytest
 from sage.all import QQ
 
+import uconf.sampling as sampling
 from uconf.models.surjection import Surjection
 from uconf.models.lie import Lie
 from uconf.wrappers.shifted_operad import ShiftedOperad
@@ -483,6 +484,16 @@ class TestRandomFreeAlgebraElement:
         if elem is not None:
             assert elem.parent() == mod
 
+    def test_weight_uses_arity_not_inner_weight(self, rng):
+        from uconf.algebraic.free_algebra import FreeAlgebraModule
+        from uconf.algebraic.spherical import ReducedSphereCochains
+
+        mod = FreeAlgebraModule(Surjection, ReducedSphereCochains(1, QQ))
+        elem = random_free_algebra_element(mod, -1, rng, weight=1)
+        assert elem is not None
+        key = next(iter(elem.support()))
+        assert mod._weight_on_basis(key) == 1
+
 
 class TestRandomCofreeCoalgebraElement:
     def test_basic(self, rng):
@@ -494,6 +505,24 @@ class TestRandomCofreeCoalgebraElement:
         elem = random_cofree_coalgebra_element(mod, 1, rng)
         if elem is not None:
             assert elem.parent() == mod
+
+    def test_weighted_nested_module(self, rng):
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.bar.module
+        elem = random_cofree_coalgebra_element(mod, 1, rng, weight=3)
+        assert elem is not None
+        key = next(iter(elem.support()))
+        assert mod._weight_on_basis(key) == 3
+
+    def test_zero_weight_slots_are_allowed(self, rng):
+        from uconf.algebraic.spherical import ReducedSphereCochains
+
+        module = ReducedSphereCochains(1, QQ)
+        m_tuple = sampling._random_m_tuple(module, 2, -2, rng, total_weight=0)
+        assert m_tuple is not None
+        assert sum(module._weight_on_basis(key) for key in m_tuple) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +575,18 @@ class TestSampleBasisDispatch:
         elems = sample_basis(mod, 1, 5, rng, weight=1)
         # At least some elements should be generated
         assert isinstance(elems, list)
+
+    def test_weighted_nested_cofree_dispatch(self, rng):
+        """Weighted cofree sampling should avoid unbounded inner basis_iter calls."""
+        from uconf.algebraic.configuration import _build_layers
+
+        layers = _build_layers(QQ, 1)
+        mod = layers.bar.module
+        elems = sample_basis(mod, 1, 5, rng, weight=3)
+        assert len(elems) > 0
+        for elem in elems:
+            key = next(iter(elem.support()))
+            assert mod._weight_on_basis(key) == 3
 
 
 class TestRandomTreeModuleElement:
