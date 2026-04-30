@@ -181,7 +181,6 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     profile_path = None
     worker_profile = state["worker_profile"]
     profiler = None
-
     if worker_profile:
         inherited_profile = sys.getprofile()
         if inherited_profile is not None:
@@ -212,10 +211,7 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
                 prefix="uconf-chain-complex-worker-",
                 suffix=".prof",
             )
-            try:
-                pass
-            finally:
-                os.close(fd)
+            os.close(fd)
             profiler.dump_stats(profile_path)
 
     return {
@@ -544,7 +540,7 @@ def compute_chain_complex(
                 continue
             n_target = len(keys_by_degree[d - 1])
             source = basis_by_degree[d]
-            if not source and n_target == 0:
+            if source is not None and not source and n_target == 0:
                 continue
             differentials[d] = _boundary_matrix(
                 module,
