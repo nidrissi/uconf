@@ -3,7 +3,6 @@ uconf.wrappers
 
 .. automodule:: uconf.wrappers
    :members:
-   :imported-members:
 
 Modules
 -------
@@ -11,6 +10,6 @@ Modules
 .. autosummary::
    :toctree: generated/wrappers
 
-   uconf.wrappers.hadamard_operad
-   uconf.wrappers.shifted_cooperad
-   uconf.wrappers.shifted_operad
+   hadamard_operad
+   shifted_cooperad
+   shifted_operad

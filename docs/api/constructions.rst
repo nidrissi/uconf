@@ -3,7 +3,6 @@ uconf.constructions
 
 .. automodule:: uconf.constructions
    :members:
-   :imported-members:
 
 Modules
 -------
@@ -11,7 +10,7 @@ Modules
 .. autosummary::
    :toctree: generated/constructions
 
-   uconf.constructions.bar_algebra
-   uconf.constructions.bar_construction
-   uconf.constructions.cobar_coalgebra
-   uconf.constructions.cobar_construction
+   bar_algebra
+   bar_construction
+   cobar_coalgebra
+   cobar_construction

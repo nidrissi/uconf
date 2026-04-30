@@ -3,7 +3,6 @@ uconf.models
 
 .. automodule:: uconf.models
    :members:
-   :imported-members:
 
 Modules
 -------
@@ -11,12 +10,12 @@ Modules
 .. autosummary::
    :toctree: generated/models
 
-   uconf.models.associative
-   uconf.models.barratt_eccles
-   uconf.models.coassociative
-   uconf.models.cocommutative
-   uconf.models.commutative
-   uconf.models.lie
-   uconf.models.simplicial
-   uconf.models.surjection
-   uconf.models.surjection_dual
+   associative
+   barratt_eccles
+   coassociative
+   cocommutative
+   commutative
+   lie
+   simplicial
+   surjection
+   surjection_dual
