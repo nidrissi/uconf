@@ -28,6 +28,7 @@ compute_chain_complex(
     weight=w,
     n_jobs=n_jobs,
     worker_profile_paths=worker_profile_paths,
+    worker_profile_parent=profile,
     progress=True,
 )
 # ----------------

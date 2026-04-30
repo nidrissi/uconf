@@ -253,6 +253,7 @@ class TestChainComplex:
             check=True,
             n_jobs=2,
             worker_profile_paths=worker_profile_paths,
+            worker_profile_parent=profile,
         )
         profile.disable()
 
