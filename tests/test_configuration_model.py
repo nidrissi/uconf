@@ -1727,6 +1727,9 @@ class TestFullModel:
         @staticmethod
         def _count(d: int, k: int):
             """Count the expected dimension of the weight-k part of the model in degree d, based on the result of Fuks."""
+            if d < 0:
+                return 0
+
             S = k - d
             if S < 0:
                 return 0
