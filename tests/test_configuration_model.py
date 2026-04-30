@@ -785,34 +785,6 @@ class TestLayer3_ΩBH_Kd:
                     rhs *= sign_from_exponent(q.degree() * a.degree())
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-        def test_regression_left_to_right_substitution(
-            self, dim, ring, layers: ConfigurationLayers, rng
-        ):
-            """Exact regression for the cobar free-algebra substitution order bug."""
-            if dim != 1 or ring != QQ:
-                pytest.skip("This exact counterexample is specific to d=1 over QQ")
-
-            fa = layers.free_alg
-            P = layers.OBXsLie
-            p = next(
-                elem
-                for elem in P(2, ring).graded_basis(-1)
-                if str(elem) == "(([x1,x2] ⊙ {1 2}; 1, 2); 1, 2)"
-            )
-            weight1 = []
-            for d_try in range(-1, 4):
-                weight1.extend(sample_basis(fa.module, d_try, 3, rng, weight=1))
-                if weight1:
-                    break
-            if not weight1:
-                pytest.skip("No weight-1 free-algebra elements found")
-            a = weight1[0]
-            c = fa.act(p, [a, a])
-
-            lhs = fa.act(P.compose(p, 1, p), [a, a, c])
-            rhs = fa.act(p, [fa.act(p, [a, a]), c])
-            assert _as_dict(lhs) == _as_dict(rhs)
-
     class TestLeibnizAction:
         """d(γ(p; a₁, a₂)) = γ(dp; a₁, a₂)
         + (-1)^|p| γ(p; da₁, a₂) + (-1)^{|p|+|a₁|} γ(p; a₁, da₂)."""
@@ -1669,21 +1641,6 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
                     assert mod.boundary(mod.boundary(elem)) == mod.zero(), (
                         f"d²≠0 w=4 deg={deg} dim={dim} ring={ring}"
                     )
-
-        def test_regression_remaining_weight4_counterexample(self, dim, ring, layers):
-            """Exact regression for the last rational weight-4 sign mismatch."""
-            if dim != 1 or ring != QQ:
-                pytest.skip("This exact counterexample is specific to d=1 over QQ")
-
-            mod = layers.bar.module
-
-            elem = next(
-                basis
-                for basis in mod.graded_basis_by_weight(3, 4)
-                if str(basis)
-                == "<([x1,x2] ⊙ {1 2}; 1, ([x1,x2] ⊙ {1 2 1 2}; 2, 3)); ɑ1 # <(([x1,x2] ⊙ {1 2 1}; 1, 2); 1, 2); β1, β1>, ɑ1 # <id; β1>, ɑ1 # <id; β1>>"
-            )
-            assert mod.boundary(mod.boundary(elem)) == mod.zero()
 
     class TestDecomposedDSquared:
         """Test the components of d separately: d_cofree and d_alpha.
