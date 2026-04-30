@@ -785,7 +785,9 @@ class TestLayer3_ΩBH_Kd:
                     rhs *= sign_from_exponent(q.degree() * a.degree())
                     assert _as_dict(lhs) == _as_dict(rhs)
 
-        def test_regression_left_to_right_substitution(self, dim, ring, layers: ConfigurationLayers):
+        def test_regression_left_to_right_substitution(
+            self, dim, ring, layers: ConfigurationLayers, rng
+        ):
             """Exact regression for the cobar free-algebra substitution order bug."""
             if dim != 1 or ring != QQ:
                 pytest.skip("This exact counterexample is specific to d=1 over QQ")
@@ -797,7 +799,14 @@ class TestLayer3_ΩBH_Kd:
                 for elem in P(2, ring).graded_basis(-1)
                 if str(elem) == "(([x1,x2] ⊙ {1 2}; 1, 2); 1, 2)"
             )
-            a = next(iter(fa.module.graded_basis_by_weight(0, 1)))
+            weight1 = []
+            for d_try in range(-1, 4):
+                weight1.extend(sample_basis(fa.module, d_try, 3, rng, weight=1))
+                if weight1:
+                    break
+            if not weight1:
+                pytest.skip("No weight-1 free-algebra elements found")
+            a = weight1[0]
             c = fa.act(p, [a, a])
 
             lhs = fa.act(P.compose(p, 1, p), [a, a, c])
