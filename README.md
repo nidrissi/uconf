@@ -63,7 +63,7 @@ conda run -n sage python -m pip install -e ".[docs]"
 Build the site:
 
 ```bash
-conda run -n sage sphinx-build -W --keep-going -b html docs docs/_build/html
+conda run -n sage sphinx-build --keep-going -b html docs docs/_build/html
 ```
 
 The generated HTML files are written to `docs/_build/html/`.

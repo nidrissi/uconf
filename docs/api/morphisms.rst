@@ -3,7 +3,6 @@ uconf.morphisms
 
 .. automodule:: uconf.morphisms
    :members:
-   :imported-members:
 
 Modules
 -------
@@ -11,6 +10,6 @@ Modules
 .. autosummary::
    :toctree: generated/morphisms
 
-   uconf.morphisms.canonical_twisting
-   uconf.morphisms.classical
-   uconf.morphisms.e_comodule_morphism
+   canonical_twisting
+   classical
+   e_comodule_morphism
