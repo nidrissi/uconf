@@ -44,7 +44,9 @@ _BOUNDARY_MATRIX_CHUNKS_PER_WORKER = 8
 class _ChainComplexProgressReporter:
     """Low-overhead progress reporting for chain-complex assembly."""
 
-    def __init__(self, total_columns: int, *, enabled: bool, stream=None, min_interval: float = 0.2):
+    def __init__(
+        self, total_columns: int, *, enabled: bool, stream=None, min_interval: float = 0.2
+    ):
         self._total_columns = total_columns
         self._enabled = enabled and total_columns > 0
         self._stream = stream if stream is not None else sys.stderr
@@ -52,7 +54,9 @@ class _ChainComplexProgressReporter:
         self._completed = 0
         self._last_emit = 0.0
         self._interactive = bool(
-            hasattr(self._stream, "isatty") and callable(self._stream.isatty) and self._stream.isatty()
+            hasattr(self._stream, "isatty")
+            and callable(self._stream.isatty)
+            and self._stream.isatty()
         )
         self._last_width = 0
 
@@ -62,10 +66,7 @@ class _ChainComplexProgressReporter:
             return
         self._completed += n_columns
         now = time.monotonic()
-        if (
-            self._completed < self._total_columns
-            and now - self._last_emit < self._min_interval
-        ):
+        if self._completed < self._total_columns and now - self._last_emit < self._min_interval:
             return
         self._last_emit = now
         self._emit(degree)
@@ -302,7 +303,10 @@ def _boundary_matrix(
                         _chunk_ranges(n_source, chunk_size),
                     ):
                         _merge_sparse_entries(entries, chunk_entries["entries"])
-                        if worker_profile_paths is not None and chunk_entries["profile_path"] is not None:
+                        if (
+                            worker_profile_paths is not None
+                            and chunk_entries["profile_path"] is not None
+                        ):
                             worker_profile_paths.append(chunk_entries["profile_path"])
                         if progress is not None:
                             progress.update(chunk_entries["columns_done"], degree=degree)
@@ -520,9 +524,7 @@ def compute_chain_complex(
 
     # Build differential matrices: d_n : C_n -> C_{n-1}
     differentials: dict[int, Any] = {}
-    total_columns = sum(
-        len(keys_by_degree[d]) for d in extended_degrees if d - 1 in key_to_idx
-    )
+    total_columns = sum(len(keys_by_degree[d]) for d in extended_degrees if d - 1 in key_to_idx)
     progress_reporter = _ChainComplexProgressReporter(total_columns, enabled=progress)
     try:
         for d in extended_degrees:
