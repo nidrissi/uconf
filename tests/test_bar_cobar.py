@@ -1025,9 +1025,7 @@ class TestBarPlanarize:
         cofree = CofreeCoalgebraModule(BXsLie, M)
 
         BXsLie3 = BXsLie(3, QQ)
-        planar_key = RootedTree(
-            ((1,), (1, 2, 1)), RootedTree(((1,), (1, 2)), 1, 2), 3
-        )
+        planar_key = RootedTree(((1,), (1, 2, 1)), RootedTree(((1,), (1, 2)), 1, 2), 3)
         planar = BXsLie3(planar_key)
         nonplanar = planar.permute([2, 3, 1])
         nonplanar_key = next(iter(nonplanar.support()))
