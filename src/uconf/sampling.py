@@ -53,11 +53,6 @@ from uconf.algebraic.tree_module import (
     _module_basis_keys_in_degree,
     _module_basis_keys_in_weight_and_degree,
 )
-from uconf.algebraic.tree_module import (
-    TreeModule,
-    _module_basis_keys_in_degree,
-    _module_basis_keys_in_weight_and_degree,
-)
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.trees import RootedTree
@@ -1574,15 +1569,9 @@ def _random_m_tuple(
     if n == 0:
         want_zero_weight = total_weight in (None, 0)
         return () if total_deg == 0 and want_zero_weight else None
-        if total_deg != 0:
-            return None
-        if total_weight is not None and total_weight != 0:
-            return None
-        return ()
     if total_weight is not None and total_weight < n:
         return None
     if n == 1:
-        key = _random_module_key(module, total_deg, rng, weight=total_weight)
         if total_weight is None:
             key = _random_module_key(module, total_deg, rng)
         else:
@@ -1627,65 +1616,35 @@ def _random_m_tuple(
 
     # Try to build an n-tuple by greedily picking keys
     m_conn = int(getattr(module, "connectivity", 0))
-    dead_states: set[tuple[int, int, int | None]] = set()
+    result = []
+    remaining = total_deg
 
-    def build_tuple(slots: int, deg: int, weight: int | None) -> tuple | None:
-        state = (slots, deg, weight)
-        if state in dead_states:
-            return None
-        if weight is not None and weight < 0:
-            dead_states.add(state)
-            return None
-        if slots == 0:
-            want_zero_weight = weight in (None, 0)
-            return () if deg == 0 and want_zero_weight else None
-        if slots == 1:
-            key = _random_module_key(module, deg, rng, weight=weight)
-            if key is not None:
-                return (key,)
-            dead_states.add(state)
+    for i in range(n):
+        slots_left = n - i - 1
+        min_remaining = slots_left * max(0, m_conn)
+        max_for_this = remaining - min_remaining
+        min_for_this = max(0, m_conn)
+
+        if max_for_this < min_for_this:
             return None
 
-        min_deg = m_conn
-        max_deg = deg - (slots - 1) * m_conn
-        if max_deg < min_deg:
-            dead_states.add(state)
-            return None
-
-        if weight is None:
-            candidate_splits = [(d_this, None) for d_this in range(min_deg, max_deg + 1)]
-        else:
-            min_weight = 0
-            max_weight = weight
-            if max_weight < min_weight:
-                dead_states.add(state)
-                return None
-            candidate_splits = [
-                (d_this, w_this)
-                for w_this in range(min_weight, max_weight + 1)
-                for d_this in range(min_deg, max_deg + 1)
-            ]
-
-        rng.shuffle(candidate_splits)
-
-        for d_this, w_this in candidate_splits:
-            if not _is_basis_feasible(module, d_this, weight=w_this):
-                continue
-            key = _random_module_key(module, d_this, rng, weight=w_this)
+        d_this = rng.randint(min_for_this, max_for_this)
+        key = _random_module_key(module, d_this, rng)
+        if key is None:
+            if d_this != 0:
+                key = _random_module_key(module, 0, rng)
+                if key is not None:
+                    d_this = 0
             if key is None:
-                continue
-            rest = build_tuple(
-                slots - 1,
-                deg - d_this,
-                None if weight is None else weight - w_this,
-            )
-            if rest is not None:
-                return (key,) + rest
+                return None
 
-        dead_states.add(state)
+        result.append(key)
+        remaining -= d_this
+
+    if remaining != 0:
         return None
 
-    return build_tuple(n, total_deg, total_weight)
+    return tuple(result)
 
 
 def random_free_algebra_element(
@@ -1740,19 +1699,14 @@ def random_free_algebra_element(
     m_conn = int(getattr(M, "connectivity", 0))
     if weight is not None:
         possible_n = [weight] if weight >= 1 else []
-        possible_n = [weight]
     elif m_conn > 0:
         max_n = max(1, degree // m_conn + 2)
-        possible_n = list(range(1, max_n + 1))
         possible_n = list(range(1, max_n + 1))
     elif connectivity > 0:
         max_n = max(1, degree // connectivity + 2)
         possible_n = list(range(1, max_n + 1))
-        possible_n = list(range(1, max_n + 1))
     else:
         max_n = 10  # heuristic bound
-        possible_n = list(range(1, max_n + 1))
-
         possible_n = list(range(1, max_n + 1))
 
     rng.shuffle(possible_n)
@@ -1767,7 +1721,6 @@ def random_free_algebra_element(
             # P(1) = unit, need module key at degree d
             mk = _random_module_key(M, degree, rng)
             if mk is not None:
-                return parent.term((P.unit_key(), (mk,)))
                 return parent.term((P.unit_key(), (mk,)))
             continue
 
@@ -1901,13 +1854,11 @@ def random_cofree_coalgebra_element(
         n = possible_n[rng.randint(0, len(possible_n) - 1)]
 
         if n == 1:
-            mk = _random_module_key(M, degree, rng, weight=weight)
             if weight is None:
                 mk = _random_module_key(M, degree, rng)
             else:
                 mk = _random_weighted_module_key(M, degree, weight, rng)
             if mk is not None:
-                return parent.term((C.unit_key(), (mk,)))
                 return parent.term((C.unit_key(), (mk,)))
             continue
 
@@ -1942,7 +1893,6 @@ def random_cofree_coalgebra_element(
         if c_key is None:
             continue
 
-        m_tuple = _random_m_tuple(M, n, m_deg, rng, total_weight=weight)
         m_tuple = _random_m_tuple(M, n, m_deg, rng, total_weight=weight)
         if m_tuple is None:
             continue
@@ -2021,7 +1971,10 @@ def random_tree_module_element(
         n = possible_n[rng.randint(0, len(possible_n) - 1)]
 
         if n == 1:
-            mk = _random_module_key(M, degree, rng, weight=weight)
+            if weight is None:
+                mk = _random_module_key(M, degree, rng)
+            else:
+                mk = _random_weighted_module_key(M, degree, weight, rng)
             if mk is not None:
                 return parent((1, (mk,)))
             continue
