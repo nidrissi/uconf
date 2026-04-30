@@ -280,7 +280,6 @@ class TestSampleBasisEmptyFastFail:
         assert time.time() - t0 < 1.0, "sphere_nontrivial cobar at infeasible degree must fast-fail"
 
     def test_direct_sampler_retry_budget_is_capped(self, monkeypatch, rng):
-        import uconf.sampling as sampling
 
         calls = 0
 

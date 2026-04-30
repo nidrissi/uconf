@@ -1016,9 +1016,7 @@ class TestBarPlanarize:
 
     def test_planarize_matches_cofree_leaf_normalization(self):
         """Bar planarization must use the leaf permutation expected by cofree normalization."""
-        M = CombinatorialFreeModule(
-            QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ)
-        )
+        M = CombinatorialFreeModule(QQ, ["a", "b", "c"], category=GradedModulesWithBasis(QQ))
         M.degree_on_basis = lambda _: 1
         M.boundary = lambda _elem: M.zero()
 
