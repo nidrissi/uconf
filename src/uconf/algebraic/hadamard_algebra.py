@@ -124,7 +124,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
         right_value = self.right_algebra.act(right_op, right_inputs)
 
         result_dict: dict = {}
-        R = self.module.base_ring()
+        R = base_ring
         zero = R.zero()
         for left_out_basis, left_out_coeff in left_value:
             for right_out_basis, right_out_coeff in right_value:
