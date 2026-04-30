@@ -260,7 +260,7 @@ C.betti()
     simplex tuples `(v_0, …, v_n)` (strictly-increasing non-negative integers).
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data raises.
     - `SimplicialChains.fundamental_chain(n, base_ring)` — the fundamental cycle `[0,…,n]`.
-    - `SimplicialChains.basis_iter(N)` — iterator over all simplices in `Δ^N`.
+    - `SimplicialChains.basis_iter(base_ring, N)` — iterator over all simplices in `Δ^N`.
     - `Element.boundary()` — simplicial boundary on arity-1 elements.
     - `Element.iterated_diagonal(times)` — AW diagonal; returns a native Sage
       `tensor([SimplicialChains(base_ring)]*(times+1))` element.
@@ -269,7 +269,7 @@ C.betti()
     - Constructor semantics: empty simplices and simplices with consecutive repeated vertices map to zero; malformed simplex data and vertices outside `\{0, ..., N\}` raise.
     - `SimplicialCochains.volume_form(N, base_ring)` — the volume form on `Δ^N`.
     - `SimplicialCochains.evaluate(cochain, chain)` — Kronecker pairing.
-    - `SimplicialCochains.dual_basis_it(N)` — iterator over dual basis.
+    - `SimplicialCochains.dual_basis_it(N, base_ring)` — iterator over dual basis.
     - `Element.coboundary()` — coboundary operator.
 
 ### Surjection action/coaction API
@@ -536,8 +536,8 @@ from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
 
 u = Surjection(2, QQ)((1, 2, 1))
 C = SimplicialCochains(N=3, base_ring=QQ)
-f1 = C(((0, 1),))
-f2 = C(((1, 2),))
+f1 = C((0, 1))
+f2 = C((1, 2))
 alg = SurjectionSimplicialCochainAlgebra(N=3, base_ring=QQ)
 mu = alg.act(u, [f1, f2])
 ```

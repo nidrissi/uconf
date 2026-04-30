@@ -207,7 +207,7 @@ class SimplicialChains(CombinatorialFreeModule):
 
             This method applies the diagonal ``times`` times, producing
             ``times + 1`` tensor factors.  Returns an element of
-            ``tensor([SimplicialChains(SC.base_ring())] * (times + 1))``.
+            ``tensor([self.parent()] * (times + 1))``.
 
             Parameters
             ----------
