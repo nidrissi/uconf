@@ -1,0 +1,56 @@
+name: Documentation
+
+on:
+    pull_request:
+        paths:
+            - "docs/**"
+            - "src/uconf/**/*.py"
+            - ".github/workflows/docs.yml"
+            - "pyproject.toml"
+            - "environment.yml"
+            - "README.md"
+    push:
+        branches:
+            - main
+        paths:
+            - "docs/**"
+            - "src/uconf/**/*.py"
+            - ".github/workflows/docs.yml"
+            - "pyproject.toml"
+            - "environment.yml"
+            - "README.md"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: docs-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build-docs:
+        name: Build HTML docs
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Setup Conda and create Sage environment
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  activate-environment: sage
+                  channel-priority: strict
+                  environment-file: environment.yml
+
+            - name: Install package with docs dependencies
+              shell: bash -el {0}
+              run: |
+                  python -m pip install --upgrade pip
+                  python -m pip install -e ".[docs]"
+
+            - name: Build HTML documentation
+              shell: bash -el {0}
+              run: |
+                  sphinx-build -W --keep-going -b html docs docs/_build/html

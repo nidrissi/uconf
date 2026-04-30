@@ -48,6 +48,26 @@ conda run -n sage ruff format --check tests src
 conda run -n sage python -m compileall -q src tests
 ```
 
+## HTML documentation
+
+The repository now includes a Sphinx configuration in
+`/home/runner/work/najib-victor/najib-victor/docs` that builds HTML
+documentation from the existing docstrings.
+
+Install the documentation dependencies:
+
+```bash
+conda run -n sage python -m pip install -e ".[docs]"
+```
+
+Build the site:
+
+```bash
+conda run -n sage sphinx-build -W --keep-going -b html docs docs/_build/html
+```
+
+The generated HTML files are written to `docs/_build/html/`.
+
 ## `uconf` package
 
 Canonical imports are subpackage-based (e.g., `uconf.models.surjection`).
