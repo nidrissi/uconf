@@ -21,15 +21,17 @@ EXAMPLES::
 
 from __future__ import annotations
 
-import multiprocessing
 import os
 from typing import Any, Literal
 
+import multiprocessing
 from sage.all import ChainComplex, matrix
 
 from uconf.core.signs import get_on_basis
 
 
+# Keep multiprocessing helpers at module scope so forked workers can reuse the
+# same top-level functions and inherited state without re-serializing the model.
 _BOUNDARY_MATRIX_STATE: dict[str, Any] = {}
 
 
@@ -204,7 +206,7 @@ def _boundary_matrix(
                 sparse=sparse,
             )
 
-        entries: dict[tuple[int, int], Any] = {}
+        serial_entries: dict[tuple[int, int], Any] = {}
         for j, key in enumerate(basis_source_keys):
             column_entries = _boundary_entries_for_key(
                 key,
@@ -213,8 +215,14 @@ def _boundary_matrix(
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
             )
-            entries.update(column_entries)
-        return _build_matrix_from_entries(base_ring, n_target, n_source, entries, sparse=sparse)
+            serial_entries.update(column_entries)
+        return _build_matrix_from_entries(
+            base_ring,
+            n_target,
+            n_source,
+            serial_entries,
+            sparse=sparse,
+        )
 
     if basis_source is None:
         raise ValueError(
@@ -354,7 +362,7 @@ def compute_chain_complex(
     """
     base_ring = module.base_ring()
     if n_jobs < 1:
-        raise ValueError(f"n_jobs must be >= 1, got {n_jobs}.")
+        raise ValueError(f"n_jobs must be >= 1, got {n_jobs}")
 
     if not degrees:
         return ChainComplex({}, base_ring=base_ring, degree_of_differential=-1)

@@ -202,6 +202,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                         normalized = self._normalized_corolla_sum(c_left_term, new_m)
                         scale = sign * coeff * a_coeff
                         for out_key, out_coeff in normalized:
+                            # Sage's free-module constructors do not always
+                            # coerce products of ring elements automatically.
                             combined = base_ring(scale * out_coeff)
                             result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
@@ -305,6 +307,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 normalized = self._normalized_corolla_sum(c_left_term, new_m)
                 scale = sign * coop_sign * gathering_sign * a_coeff
                 for out_key, out_coeff in normalized:
+                    # Sage's free-module constructors do not always coerce
+                    # accumulated coefficients on their own.
                     combined = base_ring(scale * out_coeff)
                     result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
