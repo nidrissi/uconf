@@ -1526,65 +1526,39 @@ def random_cobar_element(
 # ---------------------------------------------------------------------------
 
 
-def _random_module_key(module, degree: int, rng: Random, *, weight: int | None = None):
-    """Pick a random basis key from the inner module at the given degree.
-
-    Uses reservoir sampling (one pass, O(1) memory).
-    """
+def _reservoir_sample_keys(keys: Iterator[Any], rng: Random):
+    """Pick one key from an iterator using reservoir sampling."""
     chosen = None
     count = 0
-    if weight is not None and weight < 0:
-        return None
-    basis_iter = (
-        _module_basis_keys_in_weight_and_degree(module, degree, weight)
-        if weight is not None
-        else _module_basis_keys_in_degree(module, degree)
-    )
-    for key in basis_iter:
+    for key in keys:
         count += 1
         if rng.randint(1, count) == 1:
             chosen = key
-    try:
-        for key in _module_basis_keys_in_degree(module, degree):
-            count += 1
-            if rng.randint(1, count) == 1:
-                chosen = key
-    except ValueError:
-        return None
     return chosen
 
 
-def _random_m_tuple(
-    module,
-    n: int,
-    total_deg: int,
-    rng: Random,
-    *,
-    total_weight: int | None = None,
-) -> tuple | None:
-    """Generate a random n-tuple of module basis keys with prescribed totals.
+def _random_module_key(module, degree: int, rng: Random):
+    """Pick a random basis key from the inner module at the given degree.
 
-    This performs a backtracking search over feasible splits of the total
-    degree across the ``n`` slots. When ``total_weight`` is provided, it
-    simultaneously searches over degree/weight splits, samples a basis key
-    for the current slot, and then recurses on the remaining slots.
+    Returns ``None`` when the degree slice cannot be enumerated finitely.
+    """
+    try:
+        return _reservoir_sample_keys(_module_basis_keys_in_degree(module, degree), rng)
+    except ValueError:
+        return None
 
-    If ``total_weight`` is not ``None``, each slot is assigned a nonnegative
-    weight. This allows zero-weight basis keys when the inner module supports
-    them, while still requiring the total weight to be distributed across all
-    ``n`` slots.
+
 def _random_weighted_module_key(module, degree: int, weight: int, rng: Random):
-    """Pick a random basis key from the inner module at the given degree and weight."""
-    chosen = None
-    count = 0
+    """Pick a random basis key from the inner module at the given degree and weight.
+
+    Returns ``None`` when the weighted slice cannot be enumerated finitely.
+    """
     try:
-        for key in _module_basis_keys_in_weight_and_degree(module, degree, weight):
-            count += 1
-            if rng.randint(1, count) == 1:
-                chosen = key
+        return _reservoir_sample_keys(
+            _module_basis_keys_in_weight_and_degree(module, degree, weight), rng
+        )
     except ValueError:
         return None
-    return chosen
 
 
 def _random_m_tuple(
