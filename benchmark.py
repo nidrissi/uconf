@@ -46,7 +46,7 @@ with report_path.open("w") as report_file:
     stats = pstats.Stats(profile, stream=report_file)
     for worker_profile_path in worker_profile_paths:
         stats.add(worker_profile_path)
-    stats.sort_stats("cumulative").print_stats()
+    stats.sort_stats("cumulative").strip_dirs().print_stats()
 
 for worker_profile_path in worker_profile_paths:
     os.unlink(worker_profile_path)
