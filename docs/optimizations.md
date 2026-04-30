@@ -364,3 +364,96 @@ In an isolated `cProfile` run over all arity-3 basis elements:
 | `_extend_tree` cumtime | 4.59 s | 2.18 s |
 | `e_comodule_on_generator` cumtime | 3.76 s | 1.76 s |
 | `_nu_on_planar` cumtime | 1.40 s | 0.72 s |
+
+---
+
+## Optimizations applied 2026-04-30
+
+### 19. Basis-level action caches in free/Hadamard algebras
+
+**Files:** `src/uconf/algebraic/free_algebra.py`,
+`src/uconf/algebraic/hadamard_algebra.py`
+
+The bar differential repeatedly applies algebra actions to the **same basis
+inputs** with different scalar coefficients.  Previously both
+`FreeOperadAlgebra._act_impl` and `HadamardTensorAlgebra._act_impl`
+recomputed the full substitution / graded-interchange / normalization pipeline
+for every call, even when the underlying basis tuple had already appeared in an
+earlier boundary term.
+
+This round adds cached basis-level helpers:
+
+- `FreeOperadAlgebra._act_on_basis_tuple(q_key, input_keys)`
+- `HadamardTensorAlgebra._act_on_basis_tuple(had_basis, tensor_basis_tuple)`
+
+The public `_act_impl` methods now only expand coefficients and reuse the
+cached basis result.  This pushes repeated operadic substitution, normalization,
+and tensor-product output construction behind `@cached_method`.
+
+### 20. Cached bar/E-comodule intermediates and cheaper normalization
+
+**Files:** `src/uconf/constructions/bar_algebra.py`,
+`src/uconf/morphisms/e_comodule_morphism.py`,
+`src/uconf/algebraic/cofree_coalgebra.py`,
+`src/uconf/homology.py`
+
+Several remaining hotspots were still rebuilding the same intermediate objects:
+
+- `BarAlgebraModule._dalpha_*` now caches `α(c_R)` on basis keys and the
+  normalized left-corolla outputs `(c_L, new_m)`.
+- `_nu_on_planar` now memoizes repeated `d_sigma_decompose` calls, repeated
+  cooperad-factor permutations, and repeated `rho(sigma_bar)` evaluations
+  inside one recursion tree.
+- `CofreeCoalgebraModule._normalized_corolla_sum` and `_boundary_on_basis`
+  now accumulate directly into dictionaries instead of repeatedly doing
+  `result += ...`.
+- `_boundary_matrix` now caches normalized target-row matches for repeated raw
+  boundary keys, reducing duplicate `_normalize_key(...)` work during matrix
+  assembly.
+
+### 21. Cold vs warm benchmark split
+
+**Files:** `benchmark.py`, `benchmark_detailed.py`
+
+The benchmark scripts now run **cold** and **warm** passes separately in the
+same process so that one-time cache fill can be compared against steady-state
+costs.
+
+On the weight-3 Euclidean configuration benchmark (`GF(2)`, `dim=2`):
+
+| Metric | Cold | Warm |
+|--------|------|------|
+| `benchmark_detailed.py` full chain complex | 19.58 s | 0.056 s |
+| `benchmark_detailed.py` arity-3 E-comodule sub-benchmark | 5.22 s | 1.67 s |
+| `benchmark_detailed.py` basis enumeration | 0.407 s | ~0.000 s |
+| `benchmark.py` wall time (`n_jobs=8`) | 20.97 s | 18.98 s |
+
+The serial detailed benchmark now makes the cache split explicit:
+
+- **One-time setup + cache fill:** ~19.60 s
+- **Steady-state full chain complex:** ~0.056 s
+
+The parallel profiled benchmark remains much slower on the warm pass because
+forked workers do not reuse the main process's cached `@cached_method` state;
+the wall time is now dominated by process/lock overhead, while the merged
+worker profiles still identify the same mathematical hot paths.
+
+### Current bottleneck split after this round
+
+From `benchmark_profile.txt` (merged worker profiles; cumulative times sum
+across workers and therefore exceed wall clock):
+
+- `bar_algebra._dalpha_all_splits`: **118.9 s** cumulative
+- `configuration._on_element`: **88.4 s**
+- `e_comodule_on_generator`: **70.7 s**
+- `e_comodule._on_element`: **74.2 s**
+- `hadamard_algebra._act_impl`: **28.6 s**
+- `hadamard_algebra._act_on_basis_tuple`: **28.0 s**
+- `free_algebra._act_impl`: **24.4 s**
+- `free_algebra._act_on_basis_tuple`: **23.1 s**
+- `quasi_planar.d_sigma_decompose`: **18.8 s**
+- `cofree_coalgebra._boundary_on_basis`: **13.0 s**
+- `cofree_coalgebra._normalized_corolla_sum`: **5.3 s**
+
+So the next work should stay focused on the `d_alpha` / comodule / algebra
+action stack, not on table reduction or basis enumeration.
