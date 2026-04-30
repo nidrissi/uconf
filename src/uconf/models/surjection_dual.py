@@ -11,7 +11,22 @@ from uconf.models.surjection import Surjection
 
 
 class SurjectionDual(Surjection):
-    """Linear dual companion of :class:`uconf.surjection.Surjection`."""
+    r"""Linear dual companion of :class:`uconf.models.surjection.Surjection`.
+
+    The basis is dual to the surjection basis, with degree equal to the
+    negative of the primal surjection degree.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import SurjectionDual
+        sage: SD2 = SurjectionDual(2, QQ)
+        sage: x = SD2((1, 2, 1))
+        sage: x.arity()
+        2
+        sage: SD2.degree_on_basis((1, 2, 1))
+        -1
+    """
 
     name: ClassVar[str] = "𝒳*"
     connectivity: ClassVar[int] = 0
@@ -104,7 +119,10 @@ class SurjectionDual(Surjection):
 
     @staticmethod
     def counit(x: "SurjectionDual.Element"):
-        """Return the cooperadic counit evaluation."""
+        """Return the cooperadic counit evaluation.
+
+        The counit is nonzero only on the arity-``1`` basis element ``(1,)``.
+        """
         if x.arity() != 1:
             return x.parent().base_ring().zero()
         value = x.parent().base_ring().zero()
@@ -115,14 +133,41 @@ class SurjectionDual(Surjection):
 
     @staticmethod
     def reduced(x: "SurjectionDual.Element") -> "SurjectionDual.Element":
-        """Project to the reduced part (kills the arity-1 unit component)."""
+        """Project to the reduced part.
+
+        This removes the arity-``1`` counit component and is the identity in
+        higher arity.
+        """
         if x.arity() != 1:
             return x
         return x - SurjectionDual.counit(x) * x.parent()((1,))
 
     @staticmethod
     def infinitesimal_cocompose(x: "SurjectionDual.Element", i: int, m: int, n: int):
-        """Partial cocomposition dual to ``Surjection.compose`` on basis pairing."""
+        r"""Partial cocomposition dual to :meth:`Surjection.compose`.
+
+        Parameters
+        ----------
+        x:
+            Element of ``SurjectionDual(m + n - 1)``.
+        i:
+            Input slot on the left factor.
+        m, n:
+            Arities of the left and right output cooperad factors.
+
+        Returns
+        -------
+        Sage tensor element
+            An element of ``SurjectionDual(m) \otimes SurjectionDual(n)``.
+
+        EXAMPLES::
+
+            sage: from sage.all import QQ
+            sage: from uconf import SurjectionDual
+            sage: x = SurjectionDual(2, QQ)((1, 2))
+            sage: x.infinitesimal_cocompose(1, 1, 2).parent().base_ring() == QQ
+            True
+        """
         if m <= 0 or n <= 0:
             raise ValueError(f"Arities must be positive. Got m={m}, n={n}.")
         if not (1 <= i <= m):
