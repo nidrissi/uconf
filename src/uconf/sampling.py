@@ -1528,7 +1528,7 @@ def _random_module_key(module, degree: int, rng: Random, *, weight: int | None =
     """
     chosen = None
     count = 0
-    if weight is not None and weight < 1:
+    if weight is not None and weight < 0:
         return None
     basis_iter = (
         _module_basis_keys_in_weight_and_degree(module, degree, weight)
@@ -1557,10 +1557,13 @@ def _random_m_tuple(
     simultaneously searches over degree/weight splits, samples a basis key
     for the current slot, and then recurses on the remaining slots.
 
-    If ``total_weight`` is not ``None``, each slot is assigned positive
-    weight (at least ``1``), so the total weight must be distributable among
-    all ``n`` slots as a sum of positive integers.
+    If ``total_weight`` is not ``None``, each slot is assigned a nonnegative
+    weight. This allows zero-weight basis keys when the inner module supports
+    them, while still requiring the total weight to be distributed across all
+    ``n`` slots.
     """
+    if total_weight is not None and total_weight < 0:
+        return None
     if n == 0:
         want_zero_weight = total_weight in (None, 0)
         return () if total_deg == 0 and want_zero_weight else None
@@ -1571,9 +1574,12 @@ def _random_m_tuple(
     m_conn = int(getattr(module, "connectivity", 0))
     dead_states: set[tuple[int, int, int | None]] = set()
 
-    def backtrack(slots: int, deg: int, weight: int | None) -> tuple | None:
+    def build_tuple(slots: int, deg: int, weight: int | None) -> tuple | None:
         state = (slots, deg, weight)
         if state in dead_states:
+            return None
+        if weight is not None and weight < 0:
+            dead_states.add(state)
             return None
         if slots == 0:
             want_zero_weight = weight in (None, 0)
@@ -1594,8 +1600,8 @@ def _random_m_tuple(
         if weight is None:
             candidate_splits = [(d_this, None) for d_this in range(min_deg, max_deg + 1)]
         else:
-            min_weight = 1
-            max_weight = weight - (slots - 1)
+            min_weight = 0
+            max_weight = weight
             if max_weight < min_weight:
                 dead_states.add(state)
                 return None
@@ -1613,7 +1619,7 @@ def _random_m_tuple(
             key = _random_module_key(module, d_this, rng, weight=w_this)
             if key is None:
                 continue
-            rest = backtrack(
+            rest = build_tuple(
                 slots - 1,
                 deg - d_this,
                 None if weight is None else weight - w_this,
@@ -1624,7 +1630,7 @@ def _random_m_tuple(
         dead_states.add(state)
         return None
 
-    return backtrack(n, total_deg, total_weight)
+    return build_tuple(n, total_deg, total_weight)
 
 
 def random_free_algebra_element(
@@ -1678,16 +1684,17 @@ def random_free_algebra_element(
     # Determine arity range
     m_conn = int(getattr(M, "connectivity", 0))
     if weight is not None:
-        max_n = weight  # each leaf has weight >= 1
+        possible_n = [weight] if weight >= 1 else []
     elif m_conn > 0:
         max_n = max(1, degree // m_conn + 2)
+        possible_n = list(range(1, max_n + 1))
     elif connectivity > 0:
         max_n = max(1, degree // connectivity + 2)
+        possible_n = list(range(1, max_n + 1))
     else:
         max_n = 10  # heuristic bound
+        possible_n = list(range(1, max_n + 1))
 
-    # n=1: identity operad key, single module element
-    possible_n = list(range(1, max_n + 1))
     rng.shuffle(possible_n)
 
     max_attempts = 50
@@ -1698,7 +1705,7 @@ def random_free_algebra_element(
 
         if n == 1:
             # P(1) = unit, need module key at degree d
-            mk = _random_module_key(M, degree, rng, weight=weight)
+            mk = _random_module_key(M, degree, rng)
             if mk is not None:
                 return parent.term((P.unit_key(), (mk,)))
             continue
@@ -1737,7 +1744,7 @@ def random_free_algebra_element(
             continue
 
         # Sample a random m_tuple
-        m_tuple = _random_m_tuple(M, n, m_deg, rng, total_weight=weight)
+        m_tuple = _random_m_tuple(M, n, m_deg, rng)
         if m_tuple is None:
             continue
 
