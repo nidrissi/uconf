@@ -1704,9 +1704,12 @@ class TestLayer6_Bπ_pb_S_ΩBH_Kd:
 # ===========================================================================
 
 
+WEIGHT_DEPTH_PAIRS = [(2, 6), (3, 5), (4, 3)]
+
+
 class TestFullModel:
     class TestChainComplex:
-        @pytest.mark.parametrize("w,dmax", [(2, 5), (3, 4), (4, 2)])
+        @pytest.mark.parametrize("w,dmax", WEIGHT_DEPTH_PAIRS)
         def test_full_model(self, dim, ring, w: int, dmax: int):
             model = euclidean_unordered_configuration_model(ring, dim)
             C = compute_chain_complex(model.module, degrees=range(-1, dmax), weight=w, check=True)
@@ -1720,42 +1723,43 @@ class TestFullModel:
                     basis = model.module.graded_basis_by_weight(k, w)
                     assert len(basis) == len(set(basis))
 
+    class TestExpectedDimension:
+        @staticmethod
+        def _count(d: int, k: int):
+            """Count the expected dimension of the weight-k part of the model in degree d, based on the result of Fuks."""
+            if d < 0:
+                return 0
 
-@pytest.mark.skip(reason="Too slow at the moment!")
-class TestExpectedDimension:
-    @staticmethod
-    def _count(d: int, k: int):
-        """Count the expected dimension of the weight-k part of the model in degree d, based on the result of Fuks."""
-        S = k - d
-        if S < 0:
-            return 0
+            S = k - d
+            if S < 0:
+                return 0
 
-        mersenne_parts = [2**i - 1 for i in range(1, d.bit_length() + 1)]
-        P = Partitions(d, parts_in=mersenne_parts)
+            mersenne_parts = [2**i - 1 for i in range(1, d.bit_length() + 1)]
+            P = Partitions(d, parts_in=mersenne_parts)
 
-        return sum(1 for p in P if len(p) <= S)
+            return sum(1 for p in P if len(p) <= S)
 
-    @pytest.mark.parametrize("w", [1, 2, 3, 4])
-    def test_expected_dimension_gf2(self, w: int):
-        model = euclidean_unordered_configuration_model(GF(2), 2)
-        cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
-        print(
-            "Found Betti numbers:",
-            [cc.betti(deg) for deg in range(-1, 3)],
-            f"Expected dimensions: {[self._count(deg, w) for deg in range(-1, 3)]}",
-        )
-        for deg in range(-1, 3):
-            assert cc.betti(deg) == self._count(deg, w), (
-                f"Betti number mismatch at deg={deg}, weight={w}"
+        @pytest.mark.parametrize("w,dmax", WEIGHT_DEPTH_PAIRS)
+        def test_expected_dimension_gf2(self, w: int, dmax: int):
+            model = euclidean_unordered_configuration_model(GF(2), 2)
+            cc = compute_chain_complex(model.module, degrees=range(-1, dmax), weight=w, check=True)
+            print(
+                "Found Betti numbers:",
+                [cc.betti(deg) for deg in range(-1, dmax)],
+                f"Expected dimensions: {[self._count(deg, w) for deg in range(-1, dmax)]}",
             )
+            for deg in range(-1, dmax):
+                assert cc.betti(deg) == self._count(deg, w), (
+                    f"Betti number mismatch at deg={deg}, weight={w}"
+                )
 
-    @pytest.mark.parametrize("w", [1, 2, 3, 4])
-    def test_expected_dimension_QQ(self, w: int):
-        model = euclidean_unordered_configuration_model(QQ, 2)
-        cc = compute_chain_complex(model.module, degrees=range(-1, 3), weight=w, check=True)
-        print("Found Betti numbers:", [cc.betti(deg) for deg in range(-1, 3)])
-        for deg in range(-1, 3):
-            if deg == 0 or (w > 1 and deg == 1):
-                assert cc.betti(deg) == 1, f"Betti number mismatch at deg={deg}, weight={w}"
-            else:
-                assert cc.betti(deg) == 0, f"Betti number mismatch at deg={deg}, weight={w}"
+        @pytest.mark.parametrize("w,dmax", WEIGHT_DEPTH_PAIRS)
+        def test_expected_dimension_QQ(self, w: int, dmax: int):
+            model = euclidean_unordered_configuration_model(QQ, 2)
+            cc = compute_chain_complex(model.module, degrees=range(-1, dmax), weight=w, check=True)
+            print("Found Betti numbers:", [cc.betti(deg) for deg in range(-1, dmax)])
+            for deg in range(-1, dmax):
+                if deg == 0 or (w > 1 and deg == 1):
+                    assert cc.betti(deg) == 1, f"Betti number mismatch at deg={deg}, weight={w}"
+                else:
+                    assert cc.betti(deg) == 0, f"Betti number mismatch at deg={deg}, weight={w}"

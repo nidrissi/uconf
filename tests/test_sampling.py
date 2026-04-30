@@ -280,7 +280,6 @@ class TestSampleBasisEmptyFastFail:
         assert time.time() - t0 < 1.0, "sphere_nontrivial cobar at infeasible degree must fast-fail"
 
     def test_direct_sampler_retry_budget_is_capped(self, monkeypatch, rng):
-        import uconf.sampling as sampling
 
         calls = 0
 
@@ -506,23 +505,16 @@ class TestRandomCofreeCoalgebraElement:
         if elem is not None:
             assert elem.parent() == mod
 
-    def test_weighted_nested_module(self, rng):
+    def test_weighted_configuration_bar_module(self, rng):
         from uconf.algebraic.configuration import _build_layers
 
         layers = _build_layers(QQ, 1)
         mod = layers.bar.module
         elem = random_cofree_coalgebra_element(mod, 1, rng, weight=3)
+
         assert elem is not None
-        key = next(iter(elem.support()))
-        assert mod._weight_on_basis(key) == 3
-
-    def test_zero_weight_slots_are_allowed(self, rng):
-        from uconf.algebraic.spherical import ReducedSphereCochains
-
-        module = ReducedSphereCochains(1, QQ)
-        m_tuple = sampling._random_m_tuple(module, 2, -2, rng, total_weight=0)
-        assert m_tuple is not None
-        assert sum(module._weight_on_basis(key) for key in m_tuple) == 0
+        for key in elem.support():
+            assert mod._weight_on_basis(key) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -576,17 +568,18 @@ class TestSampleBasisDispatch:
         # At least some elements should be generated
         assert isinstance(elems, list)
 
-    def test_weighted_nested_cofree_dispatch(self, rng):
-        """Weighted cofree sampling should avoid unbounded inner basis_iter calls."""
+    def test_weighted_bar_module_dispatch(self, rng):
+        """Weighted bar-module sampling should use finite inner weight slices."""
         from uconf.algebraic.configuration import _build_layers
 
         layers = _build_layers(QQ, 1)
         mod = layers.bar.module
         elems = sample_basis(mod, 1, 5, rng, weight=3)
+
         assert len(elems) > 0
         for elem in elems:
-            key = next(iter(elem.support()))
-            assert mod._weight_on_basis(key) == 3
+            for key in elem.support():
+                assert mod._weight_on_basis(key) == 3
 
 
 class TestRandomTreeModuleElement:

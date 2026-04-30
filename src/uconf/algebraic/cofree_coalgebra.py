@@ -122,13 +122,17 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         For each basis term ``(c_key, coeff)`` of ``c_elem ∈ C(n)``, applies
         ``planarize`` to obtain ``Σ (c_planar_key ⊗ σ) * c`` and returns::
 
-            Σ coeff * c * ε(σ; degrees) * self.term((c_planar_key, σ · m_tuple))
+            Σ coeff * c * ε(leaf_perm; degrees) * self.term((c_planar_key, permute(m_tuple)))
 
-        where ``σ · m_tuple`` is the left action on the leaf tensor:
+        Here ``permute(m_tuple)`` is the leaf-tensor reordering induced by
+        ``planarize``.  By default it is the usual left action of ``σ``:
 
             ``σ · (m_1, ..., m_n) = (m_{σ^{-1}(1)}, ..., m_{σ^{-1}(n)})``
 
-        and ``ε(σ; degrees)`` is the Koszul sign for that graded left action.
+        but cooperad components may override this convention via
+        ``_leaf_tensor_permutation_from_planarize`` when their planarization
+        stores the global leaf relabeling differently.  ``ε(leaf_perm;
+        degrees)`` is the Koszul sign for the resulting graded leaf action.
 
         This ensures all stored C-keys are in the planar basis.
 
@@ -150,14 +154,18 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             planarized = comp.planarize(comp.term(c_key))
             for (c_planar_key, sigma_key), pl_coeff in planarized:
                 sigma_tuple = tuple(int(s) for s in sigma_key)
-                sigma_inv = [0] * n
-                for pos, value in enumerate(sigma_tuple, start=1):
-                    sigma_inv[value - 1] = pos
-                sigma_inv_tuple = tuple(sigma_inv)
-                permuted_m = tuple(m_tuple[sigma_inv_tuple[i] - 1] for i in range(n))
+                permute_leaf_tuple = getattr(comp, "_leaf_tensor_permutation_from_planarize", None)
+                if callable(permute_leaf_tuple):
+                    leaf_perm = tuple(int(s) for s in permute_leaf_tuple(sigma_tuple))
+                else:
+                    sigma_inv = [0] * n
+                    for pos, value in enumerate(sigma_tuple, start=1):
+                        sigma_inv[value - 1] = pos
+                    leaf_perm = tuple(sigma_inv)
+                permuted_m = tuple(m_tuple[leaf_perm[i] - 1] for i in range(n))
                 # Koszul sign for permuting graded leaf-module elements.
-                if n > 1 and sigma_inv_tuple != identity_tuple:
-                    perm_0idx = [s - 1 for s in sigma_inv_tuple]
+                if n > 1 and leaf_perm != identity_tuple:
+                    perm_0idx = [s - 1 for s in leaf_perm]
                     koszul = koszul_sign_of_permutation(perm_0idx, degrees)
                 else:
                     koszul = 1
