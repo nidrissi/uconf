@@ -1628,7 +1628,10 @@ def _random_m_tuple(
         if max_for_this < min_for_this:
             return None
 
-        d_this = rng.randint(min_for_this, max_for_this)
+        if i == n - 1:
+            d_this = remaining
+        else:
+            d_this = rng.randint(min_for_this, max_for_this)
         key = _random_module_key(module, d_this, rng)
         if key is None:
             if d_this != 0:
