@@ -7,6 +7,8 @@ uconf.constructions
 Modules
 -------
 
+.. currentmodule:: uconf.constructions
+
 .. autosummary::
    :toctree: generated/constructions
 

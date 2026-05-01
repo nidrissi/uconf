@@ -7,6 +7,8 @@ uconf.core
 Modules
 -------
 
+.. currentmodule:: uconf.core
+
 .. autosummary::
    :toctree: generated/core
 

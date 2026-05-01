@@ -7,6 +7,8 @@ uconf.morphisms
 Modules
 -------
 
+.. currentmodule:: uconf.morphisms
+
 .. autosummary::
    :toctree: generated/morphisms
 

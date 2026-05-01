@@ -7,6 +7,8 @@ uconf.wrappers
 Modules
 -------
 
+.. currentmodule:: uconf.wrappers
+
 .. autosummary::
    :toctree: generated/wrappers
 
