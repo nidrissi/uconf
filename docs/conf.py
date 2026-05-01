@@ -24,7 +24,7 @@ extensions = [
     "sphinx.ext.viewcode",
 ]
 
-templates_path = ["_templates"]
+templates_path = []
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 autosummary_generate = True
@@ -47,3 +47,4 @@ myst_enable_extensions = ["dollarmath"]
 
 html_title = "uconf documentation"
 html_theme = os.environ.get("SPHINX_HTML_THEME", "alabaster")
+html_static_path = []

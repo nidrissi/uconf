@@ -7,6 +7,8 @@ uconf.models
 Modules
 -------
 
+.. currentmodule:: uconf.models
+
 .. autosummary::
    :toctree: generated/models
 

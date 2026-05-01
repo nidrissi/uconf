@@ -7,6 +7,8 @@ uconf.algebraic
 Modules
 -------
 
+.. currentmodule:: uconf.algebraic
+
 .. autosummary::
    :toctree: generated/algebraic
 
