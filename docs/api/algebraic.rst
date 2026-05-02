@@ -1,8 +1,7 @@
 uconf.algebraic
 ===============
 
-.. automodule:: uconf.algebraic
-   :members:
+Canonical algebra/coalgebra model helpers.
 
 Modules
 -------

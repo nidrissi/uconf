@@ -1,8 +1,7 @@
 uconf.wrappers
 ==============
 
-.. automodule:: uconf.wrappers
-   :members:
+Canonical wrapper constructions such as shifted and Hadamard products.
 
 Modules
 -------

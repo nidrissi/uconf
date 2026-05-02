@@ -1,8 +1,7 @@
 uconf.models
 ============
 
-.. automodule:: uconf.models
-   :members:
+Canonical operad/cooperad and simplicial model classes.
 
 Modules
 -------

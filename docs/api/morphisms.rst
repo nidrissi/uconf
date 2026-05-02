@@ -1,8 +1,7 @@
 uconf.morphisms
 ===============
 
-.. automodule:: uconf.morphisms
-   :members:
+Operad morphisms, pullback algebras, and classical maps.
 
 Modules
 -------

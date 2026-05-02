@@ -1,8 +1,7 @@
 uconf.core
 ==========
 
-.. automodule:: uconf.core
-   :members:
+Core protocols and shared combinatorial/sign utilities.
 
 Modules
 -------
