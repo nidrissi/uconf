@@ -1,8 +1,7 @@
 uconf.constructions
 ===================
 
-.. automodule:: uconf.constructions
-   :members:
+Canonical bar/cobar constructions and twisted bar/cobar complexes.
 
 Modules
 -------
