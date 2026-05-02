@@ -4,27 +4,22 @@ import pstats
 import time
 from datetime import datetime
 from pathlib import Path
+import argparse
+from typing import Any
 
 from sage.all import GF
 
-from uconf.algebraic.configuration import _build_euclidean_layers
-from uconf.homology import compute_chain_complex
-
-layers = _build_euclidean_layers(GF(2), 2)
-obj = layers.bar
-mod = obj.module
-
-w = 3
-degs = range(-1, 5)
-n_jobs = 8
+from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
 
-def _profile_chain_complex_pass(pass_name: str) -> tuple[float, cProfile.Profile, list[str]]:
+def _profile_chain_complex_pass(
+    pass_name: str,
+) -> tuple[float, cProfile.Profile, list[str], Any]:
     worker_profile_paths: list[str] = []
     profile = cProfile.Profile()
     start = time.perf_counter()
     profile.enable()
-    compute_chain_complex(
+    cc = compute_chain_complex(
         mod,
         degrees=degs,
         weight=w,
@@ -36,37 +31,72 @@ def _profile_chain_complex_pass(pass_name: str) -> tuple[float, cProfile.Profile
     profile.disable()
     elapsed = time.perf_counter() - start
     print(f"{pass_name} pass: {elapsed:.4f}s")
-    return elapsed, profile, worker_profile_paths
+    return elapsed, profile, worker_profile_paths, cc
 
 
-cold_elapsed, cold_profile, cold_worker_profiles = _profile_chain_complex_pass("Cold")
-warm_elapsed, warm_profile, warm_worker_profiles = _profile_chain_complex_pass("Warm")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        "compute.py", description="Compute the chain complex of the unordered configuration model."
+    )
+    parser.add_argument("--dim", type=int, default=2, help="The dimension of the sphere.")
+    parser.add_argument("--weight", type=int, default=2, help="The weight of the configuration.")
+    parser.add_argument("--deg_max", type=int, default=3, help="The maximum degree.")
+    parser.add_argument("--jobs", type=int, default=1, help="The number of parallel jobs to use.")
+    args = parser.parse_args()
 
-report_path = Path("benchmark_profile.txt")
+    w = args.weight
+    degs = range(-1, args.deg_max + 1)
+    n_jobs = args.jobs
+    dim = args.dim
+    print(f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}")
 
-with report_path.open("w") as report_file:
-    report_file.write(f"Date: {datetime.now()}\n")
-    report_file.write(f"Test run on {mod} with weight {w} using {n_jobs} jobs\n")
-    for k in degs:
-        report_file.write(f"Degree {k}: {len(mod.graded_basis_by_weight(k, w))} elements\n")
-    report_file.write(f"Cold pass wall time: {cold_elapsed:.4f}s\n")
-    report_file.write(f"Warm pass wall time: {warm_elapsed:.4f}s\n")
-    report_file.write(f"Cold→warm cache-fill overhead: {max(cold_elapsed - warm_elapsed, 0.0):.4f}s\n")
+    model = euclidean_unordered_configuration_model(GF(2), dim)
+    mod = model.module
 
-    for pass_name, profile, worker_profile_paths in (
-        ("Cold", cold_profile, cold_worker_profiles),
-        ("Warm", warm_profile, warm_worker_profiles),
-    ):
-        report_file.write("\n" + "=" * 80 + "\n")
-        report_file.write(f"{pass_name} pass profile\n")
-        if worker_profile_paths:
-            report_file.write(f"Merging {len(worker_profile_paths)} worker profile(s)\n")
-        stats = pstats.Stats(profile, stream=report_file)
-        for worker_profile_path in worker_profile_paths:
-            stats.add(worker_profile_path)
-        stats.sort_stats("cumulative").strip_dirs().print_stats()
+    cold_elapsed, cold_profile, cold_worker_profiles, cold_cc = _profile_chain_complex_pass("Cold")
+    warm_elapsed, warm_profile, warm_worker_profiles, warm_cc = _profile_chain_complex_pass("Warm")
 
-for worker_profile_path in cold_worker_profiles + warm_worker_profiles:
-    os.unlink(worker_profile_path)
+    path_suffix = f"{dim}_{w}_{args.deg_max}_{n_jobs}"
+    report_path = Path(
+        f"dump/benchmark_profile_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{path_suffix}.txt"
+    )
+    csv_path = Path(f"dump/cc_F2_{path_suffix}.csv")
+    cc_path = Path(f"dump/cc_F2_{path_suffix}")
 
-print(f"Profile written to {report_path}")
+    with report_path.open("w") as report_file:
+        report_file.write(f"Date: {datetime.now()}\n")
+        report_file.write(f"Test run on {mod} with weight {w} using {n_jobs} jobs\n")
+        for k in degs:
+            report_file.write(f"Degree {k}: {len(mod.graded_basis_by_weight(k, w))} elements\n")
+        report_file.write(f"Cold pass wall time: {cold_elapsed:.4f}s\n")
+        report_file.write(f"Warm pass wall time: {warm_elapsed:.4f}s\n")
+        report_file.write(
+            f"Cold→warm cache-fill overhead: {max(cold_elapsed - warm_elapsed, 0.0):.4f}s\n"
+        )
+
+        for pass_name, profile, worker_profile_paths in (
+            ("Cold", cold_profile, cold_worker_profiles),
+            ("Warm", warm_profile, warm_worker_profiles),
+        ):
+            report_file.write("\n" + "=" * 80 + "\n")
+            report_file.write(f"{pass_name} pass profile\n")
+            if worker_profile_paths:
+                report_file.write(f"Merging {len(worker_profile_paths)} worker profile(s)\n")
+            stats = pstats.Stats(profile, stream=report_file)
+            for worker_profile_path in worker_profile_paths:
+                stats.add(worker_profile_path)
+            stats.sort_stats("cumulative").strip_dirs().print_stats()
+
+    for worker_profile_path in cold_worker_profiles + warm_worker_profiles:
+        os.unlink(worker_profile_path)
+
+    print(f"Profile written to {report_path}")
+
+    with csv_path.open("w") as f:
+        print("d,dim,betti", file=f)
+        for d in degs:
+            print(f"{d},{cold_cc.free_module_rank(d)},{cold_cc.betti(d)}", file=f)
+        print(f"Betti numbers saved to {csv_path}")
+
+    cold_cc.save(cc_path)
+    print(f"Chain complex save to {cc_path}.sobj")

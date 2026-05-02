@@ -25,5 +25,6 @@ coverage.json
 *.prof
 *.sobj
 benchmark_profile*.txt
+dump
 docs/_build/
 docs/api/generated/
