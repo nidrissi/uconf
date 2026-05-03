@@ -89,7 +89,12 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
     @cached_method
     def _act_on_basis_tuple(self, had_basis: tuple, tensor_basis_tuple: tuple):
-        """Return the Hadamard action on basis inputs."""
+        """Return the Hadamard action on basis tensor keys.
+
+        ``tensor_basis_tuple`` stores raw tensor-module basis keys
+        ``((left_key, right_key), ...)`` rather than module elements so callers
+        can stay on the cached basis fast path.
+        """
         left_basis, right_basis = had_basis
         arity = len(tensor_basis_tuple)
         base_ring = self.module.base_ring()

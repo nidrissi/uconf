@@ -295,9 +295,11 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
                 scale = sign * coop_sign * gathering_sign * a_coeff
-                # ``_iter_all_splits`` already returns ``c_L_key`` with
-                # order-preserving relabeling into the stored planar basis, so
-                # the left corolla key is canonical and does not need a second
+                # ``_iter_all_splits`` returns ``c_L_key`` with the
+                # order-preserving relabeling described in
+                # ``BarConstruction._iter_all_splits``: the top split factor is
+                # already rewritten into the stored planar basis, so this left
+                # corolla key is canonical and does not need a second
                 # planarization pass here.
                 out_key = (c_L_key, new_m)
                 combined = base_ring(scale)
