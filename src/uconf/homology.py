@@ -138,6 +138,7 @@ def _boundary_entries_for_key(
     key_to_idx_target: dict,
     normalize_key: Any,
     normalization_cache: dict | None = None,
+    profile: dict[str, float | int] | None = None,
 ) -> dict[tuple[int, int], Any]:
     """Return the sparse matrix entries contributed by one source key."""
     entries: dict[tuple[int, int], Any] = {}
@@ -151,6 +152,9 @@ def _boundary_entries_for_key(
                 entries[ij] = coeff
             continue
         if normalize_key is not None:
+            if profile is not None:
+                profile["normalization_lookups"] = profile.get("normalization_lookups", 0) + 1
+                start = time.perf_counter()
             cached_matches = (
                 normalization_cache.get(bdry_key) if normalization_cache is not None else None
             )
@@ -163,6 +167,14 @@ def _boundary_entries_for_key(
                 cached_matches = tuple(matches)
                 if normalization_cache is not None:
                     normalization_cache[bdry_key] = cached_matches
+            if profile is not None:
+                profile["normalization_seconds"] = profile.get("normalization_seconds", 0.0) + (
+                    time.perf_counter() - start
+                )
+                if cached_matches:
+                    profile["normalized_matches"] = profile.get("normalized_matches", 0) + len(
+                        cached_matches
+                    )
             if cached_matches:
                 for i, norm_coeff in cached_matches:
                     ij = (i, j)
@@ -191,7 +203,18 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     profile_path = None
     worker_profile = state["worker_profile"]
     parent_profiler = state["parent_profiler"]
+    collect_boundary_profile = state.get("collect_boundary_profile", False)
     profiler = None
+    boundary_profile = None
+    if collect_boundary_profile:
+        boundary_profile = {
+            "boundary_on_basis_calls": 0,
+            "boundary_on_basis_seconds": 0.0,
+            "normalization_lookups": 0,
+            "normalization_seconds": 0.0,
+            "normalized_matches": 0,
+            "entry_merge_seconds": 0.0,
+        }
     if worker_profile:
         if parent_profiler is not None:
             parent_profiler.disable()
@@ -202,19 +225,30 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
         entries: dict[tuple[int, int], Any] = {}
         for j in range(start, stop):
             key = source_keys[j]
+            boundary_start = time.perf_counter() if boundary_profile is not None else None
+            boundary_terms = boundary_on_basis(key)
+            if boundary_profile is not None:
+                boundary_profile["boundary_on_basis_calls"] += 1
+                boundary_profile["boundary_on_basis_seconds"] += (
+                    time.perf_counter() - boundary_start
+                )
             column_entries = _boundary_entries_for_key(
                 key,
                 j,
-                boundary_terms=boundary_on_basis(key),
+                boundary_terms=boundary_terms,
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
                 normalization_cache=normalization_cache,
+                profile=boundary_profile,
             )
+            merge_start = time.perf_counter() if boundary_profile is not None else None
             for ij, coeff in column_entries.items():
                 if ij in entries:
                     entries[ij] += coeff
                 else:
                     entries[ij] = coeff
+            if boundary_profile is not None:
+                boundary_profile["entry_merge_seconds"] += time.perf_counter() - merge_start
     finally:
         if profiler is not None:
             profiler.disable()
@@ -229,6 +263,7 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
         "entries": entries,
         "profile_path": profile_path,
         "columns_done": stop - start,
+        "boundary_profile": boundary_profile,
     }
 
 
@@ -249,6 +284,17 @@ def _merge_sparse_entries(
             entries[ij] = coeff
 
 
+def _merge_boundary_matrix_profile(
+    profile: dict[str, float | int],
+    update: dict[str, float | int] | None,
+) -> None:
+    """Accumulate boundary-matrix profiling counters in-place."""
+    if update is None:
+        return
+    for key, value in update.items():
+        profile[key] = profile.get(key, 0) + value
+
+
 def _boundary_matrix(
     module: Any,
     basis_source_keys: list,
@@ -262,6 +308,7 @@ def _boundary_matrix(
     degree: int | None = None,
     worker_profile_paths: list[str] | None = None,
     worker_profile_parent: cProfile.Profile | None = None,
+    profile: dict[str, float | int] | None = None,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -309,6 +356,7 @@ def _boundary_matrix(
                     "normalize_key": normalize_key,
                     "worker_profile": worker_profile_paths is not None,
                     "parent_profiler": worker_profile_parent,
+                    "collect_boundary_profile": profile is not None,
                 }
             )
             entries: dict[tuple[int, int], Any] = {}
@@ -320,6 +368,11 @@ def _boundary_matrix(
                         _chunk_ranges(n_source, chunk_size),
                     ):
                         _merge_sparse_entries(entries, chunk_entries["entries"])
+                        if profile is not None:
+                            _merge_boundary_matrix_profile(
+                                profile,
+                                chunk_entries.get("boundary_profile"),
+                            )
                         if (
                             worker_profile_paths is not None
                             and chunk_entries["profile_path"] is not None
@@ -340,15 +393,28 @@ def _boundary_matrix(
         serial_entries: dict[tuple[int, int], Any] = {}
         normalization_cache: dict = {}
         for j, key in enumerate(basis_source_keys):
+            boundary_start = time.perf_counter() if profile is not None else None
+            boundary_terms = boundary_on_basis(key)
+            if profile is not None:
+                profile["boundary_on_basis_calls"] = profile.get("boundary_on_basis_calls", 0) + 1
+                profile["boundary_on_basis_seconds"] = profile.get(
+                    "boundary_on_basis_seconds", 0.0
+                ) + (time.perf_counter() - boundary_start)
             column_entries = _boundary_entries_for_key(
                 key,
                 j,
-                boundary_terms=boundary_on_basis(key),
+                boundary_terms=boundary_terms,
                 key_to_idx_target=key_to_idx_target,
                 normalize_key=normalize_key,
                 normalization_cache=normalization_cache,
+                profile=profile,
             )
+            merge_start = time.perf_counter() if profile is not None else None
             _merge_sparse_entries(serial_entries, column_entries)
+            if profile is not None:
+                profile["entry_merge_seconds"] = profile.get("entry_merge_seconds", 0.0) + (
+                    time.perf_counter() - merge_start
+                )
             if progress is not None:
                 progress.update(1, degree=degree)
         return _build_matrix_from_entries(

@@ -109,8 +109,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         for tensor_basis in tensor_basis_tuple:
             left_key, right_key = tensor_basis
-            left_inputs.append(self.left_module.term(left_key))
-            right_inputs.append(self.right_module.term(right_key))
+            left_inputs.append(left_key)
+            right_inputs.append(right_key)
             left_degs.append(left_deg(left_key))
             right_degs.append(right_deg(right_key))
 
@@ -120,8 +120,22 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 sign_exponent += right_degree * left_degree
         koszul_sign = sign_from_exponent(sign_exponent)
 
-        left_value = self.left_algebra.act(left_op, left_inputs)
-        right_value = self.right_algebra.act(right_op, right_inputs)
+        left_fast = getattr(self.left_algebra, "_act_on_basis_inputs", None)
+        if callable(left_fast):
+            left_value = left_fast(tuple(left_op), tuple(left_inputs))
+        else:
+            left_value = self.left_algebra.act(
+                left_op, [self.left_module.term(key) for key in left_inputs]
+            )
+
+        right_fast = getattr(self.right_algebra, "_act_on_basis_inputs", None)
+        if callable(right_fast):
+            right_value = right_fast(tuple(right_op), tuple(right_inputs))
+        else:
+            right_value = self.right_algebra.act(
+                right_op,
+                [self.right_module.term(key) for key in right_inputs],
+            )
 
         result_dict: dict = {}
         R = base_ring
@@ -132,6 +146,19 @@ class HadamardTensorAlgebra(OperadAlgebra):
                 combined_coeff = R(koszul_sign * left_out_coeff * right_out_coeff)
                 result_dict[combined_key] = result_dict.get(combined_key, zero) + combined_coeff
 
+        return self.module._from_dict(result_dict, remove_zeros=True)
+
+    @cached_method
+    def _act_on_basis_inputs(self, p_terms: tuple, tensor_basis_tuple: tuple):
+        """Apply the Hadamard action to basis inputs and cache the result."""
+        R = self.module.base_ring()
+        zero = R.zero()
+        result_dict: dict = {}
+        for had_basis, had_coeff in p_terms:
+            basis_result = self._act_on_basis_tuple(had_basis, tensor_basis_tuple)
+            for out_key, out_coeff in basis_result:
+                combined = R(had_coeff * out_coeff)
+                result_dict[out_key] = result_dict.get(out_key, zero) + combined
         return self.module._from_dict(result_dict, remove_zeros=True)
 
     def _act_impl(self, p_element, algebra_elements):
