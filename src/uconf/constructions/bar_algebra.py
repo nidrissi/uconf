@@ -318,7 +318,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     # order-preserving relabeling described in
                     # ``BarConstruction._iter_all_splits``.  For the common
                     # case where that key is already the stored planar basis
-                    # representative with coefficient 1, skip a second
+                    # representative with coefficient 1 (equivalently: its
+                    # planarization is just ``c_L_key ⊗ id``), skip a second
                     # planarization pass.
                     out_key = (c_L_key, new_m)
                     combined = base_ring(scale)

@@ -105,8 +105,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
         right_op = right_operad_parent.term(right_basis)
         right_op_deg = right_operad_parent.degree_on_basis(right_basis)
 
-        left_inputs = []
-        right_inputs = []
+        left_keys = []
+        right_keys = []
         left_degs = []
         right_degs = []
         left_deg = self.left_module.degree_on_basis
@@ -114,8 +114,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         for tensor_basis in tensor_basis_tuple:
             left_key, right_key = tensor_basis
-            left_inputs.append(left_key)
-            right_inputs.append(right_key)
+            left_keys.append(left_key)
+            right_keys.append(right_key)
             left_degs.append(left_deg(left_key))
             right_degs.append(right_deg(right_key))
 
@@ -127,19 +127,19 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         left_fast = getattr(self.left_algebra, "_act_on_basis_inputs", None)
         if callable(left_fast):
-            left_value = left_fast(tuple(left_op), tuple(left_inputs))
+            left_value = left_fast(tuple(left_op), tuple(left_keys))
         else:
             left_value = self.left_algebra.act(
-                left_op, [self.left_module.term(key) for key in left_inputs]
+                left_op, [self.left_module.term(key) for key in left_keys]
             )
 
         right_fast = getattr(self.right_algebra, "_act_on_basis_inputs", None)
         if callable(right_fast):
-            right_value = right_fast(tuple(right_op), tuple(right_inputs))
+            right_value = right_fast(tuple(right_op), tuple(right_keys))
         else:
             right_value = self.right_algebra.act(
                 right_op,
-                [self.right_module.term(key) for key in right_inputs],
+                [self.right_module.term(key) for key in right_keys],
             )
 
         result_dict: dict = {}
