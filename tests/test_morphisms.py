@@ -300,10 +300,12 @@ class TestPullbackAlgebra:
 
         first = ass_alg._act_on_basis_inputs(tuple(mu), ((), ()))
         second = ass_alg._act_on_basis_inputs(tuple(mu), ((), ()))
+        third = ass_alg._act_on_basis_inputs(tuple(Associative.unit(QQ)), ((),))
 
         assert _as_dict(first) == _as_dict(module(()))
         assert _as_dict(second) == _as_dict(first)
-        assert counts == {"morphism": 1, "action": 1}
+        assert _as_dict(third) == _as_dict(module(()))
+        assert counts == {"morphism": 2, "action": 2}
 
 
 # ===========================================================================
