@@ -155,18 +155,38 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         c_left_comp = self._cooperad_cls(arity, self.base_ring())
         return self._normalized_corolla_sum(c_left_comp.term(c_left_key), new_m)
 
+    @cached_method
+    def _act_on_basis_slice(self, arity, c_right_key, a_slice_keys):
+        """Return ``γ(α(c_R); a_slice)`` for basis inputs."""
+        alpha_c_right = self._alpha_on_basis(arity, c_right_key)
+        if not alpha_c_right:
+            return self._inner_module.zero()
+        act_on_basis_inputs = getattr(self._algebra, "_act_on_basis_inputs", None)
+        if callable(act_on_basis_inputs):
+            return act_on_basis_inputs(tuple(alpha_c_right), tuple(a_slice_keys))
+        return self._algebra.act(
+            alpha_c_right, [self._inner_module.term(key) for key in a_slice_keys]
+        )
+
+    @cached_method
+    def _alpha_degree_on_basis(self, arity, c_key):
+        """Return the degree of ``α(c_key)``."""
+        alpha_elem = self._alpha_on_basis(arity, c_key)
+        if not alpha_elem:
+            return 0
+        return alpha_elem.degree()
+
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
-        M = self._inner_module
         result_dict: dict = {}
         zero = base_ring.zero()
         c_elem = c_comp.term(c_key)
-        m_terms = [M.term(m_key) for m_key in m_tuple]
         m_prefix_degrees = [0]
         for m_key in m_tuple:
-            m_prefix_degrees.append(m_prefix_degrees[-1] + M.degree_on_basis(m_key))
-        action_cache: dict = {}
+            m_prefix_degrees.append(
+                m_prefix_degrees[-1] + self._inner_module.degree_on_basis(m_key)
+            )
 
         for n_r in range(1, n + 1):
             m = n - n_r + 1
@@ -175,20 +195,9 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 cocomp = C.infinitesimal_cocompose(c_elem, i, m, n_r)
 
                 for (c_L_key, c_R_key), coeff in cocomp:
-                    # Apply α to c_R
-                    alpha_c_R = self._alpha_on_basis(n_r, c_R_key)
-
-                    if not alpha_c_R:
-                        continue
-
-                    # Apply the algebra action γ(α(c_R); a_i, …, a_{i+n_r-1})
-                    action_cache_key = (c_R_key, i)
-                    action_result = action_cache.get(action_cache_key)
-                    if action_result is None:
-                        a_slice = m_terms[i - 1 : i + n_r - 1]
-                        action_result = self._algebra.act(alpha_c_R, a_slice)
-                        action_cache[action_cache_key] = action_result
-
+                    action_result = self._act_on_basis_slice(
+                        n_r, c_R_key, m_tuple[i - 1 : i + n_r - 1]
+                    )
                     if not action_result:
                         continue
 
@@ -199,7 +208,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     c_L_comp = C(m, base_ring)
                     c_L_deg = c_L_comp.degree_on_basis(c_L_key)
                     prefix_deg = m_prefix_degrees[i - 1]
-                    alpha_deg = alpha_c_R.degree()
+                    alpha_deg = self._alpha_degree_on_basis(n_r, c_R_key)
                     sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
 
                     for a_new_key, a_coeff in action_result:
@@ -229,32 +238,20 @@ class BarAlgebraModule(CofreeCoalgebraModule):
           bar degree 0.
         """
         C = self._cooperad_cls
-        M = self._inner_module
         result_dict: dict = {}
         zero = base_ring.zero()
-        m_terms = [M.term(m_key) for m_key in m_tuple]
-        m_degrees = [M.degree_on_basis(m_key) for m_key in m_tuple]
-        action_cache: dict = {}
+        m_degrees = [self._inner_module.degree_on_basis(m_key) for m_key in m_tuple]
         split_cache: dict = {}
 
         for child_positions, c_L_key, c_R_key, coop_sign in c_comp._iter_all_splits(c_key):
             n_r = len(child_positions)
             m = n - n_r + 1
 
-            # Apply α to c_R
-            alpha_c_R = self._alpha_on_basis(n_r, c_R_key)
-
-            if not alpha_c_R:
-                continue
-
-            # Algebra slice at the ACTUAL (possibly non-contiguous) positions
-            action_cache_key = (child_positions, c_R_key)
-            action_result = action_cache.get(action_cache_key)
-            if action_result is None:
-                a_slice = [m_terms[s - 1] for s in child_positions]
-                action_result = self._algebra.act(alpha_c_R, a_slice)
-                action_cache[action_cache_key] = action_result
-
+            action_result = self._act_on_basis_slice(
+                n_r,
+                c_R_key,
+                tuple(m_tuple[s - 1] for s in child_positions),
+            )
             if not action_result:
                 continue
 
@@ -290,20 +287,21 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                 split_cache[child_positions] = split_data
             top_positions, prefix_deg, gathering_sign, min_S = split_data
 
-            alpha_deg = alpha_c_R.degree()
+            alpha_deg = self._alpha_degree_on_basis(n_r, c_R_key)
             sign = sign_from_exponent(c_L_deg + alpha_deg * prefix_deg)
 
             for a_new_key, a_coeff in action_result:
                 new_m = tuple(
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
-                normalized = self._normalized_left_corolla(m, c_L_key, new_m)
                 scale = sign * coop_sign * gathering_sign * a_coeff
-                for out_key, out_coeff in normalized:
-                    # Sage's free-module constructors do not always coerce
-                    # accumulated coefficients on their own.
-                    combined = base_ring(scale * out_coeff)
-                    result_dict[out_key] = result_dict.get(out_key, zero) + combined
+                # ``_iter_all_splits`` already returns ``c_L_key`` with
+                # order-preserving relabeling into the stored planar basis, so
+                # the left corolla key is canonical and does not need a second
+                # planarization pass here.
+                out_key = (c_L_key, new_m)
+                combined = base_ring(scale)
+                result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
         return self._from_dict(result_dict, remove_zeros=True)
 

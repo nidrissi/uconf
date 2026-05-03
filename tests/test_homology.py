@@ -14,7 +14,7 @@ from uconf import (
     compute_chain_complex,
     homology_basis,
 )
-from uconf.homology import compute_homology_representatives
+from uconf.homology import _boundary_matrix, compute_homology_representatives
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -197,6 +197,53 @@ class TestChainComplex:
         serial = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=1)
         parallel = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=2)
         assert parallel.differential(1) == serial.differential(1)
+
+    def test_boundary_matrix_profile_tracks_hot_path_costs(self) -> None:
+        """Boundary-matrix profiling should track boundary, normalization, and merge costs."""
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _FakeModule:
+            def __init__(self):
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def _boundary_on_basis(self, key):
+                if key == "x":
+                    return [("raw_a", QQ.one())]
+                if key == "y":
+                    return [("a", QQ.one())]
+                return []
+
+            def _normalize_key(self, key):
+                if key == "raw_a":
+                    return [(QQ.one(), "a")]
+                return [(QQ.one(), key)]
+
+        profile: dict[str, float | int] = {}
+        matrix = _boundary_matrix(
+            _FakeModule(),
+            basis_source_keys=["x", "y"],
+            key_to_idx_target={"a": 0},
+            n_target=1,
+            sparse=True,
+            profile=profile,
+        )
+        assert matrix[0, 0] == 1
+        assert matrix[0, 1] == 1
+        assert profile["boundary_on_basis_calls"] == 2
+        assert profile["normalization_lookups"] == 1
+        assert profile["normalized_matches"] == 1
+        assert profile["boundary_on_basis_seconds"] >= 0.0
+        assert profile["normalization_seconds"] >= 0.0
+        assert profile["entry_merge_seconds"] >= 0.0
 
     def test_invalid_n_jobs_raises(self) -> None:
         """n_jobs must be positive."""

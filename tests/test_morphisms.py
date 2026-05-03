@@ -270,6 +270,41 @@ class TestPullbackAlgebra:
         result = ass_alg.boundary(a)
         assert not result
 
+    def test_pullback_basis_action_cache_reuses_morphism_and_action(self):
+        """Repeated basis-input actions should hit the pullback cache."""
+        counts = {"morphism": 0, "action": 0}
+        module = Commutative(1, QQ)
+
+        def counted_structure_map(p_element, algebra_elements):
+            counts["action"] += 1
+            result = module.zero()
+            for _, p_coeff in p_element:
+                coeff = p_coeff
+                for a in algebra_elements:
+                    for _, a_coeff in a:
+                        coeff *= a_coeff
+                result += coeff * module(())
+            return result
+
+        counted_algebra = OperadAlgebra(module, Commutative, counted_structure_map)
+
+        def counted_ass_to_com(elem):
+            counts["morphism"] += 1
+            return ass_to_com(elem)
+
+        ass_alg = PullbackAlgebra(
+            OperadMorphism(Associative, Commutative, counted_ass_to_com),
+            counted_algebra,
+        )
+        mu = Associative(2, QQ)((1, 2))
+
+        first = ass_alg._act_on_basis_inputs(tuple(mu), ((), ()))
+        second = ass_alg._act_on_basis_inputs(tuple(mu), ((), ()))
+
+        assert _as_dict(first) == _as_dict(module(()))
+        assert _as_dict(second) == _as_dict(first)
+        assert counts == {"morphism": 1, "action": 1}
+
 
 # ===========================================================================
 # E-comodule morphism tests

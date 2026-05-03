@@ -668,6 +668,19 @@ class FreeOperadAlgebra(OperadAlgebra):
         m_concat = tuple(mk for input_key in input_keys for mk in input_key[1])
         return koszul * self.module._normalized_corolla_sum(composed_elem, m_concat)
 
+    @cached_method
+    def _act_on_basis_inputs(self, p_terms: tuple, input_keys: tuple):
+        """Apply the free-algebra action to basis inputs and cache the result."""
+        R = self._base_ring
+        zero = R.zero()
+        result_dict: dict = {}
+        for q_key, q_coeff in p_terms:
+            basis_result = self._act_on_basis_tuple(q_key, input_keys)
+            for out_key, out_coeff in basis_result:
+                combined = R(q_coeff * out_coeff)
+                result_dict[out_key] = result_dict.get(out_key, zero) + combined
+        return self.module._from_dict(result_dict, remove_zeros=True)
+
     def _act_impl(self, p_element, algebra_elements):
         """P-algebra action γ(q; a_1, ..., a_k) via full operad substitution.
 
