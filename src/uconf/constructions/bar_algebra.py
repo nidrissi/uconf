@@ -176,6 +176,24 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             return 0
         return alpha_elem.degree()
 
+    @cached_method
+    def _split_left_key_is_canonical(self, arity, c_left_key):
+        """Return whether an ``_iter_all_splits`` left factor is already canonical."""
+        comp = self._cooperad_cls(arity, self.base_ring())
+        planarize_on_basis = self._cooperad_planarize_on_basis(arity)
+        if planarize_on_basis is not None:
+            planarized = tuple(planarize_on_basis(c_left_key))
+        else:
+            planarized = tuple(comp.planarize(comp.term(c_left_key)))
+        identity = tuple(range(1, arity + 1))
+        one = self.base_ring().one()
+        return (
+            len(planarized) == 1
+            and planarized[0][0][0] == c_left_key
+            and tuple(planarized[0][0][1]) == identity
+            and planarized[0][1] == one
+        )
+
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
@@ -295,15 +313,21 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     a_new_key if pos == min_S else m_tuple[pos - 1] for pos in top_positions
                 )
                 scale = sign * coop_sign * gathering_sign * a_coeff
-                # ``_iter_all_splits`` returns ``c_L_key`` with the
-                # order-preserving relabeling described in
-                # ``BarConstruction._iter_all_splits``: the top split factor is
-                # already rewritten into the stored planar basis, so this left
-                # corolla key is canonical and does not need a second
-                # planarization pass here.
-                out_key = (c_L_key, new_m)
-                combined = base_ring(scale)
-                result_dict[out_key] = result_dict.get(out_key, zero) + combined
+                if self._split_left_key_is_canonical(m, c_L_key):
+                    # ``_iter_all_splits`` returns ``c_L_key`` with the
+                    # order-preserving relabeling described in
+                    # ``BarConstruction._iter_all_splits``.  For the common
+                    # case where that key is already the stored planar basis
+                    # representative with coefficient 1, skip a second
+                    # planarization pass.
+                    out_key = (c_L_key, new_m)
+                    combined = base_ring(scale)
+                    result_dict[out_key] = result_dict.get(out_key, zero) + combined
+                    continue
+                normalized = self._normalized_left_corolla(m, c_L_key, new_m)
+                for out_key, out_coeff in normalized:
+                    combined = base_ring(scale * out_coeff)
+                    result_dict[out_key] = result_dict.get(out_key, zero) + combined
 
         return self._from_dict(result_dict, remove_zeros=True)
 
