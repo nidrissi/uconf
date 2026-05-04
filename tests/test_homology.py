@@ -355,7 +355,7 @@ class TestChainComplex:
             @cached_method
             def _expensive_boundary(self, key):
                 with open(self._log_path, "a", encoding="utf-8") as handle:
-                    handle.write(f"{key}\n")
+                    handle.write(f"{os.getpid()}:{key}\n")
                 if key == "x":
                     return (("a", QQ.one()),)
                 if key == "y":
@@ -372,10 +372,22 @@ class TestChainComplex:
                     self._expensive_boundary(key)
 
         log_path = tmp_path / "prewarm.log"
-        compute_chain_complex(_FakeModule(os.fspath(log_path)), degrees=range(2), n_jobs=2)
-        cache_misses = log_path.read_text(encoding="utf-8").splitlines()
-        assert len(cache_misses) == 5
-        assert set(cache_misses) == {"a", "b", "x", "y", "z"}
+        parent_pid = os.getpid()
+        chain_complex = compute_chain_complex(
+            _FakeModule(os.fspath(log_path)),
+            degrees=range(2),
+            n_jobs=2,
+        )
+        cache_miss_entries = log_path.read_text(encoding="utf-8").splitlines()
+        assert len(cache_miss_entries) == 5
+        cache_miss_pids = {int(entry.split(":", 1)[0]) for entry in cache_miss_entries}
+        cache_miss_keys = {entry.split(":", 1)[1] for entry in cache_miss_entries}
+        assert cache_miss_pids == {parent_pid}
+        assert cache_miss_keys == {"a", "b", "x", "y", "z"}
+        assert chain_complex.differential(1)[0, 0] == 1
+        assert chain_complex.differential(1)[1, 1] == 1
+        assert chain_complex.differential(1)[0, 2] == 1
+        assert chain_complex.differential(1)[1, 2] == 1
 
     def test_progress_reporting_writes_status(self, capsys) -> None:
         """Optional progress reporting should emit visible status updates."""

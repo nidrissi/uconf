@@ -194,8 +194,16 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             and planarized[0][1] == one
         )
 
-    def _prewarm_parallel_boundary_caches(self, source_keys):
-        """Populate read-mostly d_α helper caches before forked workers start."""
+    def _prewarm_parallel_boundary_caches(
+        self, source_keys: tuple[tuple[object, tuple], ...]
+    ) -> None:
+        """Populate read-mostly d_α helper caches before forked workers start.
+
+        ``source_keys`` is the tuple of bar-module basis keys ``(c_key, m_tuple)``
+        scheduled for one boundary matrix.  We precompute only immutable
+        cooperad-side helpers that can be inherited copy-on-write by forked
+        workers, leaving algebra-input-dependent caches lazy.
+        """
         base_ring = self.base_ring()
         seen_arities: set[int] = set()
         seen_alpha_keys: set[tuple[int, object]] = set()
