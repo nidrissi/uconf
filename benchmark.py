@@ -38,10 +38,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         "compute.py", description="Compute the chain complex of the unordered configuration model."
     )
-    parser.add_argument("--dim", type=int, default=2, help="The dimension of the sphere.")
-    parser.add_argument("--weight", type=int, default=2, help="The weight of the configuration.")
-    parser.add_argument("--deg_max", type=int, default=3, help="The maximum degree.")
-    parser.add_argument("--jobs", type=int, default=1, help="The number of parallel jobs to use.")
+    parser.add_argument("--dim", "-d", type=int, default=2, help="The dimension of the sphere.")
+    parser.add_argument(
+        "--weight", "-w", type=int, default=2, help="The weight of the configuration."
+    )
+    parser.add_argument("--deg_max", "-m", type=int, default=3, help="The maximum degree.")
+    parser.add_argument(
+        "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
+    )
     args = parser.parse_args()
 
     w = args.weight
