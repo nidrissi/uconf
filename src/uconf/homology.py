@@ -26,7 +26,7 @@ import os
 import sys
 import tempfile
 import time
-from typing import Any, Literal, TextIO
+from typing import Any, Literal, Sequence, TextIO
 
 import multiprocessing
 from sage.all import ChainComplex, matrix
@@ -297,7 +297,7 @@ def _merge_boundary_matrix_profile(
 
 def _prewarm_parallel_boundary_caches(
     module: Any,
-    basis_source_keys: list,
+    basis_source_keys: Sequence,
     *,
     profile: dict[str, float | int] | None = None,
 ) -> None:
@@ -306,7 +306,10 @@ def _prewarm_parallel_boundary_caches(
     if not callable(prewarm):
         return
     start = time.perf_counter() if profile is not None else None
-    prewarm(tuple(basis_source_keys))
+    prewarm_source_keys = (
+        basis_source_keys if isinstance(basis_source_keys, tuple) else tuple(basis_source_keys)
+    )
+    prewarm(prewarm_source_keys)
     if profile is not None:
         profile["parallel_cache_prewarm_calls"] = profile.get("parallel_cache_prewarm_calls", 0) + 1
         profile["parallel_cache_prewarm_keys"] = profile.get(
