@@ -219,6 +219,10 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
             c_comp = self._cooperad_cls(n, base_ring)
             if hasattr(c_comp, "_iter_all_splits"):
+                # Bar-construction cooperads expose ``_iter_all_splits`` to
+                # enumerate all internal-edge cuts, including non-contiguous
+                # leaf subsets.  Simpler cooperads fall back to contiguous
+                # infinitesimal cocompositions below.
                 for child_positions, c_left_key, c_right_key, _ in c_comp._iter_all_splits(c_key):
                     n_r = len(child_positions)
                     alpha_cache_key = (n_r, c_right_key)
