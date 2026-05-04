@@ -295,6 +295,28 @@ def _merge_boundary_matrix_profile(
         profile[key] = profile.get(key, 0) + value
 
 
+def _prewarm_parallel_boundary_caches(
+    module: Any,
+    basis_source_keys: list,
+    *,
+    profile: dict[str, float | int] | None = None,
+) -> None:
+    """Populate module-level caches in the parent before forked workers start."""
+    prewarm = getattr(module, "_prewarm_parallel_boundary_caches", None)
+    if not callable(prewarm):
+        return
+    start = time.perf_counter() if profile is not None else None
+    prewarm(tuple(basis_source_keys))
+    if profile is not None:
+        profile["parallel_cache_prewarm_calls"] = profile.get("parallel_cache_prewarm_calls", 0) + 1
+        profile["parallel_cache_prewarm_keys"] = profile.get(
+            "parallel_cache_prewarm_keys", 0
+        ) + len(basis_source_keys)
+        profile["parallel_cache_prewarm_seconds"] = profile.get(
+            "parallel_cache_prewarm_seconds", 0.0
+        ) + (time.perf_counter() - start)
+
+
 def _boundary_matrix(
     module: Any,
     basis_source_keys: list,
@@ -346,6 +368,11 @@ def _boundary_matrix(
                 1,
                 (n_source + _BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs - 1)
                 // (_BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs),
+            )
+            _prewarm_parallel_boundary_caches(
+                module,
+                basis_source_keys,
+                profile=profile,
             )
             _BOUNDARY_MATRIX_STATE.clear()
             _BOUNDARY_MATRIX_STATE.update(

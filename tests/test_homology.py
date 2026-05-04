@@ -1,11 +1,12 @@
 """Tests for chain complex construction and homology helpers."""
 
 import cProfile
+import multiprocessing
 import os
 import pstats
 
 import pytest
-from sage.all import GF, QQ
+from sage.all import GF, QQ, cached_method
 
 from uconf import (
     BarrattEccles,
@@ -314,6 +315,67 @@ class TestChainComplex:
                     os.unlink(path)
 
         assert merged.total_calls > 0
+
+    @pytest.mark.skipif(
+        os.name != "posix" or "fork" not in multiprocessing.get_all_start_methods(),
+        reason="parallel cache prewarming requires POSIX fork workers",
+    )
+    def test_parallel_workers_inherit_prewarmed_cached_results(self, tmp_path) -> None:
+        """Parent prewarming should avoid refilling cached_method entries in workers."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _FakeModule:
+            def __init__(self, log_path):
+                self._basis = {
+                    0: [_FakeElement("a"), _FakeElement("b")],
+                    1: [_FakeElement("x"), _FakeElement("y"), _FakeElement("z")],
+                }
+                self._log_path = log_path
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def graded_basis(self, d):
+                return self._basis.get(d, [])
+
+            @cached_method
+            def _expensive_boundary(self, key):
+                with open(self._log_path, "a", encoding="utf-8") as handle:
+                    handle.write(f"{key}\n")
+                if key == "x":
+                    return (("a", QQ.one()),)
+                if key == "y":
+                    return (("b", QQ.one()),)
+                if key == "z":
+                    return (("a", QQ.one()), ("b", QQ.one()))
+                return ()
+
+            def _boundary_on_basis(self, key):
+                return self._expensive_boundary(key)
+
+            def _prewarm_parallel_boundary_caches(self, source_keys):
+                for key in source_keys:
+                    self._expensive_boundary(key)
+
+        log_path = tmp_path / "prewarm.log"
+        compute_chain_complex(_FakeModule(os.fspath(log_path)), degrees=range(2), n_jobs=2)
+        cache_misses = log_path.read_text(encoding="utf-8").splitlines()
+        assert len(cache_misses) == 5
+        assert set(cache_misses) == {"a", "b", "x", "y", "z"}
 
     def test_progress_reporting_writes_status(self, capsys) -> None:
         """Optional progress reporting should emit visible status updates."""
