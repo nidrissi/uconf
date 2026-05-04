@@ -194,6 +194,55 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             and planarized[0][1] == one
         )
 
+    def _prewarm_parallel_boundary_caches(self, source_keys):
+        """Populate read-mostly d_α helper caches before forked workers start."""
+        base_ring = self.base_ring()
+        seen_arities: set[int] = set()
+        seen_alpha_keys: set[tuple[int, object]] = set()
+        seen_left_keys: set[tuple[int, object]] = set()
+
+        for c_key, m_tuple in source_keys:
+            n = len(m_tuple)
+            if n not in seen_arities:
+                seen_arities.add(n)
+                self._cooperad_planarize_on_basis(n)
+            if n <= 1:
+                continue
+
+            c_comp = self._cooperad_cls(n, base_ring)
+            if hasattr(c_comp, "_iter_all_splits"):
+                for child_positions, c_left_key, c_right_key, _ in c_comp._iter_all_splits(c_key):
+                    n_r = len(child_positions)
+                    alpha_cache_key = (n_r, c_right_key)
+                    if alpha_cache_key not in seen_alpha_keys:
+                        seen_alpha_keys.add(alpha_cache_key)
+                        self._alpha_on_basis(n_r, c_right_key)
+                        self._alpha_degree_on_basis(n_r, c_right_key)
+
+                    m = n - n_r + 1
+                    left_cache_key = (m, c_left_key)
+                    if left_cache_key not in seen_left_keys:
+                        seen_left_keys.add(left_cache_key)
+                        self._split_left_key_is_canonical(m, c_left_key)
+                continue
+
+            c_elem = c_comp.term(c_key)
+            for n_r in range(1, n + 1):
+                m = n - n_r + 1
+                for i in range(1, m + 1):
+                    cocomp = self._cooperad_cls.infinitesimal_cocompose(c_elem, i, m, n_r)
+                    for (c_left_key, c_right_key), _ in cocomp:
+                        alpha_cache_key = (n_r, c_right_key)
+                        if alpha_cache_key not in seen_alpha_keys:
+                            seen_alpha_keys.add(alpha_cache_key)
+                            self._alpha_on_basis(n_r, c_right_key)
+                            self._alpha_degree_on_basis(n_r, c_right_key)
+
+                        left_cache_key = (m, c_left_key)
+                        if left_cache_key not in seen_left_keys:
+                            seen_left_keys.add(left_cache_key)
+                            self._split_left_key_is_canonical(m, c_left_key)
+
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
         C = self._cooperad_cls
