@@ -323,28 +323,32 @@ class TestChainComplex:
     def test_parallel_workers_inherit_prewarmed_cached_results(self, tmp_path) -> None:
         """Parent prewarming should avoid refilling cached_method entries in workers."""
 
-        class _FakeElement:
+        class _MockChainElement:
             def __init__(self, key):
                 self._key = key
 
             def leading_support(self):
                 return self._key
 
-        class _Boundary:
+        class _MockBoundaryOperator:
             def __init__(self, on_basis):
                 self._on_basis = on_basis
 
             def on_basis(self):
                 return self._on_basis
 
-        class _FakeModule:
+        class _MockCachingModule:
             def __init__(self, log_path):
                 self._basis = {
-                    0: [_FakeElement("a"), _FakeElement("b")],
-                    1: [_FakeElement("x"), _FakeElement("y"), _FakeElement("z")],
+                    0: [_MockChainElement("a"), _MockChainElement("b")],
+                    1: [
+                        _MockChainElement("x"),
+                        _MockChainElement("y"),
+                        _MockChainElement("z"),
+                    ],
                 }
                 self._log_path = log_path
-                self.boundary = _Boundary(self._boundary_on_basis)
+                self.boundary = _MockBoundaryOperator(self._boundary_on_basis)
 
             def base_ring(self):
                 return QQ
@@ -374,7 +378,7 @@ class TestChainComplex:
         log_path = tmp_path / "prewarm.log"
         parent_pid = os.getpid()
         chain_complex = compute_chain_complex(
-            _FakeModule(os.fspath(log_path)),
+            _MockCachingModule(os.fspath(log_path)),
             degrees=range(2),
             n_jobs=2,
         )

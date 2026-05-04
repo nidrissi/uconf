@@ -305,7 +305,9 @@ def _prewarm_parallel_boundary_caches(
     prewarm = getattr(module, "_prewarm_parallel_boundary_caches", None)
     if not callable(prewarm):
         return
-    start = time.perf_counter() if profile is not None else None
+    start = None
+    if profile is not None:
+        start = time.perf_counter()
     prewarm_source_keys = (
         basis_source_keys if isinstance(basis_source_keys, tuple) else tuple(basis_source_keys)
     )
