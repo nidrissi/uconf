@@ -1,8 +1,8 @@
 """Canonical operad/cooperad and simplicial model classes."""
 
-from sage.all import Partitions, cached_function
+from sage.all import cached_function
 
-from itertools import permutations
+from itertools import combinations
 
 from uconf.models.associative import Associative
 from uconf.models.barratt_eccles import BarrattEccles
@@ -28,35 +28,53 @@ __all__ = [
 ]
 
 
+def _compositions(m: int, k: int):
+    """Yield all compositions of m into k positive parts.
+
+    Equivalent to Partitions(m, length=k) + all permutations, but uses a
+    direct combinatorial construction (choose k-1 dividers from m-1 slots)
+    that avoids Sage type overhead and the permutation-dedup set.
+    """
+    for dividers in combinations(range(1, m), k - 1):
+        prev = 0
+        parts: list[int] = []
+        for d in dividers:
+            parts.append(d - prev)
+            prev = d
+        parts.append(m - prev)
+        yield tuple(parts)
+
+
 @cached_function
 def _compute_table_reduction_cached(n, base_ring, basis_element: tuple) -> Surjection.Element:
     """Compute table reduction on one Barratt--Eccles basis element (cached).
 
     Cached on (arity, base_ring, basis_element) so repeated calls with the
-    same BE key avoid recomputing the expensive partition enumeration.
+    same BE key avoid recomputing the expensive composition enumeration.
     """
     d = len(basis_element) - 1
     target = Surjection(n, base_ring)
+    # Hoist .tuple() calls: each permutation object is queried once here
+    # instead of once per composition inside the generator.
+    basis_tuples = tuple(s.tuple() for s in basis_element)
+    R_one = base_ring.one()
 
     def term_generator():
-        R = target.base_ring()
-        for pi_ord in Partitions(
-            d + n,
-            length=d + 1,  # pyright: ignore[reportCallIssue]
-        ):
-            for pi in set(permutations(pi_ord)):
-                k2, removed = [], []
-                degenerate = False
-                for idx, i in enumerate(pi):
-                    filtered = [i for i in basis_element[idx].tuple() if i not in removed]
-                    if idx > 0 and k2[-1] == filtered[0]:
-                        degenerate = True
-                        break
-                    if i > 1:
-                        removed += filtered[: i - 1]
-                    k2 += filtered[:i]
-                if not degenerate:
-                    yield tuple(k2), R.one()
+        for pi in _compositions(d + n, d + 1):
+            k2: list[int] = []
+            removed_mask = 0  # bitmask: bit v set <=> v is in "removed"
+            degenerate = False
+            for idx, i in enumerate(pi):
+                filtered = [v for v in basis_tuples[idx] if not (removed_mask & (1 << v))]
+                if idx > 0 and k2[-1] == filtered[0]:
+                    degenerate = True
+                    break
+                if i > 1:
+                    for v in filtered[: i - 1]:
+                        removed_mask |= 1 << v
+                k2 += filtered[:i]
+            if not degenerate:
+                yield tuple(k2), R_one
 
     return target.sum_of_terms(term_generator())
 
