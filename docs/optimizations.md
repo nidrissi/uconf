@@ -457,3 +457,71 @@ across workers and therefore exceed wall clock):
 
 So the next work should stay focused on the `d_alpha` / comodule / algebra
 action stack, not on table reduction or basis enumeration.
+
+---
+
+## Optimizations applied 2026-05-06
+
+### Benchmark baseline (weight 3, deg_max 5, serial)
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Wall-clock time | 27.98 s | 11.52 s |
+| **Speedup** | — | **2.43×** |
+| `term_generator` tottime | 16.50 s | 0.17 s |
+| `_compute_table_reduction_cached` cumtime | 16.64 s | 0.49 s |
+| `sum_of_terms` cumtime | 16.78 s | 0.61 s |
+
+### 22. Pure-Python `_compute_table_reduction_cached` rewrite
+
+**File:** `src/uconf/models/__init__.py`
+
+**Problem.** The `term_generator` inner loop inside `_compute_table_reduction_cached`
+used `Partitions(d+n, length=d+1)` + `set(permutations(pi_ord))` to enumerate
+all ordered compositions of `d+n` into `d+1` positive parts. For a partition
+like `[3,1,1,1,1]` this generated 720 permutation candidates and deduped to 5
+unique tuples; the set/permutation overhead accumulated to **16.5 s tottime**
+(60 % of wall time) across 3 666 cache misses.
+
+Three issues were fixed:
+
+1. **Composition enumeration via `itertools.combinations`** (1a): replaced
+   the Sage `Partitions` + `permutations` + `set` triple with a pure-Python
+   `_compositions(m, k)` generator that places `k-1` dividers in `m-1` slots.
+   Yields each of the `C(m-1, k-1)` compositions exactly once with no
+   deduplication. On the heaviest case (d=5, n=3) this is 19× faster in
+   isolation; `sage.combinat.Compositions` was tried first but found to be
+   36× *slower* than the current code due to Sage type-system overhead.
+
+2. **Hoist `.tuple()` calls** (1b): precomputed
+   `basis_tuples = tuple(s.tuple() for s in basis_element)` once per cached
+   call instead of calling `.tuple()` inside both loop levels.
+
+3. **Bitmask for `removed`** (1c): replaced the `removed: list` (O(n)
+   membership) with a small-int bitmask (O(1) bitwise AND). Arities in this
+   benchmark are ≤ 5 so a Python `int` suffices.
+
+**Impact.** `term_generator` tottime: 16.5 s → 0.17 s (**97× on this
+function**). Overall benchmark: 27.98 s → 11.52 s (**2.43× wall-clock**).
+Table reduction is no longer in the top 10 by cumtime.
+
+### Remaining bottlenecks after this round
+
+From `benchmark_profile_2026-05-06_17-01-38_2_3_5_1.txt` (serial,
+`-d2 -w3 -m5`):
+
+| Function | cumtime |
+|----------|---------|
+| `bar_algebra._dalpha_all_splits` | 8.15 s |
+| `pullback_algebra._act_on_basis_inputs` | 7.93 s |
+| `configuration._on_element` | 4.77 s |
+| `e_comodule_morphism._root_image_for_generator` | 4.16 s |
+| `e_comodule_morphism._extend_tree` | 4.18 s |
+| `hadamard_algebra._act_on_basis_tuple` | 3.10 s |
+| `e_comodule_morphism._nu_on_planar` | 3.05 s |
+| `e_comodule_morphism.recurse` | 2.85 s |
+| `free_algebra._act_on_basis_tuple` | 2.15 s |
+
+The dominant remaining cost is the `d_alpha` / E-comodule / algebra-action
+stack — the same cluster identified after the 2026-04-30 round but now
+exposed without the table-reduction overhead masking it.
