@@ -27,9 +27,12 @@ import os
 import sys
 import tempfile
 import time
-from typing import Any, Literal, Sequence, TextIO
+from typing import Any, Iterator, Literal, Sequence, TextIO
 
+import gc
 import multiprocessing
+import multiprocessing.connection
+import signal
 from sage.all import ChainComplex, matrix
 
 from uconf.core.signs import get_on_basis
@@ -356,6 +359,310 @@ def _prewarm_parallel_boundary_caches(
         )
 
 
+# ---------------------------------------------------------------------------
+# Raw-fork worker orchestration
+# ---------------------------------------------------------------------------
+#
+# WHY NOT multiprocessing.Pool?
+# ==============================
+# Pool teardown is slow and can hang indefinitely when workers hold large
+# caches (multiple GB), because graceful Python shutdown triggers GC,
+# finalizers, and destructor chains.  Pool.terminate() can also hang when the
+# Pool's internal feeder thread is blocked on a full queue.
+#
+# The intended model here is "crash-only" disposable workers:
+#   compute → emit result → idle forever → SIGKILL by parent
+#
+# WHY gc.freeze() BEFORE FORKING?
+# =================================
+# gc.freeze() moves all currently tracked Python objects into the permanent
+# (gen 2) GC generation.  The CPython GC does not scan permanent-generation
+# objects, so their internal reference counts are never touched by GC traversal.
+# This avoids copy-on-write (CoW) faults on pages that contain the GC headers
+# of the warmed cache objects, which would otherwise force the OS to copy pages
+# into the worker's private address space just because the GC incremented a
+# refcount, negating most of the RAM savings from fork-CoW sharing.
+#
+# WHY SIGKILL (not SIGTERM or graceful close)?
+# =============================================
+# Workers hold multi-GB dictionaries.  Letting the Python interpreter run its
+# shutdown sequence (atexit handlers, __del__ finalizers, GC collection) would
+# take minutes and sometimes hang.  SIGKILL is immediate: the OS reclaims all
+# memory instantly without running any Python cleanup code.  The join() call
+# that follows is purely for zombie reaping, not for graceful exit.
+#
+# LINUX-ONLY ASSUMPTION
+# ======================
+# This code assumes Linux fork(2) copy-on-write semantics.  The "fork" start
+# method is selected explicitly.  spawn / forkserver are not used because they
+# cannot inherit the pre-warmed parent caches.
+#
+# COW INVARIANT
+# =============
+# After gc.freeze() and before workers are forked, shared global structures
+# MUST remain READ-ONLY.  The following patterns are DANGEROUS and must be
+# avoided in worker code:
+#   - Inserting into or deleting from module-level dicts (e.g. _BOUNDARY_MATRIX_STATE)
+#   - Appending to shared lists
+#   - Triggering lazy cache population (e.g. calling @cached_method on a shared object)
+#   - Touching any global mutable state
+# Any write to a CoW-shared page causes Linux to copy the entire 4 KB page into
+# the worker's private address space, defeating the memory savings.
+
+
+def _worker_loop(task_conn: Any, result_conn: Any) -> None:
+    """Worker main loop: receive tasks, compute results, send back, repeat.
+
+    This function runs in a forked child process.  It intentionally does NOT
+    call ``sys.exit()``, run cleanup handlers, or perform graceful teardown.
+    After all tasks are processed (or on pipe EOF), the worker blocks forever
+    and waits for SIGKILL from the parent.
+
+    IMPORTANT — CoW safety:
+        This function reads from ``_BOUNDARY_MATRIX_STATE`` via
+        ``_boundary_matrix_worker`` but must NEVER write to it or any other
+        module-level shared structure.  Any write would cause Linux to copy the
+        underlying memory page, negating the memory savings from fork CoW.
+
+    Parameters
+    ----------
+    task_conn:
+        Read-only end of the task pipe (parent writes tasks here).
+    result_conn:
+        Write-only end of the result pipe (worker writes results here).
+    """
+    # Workers must not attempt graceful cleanup — intentional design.
+    # Do NOT add sys.exit(), atexit handlers, or resource finalizers here.
+    try:
+        while True:
+            try:
+                task = task_conn.recv()
+            except EOFError:
+                # Parent closed the write end of the pipe (or was SIGKILLed).
+                # Block forever and wait for SIGKILL from the parent.  Do NOT
+                # call sys.exit() — that would trigger Python interpreter
+                # teardown, which is exactly what we want to avoid.
+                while True:
+                    time.sleep(3600)
+            result = _boundary_matrix_worker(task)
+            result_conn.send(result)
+    except Exception as exc:  # noqa: BLE001
+        # Unexpected error: send an error result so the parent can detect it,
+        # then block forever until SIGKILL.  Do NOT call sys.exit().
+        try:
+            result_conn.send(
+                {
+                    "error": str(exc),
+                    "entries": {},
+                    "profile_path": None,
+                    "columns_done": 0,
+                    "boundary_profile": None,
+                }
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        while True:
+            time.sleep(3600)
+
+
+class _WorkerManager:
+    """Manages raw forked worker processes for parallel boundary-matrix assembly.
+
+    Replaces ``multiprocessing.Pool`` with explicit ``Process`` lifecycle
+    management to avoid Pool's slow graceful teardown and potential hangs.
+
+    See the module-level comments above for the full rationale.
+
+    **LINUX-ONLY**: Relies on fork(2) copy-on-write semantics.
+
+    Worker lifecycle
+    ----------------
+    1. Workers are forked once at construction time.
+    2. Tasks are submitted via ``map_unordered`` (round-robin across workers).
+    3. Results are yielded in completion order as they arrive.
+    4. After all results are collected, call ``kill_all()`` to SIGKILL every
+       worker immediately.  ``join(timeout=...)`` is used only for zombie
+       reaping — the parent never blocks indefinitely.
+
+    CoW invariant
+    -------------
+    Workers inherit the parent's address space via fork copy-on-write.  Shared
+    global structures (e.g. ``_BOUNDARY_MATRIX_STATE``, module caches) must
+    remain READ-ONLY after construction.  Any write causes Linux to copy the
+    underlying page, negating the RAM savings.
+    """
+
+    # Maximum time (seconds) to wait for a worker to be reaped after SIGKILL.
+    # SIGKILL is immediate; the join timeout is purely for zombie reaping.
+    _REAP_TIMEOUT: float = 5.0
+
+    def __init__(self, n_jobs: int) -> None:
+        # Use the "fork" context explicitly.  spawn/forkserver are not used
+        # because they cannot inherit the pre-warmed parent caches.
+        ctx = multiprocessing.get_context("fork")
+        self._workers: list[Any] = []
+        # One unidirectional Pipe pair per worker:
+        #   task:   parent → worker  (parent sends tasks)
+        #   result: worker → parent  (worker sends results)
+        self._task_conns: list[Any] = []
+        self._result_conns: list[Any] = []
+        self._n_jobs = n_jobs
+        self._alive = True
+
+        for _ in range(n_jobs):
+            # Pipe(duplex=False) returns (readable_end, writable_end).
+            # task pipe:   parent writes tasks  → worker reads them
+            # result pipe: worker writes results → parent reads them
+            child_task_conn, parent_task_conn = ctx.Pipe(duplex=False)
+            parent_result_conn, child_result_conn = ctx.Pipe(duplex=False)
+            p = ctx.Process(
+                target=_worker_loop,
+                args=(child_task_conn, child_result_conn),
+                # daemon=True: if the parent exits unexpectedly (e.g. crash),
+                # the OS will send SIGKILL to daemon children automatically.
+                daemon=True,
+            )
+            p.start()
+            # Close child-side pipe ends in the parent to ensure proper EOF
+            # detection when workers die and to avoid resource leaks.
+            child_task_conn.close()
+            child_result_conn.close()
+
+            self._workers.append(p)
+            self._task_conns.append(parent_task_conn)
+            self._result_conns.append(parent_result_conn)
+
+    def map_unordered(self, tasks: list) -> Iterator[Any]:
+        """Distribute *tasks* across workers and yield results as they arrive.
+
+        Tasks are distributed round-robin.  Results are yielded in completion
+        order (not submission order) for maximum throughput.
+
+        If a worker sends an error result or dies unexpectedly, this method
+        kills all workers, reaps zombies, and raises ``RuntimeError``.
+
+        Parameters
+        ----------
+        tasks:
+            List of task descriptors to distribute.
+
+        Yields
+        ------
+        Result dicts returned by ``_boundary_matrix_worker``.
+        """
+        if not tasks:
+            return
+
+        # Distribute tasks round-robin across workers.
+        worker_pending: list[int] = [0] * self._n_jobs
+        for i, task in enumerate(tasks):
+            worker_idx = i % self._n_jobs
+            self._task_conns[worker_idx].send(task)
+            worker_pending[worker_idx] += 1
+
+        # Build a mapping from connection id → worker index for error messages.
+        conn_to_idx = {id(conn): i for i, conn in enumerate(self._result_conns)}
+        # Track remaining expected results per connection.
+        remaining: dict[int, int] = {
+            id(conn): worker_pending[i]
+            for i, conn in enumerate(self._result_conns)
+            if worker_pending[i] > 0
+        }
+        # Only poll connections that have pending results.
+        active_conns: list[Any] = [
+            conn for i, conn in enumerate(self._result_conns) if worker_pending[i] > 0
+        ]
+        total_pending = len(tasks)
+
+        while total_pending > 0:
+            # Wait for any result connection to become readable (60 s timeout
+            # to avoid hanging forever if a worker stalls unexpectedly).
+            ready = multiprocessing.connection.wait(active_conns, timeout=60.0)
+            if not ready:
+                # Timeout: check whether any worker has died.
+                dead = [p for p in self._workers if not p.is_alive()]
+                if dead:
+                    self.kill_all()
+                    raise RuntimeError(
+                        f"{len(dead)} worker process(es) died unexpectedly "
+                        "during boundary matrix assembly"
+                    )
+                continue
+
+            for conn in ready:
+                try:
+                    result = conn.recv()
+                except EOFError:
+                    # Worker pipe closed before sending a result — worker died.
+                    w_idx = conn_to_idx[id(conn)]
+                    self.kill_all()
+                    raise RuntimeError(
+                        f"Worker {w_idx} (pid {self._workers[w_idx].pid}) "
+                        "died unexpectedly (EOF on result pipe)"
+                    )
+                if result.get("error") is not None:
+                    self.kill_all()
+                    raise RuntimeError(f"Worker raised an exception: {result['error']}")
+                remaining[id(conn)] -= 1
+                if remaining[id(conn)] == 0:
+                    # No more results expected from this connection.
+                    active_conns = [c for c in active_conns if c is not conn]
+                total_pending -= 1
+                yield result
+
+    def kill_all(self, *, reap_timeout: float = _REAP_TIMEOUT) -> None:
+        """SIGKILL all workers immediately, then reap zombies.
+
+        Why SIGKILL and not SIGTERM or graceful close?
+            Workers hold multi-GB caches.  Graceful Python interpreter teardown
+            triggers GC, finalizers, and destructor chains that take minutes
+            and sometimes hang.  SIGKILL is instant — the OS reclaims all
+            memory without running any Python cleanup code.
+
+        The subsequent ``join(timeout=...)`` is purely for zombie reaping — it
+        does not wait for graceful exit.  If a worker somehow survives SIGKILL
+        (which should not happen on Linux), we move on rather than hanging.
+
+        Parameters
+        ----------
+        reap_timeout:
+            Total time budget (seconds) for zombie reaping across all workers.
+            This is a safety upper bound; SIGKILL should make reaping
+            essentially instant.
+        """
+        if not self._alive:
+            return
+        self._alive = False
+
+        # SIGKILL every live worker immediately.
+        for p in self._workers:
+            if p.is_alive():
+                try:
+                    os.kill(p.pid, signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    pass  # Already dead.
+
+        # Reap zombies.  Divide the timeout budget equally across workers.
+        per_worker_timeout = reap_timeout / max(1, len(self._workers))
+        for p in self._workers:
+            p.join(timeout=per_worker_timeout)
+            # If still alive after SIGKILL + timeout, something is very wrong,
+            # but we still do NOT block forever — just move on.
+
+        # Close parent-side pipe ends.
+        for conn in self._task_conns + self._result_conns:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def __enter__(self) -> "_WorkerManager":
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.kill_all()
+
+
 def _boundary_matrix(
     module: Any,
     basis_source_keys: list,
@@ -420,8 +727,10 @@ def _boundary_matrix(
         Optional mutable dict accumulating timing and count statistics.
         Updated in-place with keys such as ``boundary_matrix_seconds``.
     pool:
-        A pre-forked worker pool (e.g., from ``multiprocessing.Pool``).
-        When provided, avoids the overhead of spawning a new pool per degree.
+        A pre-forked :class:`_WorkerManager` instance.
+        When provided, avoids the overhead of forking new workers per degree.
+        Static worker state must already have been set in
+        ``_BOUNDARY_MATRIX_STATE`` before this manager was created.
 
     Returns
     -------
@@ -445,7 +754,7 @@ def _boundary_matrix(
             )
         )
         if use_parallel:
-            # Use several chunks per worker so the pool can rebalance uneven
+            # Use several chunks per worker so workers can absorb uneven
             # boundary costs without paying per-column scheduling overhead.
             chunk_size = max(
                 1,
@@ -454,20 +763,22 @@ def _boundary_matrix(
             )
             # Build tasks with per-degree data inline: each task carries its
             # own source-key slice and the target index map so that a
-            # persistent pool (forked once) can handle multiple degrees.
+            # persistent worker manager (forked once) can handle multiple
+            # degrees.
             tasks = [
                 (basis_source_keys[start:stop], start, key_to_idx_target)
                 for start, stop in _chunk_ranges(n_source, chunk_size)
             ]
             entries: dict[tuple[int, int], Any] = {}
             if pool is not None:
-                # Persistent pool: static state was set (and workers forked)
-                # once in compute_chain_complex; no prewarm or state setup here.
-                active_pool = pool
-                own_pool = False
+                # Persistent worker manager: static state was set (and workers
+                # forked) once in compute_chain_complex; no prewarm or state
+                # setup needed here.
+                active_manager: _WorkerManager = pool
+                own_manager = False
             else:
-                # Per-call temporary pool: prewarm caches, set static state,
-                # then fork workers.
+                # Per-call temporary worker manager: prewarm caches, set
+                # static state, freeze GC, then fork workers.
                 _prewarm_parallel_boundary_caches(
                     module,
                     basis_source_keys,
@@ -483,14 +794,14 @@ def _boundary_matrix(
                         "collect_boundary_profile": profile is not None,
                     }
                 )
-                ctx = multiprocessing.get_context("fork")
-                active_pool = ctx.Pool(processes=n_jobs)
-                own_pool = True
+                # Freeze GC before forking: moves all tracked objects to the
+                # permanent generation so that the GC will not touch their
+                # reference counts in workers, avoiding CoW page faults.
+                gc.freeze()
+                active_manager = _WorkerManager(n_jobs)
+                own_manager = True
             try:
-                for chunk_result in active_pool.imap_unordered(
-                    _boundary_matrix_worker,
-                    tasks,
-                ):
+                for chunk_result in active_manager.map_unordered(tasks):
                     _merge_sparse_entries(entries, chunk_result["entries"])
                     if profile is not None:
                         _merge_boundary_matrix_profile(
@@ -505,9 +816,9 @@ def _boundary_matrix(
                     if progress is not None:
                         progress.update(chunk_result["columns_done"], degree=degree)
             finally:
-                if own_pool:
-                    active_pool.terminate()
-                    active_pool.join()
+                if own_manager:
+                    # SIGKILL workers immediately — no graceful teardown.
+                    active_manager.kill_all()
                     _BOUNDARY_MATRIX_STATE.clear()
             return _build_matrix_from_entries(
                 base_ring,
@@ -751,8 +1062,9 @@ def compute_chain_complex(
     _vprint(f"total boundary columns: {total_columns}", verbose)
     progress_reporter = _ChainComplexProgressReporter(total_columns, enabled=progress)
 
-    # O1: Create a single pool for all boundary matrices so that workers
-    # survive across degrees and keep their caches warm between boundaries.
+    # O1: Create a single worker manager for all boundary matrices so that
+    # workers survive across degrees and keep their caches warm between
+    # boundaries.
     # O2: Prewarm all cooperad caches for EVERY source key before forking so
     # that workers inherit fully populated caches via copy-on-write.
     use_persistent_pool = (
@@ -762,7 +1074,7 @@ def compute_chain_complex(
         and "fork" in multiprocessing.get_all_start_methods()
         and any(keys_by_degree[d] for d in extended_degrees if d - 1 in key_to_idx)
     )
-    shared_pool = None
+    shared_pool: _WorkerManager | None = None
     try:
         if use_persistent_pool:
             boundary_on_basis_fn = get_on_basis(module.boundary)
@@ -786,7 +1098,9 @@ def compute_chain_complex(
             else:
                 _vprint("prewarm disabled — skipping", verbose)
             # Set static state before forking; workers inherit it copy-on-write.
-            _vprint(f"forking pool ({n_jobs} workers)...", verbose)
+            # IMPORTANT: After this point, _BOUNDARY_MATRIX_STATE and all warmed
+            # module caches MUST remain read-only.  Any write would trigger Linux
+            # CoW page copies in workers, negating the memory savings.
             _BOUNDARY_MATRIX_STATE.clear()
             _BOUNDARY_MATRIX_STATE.update(
                 {
@@ -797,9 +1111,14 @@ def compute_chain_complex(
                     "collect_boundary_profile": False,
                 }
             )
-            ctx = multiprocessing.get_context("fork")
-            shared_pool = ctx.Pool(processes=n_jobs)
-            _vprint("pool ready", verbose)
+            # Freeze GC after warmup and before forking.
+            # This moves all currently tracked objects into the permanent GC
+            # generation so the GC never updates their reference counts in
+            # workers, preventing CoW page faults on the warm cache pages.
+            gc.freeze()
+            _vprint(f"forking workers ({n_jobs} processes)...", verbose)
+            shared_pool = _WorkerManager(n_jobs)
+            _vprint("workers ready", verbose)
 
         for d in extended_degrees:
             if d - 1 not in key_to_idx:
@@ -835,8 +1154,10 @@ def compute_chain_complex(
     finally:
         progress_reporter.close()
         if shared_pool is not None:
-            shared_pool.terminate()
-            shared_pool.join()
+            # SIGKILL all workers immediately — no graceful shutdown.
+            # This is intentional: workers hold large caches whose teardown
+            # would be slow or could hang.
+            shared_pool.kill_all()
             _BOUNDARY_MATRIX_STATE.clear()
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
