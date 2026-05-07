@@ -3,6 +3,7 @@
 import cProfile
 import os
 import pstats
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +29,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print timestamped phase diagnostics to stderr."
     )
+    parser.add_argument(
+        "--no-prewarm", action="store_true", help="Disable cache prewarm before forking workers."
+    )
+    parser.add_argument(
+        "--no-profile", action="store_true",
+        help="Disable cProfile (faster runs when profiling data is not needed).",
+    )
     args = parser.parse_args()
 
     w = args.weight
@@ -35,60 +43,85 @@ if __name__ == "__main__":
     n_jobs = args.jobs
     dim = args.dim
     verbose = args.verbose
-    print(f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}")
+    do_prewarm = not args.no_prewarm
+    do_profile = not args.no_profile
+    print(f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}", flush=True)
 
     if verbose:
-        import sys as _sys
-        import time as _time
-        print(f"[{_time.strftime('%H:%M:%S')}] building model...", file=_sys.stderr, flush=True)
+        print(f"[{time.strftime('%H:%M:%S')}] building model...", file=sys.stderr, flush=True)
     model = euclidean_unordered_configuration_model(GF(2), dim)
     mod = model.module
     if verbose:
-        print(f"[{_time.strftime('%H:%M:%S')}] model ready", file=_sys.stderr, flush=True)
+        print(f"[{time.strftime('%H:%M:%S')}] model ready", file=sys.stderr, flush=True)
 
-    worker_profile_paths: list[str] = []
-    profile = cProfile.Profile()
+    worker_profile_paths: list[str] | None = [] if do_profile else None
+    profile: cProfile.Profile | None = cProfile.Profile() if do_profile else None
+    prewarm_profile: cProfile.Profile | None = cProfile.Profile() if do_profile else None
+
     start = time.perf_counter()
-    profile.enable()
+    if profile is not None:
+        profile.enable()
     cc = compute_chain_complex(
         mod,
         degrees=degs,
         weight=w,
         n_jobs=n_jobs,
+        prewarm=do_prewarm,
+        prewarm_profiler=prewarm_profile,
         worker_profile_paths=worker_profile_paths,
         worker_profile_parent=profile,
         progress=True,
         verbose=verbose,
     )
-    profile.disable()
+    if profile is not None:
+        profile.disable()
     elapsed = time.perf_counter() - start
 
     path_suffix = f"{dim}_{w}_{args.deg_max}_{n_jobs}"
-    report_path = Path(
-        f"dump/benchmark_profile_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{path_suffix}.txt"
-    )
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     csv_path = Path(f"dump/cc_F2_{path_suffix}.csv")
     cc_path = Path(f"dump/cc_F2_{path_suffix}")
 
-    with report_path.open("w") as report_file:
-        report_file.write(f"Date: {datetime.now()}\n")
-        report_file.write(f"Test run on {mod} with weight {w} using {n_jobs} jobs\n")
-        for k in degs:
-            report_file.write(f"Degree {k}: {len(mod.graded_basis_by_weight(k, w))} elements\n")
-        report_file.write(f"Elapsed time: {elapsed:.4f}s\n")
+    if do_profile:
+        assert profile is not None
+        assert prewarm_profile is not None
+        assert worker_profile_paths is not None
 
-        report_file.write("\n" + "=" * 80 + "\n")
-        if worker_profile_paths:
-            report_file.write(f"Merging {len(worker_profile_paths)} worker profile(s)\n")
-        stats = pstats.Stats(profile, stream=report_file)
-        for worker_profile_path in worker_profile_paths:
-            stats.add(worker_profile_path)
-        stats.strip_dirs().sort_stats("cumulative").print_stats()
+        report_path = Path(f"dump/benchmark_profile_{timestamp}_{path_suffix}.txt")
+        prewarm_report_path = Path(f"dump/benchmark_prewarm_profile_{timestamp}_{path_suffix}.txt")
 
-    for worker_profile_path in worker_profile_paths:
-        os.unlink(worker_profile_path)
+        with report_path.open("w") as report_file:
+            report_file.write(f"Date: {datetime.now()}\n")
+            report_file.write(f"Test run on {mod} with weight {w} using {n_jobs} jobs\n")
+            for k in degs:
+                report_file.write(f"Degree {k}: {len(mod.graded_basis_by_weight(k, w))} elements\n")
+            report_file.write(f"Elapsed time: {elapsed:.4f}s\n")
 
-    print(f"Profile written to {report_path}")
+            report_file.write("\n" + "=" * 80 + "\n")
+            if worker_profile_paths:
+                report_file.write(f"Merging {len(worker_profile_paths)} worker profile(s)\n")
+            stats = pstats.Stats(profile, stream=report_file)
+            for wp in worker_profile_paths:
+                stats.add(wp)
+            stats.strip_dirs().sort_stats("cumulative").print_stats()
+
+        for wp in worker_profile_paths:
+            os.unlink(wp)
+
+        print(f"Profile written to {report_path}")
+
+        with prewarm_report_path.open("w") as prewarm_file:
+            prewarm_file.write(f"Date: {datetime.now()}\n")
+            prewarm_file.write(f"Prewarm profile for {mod} weight={w} n_jobs={n_jobs}\n")
+            prewarm_file.write(f"Prewarm enabled: {do_prewarm}\n\n")
+            prewarm_file.write("=" * 80 + "\n")
+            pstats.Stats(prewarm_profile, stream=prewarm_file).strip_dirs().sort_stats(
+                "cumulative"
+            ).print_stats()
+
+        print(f"Prewarm profile written to {prewarm_report_path}")
+    else:
+        print(f"Elapsed time: {elapsed:.4f}s")
 
     with csv_path.open("w") as f:
         print("d,dim,betti", file=f)
@@ -97,4 +130,4 @@ if __name__ == "__main__":
         print(f"Betti numbers saved to {csv_path}")
 
     cc.save(cc_path)
-    print(f"Chain complex save to {cc_path}.sobj")
+    print(f"Chain complex saved to {cc_path}.sobj")

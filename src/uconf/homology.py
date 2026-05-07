@@ -316,6 +316,7 @@ def _prewarm_parallel_boundary_caches(
     *,
     profile: dict[str, float | int] | None = None,
     verbose: bool = False,
+    profiler: cProfile.Profile | None = None,
 ) -> None:
     """Populate module-level caches in the parent before forked workers start."""
     prewarm = getattr(module, "_prewarm_parallel_boundary_caches", None)
@@ -333,10 +334,16 @@ def _prewarm_parallel_boundary_caches(
         )
     except (ValueError, TypeError):
         accepts_verbose = False
-    if accepts_verbose:
-        prewarm(prewarm_source_keys, verbose=verbose)
-    else:
-        prewarm(prewarm_source_keys)
+    if profiler is not None:
+        profiler.enable()
+    try:
+        if accepts_verbose:
+            prewarm(prewarm_source_keys, verbose=verbose)
+        else:
+            prewarm(prewarm_source_keys)
+    finally:
+        if profiler is not None:
+            profiler.disable()
     elapsed = time.perf_counter() - start
     _vprint(f"prewarm: done ({elapsed:.1f}s)", verbose)
     if profile is not None:
@@ -595,6 +602,8 @@ def compute_chain_complex(
     n_jobs: int = 1,
     progress: bool = False,
     verbose: bool = False,
+    prewarm: bool = True,
+    prewarm_profiler: cProfile.Profile | None = None,
     worker_profile_paths: list[str] | None = None,
     worker_profile_parent: cProfile.Profile | None = None,
 ) -> Any:
@@ -725,8 +734,13 @@ def compute_chain_complex(
                 if d - 1 in key_to_idx
                 for k in keys_by_degree[d]
             )
-            _vprint(f"prewarming caches ({len(all_source_keys)} source keys across all degrees)...", verbose)
-            _prewarm_parallel_boundary_caches(module, all_source_keys, verbose=verbose)
+            if prewarm:
+                _vprint(f"prewarming caches ({len(all_source_keys)} source keys across all degrees)...", verbose)
+                _prewarm_parallel_boundary_caches(
+                    module, all_source_keys, verbose=verbose, profiler=prewarm_profiler
+                )
+            else:
+                _vprint("prewarm disabled — skipping", verbose)
             # Set static state before forking; workers inherit it copy-on-write.
             _vprint(f"forking pool ({n_jobs} workers)...", verbose)
             _BOUNDARY_MATRIX_STATE.clear()
