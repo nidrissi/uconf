@@ -525,3 +525,153 @@ From `benchmark_profile_2026-05-06_17-01-38_2_3_5_1.txt` (serial,
 The dominant remaining cost is the `d_alpha` / E-comodule / algebra-action
 stack — the same cluster identified after the 2026-04-30 round but now
 exposed without the table-reduction overhead masking it.
+
+---
+
+## Optimizations applied 2026-05-07
+
+### Benchmark baseline (weight 4, deg_max 3, 8 jobs, parallel)
+
+The serial benchmark is now fast enough that the parallel configuration
+(`-d2 -w4 -m3 -j8`) is the relevant measurement point.  The profile dumps
+`dump/benchmark_profile_2026-05-07_14-42-28_2_4_3_8.txt` and
+`dump/benchmark_prewarm_profile_2026-05-07_14-42-28_2_4_3_8.txt` were
+analysed at the start of this session.
+
+Wall-time breakdown at baseline (178.0 s total):
+
+| Phase | Wall (s) |
+|-------|---------:|
+| Serial prewarm (`_prewarm_parallel_boundary_caches`) | 22.7 |
+| Worker compute (1065 s merged ÷ 8, approximate) | ~133 |
+| Pool teardown (`pool.terminate()` + `join()`) | ~134 |
+
+The 134 s teardown is the single largest contributor: 8 long-lived workers
+accumulate ~5 degrees of dirty copy-on-write pages and large caches over
+their lifetimes.  Attempting to bypass this with SIGKILL (Action A) was
+investigated and abandoned — see the note below.
+
+### Investigated and rejected: SIGKILL pool teardown (Action A)
+
+**Problem.** `pool.terminate()` + `pool.join()` blocks for ~134 s while 8
+workers exit, running Python finalizers and releasing accumulated COW pages.
+
+**Attempted fix.** Send `signal.SIGKILL` to each worker pid before calling
+`terminate()` to bypass finalizers.
+
+**Why it deadlocks.** Workers blocked inside `SimpleQueue.get()` hold the
+queue's `_rlock` (a POSIX semaphore acquired during `recv_bytes()`).
+SIGKILL skips the `_rlock.release()` call, leaving the semaphore locked.
+`pool._terminate_pool` subsequently calls `_help_stuff_finish`, which tries
+to acquire `inqueue._rlock` in order to drain pending tasks — this blocks
+forever.
+
+The deadlock was confirmed empirically: the test
+`test_boundary_matrix_parallel_fast_path_matches_serial` hung indefinitely
+after the SIGKILL change was introduced.  `multiprocessing.Pool` is
+structurally incompatible with instant worker kill from the parent.  The
+SIGKILL change was reverted.  Possible future alternatives are worker
+self-exit via `os._exit(0)` (avoids holding the lock) or
+`maxtasksperchild` to recycle workers per few degrees rather than once at
+the very end.
+
+### 23. Cache `FreeAlgebraModule._normalize_key` and `_boundary_on_basis`
+
+**File:** `src/uconf/algebraic/free_algebra.py`
+
+`FreeAlgebraModule._normalize_key` (line 175) and `_boundary_on_basis`
+(line 350) were the two remaining uncached methods in the class.  All
+analogous methods in the codebase (`cofree_coalgebra._boundary_on_basis`,
+`bar_construction._boundary_on_basis`, etc.) already carry `@cached_method`.
+
+`_normalize_key` is called from four independent sites: inside
+`_normalized_corolla_sum` (from the algebra action stack), inside
+`_element_constructor_` for user-facing construction, inside `_boundary_on_basis`
+itself (from the bar/cobar differential), and from `_act_impl`.  Caching it
+ensures that any `(p_key, m_tuple)` pair encountered across these paths is
+normalised at most once, regardless of which call site triggers it first.
+
+`_boundary_on_basis` is called via the module morphism set up in `__init__`
+and is similarly shared across boundary evaluations in different degrees.
+
+### 24. Prewarm pullback morphism cache before forking workers (O6)
+
+**File:** `src/uconf/constructions/bar_algebra.py`
+
+**Problem.** The merged worker profile showed
+`morphism.__call__ → configuration._on_element` costing **~446 s merged
+CPU** (~24 s wall at 8×).  This is the surjection comodule morphism
+(built by `_make_surjection_comodule_morphism`) being applied to cobar
+elements derived from `_alpha_on_basis` in each `_act_on_basis_slice` call.
+The morphism result depends only on the cobar element (not on the algebra
+inputs), so each of the 8 workers was independently computing and caching
+the same set of morphism evaluations from scratch.
+
+Concretely, this involved three nested caches that were cold in every
+worker at fork time:
+
+- `PullbackAlgebra._morphism_cache` — maps `tuple(cobar_element)` to the
+  corresponding surjection Hadamard element.
+- `make_e_comodule_morphism` closure dicts `root_image_cache` /
+  `tree_image_cache` — memoize per-generator and per-subtree images of the
+  BE-valued comodule map.
+- `_compute_table_reduction_cached` — global `@cached_function` that maps
+  BE basis keys to surjection elements.
+
+**Fix.** Extended `_prewarm_parallel_boundary_caches` to prewarm all three
+caches in the parent process.  For every unique `(n_r, c_right_key)` pair
+already visited by the existing prewarm loop, after computing
+`alpha_elem = self._alpha_on_basis(n_r, c_right_key)` (a cache hit), the
+prewarm now calls:
+
+```python
+if p_terms not in _morphism_cache:
+    _morphism_cache[p_terms] = _algebra_morphism(alpha_elem)
+```
+
+where `_morphism_cache = self._algebra._morphism_cache` and
+`_algebra_morphism = self._algebra.morphism`.  This single call transitively
+fills all three downstream caches.  Workers forked after prewarm inherit the
+populated caches via Linux copy-on-write.
+
+The prewarm is gated on `hasattr(self._algebra, "_morphism_cache")` so it
+is a no-op for non-`PullbackAlgebra` algebras.
+
+**Expected savings.** ~24 s wall (the per-worker first-fill cost eliminated
+by COW inheritance).  Additional reduction in `term_generator` /
+`_compute_table_reduction_cached` first-fill tottime per worker (~6 s
+tottime shared across 8 workers → ~1 s wall recovered).
+
+### Remaining bottlenecks after this round
+
+From `dump/benchmark_profile_2026-05-07_14-42-28_2_4_3_8.txt`
+(parallel, `-d2 -w4 -m3 -j8`, 1065 s merged CPU):
+
+Top frames by *tottime* (where CPU is actually spent, not inherited from
+callees):
+
+| Function | tottime (s) |
+|----------|------------:|
+| `trees.RootedTree.__init__` | 49.8 |
+| `__init__.term_generator` | 48.5 |
+| `__init__._compositions` | 43.2 |
+| `free_module._from_dict` | 36.6 |
+| `list.append` | 33.1 |
+| `e_comodule_morphism.recurse` | 14.9 |
+| `shifted_operad.permute` | 11.9 |
+| `hadamard_algebra._act_on_basis_tuple` | 11.6 |
+| `bar_construction._planarize_subtree` | 10.4 |
+| `cobar_construction.compose` | 10.3 |
+
+Note that the 48.5 s in `term_generator` and 43.2 s in `_compositions`
+are worker-side first fills of `_compute_table_reduction_cached`.  If the
+new morphism prewarm also covers `_compute_table_reduction_cached` (it
+does, transitively), these costs will move to the prewarm and be paid only
+once, reducing worker tottime by ~24 s merged ≈ 3 s wall.
+
+The `RootedTree.__init__` (7.2 M calls, 49.8 s) is the largest remaining
+single function.  Opportunities: defer expensive derived-field computation
+(`_leaves`, `_weight`) for callers that only need `_hash` or `_arity`; this
+requires auditing all callers.  Pool teardown (~134 s wall) remains the
+dominant wall-time contributor until either action E (worker self-exit) or a
+pool-replacement strategy is implemented.
