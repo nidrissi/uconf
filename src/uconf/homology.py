@@ -410,7 +410,10 @@ def _prewarm_parallel_boundary_caches(
 # the worker's private address space, defeating the memory savings.
 
 
-def _worker_loop(task_conn: Any, result_conn: Any) -> None:
+def _worker_loop(
+    task_conn: "multiprocessing.connection.Connection",
+    result_conn: "multiprocessing.connection.Connection",
+) -> None:
     """Worker main loop: receive tasks, compute results, send back, repeat.
 
     This function runs in a forked child process.  It intentionally does NOT
@@ -500,12 +503,12 @@ class _WorkerManager:
         # Use the "fork" context explicitly.  spawn/forkserver are not used
         # because they cannot inherit the pre-warmed parent caches.
         ctx = multiprocessing.get_context("fork")
-        self._workers: list[Any] = []
+        self._workers: list[multiprocessing.Process] = []
         # One unidirectional Pipe pair per worker:
         #   task:   parent → worker  (parent sends tasks)
         #   result: worker → parent  (worker sends results)
-        self._task_conns: list[Any] = []
-        self._result_conns: list[Any] = []
+        self._task_conns: list[multiprocessing.connection.Connection] = []
+        self._result_conns: list[multiprocessing.connection.Connection] = []
         self._n_jobs = n_jobs
         self._alive = True
 
@@ -532,7 +535,7 @@ class _WorkerManager:
             self._task_conns.append(parent_task_conn)
             self._result_conns.append(parent_result_conn)
 
-    def map_unordered(self, tasks: list) -> Iterator[Any]:
+    def map_unordered(self, tasks: list[Any]) -> Iterator[Any]:
         """Distribute *tasks* across workers and yield results as they arrive.
 
         Tasks are distributed round-robin.  Results are yielded in completion
