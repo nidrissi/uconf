@@ -22,6 +22,7 @@ EXAMPLES::
 from __future__ import annotations
 
 import cProfile
+import inspect
 import os
 import sys
 import tempfile
@@ -32,6 +33,14 @@ import multiprocessing
 from sage.all import ChainComplex, matrix
 
 from uconf.core.signs import get_on_basis
+
+
+def _vprint(msg: str, verbose: bool, *, stream: TextIO | None = None) -> None:
+    """Print a timestamped diagnostic message when verbose is True."""
+    if not verbose:
+        return
+    ts = time.strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}", file=stream or sys.stderr, flush=True)
 
 
 # Keep multiprocessing helpers at module scope so forked workers can reuse the
@@ -306,18 +315,30 @@ def _prewarm_parallel_boundary_caches(
     basis_source_keys: Sequence,
     *,
     profile: dict[str, float | int] | None = None,
+    verbose: bool = False,
 ) -> None:
     """Populate module-level caches in the parent before forked workers start."""
     prewarm = getattr(module, "_prewarm_parallel_boundary_caches", None)
     if not callable(prewarm):
         return
-    start = None
-    if profile is not None:
-        start = time.perf_counter()
+    start = time.perf_counter()
+    _vprint(f"prewarm: starting for {len(basis_source_keys)} source keys", verbose)
     prewarm_source_keys = (
         basis_source_keys if isinstance(basis_source_keys, tuple) else tuple(basis_source_keys)
     )
-    prewarm(prewarm_source_keys)
+    try:
+        sig = inspect.signature(prewarm)
+        accepts_verbose = "verbose" in sig.parameters or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+        )
+    except (ValueError, TypeError):
+        accepts_verbose = False
+    if accepts_verbose:
+        prewarm(prewarm_source_keys, verbose=verbose)
+    else:
+        prewarm(prewarm_source_keys)
+    elapsed = time.perf_counter() - start
+    _vprint(f"prewarm: done ({elapsed:.1f}s)", verbose)
     if profile is not None:
         profile["parallel_cache_prewarm_calls"] = profile.get("parallel_cache_prewarm_calls", 0) + 1
         profile["parallel_cache_prewarm_keys"] = profile.get(
@@ -325,7 +346,7 @@ def _prewarm_parallel_boundary_caches(
         ) + len(basis_source_keys)
         profile["parallel_cache_prewarm_seconds"] = profile.get(
             "parallel_cache_prewarm_seconds", 0.0
-        ) + (time.perf_counter() - start)
+        ) + elapsed
 
 
 def _boundary_matrix(
@@ -573,6 +594,7 @@ def compute_chain_complex(
     sparse: bool = True,
     n_jobs: int = 1,
     progress: bool = False,
+    verbose: bool = False,
     worker_profile_paths: list[str] | None = None,
     worker_profile_parent: cProfile.Profile | None = None,
 ) -> Any:
@@ -660,7 +682,9 @@ def compute_chain_complex(
     key_to_idx: dict[int, dict] = {}
     use_boundary_fast_path = get_on_basis(module.boundary) is not None
 
+    _vprint("collecting basis elements...", verbose)
     for d in extended_degrees:
+        _vprint(f"  basis degree {d}...", verbose)
         basis_elems, basis_keys = _get_basis_elements(
             module,
             d,
@@ -670,10 +694,12 @@ def compute_chain_complex(
         basis_by_degree[d] = basis_elems
         keys_by_degree[d] = basis_keys
         key_to_idx[d] = {k: i for i, k in enumerate(basis_keys)}
+        _vprint(f"  basis degree {d}: {len(basis_keys)} keys", verbose)
 
     # Build differential matrices: d_n : C_n -> C_{n-1}
     differentials: dict[int, Any] = {}
     total_columns = sum(len(keys_by_degree[d]) for d in extended_degrees if d - 1 in key_to_idx)
+    _vprint(f"total boundary columns: {total_columns}", verbose)
     progress_reporter = _ChainComplexProgressReporter(total_columns, enabled=progress)
 
     # O1: Create a single pool for all boundary matrices so that workers
@@ -699,8 +725,10 @@ def compute_chain_complex(
                 if d - 1 in key_to_idx
                 for k in keys_by_degree[d]
             )
-            _prewarm_parallel_boundary_caches(module, all_source_keys)
+            _vprint(f"prewarming caches ({len(all_source_keys)} source keys across all degrees)...", verbose)
+            _prewarm_parallel_boundary_caches(module, all_source_keys, verbose=verbose)
             # Set static state before forking; workers inherit it copy-on-write.
+            _vprint(f"forking pool ({n_jobs} workers)...", verbose)
             _BOUNDARY_MATRIX_STATE.clear()
             _BOUNDARY_MATRIX_STATE.update(
                 {
@@ -713,6 +741,7 @@ def compute_chain_complex(
             )
             ctx = multiprocessing.get_context("fork")
             shared_pool = ctx.Pool(processes=n_jobs)
+            _vprint("pool ready", verbose)
 
         for d in extended_degrees:
             if d - 1 not in key_to_idx:
@@ -725,6 +754,11 @@ def compute_chain_complex(
             source = basis_by_degree[d]
             if source is not None and not source and n_target == 0:
                 continue
+            _vprint(
+                f"boundary matrix degree {d}: {len(keys_by_degree[d])} source × {n_target} target",
+                verbose,
+            )
+            _t0 = time.perf_counter()
             differentials[d] = _boundary_matrix(
                 module,
                 keys_by_degree[d],
@@ -739,6 +773,7 @@ def compute_chain_complex(
                 worker_profile_parent=worker_profile_parent,
                 pool=shared_pool,
             )
+            _vprint(f"boundary matrix degree {d}: done ({time.perf_counter() - _t0:.1f}s)", verbose)
     finally:
         progress_reporter.close()
         if shared_pool is not None:
