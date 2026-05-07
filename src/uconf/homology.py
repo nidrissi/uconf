@@ -35,12 +35,12 @@ from sage.all import ChainComplex, matrix
 from uconf.core.signs import get_on_basis
 
 
-def _vprint(msg: str, verbose: bool, *, stream: TextIO | None = None) -> None:
+def _vprint(msg: str, verbose: bool, *, stream: TextIO | None = None, end: str = "\n") -> None:
     """Print a timestamped diagnostic message when verbose is True."""
     if not verbose:
         return
     ts = time.strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}", file=stream or sys.stderr, flush=True)
+    print(f"[{ts}] {msg}", file=stream or sys.stderr, flush=True, end=end)
 
 
 # Keep multiprocessing helpers at module scope so forked workers can reuse the
@@ -105,12 +105,7 @@ class _ChainComplexProgressReporter:
         if self._interactive:
             width = max(self._last_width, len(message))
             self._last_width = width
-            print(
-                f"\r{message.ljust(width)}",
-                end="",
-                file=self._stream,
-                flush=True,
-            )
+            _vprint(f"{message.ljust(width)}\r", True, stream=self._stream, end="")
             return
         print(message, file=self._stream, flush=True)
 
