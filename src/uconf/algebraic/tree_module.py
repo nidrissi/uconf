@@ -11,6 +11,7 @@ for our use-cases) and M is an inner dg-module.
 
 from __future__ import annotations
 
+from itertools import chain
 from typing import Any, Iterator
 
 from sage.all import (
@@ -542,6 +543,11 @@ class TreeModule(CombinatorialFreeModule):
             max_tree_weight = n - 1
             for d_M in range(max_m_deg + 1):
                 d_tree = d - d_M
+                m_tuples = _tuples_in_degree_and_weight(keys_by_dw, n, d_M, w)
+                try:
+                    first_m_tuple = next(m_tuples)
+                except StopIteration:
+                    continue
                 trees = tuple(
                     enumerate_planar_trees_generic_in_degree(
                         n,
@@ -555,7 +561,7 @@ class TreeModule(CombinatorialFreeModule):
                 )
                 if not trees:
                     continue
-                for m_tuple in _tuples_in_degree_and_weight(keys_by_dw, n, d_M, w):
+                for m_tuple in chain((first_m_tuple,), m_tuples):
                     for tree in trees:
                         yield self((tree, m_tuple))
 

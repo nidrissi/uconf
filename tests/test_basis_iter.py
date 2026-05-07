@@ -559,6 +559,31 @@ class TestBarAlgebraBasisWeightIter:
         fam = trivial_bar.graded_basis_by_weight(0, 1)
         assert len(list(fam)) == 1
 
+    def test_tree_module_weight_short_circuits_before_tree_enumeration(self, monkeypatch) -> None:
+        """Skip tree enumeration when no leaf tuple can realize the weight slice."""
+        from sage.all import CombinatorialFreeModule, GradedModulesWithBasis
+
+        from uconf.algebraic.tree_module import TreeModule
+
+        M = CombinatorialFreeModule(QQ, ["x"], category=GradedModulesWithBasis(QQ))
+        M.degree_on_basis = lambda _: 0
+        M._weight_on_basis = lambda _: 2
+        M.boundary = lambda _: M.zero()
+        M.connectivity = 0
+        M.basis_weight_iter = lambda d, w: iter([M("x")]) if (d, w) == (0, 2) else iter(())
+
+        def _unexpected_tree_enumeration(*args, **kwargs):
+            raise AssertionError("tree enumeration should be skipped when no m_tuple exists")
+
+        monkeypatch.setattr(
+            "uconf.algebraic.tree_module.enumerate_planar_trees_generic_in_degree",
+            _unexpected_tree_enumeration,
+        )
+
+        tm = TreeModule(Associative, M, name="WeightedTreeModule")
+        elems = list(tm.basis_weight_iter(0, 2))
+        assert len(elems) == 1
+
 
 # ---------------------------------------------------------------------------
 # 11. basis_weight_iter: HadamardTensorAlgebra

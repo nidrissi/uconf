@@ -56,6 +56,17 @@ def _element_cache_key(element: Any) -> tuple:
     return tuple(element)
 
 
+def _component_cache_key(component: Any) -> tuple[Any, ...]:
+    """Return a cache key distinguishing cooperad components that may share terms."""
+    owner = getattr(component, "factory", component)
+    return (
+        id(owner),
+        component.__class__,
+        component.arity(),
+        component.base_ring(),
+    )
+
+
 def _permute_component_element_direct(
     component: Any,
     element: Any,
@@ -340,7 +351,7 @@ def _nu_on_planar(
         # Compute all d_sigma components at once (one boundary+planarize
         # call) instead of once per permutation.
         elem_key = _element_cache_key(current_d_elem)
-        decomp_global_key = (_n_for_cache, elem_key)
+        decomp_global_key = (_component_cache_key(cooperad_component), _n_for_cache, elem_key)
         decomp = _decompose_cache.get(decomp_global_key)
         if decomp is None:
             decomp = cooperad_component.d_sigma_decompose(current_d_elem)
