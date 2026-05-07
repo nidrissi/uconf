@@ -224,7 +224,7 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Chain complexes and homology (`homology.py`)
 
-- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True, n_jobs=1, progress=False, worker_profile_paths=None, worker_profile_parent=None)` — builds a SageMath
+- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True, n_jobs=1, progress=False, worker_profile_paths=None, worker_profile_parent=None, n_jobs=1, progress=False, worker_profile_paths=None, worker_profile_parent=None)` — builds a SageMath
   `ChainComplex` from any dg-module that exposes `graded_basis(d)`,
   `boundary`, and `base_ring()`.  This includes all operad/cooperad
   components, bar/cobar constructions, free algebras, cofree coalgebras,

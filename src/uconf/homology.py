@@ -411,8 +411,13 @@ def _boundary_matrix(
         The homological degree of the boundary map being computed. Used for
         progress reporting and profiling.
     worker_profile_paths:
-        File paths for per-worker ``cProfile`` output. If provided, each
-        worker writes its profile to the corresponding path.
+        Optional collection used to record generated ``cProfile`` output
+        paths from parallel work. Profiling data is written per processed
+        chunk/task, not via a fixed one-path-per-worker slot, so a single
+        worker may emit multiple ``.prof`` files and the total number of
+        files depends on task partitioning. Callers should therefore expect
+        zero or more generated profile files, and may need to merge and
+        remove multiple files after analysis.
     worker_profile_parent:
         A ``cProfile.Profile`` instance from the calling process. Paused
         during parallel sections and resumed afterwards.
