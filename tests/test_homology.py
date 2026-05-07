@@ -440,6 +440,45 @@ class TestChainComplex:
         assert "compute_chain_complex:" in captured.err
         assert "100%" in captured.err
 
+    def test_fast_path_keeps_zero_matrix_when_target_degree_is_missing(self) -> None:
+        """Fast-path assembly should still record source rank at boundary degrees."""
+
+        class _FakeElement:
+            def __init__(self, key):
+                self._key = key
+
+            def leading_support(self):
+                return self._key
+
+        class _Boundary:
+            def __init__(self, on_basis):
+                self._on_basis = on_basis
+
+            def on_basis(self):
+                return self._on_basis
+
+        class _SourceOnlyModule:
+            def __init__(self):
+                self._basis = {
+                    1: [_FakeElement("x"), _FakeElement("y")],
+                }
+                self.boundary = _Boundary(self._boundary_on_basis)
+
+            def base_ring(self):
+                return QQ
+
+            def graded_basis(self, degree):
+                return self._basis.get(degree, [])
+
+            def _boundary_on_basis(self, key):
+                return ()
+
+        cc = compute_chain_complex(_SourceOnlyModule(), degrees=range(2), check=True)
+        d1 = cc.differential(1)
+        assert d1.nrows() == 0
+        assert d1.ncols() == 2
+        assert cc.free_module_rank(1) == 2
+
 
 # ---------------------------------------------------------------------------
 # homology_basis

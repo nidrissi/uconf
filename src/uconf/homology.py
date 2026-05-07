@@ -810,8 +810,8 @@ def compute_chain_complex(
             if d - 1 not in key_to_idx:
                 # Target degree not in range; if there are source basis elements,
                 # we still need a zero matrix so the complex knows the rank of C_d.
-                if basis_by_degree[d]:
-                    differentials[d] = matrix(base_ring, 0, len(basis_by_degree[d]), sparse=sparse)
+                if keys_by_degree[d]:
+                    differentials[d] = matrix(base_ring, 0, len(keys_by_degree[d]), sparse=sparse)
                 continue
             n_target = len(keys_by_degree[d - 1])
             source = basis_by_degree[d]

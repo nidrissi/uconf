@@ -406,3 +406,79 @@ class TestEComoduleMorphism:
             assert tensor_dict == had_dict, (
                 f"Generator mismatch: tensor={tensor_dict}, had={had_dict}"
             )
+
+    def test_nu_on_planar_decompose_cache_distinguishes_components(self):
+        """The shared d_sigma cache must not collide across cooperad components."""
+        from uconf.morphisms.e_comodule_morphism import _decompose_cache, _nu_on_planar
+
+        class _FakeElement:
+            def __init__(self, terms):
+                self._terms = tuple(terms)
+
+            def __iter__(self):
+                return iter(self._terms)
+
+            def __bool__(self):
+                return bool(self._terms)
+
+        class _FakeCooperadComponent:
+            def __init__(self, label):
+                self.label = label
+
+            def arity(self):
+                return 2
+
+            def base_ring(self):
+                return QQ
+
+            def _permute_on_basis(self, basis_key, sigma_tuple):
+                return ((basis_key, QQ.one()),)
+
+            def _from_dict(self, data, remove_zeros=True):
+                return _FakeElement(tuple(data.items()))
+
+            def d_sigma_decompose(self, element):
+                head_key = next(iter(element))[0]
+                if head_key != "root":
+                    return {}
+                transposition = SymmetricGroup(2)([2, 1])
+                return {
+                    transposition: _FakeElement(((f"{self.label}-next", QQ.one()),)),
+                }
+
+        class _FakeBarrattEcclesComponent:
+            def rho(self, sigma_bar):
+                be_key = tuple(tuple(sigma.tuple()) for sigma in sigma_bar)
+                return ((be_key, QQ.one()),)
+
+        class _FakeTarget:
+            def _from_dict(self, data, remove_zeros=True):
+                return dict(data)
+
+        source = _FakeElement((("root", QQ.one()),))
+        be_component = _FakeBarrattEcclesComponent()
+        S2 = SymmetricGroup(2)
+        identity = S2.identity()
+        _decompose_cache.clear()
+        try:
+            first = _nu_on_planar(
+                source,
+                _FakeCooperadComponent("left"),
+                be_component,
+                S2,
+                identity,
+                _FakeTarget(),
+            )
+            second = _nu_on_planar(
+                source,
+                _FakeCooperadComponent("right"),
+                be_component,
+                S2,
+                identity,
+                _FakeTarget(),
+            )
+        finally:
+            _decompose_cache.clear()
+
+        assert any(coop_key == "left-next" for (_, coop_key) in first)
+        assert any(coop_key == "right-next" for (_, coop_key) in second)
