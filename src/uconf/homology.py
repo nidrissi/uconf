@@ -317,6 +317,7 @@ def _prewarm_parallel_boundary_caches(
     profile: dict[str, float | int] | None = None,
     verbose: bool = False,
     profiler: cProfile.Profile | None = None,
+    parent_profiler: cProfile.Profile | None = None,
 ) -> None:
     """Populate module-level caches in the parent before forked workers start."""
     prewarm = getattr(module, "_prewarm_parallel_boundary_caches", None)
@@ -335,6 +336,8 @@ def _prewarm_parallel_boundary_caches(
     except (ValueError, TypeError):
         accepts_verbose = False
     if profiler is not None:
+        if parent_profiler is not None:
+            parent_profiler.disable()
         profiler.enable()
     try:
         if accepts_verbose:
@@ -344,6 +347,8 @@ def _prewarm_parallel_boundary_caches(
     finally:
         if profiler is not None:
             profiler.disable()
+            if parent_profiler is not None:
+                parent_profiler.enable()
     elapsed = time.perf_counter() - start
     _vprint(f"prewarm: done ({elapsed:.1f}s)", verbose)
     if profile is not None:
@@ -737,7 +742,11 @@ def compute_chain_complex(
                     verbose,
                 )
                 _prewarm_parallel_boundary_caches(
-                    module, all_source_keys, verbose=verbose, profiler=prewarm_profiler
+                    module,
+                    all_source_keys,
+                    verbose=verbose,
+                    profiler=prewarm_profiler,
+                    parent_profiler=worker_profile_parent,
                 )
             else:
                 _vprint("prewarm disabled — skipping", verbose)
