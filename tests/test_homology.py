@@ -252,6 +252,10 @@ class TestChainComplex:
         with pytest.raises(ValueError, match="n_jobs must be >= 1"):
             compute_chain_complex(S2, degrees=range(2), n_jobs=0)
 
+    @pytest.mark.skipif(
+        os.name != "posix" or "fork" not in multiprocessing.get_all_start_methods(),
+        reason="parallel worker profiling requires POSIX fork workers",
+    )
     def test_parallel_worker_profiles_can_be_merged(self) -> None:
         """Parallel worker profiling should emit mergeable pstats files."""
 
