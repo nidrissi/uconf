@@ -195,7 +195,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         )
 
     def _prewarm_parallel_boundary_caches(
-        self, source_keys: tuple[tuple[object, tuple], ...]
+        self, source_keys: tuple[tuple[object, tuple], ...], *, verbose: bool = False
     ) -> None:
         """Populate read-mostly d_α helper caches before forked workers start.
 
@@ -204,10 +204,18 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         cooperad-side helpers that can be inherited copy-on-write by forked
         workers, leaving algebra-input-dependent caches lazy.
         """
+        import sys
+        import time as _time
+
+        def _vp(msg: str) -> None:
+            if verbose:
+                print(f"[{_time.strftime('%H:%M:%S')}]   bar prewarm: {msg}", file=sys.stderr, flush=True)
+
         base_ring = self.base_ring()
         seen_arities: set[int] = set()
         seen_alpha_keys: set[tuple[int, object]] = set()
         seen_left_keys: set[tuple[int, object]] = set()
+        _vp(f"{len(source_keys)} source keys")
 
         # O2: pre-populate the comodule-morphism chain (e_comodule_on_generator,
         # _root_image_for_generator, table_reduction) in the parent process so
@@ -216,10 +224,22 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         morphism = getattr(pullback, "morphism", None)
         morphism_cache = getattr(pullback, "_morphism_cache", None)
 
-        for c_key, m_tuple in source_keys:
+        _last_report = _time.perf_counter()
+        _report_interval = 10.0  # seconds between progress reports
+        for _i, (c_key, m_tuple) in enumerate(source_keys):
+            if verbose:
+                _now = _time.perf_counter()
+                if _now - _last_report >= _report_interval:
+                    _last_report = _now
+                    _vp(
+                        f"{_i}/{len(source_keys)} keys, "
+                        f"alpha_keys={len(seen_alpha_keys)}, "
+                        f"left_keys={len(seen_left_keys)}"
+                    )
             n = len(m_tuple)
             if n not in seen_arities:
                 seen_arities.add(n)
+                _vp(f"arity {n}: registering planarize_on_basis")
                 self._cooperad_planarize_on_basis(n)
             if n <= 1:
                 continue
@@ -271,6 +291,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                         if left_cache_key not in seen_left_keys:
                             seen_left_keys.add(left_cache_key)
                             self._split_left_key_is_canonical(m, c_left_key)
+
+        _vp(
+            f"complete: alpha_keys={len(seen_alpha_keys)}, "
+            f"left_keys={len(seen_left_keys)}, "
+            f"morphism_cache_size={len(morphism_cache) if morphism_cache is not None else 'N/A'}"
+        )
 
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""

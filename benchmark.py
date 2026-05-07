@@ -7,7 +7,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 import argparse
-from typing import Any
 
 from sage.all import GF
 
@@ -26,16 +25,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
     )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Print timestamped phase diagnostics to stderr."
+    )
     args = parser.parse_args()
 
     w = args.weight
     degs = range(-1, args.deg_max + 1)
     n_jobs = args.jobs
     dim = args.dim
+    verbose = args.verbose
     print(f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}")
 
+    if verbose:
+        import sys as _sys
+        import time as _time
+        print(f"[{_time.strftime('%H:%M:%S')}] building model...", file=_sys.stderr, flush=True)
     model = euclidean_unordered_configuration_model(GF(2), dim)
     mod = model.module
+    if verbose:
+        print(f"[{_time.strftime('%H:%M:%S')}] model ready", file=_sys.stderr, flush=True)
 
     worker_profile_paths: list[str] = []
     profile = cProfile.Profile()
@@ -49,6 +58,7 @@ if __name__ == "__main__":
         worker_profile_paths=worker_profile_paths,
         worker_profile_parent=profile,
         progress=True,
+        verbose=verbose,
     )
     profile.disable()
     elapsed = time.perf_counter() - start
