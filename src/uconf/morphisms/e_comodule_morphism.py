@@ -35,6 +35,13 @@ from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
+# Module-level caches for hot paths in _nu_on_planar.  Keyed on
+# (arity, elem_key) so entries are shared across distinct top-level calls
+# that encounter the same cooperad sub-elements.
+_decompose_cache: dict = {}
+_rho_cache: dict = {}
+
+
 def _sigma_as_tuple(sigma: Any) -> tuple[int, ...]:
     """Return a permutation as a one-line tuple."""
     if isinstance(sigma, tuple):
@@ -267,8 +274,11 @@ def _nu_on_planar(
     # repeated tensor element construction overhead.
     result_dict: dict[tuple[Any, Any], Any] = {}
     cooperad_factor_cache: dict[tuple[tuple[Any, ...], tuple[int, ...]], Any] = {}
-    decompose_cache: dict[tuple[Any, ...], dict[Any, Any]] = {}
-    rho_cache: dict[tuple[tuple[int, ...], ...], Any] = {}
+    # Use module-level caches so entries are shared across distinct top-level
+    # calls that encounter the same cooperad sub-elements.  Both are keyed on
+    # (arity, elem_key) to avoid cross-arity collisions.
+    _n_for_cache = n  # capture for use inside nested closures
+    be_id = id(be_component)
 
     def make_cooperad_factor(pl_elem, sigma_prod=None, sigma_prod_tuple=None):
         """Build the cooperad factor for the formula.
@@ -310,10 +320,11 @@ def _nu_on_planar(
                     result_dict[pair] = coop_coeff
         else:
             sigma_bar_key = tuple(_sigma_as_tuple(sigma) for sigma in sigma_bar)
-            be_elem = rho_cache.get(sigma_bar_key)
+            rho_global_key = (be_id, sigma_bar_key)
+            be_elem = _rho_cache.get(rho_global_key)
             if be_elem is None:
                 be_elem = be_component.rho(list(sigma_bar))
-                rho_cache[sigma_bar_key] = be_elem
+                _rho_cache[rho_global_key] = be_elem
 
             if be_elem:
                 coop_factor = make_cooperad_factor(current_d_elem, sigma_prod, sigma_prod_tuple)
@@ -329,10 +340,11 @@ def _nu_on_planar(
         # Compute all d_sigma components at once (one boundary+planarize
         # call) instead of once per permutation.
         elem_key = _element_cache_key(current_d_elem)
-        decomp = decompose_cache.get(elem_key)
+        decomp_global_key = (_n_for_cache, elem_key)
+        decomp = _decompose_cache.get(decomp_global_key)
         if decomp is None:
             decomp = cooperad_component.d_sigma_decompose(current_d_elem)
-            decompose_cache[elem_key] = decomp
+            _decompose_cache[decomp_global_key] = decomp
         for sigma, next_d in decomp.items():
             if sigma != identity_n:
                 next_sigma_prod = sigma * sigma_prod

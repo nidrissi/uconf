@@ -38,7 +38,7 @@ from uconf.core.signs import get_on_basis
 # same top-level functions and per-call inherited state without re-serializing
 # the model.
 _BOUNDARY_MATRIX_STATE: dict[str, Any] = {}
-_BOUNDARY_MATRIX_CHUNKS_PER_WORKER = 8
+_BOUNDARY_MATRIX_CHUNKS_PER_WORKER = 4
 
 
 class _ChainComplexProgressReporter:
@@ -191,19 +191,25 @@ def _boundary_entries_for_key(
     return entries
 
 
-def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]:
-    """Compute sparse boundary entries for a chunk of source columns."""
-    start, stop = task
+def _boundary_matrix_worker(task: tuple) -> dict[tuple[int, int], Any]:
+    """Compute sparse boundary entries for a chunk of source columns.
+
+    ``task`` is ``(chunk_source_keys, j_start, key_to_idx_target)`` where
+    per-degree data is passed inline so that a persistent worker pool (forked
+    once) can handle tasks across multiple degrees without re-forking.  Static
+    data (``boundary_on_basis``, ``normalize_key``, profiling flags) is read
+    from the module-global ``_BOUNDARY_MATRIX_STATE``, which is set in the
+    parent before pool creation and inherited via copy-on-write.
+    """
+    chunk_source_keys, j_start, key_to_idx_target = task
     state = _BOUNDARY_MATRIX_STATE
-    source_keys = state["source_keys"]
     boundary_on_basis = state["boundary_on_basis"]
-    key_to_idx_target = state["key_to_idx_target"]
     normalize_key = state["normalize_key"]
-    normalization_cache: dict = {}
-    profile_path = None
     worker_profile = state["worker_profile"]
     parent_profiler = state["parent_profiler"]
     collect_boundary_profile = state.get("collect_boundary_profile", False)
+    normalization_cache: dict = {}
+    profile_path = None
     profiler = None
     boundary_profile = None
     if collect_boundary_profile:
@@ -223,8 +229,8 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
 
     try:
         entries: dict[tuple[int, int], Any] = {}
-        for j in range(start, stop):
-            key = source_keys[j]
+        for idx, key in enumerate(chunk_source_keys):
+            j = j_start + idx
             boundary_start = time.perf_counter() if boundary_profile is not None else None
             boundary_terms = boundary_on_basis(key)
             if boundary_profile is not None:
@@ -262,7 +268,7 @@ def _boundary_matrix_worker(task: tuple[int, int]) -> dict[tuple[int, int], Any]
     return {
         "entries": entries,
         "profile_path": profile_path,
-        "columns_done": stop - start,
+        "columns_done": len(chunk_source_keys),
         "boundary_profile": boundary_profile,
     }
 
@@ -336,6 +342,7 @@ def _boundary_matrix(
     worker_profile_paths: list[str] | None = None,
     worker_profile_parent: cProfile.Profile | None = None,
     profile: dict[str, float | int] | None = None,
+    pool: Any | None = None,
 ) -> Any:
     """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
 
@@ -361,12 +368,15 @@ def _boundary_matrix(
     boundary_on_basis = get_on_basis(module.boundary)
 
     if boundary_on_basis is not None:
-        if (
+        use_parallel = (
             n_jobs > 1
             and n_source > 0
-            and os.name == "posix"
-            and "fork" in multiprocessing.get_all_start_methods()
-        ):
+            and (
+                pool is not None
+                or (os.name == "posix" and "fork" in multiprocessing.get_all_start_methods())
+            )
+        )
+        if use_parallel:
             # Use several chunks per worker so the pool can rebalance uneven
             # boundary costs without paying per-column scheduling overhead.
             chunk_size = max(
@@ -374,46 +384,63 @@ def _boundary_matrix(
                 (n_source + _BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs - 1)
                 // (_BOUNDARY_MATRIX_CHUNKS_PER_WORKER * n_jobs),
             )
-            _prewarm_parallel_boundary_caches(
-                module,
-                basis_source_keys,
-                profile=profile,
-            )
-            _BOUNDARY_MATRIX_STATE.clear()
-            _BOUNDARY_MATRIX_STATE.update(
-                {
-                    "source_keys": basis_source_keys,
-                    "boundary_on_basis": boundary_on_basis,
-                    "key_to_idx_target": key_to_idx_target,
-                    "normalize_key": normalize_key,
-                    "worker_profile": worker_profile_paths is not None,
-                    "parent_profiler": worker_profile_parent,
-                    "collect_boundary_profile": profile is not None,
-                }
-            )
+            # Build tasks with per-degree data inline: each task carries its
+            # own source-key slice and the target index map so that a
+            # persistent pool (forked once) can handle multiple degrees.
+            tasks = [
+                (basis_source_keys[start:stop], start, key_to_idx_target)
+                for start, stop in _chunk_ranges(n_source, chunk_size)
+            ]
             entries: dict[tuple[int, int], Any] = {}
-            ctx = multiprocessing.get_context("fork")
-            try:
-                with ctx.Pool(processes=n_jobs) as pool:
-                    for chunk_entries in pool.imap_unordered(
-                        _boundary_matrix_worker,
-                        _chunk_ranges(n_source, chunk_size),
-                    ):
-                        _merge_sparse_entries(entries, chunk_entries["entries"])
-                        if profile is not None:
-                            _merge_boundary_matrix_profile(
-                                profile,
-                                chunk_entries.get("boundary_profile"),
-                            )
-                        if (
-                            worker_profile_paths is not None
-                            and chunk_entries["profile_path"] is not None
-                        ):
-                            worker_profile_paths.append(chunk_entries["profile_path"])
-                        if progress is not None:
-                            progress.update(chunk_entries["columns_done"], degree=degree)
-            finally:
+            if pool is not None:
+                # Persistent pool: static state was set (and workers forked)
+                # once in compute_chain_complex; no prewarm or state setup here.
+                active_pool = pool
+                own_pool = False
+            else:
+                # Per-call temporary pool: prewarm caches, set static state,
+                # then fork workers.
+                _prewarm_parallel_boundary_caches(
+                    module,
+                    basis_source_keys,
+                    profile=profile,
+                )
                 _BOUNDARY_MATRIX_STATE.clear()
+                _BOUNDARY_MATRIX_STATE.update(
+                    {
+                        "boundary_on_basis": boundary_on_basis,
+                        "normalize_key": normalize_key,
+                        "worker_profile": worker_profile_paths is not None,
+                        "parent_profiler": worker_profile_parent,
+                        "collect_boundary_profile": profile is not None,
+                    }
+                )
+                ctx = multiprocessing.get_context("fork")
+                active_pool = ctx.Pool(processes=n_jobs)
+                own_pool = True
+            try:
+                for chunk_result in active_pool.imap_unordered(
+                    _boundary_matrix_worker,
+                    tasks,
+                ):
+                    _merge_sparse_entries(entries, chunk_result["entries"])
+                    if profile is not None:
+                        _merge_boundary_matrix_profile(
+                            profile,
+                            chunk_result.get("boundary_profile"),
+                        )
+                    if (
+                        worker_profile_paths is not None
+                        and chunk_result["profile_path"] is not None
+                    ):
+                        worker_profile_paths.append(chunk_result["profile_path"])
+                    if progress is not None:
+                        progress.update(chunk_result["columns_done"], degree=degree)
+            finally:
+                if own_pool:
+                    active_pool.terminate()
+                    active_pool.join()
+                    _BOUNDARY_MATRIX_STATE.clear()
             return _build_matrix_from_entries(
                 base_ring,
                 n_target,
@@ -648,7 +675,45 @@ def compute_chain_complex(
     differentials: dict[int, Any] = {}
     total_columns = sum(len(keys_by_degree[d]) for d in extended_degrees if d - 1 in key_to_idx)
     progress_reporter = _ChainComplexProgressReporter(total_columns, enabled=progress)
+
+    # O1: Create a single pool for all boundary matrices so that workers
+    # survive across degrees and keep their caches warm between boundaries.
+    # O2: Prewarm all cooperad caches for EVERY source key before forking so
+    # that workers inherit fully populated caches via copy-on-write.
+    use_persistent_pool = (
+        n_jobs > 1
+        and use_boundary_fast_path
+        and os.name == "posix"
+        and "fork" in multiprocessing.get_all_start_methods()
+        and any(keys_by_degree[d] for d in extended_degrees if d - 1 in key_to_idx)
+    )
+    shared_pool = None
     try:
+        if use_persistent_pool:
+            boundary_on_basis_fn = get_on_basis(module.boundary)
+            normalize_key_fn = getattr(module, "_normalize_key", None)
+            # Collect all source keys across all boundary matrices to prewarm once.
+            all_source_keys: tuple = tuple(
+                k
+                for d in extended_degrees
+                if d - 1 in key_to_idx
+                for k in keys_by_degree[d]
+            )
+            _prewarm_parallel_boundary_caches(module, all_source_keys)
+            # Set static state before forking; workers inherit it copy-on-write.
+            _BOUNDARY_MATRIX_STATE.clear()
+            _BOUNDARY_MATRIX_STATE.update(
+                {
+                    "boundary_on_basis": boundary_on_basis_fn,
+                    "normalize_key": normalize_key_fn,
+                    "worker_profile": worker_profile_paths is not None,
+                    "parent_profiler": worker_profile_parent,
+                    "collect_boundary_profile": False,
+                }
+            )
+            ctx = multiprocessing.get_context("fork")
+            shared_pool = ctx.Pool(processes=n_jobs)
+
         for d in extended_degrees:
             if d - 1 not in key_to_idx:
                 # Target degree not in range; if there are source basis elements,
@@ -672,9 +737,14 @@ def compute_chain_complex(
                 degree=d,
                 worker_profile_paths=worker_profile_paths,
                 worker_profile_parent=worker_profile_parent,
+                pool=shared_pool,
             )
     finally:
         progress_reporter.close()
+        if shared_pool is not None:
+            shared_pool.terminate()
+            shared_pool.join()
+            _BOUNDARY_MATRIX_STATE.clear()
 
     return ChainComplex(differentials, base_ring=base_ring, degree_of_differential=-1, check=check)
 
