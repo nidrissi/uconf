@@ -221,13 +221,6 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         seen_left_keys: set[tuple[int, object]] = set()
         _vp(f"{len(source_keys)} source keys")
 
-        # O2: pre-populate the comodule-morphism chain (e_comodule_on_generator,
-        # _root_image_for_generator, table_reduction) in the parent process so
-        # forked workers inherit the results via copy-on-write.
-        pullback = self._algebra
-        morphism = getattr(pullback, "morphism", None)
-        morphism_cache = getattr(pullback, "_morphism_cache", None)
-
         _last_report = _time.perf_counter()
         _report_interval = 10.0  # seconds between progress reports
         for _i, (c_key, m_tuple) in enumerate(source_keys):
@@ -259,18 +252,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                     alpha_cache_key = (n_r, c_right_key)
                     if alpha_cache_key not in seen_alpha_keys:
                         seen_alpha_keys.add(alpha_cache_key)
-                        alpha_result = self._alpha_on_basis(n_r, c_right_key)
+                        self._alpha_on_basis(n_r, c_right_key)
                         self._alpha_degree_on_basis(n_r, c_right_key)
-                        # O2: prewarm the full comodule-morphism chain so workers
-                        # inherit root_image_cache, e_comodule cache, and
-                        # table_reduction cache via copy-on-write fork.
-                        if morphism is not None and alpha_result:
-                            p_terms = tuple(alpha_result)
-                            if morphism_cache is not None:
-                                if p_terms not in morphism_cache:
-                                    morphism_cache[p_terms] = morphism(alpha_result)
-                            else:
-                                morphism(alpha_result)
 
                     m = n - n_r + 1
                     left_cache_key = (m, c_left_key)
@@ -298,8 +281,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         _vp(
             f"complete: alpha_keys={len(seen_alpha_keys)}, "
-            f"left_keys={len(seen_left_keys)}, "
-            f"morphism_cache_size={len(morphism_cache) if morphism_cache is not None else 'N/A'}"
+            f"left_keys={len(seen_left_keys)}"
         )
 
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
