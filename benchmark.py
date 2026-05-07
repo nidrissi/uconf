@@ -110,16 +110,18 @@ if __name__ == "__main__":
 
         print(f"Profile written to {report_path}")
 
-        with prewarm_report_path.open("w") as prewarm_file:
-            prewarm_file.write(f"Date: {datetime.now()}\n")
-            prewarm_file.write(f"Prewarm profile for {mod} weight={w} n_jobs={n_jobs}\n")
-            prewarm_file.write(f"Prewarm enabled: {do_prewarm}\n\n")
-            prewarm_file.write("=" * 80 + "\n")
-            pstats.Stats(prewarm_profile, stream=prewarm_file).strip_dirs().sort_stats(
-                "cumulative"
-            ).print_stats()
-
-        print(f"Prewarm profile written to {prewarm_report_path}")
+        if prewarm_profile.getstats():
+            with prewarm_report_path.open("w") as prewarm_file:
+                prewarm_file.write(f"Date: {datetime.now()}\n")
+                prewarm_file.write(f"Prewarm profile for {mod} weight={w} n_jobs={n_jobs}\n")
+                prewarm_file.write(f"Prewarm enabled: {do_prewarm}\n\n")
+                prewarm_file.write("=" * 80 + "\n")
+                pstats.Stats(prewarm_profile, stream=prewarm_file).strip_dirs().sort_stats(
+                    "cumulative"
+                ).print_stats()
+            print(f"Prewarm profile written to {prewarm_report_path}")
+        else:
+            print("Prewarm profiler inactive (n_jobs=1 or prewarm disabled) — no prewarm profile written")
     else:
         print(f"Elapsed time: {elapsed:.4f}s")
 
