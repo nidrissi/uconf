@@ -172,6 +172,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """
         return get_on_basis(self._inner_module.boundary)
 
+    @cached_method
     def _normalize_key(self, key):
         """Normalize a single ``(p_key, m_tuple)`` to planar free-algebra keys.
 
@@ -347,6 +348,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
     # Differential
     # ------------------------------------------------------------------
 
+    @cached_method
     def _boundary_on_basis(self, key) -> Any:
         """Leibniz rule: d(p ⊗ m_1 ⊗…⊗ m_n) = d_P(p) ⊗ m_… + Σ_i (−1)^{…} p ⊗…⊗ d_M(m_i) ⊗….
 

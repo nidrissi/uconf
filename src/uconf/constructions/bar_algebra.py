@@ -219,6 +219,8 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         seen_arities: set[int] = set()
         seen_alpha_keys: set[tuple[int, object]] = set()
         seen_left_keys: set[tuple[int, object]] = set()
+        _morphism_cache = getattr(self._algebra, "_morphism_cache", None)
+        _algebra_morphism = getattr(self._algebra, "morphism", None)
         _vp(f"{len(source_keys)} source keys")
 
         _last_report = _time.perf_counter()
@@ -254,6 +256,12 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                         seen_alpha_keys.add(alpha_cache_key)
                         self._alpha_on_basis(n_r, c_right_key)
                         self._alpha_degree_on_basis(n_r, c_right_key)
+                        if _morphism_cache is not None and _algebra_morphism is not None:
+                            alpha_elem = self._alpha_on_basis(n_r, c_right_key)
+                            if alpha_elem:
+                                p_terms = tuple(alpha_elem)
+                                if p_terms not in _morphism_cache:
+                                    _morphism_cache[p_terms] = _algebra_morphism(alpha_elem)
 
                     m = n - n_r + 1
                     left_cache_key = (m, c_left_key)
@@ -273,13 +281,20 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                             seen_alpha_keys.add(alpha_cache_key)
                             self._alpha_on_basis(n_r, c_right_key)
                             self._alpha_degree_on_basis(n_r, c_right_key)
+                            if _morphism_cache is not None and _algebra_morphism is not None:
+                                alpha_elem = self._alpha_on_basis(n_r, c_right_key)
+                                if alpha_elem:
+                                    p_terms = tuple(alpha_elem)
+                                    if p_terms not in _morphism_cache:
+                                        _morphism_cache[p_terms] = _algebra_morphism(alpha_elem)
 
                         left_cache_key = (m, c_left_key)
                         if left_cache_key not in seen_left_keys:
                             seen_left_keys.add(left_cache_key)
                             self._split_left_key_is_canonical(m, c_left_key)
 
-        _vp(f"complete: alpha_keys={len(seen_alpha_keys)}, left_keys={len(seen_left_keys)}")
+        morphism_count = len(_morphism_cache) if _morphism_cache is not None else 0
+        _vp(f"complete: alpha_keys={len(seen_alpha_keys)}, left_keys={len(seen_left_keys)}, morphism_keys={morphism_count}")
 
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
