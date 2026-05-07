@@ -377,24 +377,59 @@ def _boundary_matrix(
     profile: dict[str, float | int] | None = None,
     pool: Any | None = None,
 ) -> Any:
-    """Build the matrix of the boundary map ``d: C_d -> C_{d-1}``.
+    """Compute the boundary matrix from ``basis_source_keys`` to target basis.
+
+    Constructs the matrix representation of the boundary map for a single
+    degree in a chain complex. Each column corresponds to a source basis
+    element (indexed by ``basis_source_keys``) and each row corresponds to a
+    target basis element (indexed by ``key_to_idx_target``).
 
     Parameters
     ----------
     module:
-        The dg-module (must expose ``boundary``).
-    basis_source:
-        List of basis *elements* in the source degree.
+        The chain complex module; must expose ``base_ring()`` and
+        ``boundary()``.
+    basis_source_keys:
+        Keys of the source basis elements (domain of the boundary map).
     key_to_idx_target:
-        Dictionary mapping basis *keys* in the target degree to row indices.
+        Mapping from target basis key to its row index in the matrix.
     n_target:
-        Number of basis elements in the target degree (number of rows).
+        Number of target basis elements (number of rows in the matrix).
+    sparse:
+        If ``True``, return a sparse matrix; otherwise return a dense matrix.
+    n_jobs:
+        Number of parallel worker processes to use. Values greater than 1
+        require either a pre-forked ``pool`` or a POSIX system with fork
+        support.
+    basis_source:
+        Pre-computed source basis elements corresponding to
+        ``basis_source_keys``. If ``None``, elements are fetched from the
+        module during computation.
+    progress:
+        Optional progress reporter for tracking column-by-column progress.
+    degree:
+        The homological degree of the boundary map being computed. Used for
+        progress reporting and profiling.
+    worker_profile_paths:
+        File paths for per-worker ``cProfile`` output. If provided, each
+        worker writes its profile to the corresponding path.
+    worker_profile_parent:
+        A ``cProfile.Profile`` instance from the calling process. Paused
+        during parallel sections and resumed afterwards.
+    profile:
+        Optional mutable dict accumulating timing and count statistics.
+        Updated in-place with keys such as ``boundary_matrix_seconds``.
+    pool:
+        A pre-forked worker pool (e.g., from ``multiprocessing.Pool``).
+        When provided, avoids the overhead of spawning a new pool per degree.
 
     Returns
     -------
-    A SageMath matrix of size ``n_target × len(basis_source)`` over the
-    base ring of *module*.
+    Any
+        A matrix (dense or sparse, depending on ``sparse``) over
+        ``module.base_ring()`` representing the boundary map.
     """
+
     base_ring = module.base_ring()
     n_source = len(basis_source_keys)
     normalize_key = getattr(module, "_normalize_key", None)
