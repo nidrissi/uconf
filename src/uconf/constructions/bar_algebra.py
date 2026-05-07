@@ -209,7 +209,11 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
         def _vp(msg: str) -> None:
             if verbose:
-                print(f"[{_time.strftime('%H:%M:%S')}]   bar prewarm: {msg}", file=sys.stderr, flush=True)
+                print(
+                    f"[{_time.strftime('%H:%M:%S')}]   bar prewarm: {msg}",
+                    file=sys.stderr,
+                    flush=True,
+                )
 
         base_ring = self.base_ring()
         seen_arities: set[int] = set()

@@ -351,9 +351,9 @@ def _prewarm_parallel_boundary_caches(
         profile["parallel_cache_prewarm_keys"] = profile.get(
             "parallel_cache_prewarm_keys", 0
         ) + len(basis_source_keys)
-        profile["parallel_cache_prewarm_seconds"] = profile.get(
-            "parallel_cache_prewarm_seconds", 0.0
-        ) + elapsed
+        profile["parallel_cache_prewarm_seconds"] = (
+            profile.get("parallel_cache_prewarm_seconds", 0.0) + elapsed
+        )
 
 
 def _boundary_matrix(
@@ -729,13 +729,13 @@ def compute_chain_complex(
             normalize_key_fn = getattr(module, "_normalize_key", None)
             # Collect all source keys across all boundary matrices to prewarm once.
             all_source_keys: tuple = tuple(
-                k
-                for d in extended_degrees
-                if d - 1 in key_to_idx
-                for k in keys_by_degree[d]
+                k for d in extended_degrees if d - 1 in key_to_idx for k in keys_by_degree[d]
             )
             if prewarm:
-                _vprint(f"prewarming caches ({len(all_source_keys)} source keys across all degrees)...", verbose)
+                _vprint(
+                    f"prewarming caches ({len(all_source_keys)} source keys across all degrees)...",
+                    verbose,
+                )
                 _prewarm_parallel_boundary_caches(
                     module, all_source_keys, verbose=verbose, profiler=prewarm_profiler
                 )
