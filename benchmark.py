@@ -16,7 +16,7 @@ from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        "compute.py", description="Compute the chain complex of the unordered configuration model."
+        description="Compute the chain complex of the unordered configuration model."
     )
     parser.add_argument("--dim", "-d", type=int, default=2, help="The dimension of the sphere.")
     parser.add_argument(
