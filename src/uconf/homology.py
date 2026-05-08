@@ -378,12 +378,12 @@ def _prewarm_parallel_boundary_caches(
 # WHY gc.freeze() BEFORE FORKING?
 # =================================
 # gc.freeze() moves all currently tracked Python objects into the permanent
-# (gen 2) GC generation.  The CPython GC does not scan permanent-generation
-# objects, so their internal reference counts are never touched by GC traversal.
-# This avoids copy-on-write (CoW) faults on pages that contain the GC headers
-# of the warmed cache objects, which would otherwise force the OS to copy pages
-# into the worker's private address space just because the GC incremented a
-# refcount, negating most of the RAM savings from fork-CoW sharing.
+# generation.  The CPython cyclic GC does not scan permanent-generation
+# objects, so later collections do not mutate their GC bookkeeping fields or
+# tracked-object lists.  This avoids copy-on-write (CoW) faults on pages that
+# contain the warmed cache objects, which would otherwise force the OS to copy
+# those pages into the worker's private address space just because GC metadata
+# changed, negating most of the RAM savings from fork-CoW sharing.
 #
 # WHY SIGKILL (not SIGTERM or graceful close)?
 # =============================================
@@ -439,10 +439,11 @@ def _worker_loop(
     # Workers must not attempt graceful cleanup — intentional design.
     # Do NOT add sys.exit(), atexit handlers, or resource finalizers here.
     #
-    # Ctrl-C should be handled by the parent process only.  If workers inherit
-    # SIGINT and are blocked in recv()/sleep(), they emit noisy tracebacks
-    # instead of letting the parent tear the whole pool down cleanly.
+    # SIGINT/SIGTERM should be handled by the parent process only.  If workers
+    # inherit these signals and are blocked in recv()/sleep(), they emit noisy
+    # tracebacks instead of letting the parent tear the whole pool down cleanly.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     try:
         while True:
             try:
@@ -456,13 +457,16 @@ def _worker_loop(
                     time.sleep(_WORKER_IDLE_SLEEP_SECONDS)
             result = _boundary_matrix_worker(task)
             result_conn.send(result)
-    except Exception as exc:  # noqa: BLE001
+    except BaseException as exc:  # noqa: BLE001
         # Unexpected error: send an error result so the parent can detect it,
         # then block forever until SIGKILL.  Do NOT call sys.exit().
         try:
             result_conn.send(
                 {
-                    "error": (f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"),
+                    "error": (
+                        f"worker pid {os.getpid()}: "
+                        f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
+                    ),
                     "entries": {},
                     "profile_path": None,
                     "columns_done": 0,
@@ -483,7 +487,7 @@ class _WorkerManager:
 
     See the module-level comments above for the full rationale.
 
-    **LINUX-ONLY**: Relies on fork(2) copy-on-write semantics.
+    **LINUX-ONLY**: Relies on Linux fork(2) copy-on-write semantics.
 
     Worker lifecycle
     ----------------
@@ -597,11 +601,10 @@ class _WorkerManager:
             active_conns.append(self._result_conns[worker_idx])
 
         while completed < len(tasks):
-            # Wait for any result connection to become readable (60 s timeout
-            # to avoid hanging forever if a worker stalls unexpectedly).
-            ready_conns = multiprocessing.connection.wait(
-                active_conns, timeout=self._POLL_TIMEOUT
-            )
+            # Wait for any result connection to become readable.  The timeout is
+            # only a periodic health check so we can notice dead workers; it is
+            # not an overall stall deadline.
+            ready_conns = multiprocessing.connection.wait(active_conns, timeout=self._POLL_TIMEOUT)
             if not ready_conns:
                 # Timeout: check whether any worker has died.
                 dead = [p for p in self._workers if not p.is_alive()]
@@ -727,7 +730,7 @@ def _boundary_matrix(
         If ``True``, return a sparse matrix; otherwise return a dense matrix.
     n_jobs:
         Number of parallel worker processes to use. Values greater than 1
-        require either a pre-forked ``pool`` or a POSIX system with fork
+        require either a pre-forked ``pool`` or Linux with ``fork``
         support.
     basis_source:
         Pre-computed source basis elements corresponding to
@@ -776,7 +779,7 @@ def _boundary_matrix(
             and n_source > 0
             and (
                 pool is not None
-                or (os.name == "posix" and "fork" in multiprocessing.get_all_start_methods())
+                or (sys.platform == "linux" and "fork" in multiprocessing.get_all_start_methods())
             )
         )
         if use_parallel:
@@ -820,9 +823,12 @@ def _boundary_matrix(
                         "collect_boundary_profile": profile is not None,
                     }
                 )
+                # Collect unreachable cycles before freezing so they are not
+                # pinned forever in the permanent generation.
+                gc.collect()
                 # Freeze GC before forking: moves all tracked objects to the
-                # permanent generation so that the GC will not touch their
-                # reference counts in workers, avoiding CoW page faults.
+                # permanent generation so later collections will not mutate
+                # their GC bookkeeping in workers, avoiding CoW page faults.
                 gc.freeze()
                 active_manager = _WorkerManager(n_jobs)
                 own_manager = True
@@ -1014,7 +1020,7 @@ def compute_chain_complex(
         with sparse boundaries.
     n_jobs:
         Number of worker processes to use for boundary-matrix assembly on the
-        ``on_basis`` fast path.  Values above ``1`` currently use POSIX
+        ``on_basis`` fast path.  Values above ``1`` currently use Linux
         ``fork``-based multiprocessing and otherwise fall back to serial
         assembly.
     progress:
@@ -1096,7 +1102,7 @@ def compute_chain_complex(
     use_persistent_pool = (
         n_jobs > 1
         and use_boundary_fast_path
-        and os.name == "posix"
+        and sys.platform == "linux"
         and "fork" in multiprocessing.get_all_start_methods()
         and any(keys_by_degree[d] for d in extended_degrees if d - 1 in key_to_idx)
     )
@@ -1137,10 +1143,14 @@ def compute_chain_complex(
                     "collect_boundary_profile": False,
                 }
             )
+            # Collect unreachable cycles before freezing so they are not pinned
+            # forever in the permanent generation.
+            gc.collect()
             # Freeze GC after warmup and before forking.
             # This moves all currently tracked objects into the permanent GC
-            # generation so the GC never updates their reference counts in
-            # workers, preventing CoW page faults on the warm cache pages.
+            # generation so later collections do not mutate their GC
+            # bookkeeping in workers, preventing CoW page faults on the warm
+            # cache pages.
             gc.freeze()
             _vprint(f"forking workers ({n_jobs} processes)...", verbose)
             shared_pool = _WorkerManager(n_jobs)
