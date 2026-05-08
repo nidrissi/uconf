@@ -599,8 +599,10 @@ class _WorkerManager:
         while completed < len(tasks):
             # Wait for any result connection to become readable (60 s timeout
             # to avoid hanging forever if a worker stalls unexpectedly).
-            ready = multiprocessing.connection.wait(active_conns, timeout=self._POLL_TIMEOUT)
-            if not ready:
+            ready_conns = multiprocessing.connection.wait(
+                active_conns, timeout=self._POLL_TIMEOUT
+            )
+            if not ready_conns:
                 # Timeout: check whether any worker has died.
                 dead = [p for p in self._workers if not p.is_alive()]
                 if dead:
@@ -611,7 +613,7 @@ class _WorkerManager:
                     )
                 continue
 
-            for conn in ready:
+            for conn in ready_conns:
                 try:
                     result = conn.recv()
                 except EOFError:
