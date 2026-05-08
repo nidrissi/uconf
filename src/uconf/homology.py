@@ -436,6 +436,11 @@ def _worker_loop(
     """
     # Workers must not attempt graceful cleanup — intentional design.
     # Do NOT add sys.exit(), atexit handlers, or resource finalizers here.
+    #
+    # Ctrl-C should be handled by the parent process only.  If workers inherit
+    # SIGINT and are blocked in recv()/sleep(), they emit noisy tracebacks
+    # instead of letting the parent tear the whole pool down cleanly.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         while True:
             try:
@@ -538,8 +543,12 @@ class _WorkerManager:
     def map_unordered(self, tasks: list[Any]) -> Iterator[Any]:
         """Distribute *tasks* across workers and yield results as they arrive.
 
-        Tasks are distributed round-robin.  Results are yielded in completion
-        order (not submission order) for maximum throughput.
+        Tasks are distributed in a bounded round-robin schedule.  At most one
+        task per worker is in flight at a time, which prevents the parent from
+        deadlocking while trying to push many large task descriptors into a
+        worker's pipe before it has finished its current task.  Results are
+        yielded in completion order (not submission order) for maximum
+        throughput.
 
         If a worker sends an error result or dies unexpectedly, this method
         kills all workers, reaps zombies, and raises ``RuntimeError``.
@@ -556,28 +565,31 @@ class _WorkerManager:
         if not tasks:
             return
 
-        # Distribute tasks round-robin across workers.
-        worker_pending: list[int] = [0] * self._n_jobs
-        for i, task in enumerate(tasks):
-            worker_idx = i % self._n_jobs
-            self._task_conns[worker_idx].send(task)
-            worker_pending[worker_idx] += 1
-
-        # Build a mapping from connection id → worker index for error messages.
         conn_to_idx = {id(conn): i for i, conn in enumerate(self._result_conns)}
-        # Track remaining expected results per connection.
-        remaining: dict[int, int] = {
-            id(conn): worker_pending[i]
-            for i, conn in enumerate(self._result_conns)
-            if worker_pending[i] > 0
-        }
-        # Only poll connections that have pending results.
-        active_conns: list[Any] = [
-            conn for i, conn in enumerate(self._result_conns) if worker_pending[i] > 0
-        ]
-        total_pending = len(tasks)
+        active_conns: list[multiprocessing.connection.Connection] = []
+        next_task_idx = 0
+        completed = 0
 
-        while total_pending > 0:
+        def _send_task(worker_idx: int, task: Any) -> None:
+            try:
+                self._task_conns[worker_idx].send(task)
+            except (BrokenPipeError, EOFError, OSError) as exc:
+                self.kill_all()
+                raise RuntimeError(
+                    f"Worker {worker_idx} (pid {self._workers[worker_idx].pid}) "
+                    "died while receiving a task"
+                ) from exc
+
+        # Seed each worker with at most one task.  Task descriptors can be
+        # large because they currently carry both chunk basis keys and the
+        # target index map, so unbounded eager submission can fill the pipe and
+        # deadlock the parent while workers are still busy with earlier tasks.
+        for worker_idx in range(min(self._n_jobs, len(tasks))):
+            _send_task(worker_idx, tasks[next_task_idx])
+            next_task_idx += 1
+            active_conns.append(self._result_conns[worker_idx])
+
+        while completed < len(tasks):
             # Wait for any result connection to become readable (60 s timeout
             # to avoid hanging forever if a worker stalls unexpectedly).
             ready = multiprocessing.connection.wait(active_conns, timeout=60.0)
@@ -606,11 +618,13 @@ class _WorkerManager:
                 if result.get("error") is not None:
                     self.kill_all()
                     raise RuntimeError(f"Worker raised an exception: {result['error']}")
-                remaining[id(conn)] -= 1
-                if remaining[id(conn)] == 0:
-                    # No more results expected from this connection.
+                completed += 1
+                w_idx = conn_to_idx[id(conn)]
+                if next_task_idx < len(tasks):
+                    _send_task(w_idx, tasks[next_task_idx])
+                    next_task_idx += 1
+                else:
                     active_conns = [c for c in active_conns if c is not conn]
-                total_pending -= 1
                 yield result
 
     def kill_all(self, *, reap_timeout: float = _REAP_TIMEOUT) -> None:

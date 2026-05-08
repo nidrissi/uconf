@@ -15,7 +15,7 @@ from uconf import (
     compute_chain_complex,
     homology_basis,
 )
-from uconf.homology import _boundary_matrix, compute_homology_representatives
+from uconf.homology import _WorkerManager, _boundary_matrix, compute_homology_representatives
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -198,6 +198,78 @@ class TestChainComplex:
         serial = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=1)
         parallel = compute_chain_complex(module, degrees=range(2), check=True, n_jobs=2)
         assert parallel.differential(1) == serial.differential(1)
+
+    def test_worker_manager_bounds_inflight_tasks(self, monkeypatch) -> None:
+        """The raw worker manager should not queue multiple large tasks per worker."""
+
+        class _FakeWorker:
+            def __init__(self, pid):
+                self.pid = pid
+
+            def is_alive(self):
+                return True
+
+        state = {
+            "outstanding": [0, 0],
+            "max_outstanding": [0, 0],
+        }
+
+        class _FakeTaskConn:
+            def __init__(self, worker_idx):
+                self._worker_idx = worker_idx
+
+            def send(self, _task):
+                state["outstanding"][self._worker_idx] += 1
+                state["max_outstanding"][self._worker_idx] = max(
+                    state["max_outstanding"][self._worker_idx],
+                    state["outstanding"][self._worker_idx],
+                )
+
+        class _FakeResultConn:
+            def __init__(self, worker_idx, results):
+                self._worker_idx = worker_idx
+                self._results = list(results)
+
+            def recv(self):
+                state["outstanding"][self._worker_idx] -= 1
+                return self._results.pop(0)
+
+        result_conns = [
+            _FakeResultConn(
+                0,
+                [
+                    {"entries": {(0, 0): QQ.one()}, "profile_path": None, "columns_done": 1},
+                    {"entries": {(0, 2): QQ.one()}, "profile_path": None, "columns_done": 1},
+                    {"entries": {(0, 4): QQ.one()}, "profile_path": None, "columns_done": 1},
+                ],
+            ),
+            _FakeResultConn(
+                1,
+                [
+                    {"entries": {(0, 1): QQ.one()}, "profile_path": None, "columns_done": 1},
+                    {"entries": {(0, 3): QQ.one()}, "profile_path": None, "columns_done": 1},
+                ],
+            ),
+        ]
+
+        def _fake_wait(active_conns, timeout):
+            del timeout
+            return [conn for conn in active_conns if conn._results]
+
+        monkeypatch.setattr(multiprocessing.connection, "wait", _fake_wait)
+
+        manager = object.__new__(_WorkerManager)
+        manager._workers = [_FakeWorker(101), _FakeWorker(102)]
+        manager._task_conns = [_FakeTaskConn(0), _FakeTaskConn(1)]
+        manager._result_conns = result_conns
+        manager._n_jobs = 2
+        manager._alive = True
+
+        tasks = ["t0", "t1", "t2", "t3", "t4"]
+        results = list(manager.map_unordered(tasks))
+
+        assert len(results) == len(tasks)
+        assert state["max_outstanding"] == [1, 1]
 
     def test_boundary_matrix_profile_tracks_hot_path_costs(self) -> None:
         """Boundary-matrix profiling should track boundary, normalization, and merge costs."""
