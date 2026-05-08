@@ -27,6 +27,7 @@ import os
 import sys
 import tempfile
 import time
+import traceback
 from typing import Any, Iterator, Literal, Sequence, TextIO
 
 import gc
@@ -51,6 +52,7 @@ def _vprint(msg: str, verbose: bool, *, stream: TextIO | None = None, end: str =
 # the model.
 _BOUNDARY_MATRIX_STATE: dict[str, Any] = {}
 _BOUNDARY_MATRIX_CHUNKS_PER_WORKER = 4
+_WORKER_IDLE_SLEEP_SECONDS = 3600.0
 
 
 class _ChainComplexProgressReporter:
@@ -451,7 +453,7 @@ def _worker_loop(
                 # call sys.exit() — that would trigger Python interpreter
                 # teardown, which is exactly what we want to avoid.
                 while True:
-                    time.sleep(3600)
+                    time.sleep(_WORKER_IDLE_SLEEP_SECONDS)
             result = _boundary_matrix_worker(task)
             result_conn.send(result)
     except Exception as exc:  # noqa: BLE001
@@ -460,7 +462,7 @@ def _worker_loop(
         try:
             result_conn.send(
                 {
-                    "error": str(exc),
+                    "error": (f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"),
                     "entries": {},
                     "profile_path": None,
                     "columns_done": 0,
@@ -470,7 +472,7 @@ def _worker_loop(
         except Exception:  # noqa: BLE001
             pass
         while True:
-            time.sleep(3600)
+            time.sleep(_WORKER_IDLE_SLEEP_SECONDS)
 
 
 class _WorkerManager:
@@ -503,6 +505,11 @@ class _WorkerManager:
     # Maximum time (seconds) to wait for a worker to be reaped after SIGKILL.
     # SIGKILL is immediate; the join timeout is purely for zombie reaping.
     _REAP_TIMEOUT: float = 5.0
+    # Maximum time to wait in wait() before checking that workers are still
+    # alive.  This is intentionally long enough to avoid busy polling during
+    # expensive chunk computations, but bounded so the parent never waits
+    # forever if a worker dies or IPC stalls.
+    _POLL_TIMEOUT: float = 60.0
 
     def __init__(self, n_jobs: int) -> None:
         # Use the "fork" context explicitly.  spawn/forkserver are not used
@@ -592,7 +599,7 @@ class _WorkerManager:
         while completed < len(tasks):
             # Wait for any result connection to become readable (60 s timeout
             # to avoid hanging forever if a worker stalls unexpectedly).
-            ready = multiprocessing.connection.wait(active_conns, timeout=60.0)
+            ready = multiprocessing.connection.wait(active_conns, timeout=self._POLL_TIMEOUT)
             if not ready:
                 # Timeout: check whether any worker has died.
                 dead = [p for p in self._workers if not p.is_alive()]
