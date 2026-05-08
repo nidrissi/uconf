@@ -4,6 +4,7 @@ import cProfile
 import multiprocessing
 import os
 import pstats
+import sys
 
 import pytest
 from sage.all import GF, QQ, cached_method
@@ -15,7 +16,13 @@ from uconf import (
     compute_chain_complex,
     homology_basis,
 )
-from uconf.homology import _WorkerManager, _boundary_matrix, compute_homology_representatives
+import uconf.homology as homology_module
+from uconf.homology import (
+    _WorkerManager,
+    _boundary_matrix,
+    _worker_loop,
+    compute_homology_representatives,
+)
 
 # ---------------------------------------------------------------------------
 # chain_complex
@@ -271,6 +278,159 @@ class TestChainComplex:
         assert len(results) == len(tasks)
         assert state["max_outstanding"] == [1, 1]
 
+    def test_worker_loop_reports_keyboardinterrupt_with_traceback(self, monkeypatch) -> None:
+        """Worker crashes should be reported without unwinding normal teardown."""
+
+        class _FakeTaskConn:
+            def recv(self):
+                return "task"
+
+        class _FakeResultConn:
+            def __init__(self):
+                self.payloads = []
+
+            def send(self, payload):
+                self.payloads.append(payload)
+
+        def _boom(_task):
+            raise KeyboardInterrupt("boom")
+
+        def _stop_sleep(_seconds):
+            raise RuntimeError("stop idle loop")
+
+        monkeypatch.setattr(homology_module, "_boundary_matrix_worker", _boom)
+        monkeypatch.setattr(homology_module.time, "sleep", _stop_sleep)
+
+        result_conn = _FakeResultConn()
+        with pytest.raises(RuntimeError, match="stop idle loop"):
+            _worker_loop(_FakeTaskConn(), result_conn)
+
+        assert len(result_conn.payloads) == 1
+        error_message = result_conn.payloads[0]["error"]
+        assert f"worker pid {os.getpid()}" in error_message
+        assert "KeyboardInterrupt: boom" in error_message
+        assert "Traceback" in error_message
+
+    def test_worker_manager_raises_on_worker_error_result(self, monkeypatch) -> None:
+        """Worker error payloads should abort the manager with useful context."""
+
+        class _FakeWorker:
+            def __init__(self, pid):
+                self.pid = pid
+
+            def is_alive(self):
+                return True
+
+        class _FakeTaskConn:
+            def send(self, _task):
+                return None
+
+        class _FakeResultConn:
+            def __init__(self, result):
+                self._result = result
+
+            def recv(self):
+                return self._result
+
+        def _fake_wait(active_conns, timeout):
+            del timeout
+            return list(active_conns)
+
+        monkeypatch.setattr(multiprocessing.connection, "wait", _fake_wait)
+
+        manager = object.__new__(_WorkerManager)
+        manager._workers = [_FakeWorker(101)]
+        manager._task_conns = [_FakeTaskConn()]
+        manager._result_conns = [_FakeResultConn({"error": "worker pid 101: boom"})]
+        manager._n_jobs = 1
+        manager._alive = True
+
+        killed: list[bool] = []
+        manager.kill_all = lambda *args, **kwargs: killed.append(True)
+
+        with pytest.raises(RuntimeError, match="worker pid 101: boom"):
+            list(manager.map_unordered(["t0"]))
+
+        assert killed == [True]
+
+    def test_worker_manager_raises_on_worker_eof(self, monkeypatch) -> None:
+        """EOF on a result pipe should abort the manager and identify the worker."""
+
+        class _FakeWorker:
+            def __init__(self, pid):
+                self.pid = pid
+
+            def is_alive(self):
+                return True
+
+        class _FakeTaskConn:
+            def send(self, _task):
+                return None
+
+        class _FakeResultConn:
+            def recv(self):
+                raise EOFError
+
+        def _fake_wait(active_conns, timeout):
+            del timeout
+            return list(active_conns)
+
+        monkeypatch.setattr(multiprocessing.connection, "wait", _fake_wait)
+
+        manager = object.__new__(_WorkerManager)
+        manager._workers = [_FakeWorker(202)]
+        manager._task_conns = [_FakeTaskConn()]
+        manager._result_conns = [_FakeResultConn()]
+        manager._n_jobs = 1
+        manager._alive = True
+
+        killed: list[bool] = []
+        manager.kill_all = lambda *args, **kwargs: killed.append(True)
+
+        with pytest.raises(RuntimeError, match=r"Worker 0 \(pid 202\) died unexpectedly"):
+            list(manager.map_unordered(["t0"]))
+
+        assert killed == [True]
+
+    def test_worker_manager_raises_on_dead_worker_timeout(self, monkeypatch) -> None:
+        """Timeout polling should detect dead workers and abort promptly."""
+
+        class _FakeWorker:
+            def __init__(self, pid, *, alive):
+                self.pid = pid
+                self._alive = alive
+
+            def is_alive(self):
+                return self._alive
+
+        class _FakeTaskConn:
+            def send(self, _task):
+                return None
+
+        class _FakeResultConn:
+            pass
+
+        def _fake_wait(active_conns, timeout):
+            del active_conns, timeout
+            return []
+
+        monkeypatch.setattr(multiprocessing.connection, "wait", _fake_wait)
+
+        manager = object.__new__(_WorkerManager)
+        manager._workers = [_FakeWorker(303, alive=False)]
+        manager._task_conns = [_FakeTaskConn()]
+        manager._result_conns = [_FakeResultConn()]
+        manager._n_jobs = 1
+        manager._alive = True
+
+        killed: list[bool] = []
+        manager.kill_all = lambda *args, **kwargs: killed.append(True)
+
+        with pytest.raises(RuntimeError, match="1 worker process\\(es\\) died unexpectedly"):
+            list(manager.map_unordered(["t0"]))
+
+        assert killed == [True]
+
     def test_boundary_matrix_profile_tracks_hot_path_costs(self) -> None:
         """Boundary-matrix profiling should track boundary, normalization, and merge costs."""
 
@@ -325,8 +485,8 @@ class TestChainComplex:
             compute_chain_complex(S2, degrees=range(2), n_jobs=0)
 
     @pytest.mark.skipif(
-        os.name != "posix" or "fork" not in multiprocessing.get_all_start_methods(),
-        reason="parallel worker profiling requires POSIX fork workers",
+        sys.platform != "linux" or "fork" not in multiprocessing.get_all_start_methods(),
+        reason="parallel worker profiling requires Linux fork workers",
     )
     def test_parallel_worker_profiles_can_be_merged(self) -> None:
         """Parallel worker profiling should emit mergeable pstats files."""
@@ -393,8 +553,8 @@ class TestChainComplex:
         assert merged.total_calls > 0
 
     @pytest.mark.skipif(
-        os.name != "posix" or "fork" not in multiprocessing.get_all_start_methods(),
-        reason="parallel cache prewarming requires POSIX fork workers",
+        sys.platform != "linux" or "fork" not in multiprocessing.get_all_start_methods(),
+        reason="parallel cache prewarming requires Linux fork workers",
     )
     def test_parallel_workers_inherit_prewarmed_cached_results(self, tmp_path) -> None:
         """Parent prewarming should avoid refilling cached_method entries in workers."""
