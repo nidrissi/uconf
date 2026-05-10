@@ -2,6 +2,7 @@
 
 import cProfile
 import os
+import pickle
 import pstats
 import sys
 import time
@@ -9,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, save
+from sage.all import GF
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
@@ -27,13 +28,17 @@ if __name__ == "__main__":
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Print timestamped phase diagnostics to stderr."
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Print timestamped phase diagnostics to stderr.",
     )
     parser.add_argument(
         "--no-prewarm", action="store_true", help="Disable cache prewarm before forking workers."
     )
     parser.add_argument(
-        "--no-profile", action="store_true",
+        "--no-profile",
+        action="store_true",
         help="Disable cProfile (faster runs when profiling data is not needed).",
     )
     args = parser.parse_args()
@@ -121,7 +126,9 @@ if __name__ == "__main__":
                 ).print_stats()
             print(f"Prewarm profile written to {prewarm_report_path}")
         else:
-            print("Prewarm profiler inactive (n_jobs=1 or prewarm disabled) — no prewarm profile written")
+            print(
+                "Prewarm profiler inactive (n_jobs=1 or prewarm disabled) — no prewarm profile written"
+            )
     else:
         print(f"Elapsed time: {elapsed:.4f}s")
 
@@ -134,7 +141,8 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
 
-    bases_path = Path(f"dump/bases_F2_{path_suffix}.sobj")
+    bases_path = Path(f"dump/bases_F2_{path_suffix}.pkl")
     bases = {d: list(mod.graded_basis_by_weight(d, w)) for d in degs}
-    save(bases, bases_path)
+    with bases_path.open("wb") as f:
+        pickle.dump(bases, f)
     print(f"Graded bases saved to {bases_path}")
