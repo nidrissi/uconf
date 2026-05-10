@@ -2,7 +2,6 @@
 
 import cProfile
 import os
-import pickle
 import pstats
 import sys
 import time
@@ -11,6 +10,7 @@ from pathlib import Path
 import argparse
 
 from sage.all import GF
+from sage.misc.persist import dumps as sage_dumps
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
@@ -141,8 +141,8 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
 
-    bases_path = Path(f"dump/bases_F2_{path_suffix}.pkl")
+    bases_path = Path(f"dump/bases_F2_{path_suffix}.sobj")
     bases = {d: list(mod.graded_basis_by_weight(d, w)) for d in degs}
     with bases_path.open("wb") as f:
-        pickle.dump(bases, f)
+        f.write(sage_dumps(bases))
     print(f"Graded bases saved to {bases_path}")
