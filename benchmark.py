@@ -81,19 +81,19 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_suffix_short = f"{dim}_{w}_{args.deg_max}"
-    path_suffix = f"{path_suffix_short}_{n_jobs}"
+    path_prefix_short = f"d{dim}_w{w}_m{args.deg_max}"
+    path_prefix = f"{path_prefix_short}_j{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_path = Path(f"dump/cc_F2_{path_suffix_short}.csv")
-    cc_path = Path(f"dump/cc_F2_{path_suffix_short}")
+    csv_path = Path(f"dump/F2_{path_prefix_short}_cc.csv")
+    cc_path = Path(f"dump/F2_{path_prefix_short}_cc.sobj")
 
     if do_profile:
         assert profile is not None
         assert prewarm_profile is not None
         assert worker_profile_paths is not None
 
-        report_path = Path(f"dump/benchmark_profile_{timestamp}_{path_suffix}.txt")
-        prewarm_report_path = Path(f"dump/benchmark_prewarm_profile_{timestamp}_{path_suffix}.txt")
+        report_path = Path(f"dump/benchmark_profile_{timestamp}_{path_prefix}.txt")
+        prewarm_report_path = Path(f"dump/benchmark_prewarm_profile_{timestamp}_{path_prefix}.txt")
 
         with report_path.open("w") as report_file:
             report_file.write(f"Date: {datetime.now()}\n")
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
 
-    bases_path = Path(f"dump/bases_F2_{path_suffix_short}.sobj")
+    bases_path = Path(f"dump/F2_{path_prefix_short}_bases.sobj")
     bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
     save(bases, bases_path)
     print(f"Graded bases saved to {bases_path}")
