@@ -232,17 +232,17 @@ if __name__ == "__main__":
             print(f"  [{i}] {r}")
 
     # --- Output paths ---
-    path_prefix = f"d{dim}_w{w}_m{deg_max_resolved}"
+    path_prefix = f"F2_d{dim}_w{w}_m{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     dump_dir.mkdir(parents=True, exist_ok=True)
-    reps_path = dump_dir / f"F2_{path_prefix}_homology_reps.sobj"
-    txt_path = dump_dir / f"F2_{path_prefix}_homology_reps.txt"
+    reps_path = dump_dir / f"{path_prefix}_homology_reps.sobj"
+    txt_path = dump_dir / f"{path_prefix}_homology_reps.txt"
 
     # --- Save profiling data ---
     if do_profile:
         assert profile is not None
-        report_path = dump_dir / f"F2_{path_prefix}_homology_reps_profile.txt"
+        report_path = dump_dir / f"{path_prefix}_homology_reps_profile.txt"
         with report_path.open("w") as report_file:
             report_file.write(f"Date: {datetime.now()}\n")
             report_file.write(

@@ -81,11 +81,11 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_prefix_short = f"d{dim}_w{w}_m{args.deg_max}"
+    path_prefix_short = f"F2_d{dim}_w{w}_m{args.deg_max}"
     path_prefix = f"{path_prefix_short}_j{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_path = Path(f"dump/F2_{path_prefix_short}_cc.csv")
-    cc_path = Path(f"dump/F2_{path_prefix_short}_cc.sobj")
+    csv_path = Path(f"dump/{path_prefix_short}_cc.csv")
+    cc_path = Path(f"dump/{path_prefix_short}_cc.sobj")
 
     if do_profile:
         assert profile is not None
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
 
-    bases_path = Path(f"dump/F2_{path_prefix_short}_bases.sobj")
+    bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
     bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
     save(bases, bases_path)
     print(f"Graded bases saved to {bases_path}")
