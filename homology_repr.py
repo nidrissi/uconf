@@ -8,14 +8,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 import argparse
-import pickle
 
-from sage.all import GF, load
+from sage.all import GF, load, save
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
 # Matches benchmark.py's output name: cc_F2_{dim}_{weight}_{deg_max}_{n_jobs}
-_CC_FILENAME_RE = re.compile(r"^cc_F2_(\d+)_(\d+)_(\d+)_(\d+)$")
+_CC_FILENAME_RE = re.compile(r"^cc_F2_(\d+)_(\d+)_(\d+)$")
 
 
 def _guess_params_from_dump(dump_stem: str) -> tuple[int, int, int] | None:
@@ -237,7 +236,7 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     dump_dir.mkdir(parents=True, exist_ok=True)
-    reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.pkl"
+    reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.sobj"
     txt_path = dump_dir / f"homology_reps_F2_{path_suffix}.txt"
 
     # --- Save profiling data ---
@@ -283,6 +282,5 @@ if __name__ == "__main__":
     serializable = {
         d: [r.monomial_coefficients() for r in reps] for d, reps in representatives.items()
     }
-    with reps_path.open("wb") as f:
-        pickle.dump(serializable, f)
+    save(serializable, reps_path)
     print(f"Representatives saved to {reps_path}")
