@@ -9,8 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF
-from sage.misc.persist import dumps as sage_dumps
+from sage.all import GF, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
@@ -82,10 +81,11 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_suffix = f"{dim}_{w}_{args.deg_max}_{n_jobs}"
+    path_suffix_short = f"{dim}_{w}_{args.deg_max}"
+    path_suffix = f"{path_suffix_short}_{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_path = Path(f"dump/cc_F2_{path_suffix}.csv")
-    cc_path = Path(f"dump/cc_F2_{path_suffix}")
+    csv_path = Path(f"dump/cc_F2_{path_suffix_short}.csv")
+    cc_path = Path(f"dump/cc_F2_{path_suffix_short}")
 
     if do_profile:
         assert profile is not None
@@ -141,8 +141,7 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
 
-    bases_path = Path(f"dump/bases_F2_{path_suffix}.sobj")
-    bases = {d: list(mod.graded_basis_by_weight(d, w)) for d in degs}
-    with bases_path.open("wb") as f:
-        f.write(sage_dumps(bases))
+    bases_path = Path(f"dump/bases_F2_{path_suffix_short}.sobj")
+    bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
+    save(bases, bases_path)
     print(f"Graded bases saved to {bases_path}")
