@@ -8,7 +8,9 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, load, save
+import pickle
+
+from sage.all import GF, load
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
@@ -160,7 +162,7 @@ if __name__ == "__main__":
     path_suffix = f"{dim}_{w}_{args.deg_max}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
-    reps_path = dump_dir / f"homology_reps_F2_{path_suffix}"
+    reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.pkl"
     txt_path = dump_dir / f"homology_reps_F2_{path_suffix}.txt"
 
     # --- Save profiling data ---
@@ -197,7 +199,8 @@ if __name__ == "__main__":
                 f.write(f"  [{i}] {r}\n")
     print(f"Text report saved to {txt_path}")
 
-    # --- Save representatives as .sobj ---
+    # --- Save representatives as a pickle file ---
     # The saved object is a dict mapping degree -> list of module elements.
-    save(representatives, str(reps_path))
-    print(f"Representatives saved to {reps_path}.sobj")
+    with reps_path.open("wb") as f:
+        pickle.dump(representatives, f)
+    print(f"Representatives saved to {reps_path}")
