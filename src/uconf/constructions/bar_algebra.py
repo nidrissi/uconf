@@ -294,7 +294,9 @@ class BarAlgebraModule(CofreeCoalgebraModule):
                             self._split_left_key_is_canonical(m, c_left_key)
 
         morphism_count = len(_morphism_cache) if _morphism_cache is not None else 0
-        _vp(f"complete: alpha_keys={len(seen_alpha_keys)}, left_keys={len(seen_left_keys)}, morphism_keys={morphism_count}")
+        _vp(
+            f"complete: alpha_keys={len(seen_alpha_keys)}, left_keys={len(seen_left_keys)}, morphism_keys={morphism_count}"
+        )
 
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
