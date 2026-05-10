@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF
+from sage.all import GF, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
@@ -133,3 +133,8 @@ if __name__ == "__main__":
 
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
+
+    bases_path = Path(f"dump/bases_F2_{path_suffix}.sobj")
+    bases = {d: list(mod.graded_basis_by_weight(d, w)) for d in degs}
+    save(bases, bases_path)
+    print(f"Graded bases saved to {bases_path}")
