@@ -2,25 +2,37 @@
 
 import cProfile
 import pstats
+import re
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
 import argparse
-
 import pickle
 
 from sage.all import GF, load
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
+# Matches benchmark.py's output name: cc_F2_{dim}_{weight}_{deg_max}_{n_jobs}
+_CC_FILENAME_RE = re.compile(r"^cc_F2_(\d+)_(\d+)_(\d+)_(\d+)$")
+
+
+def _guess_params_from_dump(dump_stem: str) -> tuple[int, int, int] | None:
+    """Try to extract (dim, weight, deg_max) from a benchmark.py-style dump filename."""
+    name = Path(dump_stem).name
+    m = _CC_FILENAME_RE.match(name)
+    if m is None:
+        return None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
             "Compute homology representatives from a saved chain complex dump. "
-            "The dump must have been produced by benchmark.py (or an equivalent script) "
-            "with the same --dim, --weight, and --deg_max parameters."
+            "The dump must have been produced by benchmark.py (or an equivalent script). "
+            "Parameters (--dim, --weight, --deg_max) are guessed from the filename when possible."
         )
     )
     parser.add_argument(
@@ -31,11 +43,27 @@ if __name__ == "__main__":
             "with or without the .sobj extension)."
         ),
     )
-    parser.add_argument("--dim", "-d", type=int, default=2, help="The dimension of the sphere.")
     parser.add_argument(
-        "--weight", "-w", type=int, default=2, help="The weight of the configuration."
+        "--dim",
+        "-d",
+        type=int,
+        default=None,
+        help="The dimension of the sphere (guessed from filename if omitted).",
     )
-    parser.add_argument("--deg_max", "-m", type=int, default=3, help="The maximum degree.")
+    parser.add_argument(
+        "--weight",
+        "-w",
+        type=int,
+        default=None,
+        help="The weight of the configuration (guessed from filename if omitted).",
+    )
+    parser.add_argument(
+        "--deg_max",
+        "-m",
+        type=int,
+        default=None,
+        help="The maximum degree (guessed from filename if omitted).",
+    )
     parser.add_argument(
         "--deg_min",
         type=int,
@@ -60,14 +88,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable cProfile (faster runs when profiling data is not needed).",
     )
+    parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="Skip confirmation prompt when parameters are guessed from the filename.",
+    )
     args = parser.parse_args()
-
-    w = args.weight
-    degs = range(args.deg_min, args.deg_max + 1)
-    dim = args.dim
-    verbose = args.verbose
-    do_profile = not args.no_profile
-    algorithm = args.algorithm
 
     # Normalise the dump path: strip .sobj if present so we can use it as a
     # stem both for loading and for output file naming.
@@ -77,6 +104,53 @@ if __name__ == "__main__":
     else:
         dump_stem = dump_path
     dump_sobj = dump_stem + ".sobj"
+
+    # --- Parameter guessing from filename ---
+    guessed = _guess_params_from_dump(dump_stem)
+    guessed_dim, guessed_w, guessed_deg_max = guessed if guessed is not None else (None, None, None)
+
+    _DEFAULTS = {"dim": 2, "weight": 2, "deg_max": 3}
+
+    def _resolve_param(name: str, user_val: int | None, guessed_val: int | None) -> int:
+        """Return the effective parameter value, emitting warnings/info as appropriate."""
+        if user_val is not None and guessed_val is not None and user_val != guessed_val:
+            print(
+                f"Warning: --{name}={user_val} was given but the filename suggests {name}={guessed_val}.",
+                flush=True,
+            )
+        if user_val is not None:
+            return user_val
+        if guessed_val is not None:
+            return guessed_val
+        return _DEFAULTS[name]
+
+    dim_resolved = _resolve_param("dim", args.dim, guessed_dim)
+    w_resolved = _resolve_param("weight", args.weight, guessed_w)
+    deg_max_resolved = _resolve_param("deg_max", args.deg_max, guessed_deg_max)
+
+    # If any parameter was guessed (i.e. not provided by the user), ask for confirmation.
+    guessed_params = {}
+    if args.dim is None and guessed_dim is not None:
+        guessed_params["dim"] = dim_resolved
+    if args.weight is None and guessed_w is not None:
+        guessed_params["weight"] = w_resolved
+    if args.deg_max is None and guessed_deg_max is not None:
+        guessed_params["deg_max"] = deg_max_resolved
+
+    if guessed_params and not args.yes:
+        guessed_str = ", ".join(f"{k}={v}" for k, v in guessed_params.items())
+        print(f"Guessed from filename: {guessed_str}")
+        answer = input("Proceed with these parameters? [Y/n] ").strip().lower()
+        if answer not in ("", "y", "yes"):
+            print("Aborted.")
+            sys.exit(0)
+
+    dim = dim_resolved
+    w = w_resolved
+    degs = range(args.deg_min, deg_max_resolved + 1)
+    verbose = args.verbose
+    do_profile = not args.no_profile
+    algorithm = args.algorithm
 
     print(
         f"dim={dim}, weight={w}, degs={list(degs)}, algorithm={algorithm}",
@@ -159,7 +233,7 @@ if __name__ == "__main__":
             print(f"  [{i}] {r}")
 
     # --- Output paths ---
-    path_suffix = f"{dim}_{w}_{args.deg_max}"
+    path_suffix = f"{dim}_{w}_{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.pkl"
