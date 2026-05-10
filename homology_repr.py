@@ -13,8 +13,8 @@ from sage.all import GF, load, save
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
-# Matches benchmark.py's output name: cc_F2_{dim}_{weight}_{deg_max}_{n_jobs}
-_CC_FILENAME_RE = re.compile(r"^cc_F2_(\d+)_(\d+)_(\d+)$")
+# Matches benchmark.py's output name pattern for chain complex dumps, e.g. "F2_d2_w3_m4_cc.sobj" or "F2_d2_w3_m4_cc".
+_CC_FILENAME_RE = re.compile(r"^F2_d(\d+)_w(\d+)_m(\d+)_cc$")
 
 
 def _guess_params_from_dump(dump_stem: str) -> tuple[int, int, int] | None:
@@ -232,17 +232,17 @@ if __name__ == "__main__":
             print(f"  [{i}] {r}")
 
     # --- Output paths ---
-    path_suffix = f"{dim}_{w}_{deg_max_resolved}"
+    path_prefix = f"d{dim}_w{w}_m{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     dump_dir.mkdir(parents=True, exist_ok=True)
-    reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.sobj"
-    txt_path = dump_dir / f"homology_reps_F2_{path_suffix}.txt"
+    reps_path = dump_dir / f"F2_{path_prefix}_homology_reps.sobj"
+    txt_path = dump_dir / f"F2_{path_prefix}_homology_reps.txt"
 
     # --- Save profiling data ---
     if do_profile:
         assert profile is not None
-        report_path = dump_dir / f"homology_reps_profile_{timestamp}_{path_suffix}.txt"
+        report_path = dump_dir / f"F2_{path_prefix}_homology_reps_profile.txt"
         with report_path.open("w") as report_file:
             report_file.write(f"Date: {datetime.now()}\n")
             report_file.write(
