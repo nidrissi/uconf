@@ -236,6 +236,7 @@ if __name__ == "__main__":
     path_suffix = f"{dim}_{w}_{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
+    dump_dir.mkdir(parents=True, exist_ok=True)
     reps_path = dump_dir / f"homology_reps_F2_{path_suffix}.pkl"
     txt_path = dump_dir / f"homology_reps_F2_{path_suffix}.txt"
 
@@ -274,7 +275,14 @@ if __name__ == "__main__":
     print(f"Text report saved to {txt_path}")
 
     # --- Save representatives as a pickle file ---
-    # The saved object is a dict mapping degree -> list of module elements.
+    # BarAlgebraModule elements contain references to local closures that
+    # Python's pickle cannot serialise directly.  We save the monomial
+    # coefficients (a plain dict {basis_key: coeff}) for each element instead.
+    # To reconstruct element `e` from its monomial coefficients `mc`, use:
+    #   e = sum(coeff * mod.monomial(key) for key, coeff in mc.items(), mod.zero())
+    serializable = {
+        d: [r.monomial_coefficients() for r in reps] for d, reps in representatives.items()
+    }
     with reps_path.open("wb") as f:
-        pickle.dump(representatives, f)
+        pickle.dump(serializable, f)
     print(f"Representatives saved to {reps_path}")
