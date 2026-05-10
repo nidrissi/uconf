@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF
+from sage.all import GF, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 
@@ -27,13 +27,17 @@ if __name__ == "__main__":
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Print timestamped phase diagnostics to stderr."
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Print timestamped phase diagnostics to stderr.",
     )
     parser.add_argument(
         "--no-prewarm", action="store_true", help="Disable cache prewarm before forking workers."
     )
     parser.add_argument(
-        "--no-profile", action="store_true",
+        "--no-profile",
+        action="store_true",
         help="Disable cProfile (faster runs when profiling data is not needed).",
     )
     args = parser.parse_args()
@@ -77,10 +81,11 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_suffix = f"{dim}_{w}_{args.deg_max}_{n_jobs}"
+    path_suffix_short = f"{dim}_{w}_{args.deg_max}"
+    path_suffix = f"{path_suffix_short}_{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_path = Path(f"dump/cc_F2_{path_suffix}.csv")
-    cc_path = Path(f"dump/cc_F2_{path_suffix}")
+    csv_path = Path(f"dump/cc_F2_{path_suffix_short}.csv")
+    cc_path = Path(f"dump/cc_F2_{path_suffix_short}")
 
     if do_profile:
         assert profile is not None
@@ -121,7 +126,9 @@ if __name__ == "__main__":
                 ).print_stats()
             print(f"Prewarm profile written to {prewarm_report_path}")
         else:
-            print("Prewarm profiler inactive (n_jobs=1 or prewarm disabled) — no prewarm profile written")
+            print(
+                "Prewarm profiler inactive (n_jobs=1 or prewarm disabled) — no prewarm profile written"
+            )
     else:
         print(f"Elapsed time: {elapsed:.4f}s")
 
@@ -133,3 +140,8 @@ if __name__ == "__main__":
 
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}.sobj")
+
+    bases_path = Path(f"dump/bases_F2_{path_suffix_short}.sobj")
+    bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
+    save(bases, bases_path)
+    print(f"Graded bases saved to {bases_path}")
