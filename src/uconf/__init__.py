@@ -94,6 +94,12 @@ from uconf.morphisms import (
     canonical_projection,
     canonical_inclusion,
 )
+from uconf.tikz import (
+    element_to_tikz,
+    tree_to_forest,
+    reps_to_tex_document,
+    Layer,
+)
 
 __all__ = [
     "OperadComponent",
@@ -168,4 +174,8 @@ __all__ = [
     "sample_algebra_pool",
     "sphere_nontrivial_surjection_iter",
     "sphere_nontrivial_operad_basis_iter",
+    "element_to_tikz",
+    "tree_to_forest",
+    "reps_to_tex_document",
+    "Layer",
 ]

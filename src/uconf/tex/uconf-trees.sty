@@ -1,0 +1,59 @@
+%% uconf-trees.sty -- forest-based styles for bar/cobar tree pictures
+%%
+%% Provides terse markup for the layered red/blue/black trees produced by
+%% the uconf library, with automatic layout (no manual level/sibling
+%% distances).
+%%
+%% Usage:
+%%   \usepackage{uconf-trees}
+%%
+%%   \begin{forest} uconf tree
+%%     [{$u\lambda$}, rv
+%%       [{$u\lambda$}, rv, re
+%%         [{$\alpha$}, bx
+%%           [{$u\lambda$}, bv
+%%             [{$v$}, lf][{$v$}, lf][{$v$}, lf]
+%%           ]
+%%         ]
+%%       ]
+%%     ]
+%%   \end{forest}
+%%
+%% Node styles:
+%%   rv -- red vertex   (outer bar tree internal vertex)
+%%   bv -- black vertex (inner cobar/bar tree internal vertex)
+%%   bx -- blue box     (manifold-chain / algebra factor)
+%%   lf -- leaf         (plain text generator)
+%%
+%% Edge styles (apply to the edge into the node from its parent):
+%%   re -- red edge     (outer bar edge)
+%%   de -- dashed edge  (cobar / desuspension edge)
+%% Default edges are solid black.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{uconf-trees}[2026/05/13 v0.1 forest styles for uconf bar/cobar trees]
+
+\RequirePackage{tikz}
+\RequirePackage{forest}
+
+\forestset{
+  uconf tree/.style={
+    for tree={
+      grow'=north,
+      parent anchor=north,
+      child anchor=south,
+      l sep=4mm,
+      s sep=2mm,
+      inner sep=1pt,
+      font=\small,
+      edge={black},
+    },
+  },
+  rv/.style={red, circle, draw=red, inner sep=1pt},
+  bv/.style={circle, draw=black, inner sep=1pt},
+  bx/.style={blue, rectangle, draw=blue, inner sep=2pt},
+  lf/.style={inner sep=3pt},
+  re/.style={edge={red}},
+  de/.style={edge={dashed}},
+}
+
+\endinput
