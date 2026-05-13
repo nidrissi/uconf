@@ -11,11 +11,11 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
   - `src/uconf/constructions/`: bar/cobar constructions and algebraic bar/cobar complexes.
   - `src/uconf/wrappers/`: shifted and Hadamard operad/cooperad wrappers.
   - `src/uconf/tikz.py`: TikZ/forest rendering of bar/cobar tree elements.
+  - `src/uconf/tex/uconf-trees.sty`: LaTeX style file with `forest` macros for tree pictures.
 - `tests/test_*.py`: main regression test suite.
-- `tex/uconf-trees.sty`: LaTeX style file with `forest` macros for tree pictures.
 - `pyproject.toml`: packaging plus pytest/ruff configuration.
-- `docs/`: project notes and optimization writeups.
-- `old-computations/`: older notebooks/utilities kept for reference.
+- `docs/`: Sphinx documentation sources.
+- `benchmark.py`, `homology_repr.py`: CLI scripts for configuration-model computations.
 - `article.tex`, `article.bib`: project-related scientific writing.
 - `old-computations/`: older notebooks/utilities kept for reference.
 
@@ -278,7 +278,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 
 ## TikZ / forest rendering of tree elements
 
-`src/uconf/tikz.py` exposes `element_to_tikz` (re-exported from `uconf`) which converts a bar / cobar / cofree-coalgebra element into a compact LaTeX snippet using the `forest` package.  The companion style file `tex/uconf-trees.sty` provides the styles and a `uconf tree` preset; load it once in your document:
+`src/uconf/tikz.py` exposes `element_to_tikz` (re-exported from `uconf`) which converts a bar / cobar / cofree-coalgebra element into a compact LaTeX snippet using the `forest` package.  The companion style file `src/uconf/tex/uconf-trees.sty` provides the styles and a `uconf tree` preset; copy or symlink it somewhere on your LaTeX search path and load it once in your document:
 
 ```latex
 \usepackage{uconf-trees}
