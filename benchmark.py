@@ -9,9 +9,29 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, save
+from sage.all import GF, QQ, Integer, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
+
+
+def parse_field(s: str):
+    """Parse a --field argument into (Sage ring, filename token).
+
+    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    """
+    if s.strip().lower() in ("q", "qq"):
+        return QQ, "Q"
+    try:
+        n = Integer(int(s))
+    except ValueError as e:
+        raise ValueError(
+            f"--field must be 'Q' or a prime-power integer, got {s!r}"
+        ) from e
+    if n < 2 or not n.is_prime_power():
+        raise ValueError(
+            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
+        )
+    return GF(n), f"F{n}"
 
 
 if __name__ == "__main__":
@@ -23,6 +43,12 @@ if __name__ == "__main__":
         "--weight", "-w", type=int, default=2, help="The weight of the configuration."
     )
     parser.add_argument("--deg_max", "-m", type=int, default=3, help="The maximum degree.")
+    parser.add_argument(
+        "--field",
+        "-f",
+        default="2",
+        help="Base field: prime p for GF(p), or 'Q' for QQ (default: 2).",
+    )
     parser.add_argument(
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
     )
@@ -49,11 +75,15 @@ if __name__ == "__main__":
     verbose = args.verbose
     do_prewarm = not args.no_prewarm
     do_profile = not args.no_profile
-    print(f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}", flush=True)
+    base_ring, field_token = parse_field(args.field)
+    print(
+        f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}, field={field_token}",
+        flush=True,
+    )
 
     if verbose:
         print(f"[{time.strftime('%H:%M:%S')}] building model...", file=sys.stderr, flush=True)
-    model = euclidean_unordered_configuration_model(GF(2), dim)
+    model = euclidean_unordered_configuration_model(base_ring, dim)
     mod = model.module
     if verbose:
         print(f"[{time.strftime('%H:%M:%S')}] model ready", file=sys.stderr, flush=True)
@@ -81,7 +111,7 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_prefix_short = f"F2_d{dim}_w{w}_m{args.deg_max}"
+    path_prefix_short = f"{field_token}_d{dim}_w{w}_m{args.deg_max}"
     path_prefix = f"{path_prefix_short}_j{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     csv_path = Path(f"dump/{path_prefix_short}_cc.csv")
