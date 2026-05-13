@@ -158,6 +158,12 @@ def _sphere_surjection_basis_sign(u: tuple[int, ...], n: int, d: int) -> int:
         # Degree-0 surjection acting on S^0: BF sign is always +1.
         return 1
 
+    # TODO: follows article.tex proof (L953/L959), whose second factor is
+    # (n+2)(n-1)/2 — equivalent mod 2 to (n-2)(n-1)/2 below. The stated
+    # Proposition (L945) and worked example (L969) use n(n-1)/2 = C(n,2),
+    # which disagrees mod 2 for even n (e.g. d=3, n=2: stated +1, proof -1).
+    # The article's parity lemma at L956 only holds for odd n. Resolve
+    # against Berger-Fresse before changing the convention.
     sign_exp = d * n * (n - 1) // 2
     sign_exp += (d * (d - 1) // 2) * ((n - 2) * (n - 1) // 2)
     sign = -1 if sign_exp % 2 else 1
