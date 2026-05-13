@@ -9,21 +9,42 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, load, save
+from sage.all import GF, QQ, Integer, load, save
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
-# Matches benchmark.py's output name pattern for chain complex dumps, e.g. "F2_d2_w3_m4_cc.sobj" or "F2_d2_w3_m4_cc".
-_CC_FILENAME_RE = re.compile(r"^F2_d(\d+)_w(\d+)_m(\d+)_cc$")
+# Matches benchmark.py's output name pattern for chain complex dumps, e.g.
+# "F2_d2_w3_m4_cc.sobj", "F3_d2_w3_m4_cc", or "Q_d2_w3_m4_cc".
+_CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_d(\d+)_w(\d+)_m(\d+)_cc$")
 
 
-def _guess_params_from_dump(dump_stem: str) -> tuple[int, int, int] | None:
-    """Try to extract (dim, weight, deg_max) from a benchmark.py-style dump filename."""
+def parse_field(s: str):
+    """Parse a --field argument into (Sage ring, filename token).
+
+    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    """
+    if s.strip().lower() in ("q", "qq"):
+        return QQ, "Q"
+    try:
+        n = Integer(int(s))
+    except ValueError as e:
+        raise ValueError(
+            f"--field must be 'Q' or a prime-power integer, got {s!r}"
+        ) from e
+    if n < 2 or not n.is_prime_power():
+        raise ValueError(
+            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
+        )
+    return GF(n), f"F{n}"
+
+
+def _guess_params_from_dump(dump_stem: str) -> tuple[str, int, int, int] | None:
+    """Try to extract (field_token, dim, weight, deg_max) from a benchmark.py-style dump filename."""
     name = Path(dump_stem).name
     m = _CC_FILENAME_RE.match(name)
     if m is None:
         return None
-    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+    return m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
 
 
 if __name__ == "__main__":
@@ -70,6 +91,15 @@ if __name__ == "__main__":
         help="The minimum degree (default: -1, matching benchmark.py).",
     )
     parser.add_argument(
+        "--field",
+        "-f",
+        default=None,
+        help=(
+            "Base field: prime p for GF(p), or 'Q' for QQ "
+            "(guessed from filename if omitted; defaults to '2')."
+        ),
+    )
+    parser.add_argument(
         "--algorithm",
         "-a",
         choices=["fast", "sage"],
@@ -106,11 +136,14 @@ if __name__ == "__main__":
 
     # --- Parameter guessing from filename ---
     guessed = _guess_params_from_dump(dump_stem)
-    guessed_dim, guessed_w, guessed_deg_max = guessed if guessed is not None else (None, None, None)
+    if guessed is not None:
+        guessed_field, guessed_dim, guessed_w, guessed_deg_max = guessed
+    else:
+        guessed_field, guessed_dim, guessed_w, guessed_deg_max = None, None, None, None
 
-    _DEFAULTS = {"dim": 2, "weight": 2, "deg_max": 3}
+    _DEFAULTS = {"dim": 2, "weight": 2, "deg_max": 3, "field": "2"}
 
-    def _resolve_param(name: str, user_val: int | None, guessed_val: int | None) -> int:
+    def _resolve_param(name, user_val, guessed_val):
         """Return the effective parameter value, emitting warnings/info as appropriate."""
         if user_val is not None and guessed_val is not None and user_val != guessed_val:
             print(
@@ -126,6 +159,11 @@ if __name__ == "__main__":
     dim_resolved = _resolve_param("dim", args.dim, guessed_dim)
     w_resolved = _resolve_param("weight", args.weight, guessed_w)
     deg_max_resolved = _resolve_param("deg_max", args.deg_max, guessed_deg_max)
+    # For the field, compare on the canonical token ("F2", "F3", "Q") rather than
+    # the raw user string (so e.g. --field q matches a guessed "Q").
+    user_field_token = parse_field(args.field)[1] if args.field is not None else None
+    field_token = _resolve_param("field", user_field_token, guessed_field)
+    base_ring, field_token = parse_field(field_token)
 
     # If any parameter was guessed (i.e. not provided by the user), ask for confirmation.
     guessed_params = {}
@@ -135,6 +173,8 @@ if __name__ == "__main__":
         guessed_params["weight"] = w_resolved
     if args.deg_max is None and guessed_deg_max is not None:
         guessed_params["deg_max"] = deg_max_resolved
+    if args.field is None and guessed_field is not None:
+        guessed_params["field"] = field_token
 
     if guessed_params and not args.yes:
         guessed_str = ", ".join(f"{k}={v}" for k, v in guessed_params.items())
@@ -152,7 +192,7 @@ if __name__ == "__main__":
     algorithm = args.algorithm
 
     print(
-        f"dim={dim}, weight={w}, degs={list(degs)}, algorithm={algorithm}",
+        f"dim={dim}, weight={w}, degs={list(degs)}, algorithm={algorithm}, field={field_token}",
         flush=True,
     )
 
@@ -181,7 +221,7 @@ if __name__ == "__main__":
             flush=True,
         )
     start_model = time.perf_counter()
-    model = euclidean_unordered_configuration_model(GF(2), dim)
+    model = euclidean_unordered_configuration_model(base_ring, dim)
     mod = model.module
     elapsed_model = time.perf_counter() - start_model
     if verbose:
@@ -232,7 +272,7 @@ if __name__ == "__main__":
             print(f"  [{i}] {r}")
 
     # --- Output paths ---
-    path_prefix = f"F2_d{dim}_w{w}_m{deg_max_resolved}"
+    path_prefix = f"{field_token}_d{dim}_w{w}_m{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     dump_dir.mkdir(parents=True, exist_ok=True)
