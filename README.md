@@ -23,6 +23,8 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 **SageMath** is required. `pytest` is needed to run the tests. `comch` is optional (used only by `test_comch_compatibility.py`).
 
+If SageMath is not installed, the easiest way to get it is to install it with `conda` (see [`environment.yml](./environment.yml)) and prefix all subsequent commands with `conda run -n sage`.
+
 ## Development
 
 ```bash
@@ -566,4 +568,3 @@ cannot be pickled).  To reconstruct an element from its dict `mc`:
 ```python
 e = sum((coeff * mod.monomial(key) for key, coeff in mc.items()), mod.zero())
 ```
-
