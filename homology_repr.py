@@ -11,7 +11,11 @@ import argparse
 
 from sage.all import GF, QQ, Integer, load, save
 
-from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
+from uconf import (
+    compute_homology_representatives,
+    euclidean_unordered_configuration_model,
+    reps_to_tex_document,
+)
 
 # Matches benchmark.py's output name pattern for chain complex dumps, e.g.
 # "F2_d2_w3_m4_cc.sobj", "F3_d2_w3_m4_cc", or "Q_d2_w3_m4_cc".
@@ -122,6 +126,15 @@ if __name__ == "__main__":
         "-y",
         action="store_true",
         help="Skip confirmation prompt when parameters are guessed from the filename.",
+    )
+    parser.add_argument(
+        "--tikz",
+        action="store_true",
+        help=(
+            "Also emit a .tex file with forest/TikZ snippets for each "
+            "representative.  Requires \\usepackage{uconf-trees} (see "
+            "tex/uconf-trees.sty) in the consuming document."
+        ),
     )
     args = parser.parse_args()
 
@@ -312,6 +325,17 @@ if __name__ == "__main__":
             for i, r in enumerate(reps):
                 f.write(f"  [{i}] {r}\n")
     print(f"Text report saved to {txt_path}")
+
+    # --- Save TikZ/forest snippets ---
+    if args.tikz:
+        tex_path = dump_dir / f"{path_prefix}_homology_reps.tex"
+        header = (
+            f"Generated from {dump_sobj}\n"
+            f"dim={dim}, weight={w}, degs={list(degs)}, algorithm={algorithm}\n"
+            f"Date: {datetime.now()}"
+        )
+        tex_path.write_text(reps_to_tex_document(representatives, header_comment=header))
+        print(f"TikZ snippets saved to {tex_path}")
 
     # --- Save representatives as a pickle file ---
     # BarAlgebraModule elements contain references to local closures that

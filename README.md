@@ -10,7 +10,9 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
   - `src/uconf/algebraic/`: algebra/coalgebra wrappers, free/cofree constructions.
   - `src/uconf/constructions/`: bar/cobar constructions and algebraic bar/cobar complexes.
   - `src/uconf/wrappers/`: shifted and Hadamard operad/cooperad wrappers.
+  - `src/uconf/tikz.py`: TikZ/forest rendering of bar/cobar tree elements.
 - `tests/test_*.py`: main regression test suite.
+- `tex/uconf-trees.sty`: LaTeX style file with `forest` macros for tree pictures.
 - `pyproject.toml`: packaging plus pytest/ruff configuration.
 - `docs/`: project notes and optimization writeups.
 - `old-computations/`: older notebooks/utilities kept for reference.
@@ -434,6 +436,43 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Internal vertices are `(decoration, child_1, ..., child_k)`.
 - In the current implementation, constructions assume connected inputs (`\bar{P}(1)=0`, `\bar{C}(1)=0`), so internal vertex arity is at least `2`.
 - Degree bookkeeping follows suspension/desuspension conventions used in `bar_construction.py` and `cobar_construction.py`.
+
+## TikZ / forest rendering of tree elements
+
+`src/uconf/tikz.py` exposes `element_to_tikz` (re-exported from `uconf`) which converts a bar / cobar / cofree-coalgebra element into a compact LaTeX snippet using the `forest` package.  The companion style file `tex/uconf-trees.sty` provides the styles and a `uconf tree` preset; load it once in your document:
+
+```latex
+\usepackage{uconf-trees}
+```
+
+Default layer styling (selected automatically by nesting depth):
+
+| layer                       | vertex style | edge style       |
+| --------------------------- | ------------ | ---------------- |
+| outer bar (red)             | `rv`         | `re` (red)       |
+| cobar                       | `bv`         | `de` (dashed)    |
+| inner bar inside cobar      | `bv`         | default (solid)  |
+| manifold / coefficient cell | `bx`         | default          |
+| leaf generator              | `lf`         | default          |
+
+Example:
+
+```python
+from sage.all import QQ
+from uconf import BarConstruction, Lie, element_to_tikz
+from uconf.core.trees import RootedTree
+
+B2 = BarConstruction(Lie)(2, QQ)
+elem = B2(RootedTree((1,), 1, 2))
+print(element_to_tikz(elem))
+# \begin{forest} uconf tree
+# [{...}, rv[{1}, lf, re][{2}, lf, re]]
+# \end{forest}
+```
+
+The `homology_repr.py` script accepts `--tikz` to dump a `.tex` file with one `forest` block per representative, ready to be `\input`'d into a document that loads `uconf-trees`.
+
+For finer control, `tree_to_forest(tree, decoration_formatter=..., layer=...)` renders a single decorated `RootedTree` with explicit styling, and `Layer` lets you mix and match vertex/edge styles.
 
 ## Dynamic wiring at `import uconf`
 
