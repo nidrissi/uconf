@@ -189,7 +189,7 @@ attribute on concrete models, property on wrappers) representing the constant
     `Δ(T) = Δ(gen_root) ∘_k Δ(child_k) ∘ … ∘_1 Δ(child_1)`.
   - Target operad is `HadamardProduct(BarrattEccles, CobarConstruction(C))`.
 
-- `core/pullback_algebra.py` — `PullbackAlgebra'
+- `algebraic/pullback_algebra.py` — `PullbackAlgebra`
   - `PullbackAlgebra(morphism, algebra)`: given a `Q`-algebra and a morphism `f: P → Q`,
     produces a `P`-algebra whose structure map is `γ^P(p; a_1,…,a_n) = γ^Q(f(p); a_1,…,a_n)`.
 
@@ -224,7 +224,7 @@ attribute on concrete models, property on wrappers) representing the constant
 
 ### Chain complexes and homology (`homology.py`)
 
-- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True, n_jobs=1, progress=False, worker_profile_paths=None, worker_profile_parent=None, n_jobs=1, progress=False, worker_profile_paths=None, worker_profile_parent=None)` — builds a SageMath
+- `compute_chain_complex(module, degrees, *, weight=None, check=False, sparse=True, n_jobs=1, progress=False, verbose=False, prewarm=True, prewarm_profiler=None, worker_profile_paths=None, worker_profile_parent=None)` — builds a SageMath
   `ChainComplex` from any dg-module that exposes `graded_basis(d)`,
   `boundary`, and `base_ring()`.  This includes all operad/cooperad
   components, bar/cobar constructions, free algebras, cofree coalgebras,
@@ -254,6 +254,13 @@ attribute on concrete models, property on wrappers) representing the constant
   a list of elements of *module* that are cycles and whose homology classes
   form a basis of `H_degree(module)`.  When *degrees* is not given, a
   minimal range `[degree-1, degree+1]` is used.
+
+- `compute_homology_representatives(module, degree, weight, cc, *, algorithm="fast")`
+  — given a previously built chain complex *cc*, returns a list of cycles
+  in *module* whose homology classes form a basis of `H_degree(cc)`.
+  The default `"fast"` algorithm uses explicit linear algebra (kernel of
+  the outgoing differential row-reduced against the image of the incoming
+  one); `"sage"` delegates to SageMath's `homology(degree, generators=True)`.
 
 ```python
 from sage.all import QQ
@@ -625,8 +632,7 @@ Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
 
 ### API contracts
 
-- `test_common_operad.py`: `OperadComponent` conformance (`Surjection`, `BarrattEccles`).
-- `test_common_cooperad.py`: `CooperadComponent` conformance (`SurjectionDual`).
+- `test_protocols.py`: `OperadComponent` conformance (`Surjection`, `BarrattEccles`) and `CooperadComponent` conformance (`SurjectionDual`).
 
 ### Main operads
 
