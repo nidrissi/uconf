@@ -232,6 +232,25 @@ def _basis_key_to_forest(
     return _node_open(label, STYLE_LEAF) + "]"
 
 
+def _underlying_operad_cls(operad_cls: Any) -> Any:
+    """If ``operad_cls`` is a Bar/Cobar construction wrapper, return the
+    underlying (co)operad whose basis decorates the tree vertices.
+
+    Vertex decorations of a :class:`BarConstruction(P)` basis tree are
+    ``P``-elements, not bar trees — so to render those decorations via a
+    per-vertex formatter we need ``P``'s ``_latex_term``, not the bar
+    construction's (which expects a whole tree).
+    """
+    from uconf.constructions.bar_construction import BarConstruction
+    from uconf.constructions.cobar_construction import CobarConstruction
+
+    if isinstance(operad_cls, BarConstruction):
+        return operad_cls.operad_cls
+    if isinstance(operad_cls, CobarConstruction):
+        return operad_cls.cooperad_cls
+    return operad_cls
+
+
 def _render_corolla(key: tuple, parent: Any, *, depth: int) -> str:
     """Render a ``(tree_key, m_tuple)`` corolla of a cofree/free module.
 
@@ -241,8 +260,13 @@ def _render_corolla(key: tuple, parent: Any, *, depth: int) -> str:
     """
     tree_key, m_tuple = key
     operad_cls = getattr(parent, "_cooperad_cls", None) or parent._operad_cls
+    # When the corolla's (co)operad is itself a Bar/Cobar construction, the
+    # basis tree's vertex decorations come from the *underlying* (co)operad —
+    # use that for the per-vertex formatter so we don't try to render a single
+    # vertex decoration as if it were a whole tree.
+    underlying = _underlying_operad_cls(operad_cls)
     layer = default_layer_for_depth(depth)
-    fmt = _operad_decoration_formatter(operad_cls, parent.base_ring())
+    fmt = _operad_decoration_formatter(underlying, parent.base_ring())
 
     inner = parent._inner_module
 
