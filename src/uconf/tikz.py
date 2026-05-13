@@ -78,11 +78,14 @@ def default_layer_for_depth(depth: int) -> Layer:
 
 
 def _node_open(content: str, *styles: str | None) -> str:
-    """Open a forest node: ``[{content}, style1, style2``.
+    """Open a forest node: ``[{$content$}, style1, style2``.
 
-    The caller is responsible for emitting any children and the closing ``]``.
+    The content is wrapped in ``$...$`` so the label is rendered in math
+    mode (decorations like ``u\\lambda`` and leaf generators like ``v``
+    are mathematical, matching the article's convention).  The caller is
+    responsible for emitting any children and the closing ``]``.
     """
-    pieces = [f"{{{content}}}"]
+    pieces = [f"{{${content}$}}"]
     pieces.extend(s for s in styles if s)
     return "[" + ", ".join(pieces)
 
