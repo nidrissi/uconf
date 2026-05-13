@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, QQ, load, save
+from sage.all import GF, QQ, Integer, load, save
 
 from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
 
@@ -19,11 +19,23 @@ _CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_d(\d+)_w(\d+)_m(\d+)_cc$")
 
 
 def parse_field(s: str):
-    """Parse a --field argument into (Sage ring, filename token)."""
+    """Parse a --field argument into (Sage ring, filename token).
+
+    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    """
     if s.strip().lower() in ("q", "qq"):
         return QQ, "Q"
-    p = int(s)
-    return GF(p), f"F{p}"
+    try:
+        n = Integer(int(s))
+    except ValueError as e:
+        raise ValueError(
+            f"--field must be 'Q' or a prime-power integer, got {s!r}"
+        ) from e
+    if n < 2 or not n.is_prime_power():
+        raise ValueError(
+            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
+        )
+    return GF(n), f"F{n}"
 
 
 def _guess_params_from_dump(dump_stem: str) -> tuple[str, int, int, int] | None:
