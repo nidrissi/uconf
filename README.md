@@ -621,6 +621,80 @@ unit = OBH.unit(QQ)
 Delta(unit)  # → unit of HadamardProduct(BE, Ω(B(Lie⊙E)))
 ```
 
+## Top-level scripts
+
+Two CLI scripts at the repository root drive end-to-end computations on the
+Euclidean unordered configuration model. Both write artifacts under `dump/`
+named with a field/dim/weight/deg_max prefix (e.g. `F2_d2_w2_m3_*`,
+`F3_d2_w2_m3_*`, `Q_d2_w2_m3_*`).
+
+### `benchmark.py` — assemble the chain complex
+
+Builds the configuration-model dg-module and computes its chain complex over a
+chosen base field, in a given weight, up to a given maximum degree. Saves the
+chain complex (`*_cc.sobj`), Betti numbers (`*_cc.csv`), the graded bases
+(`*_bases.sobj`), and (unless `--no-profile`) a `cProfile` report.
+
+```bash
+python benchmark.py --dim 2 --weight 2 --deg_max 3 --jobs 8
+python benchmark.py --field 3 --dim 2 --weight 2 --deg_max 3
+python benchmark.py --field Q --dim 2 --weight 2 --deg_max 3
+```
+
+Key arguments:
+
+- `--dim, -d` (default `2`) — sphere dimension.
+- `--weight, -w` (default `2`) — weight of the configuration subcomplex.
+- `--deg_max, -m` (default `3`) — maximum degree (chain complex is built over
+  `range(-1, deg_max + 1)`).
+- `--field, -f` (default `2`) — base field. Accepts a prime power `p` for
+  `GF(p)` or `Q`/`QQ` for the rationals. Integers that are not prime powers
+  are rejected up front.
+- `--jobs, -j` (default `1`) — number of parallel workers for differential
+  matrix assembly (POSIX `fork`-based).
+- `--verbose, -v` — timestamped phase diagnostics to stderr.
+- `--no-prewarm` — disable cache prewarm before forking workers.
+- `--no-profile` — skip `cProfile`.
+
+### `homology_repr.py` — extract homology representatives
+
+Loads a chain complex dump produced by `benchmark.py` and computes explicit
+cycle representatives of each homology class via
+`compute_homology_representatives`. Saves a text report
+(`*_homology_reps.txt`), a pickle of the monomial coefficients
+(`*_homology_reps.sobj`), and a profile.
+
+```bash
+python homology_repr.py dump/F2_d2_w2_m3_cc.sobj
+python homology_repr.py dump/Q_d2_w2_m3_cc.sobj --algorithm fast
+```
+
+The script infers `dim`, `weight`, `deg_max`, and `field` from the dump
+filename when they follow `benchmark.py`'s naming pattern, prompts for
+confirmation, and warns if an explicit `--field`/`--dim`/`--weight`/`--deg_max`
+disagrees with the filename. Pass `--yes`/`-y` to skip the prompt.
+
+Key arguments:
+
+- `dump` (positional) — path to the chain complex `.sobj` file (extension
+  optional).
+- `--dim`, `--weight`, `--deg_max`, `--field` — same meaning as in
+  `benchmark.py`; omit to infer from the filename.
+- `--deg_min` (default `-1`) — minimum degree.
+- `--algorithm, -a` (`fast` or `sage`, default `fast`) — representative
+  algorithm.
+- `--yes, -y` — skip the confirmation prompt for inferred parameters.
+- `--verbose, -v`, `--no-profile` — as in `benchmark.py`.
+
+The saved pickle stores `{degree: [monomial_coefficients_dict, ...]}` rather
+than module elements directly, because `BarAlgebraModule` elements contain
+closures that pickle cannot serialize. To reconstruct an element `e` from its
+monomial-coefficient dict `mc`:
+
+```python
+e = sum((coeff * mod.monomial(key) for key, coeff in mc.items()), mod.zero())
+```
+
 ## Tests (coverage)
 
 ### API contracts
