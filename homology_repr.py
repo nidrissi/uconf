@@ -25,20 +25,22 @@ _CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_d(\d+)_w(\d+)_m(\d+)_cc$")
 def parse_field(s: str):
     """Parse a --field argument into (Sage ring, filename token).
 
-    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    Accepts 'Q'/'QQ' for the rationals, a prime-power integer for a finite
+    field, or the canonical filename token form ``F<n>`` (so that round-trips
+    through ``_guess_params_from_dump`` -> ``parse_field`` work without losing
+    the prefix).
     """
-    if s.strip().lower() in ("q", "qq"):
+    t = s.strip()
+    if t.lower() in ("q", "qq"):
         return QQ, "Q"
+    # Accept the canonical filename token "F<n>" in addition to a raw integer.
+    digits = t[1:] if t[:1] in ("F", "f") and t[1:].isdigit() else t
     try:
-        n = Integer(int(s))
+        n = Integer(int(digits))
     except ValueError as e:
-        raise ValueError(
-            f"--field must be 'Q' or a prime-power integer, got {s!r}"
-        ) from e
+        raise ValueError(f"--field must be 'Q', a prime-power integer, or 'F<n>'; got {s!r}") from e
     if n < 2 or not n.is_prime_power():
-        raise ValueError(
-            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
-        )
+        raise ValueError(f"--field={n} is not a prime power; GF(n) only exists for prime powers")
     return GF(n), f"F{n}"
 
 
