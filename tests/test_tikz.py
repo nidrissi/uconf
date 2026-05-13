@@ -35,20 +35,20 @@ def _stub_formatter(dec, arity):
 
 
 def test_tree_to_forest_leaf_only():
-    """A bare leaf integer renders as ``[{1}, lf]``."""
+    """A bare leaf integer renders as ``[{$1$}, lf]`` (math-mode label)."""
     out = tree_to_forest(1, decoration_formatter=_stub_formatter)
-    assert out == "[{1}, lf]"
+    assert out == "[{$1$}, lf]"
 
 
 def test_tree_to_forest_default_layer_is_red():
     """The default layer (depth 0) uses red vertex + red edge styles."""
     tree = RootedTree((42,), 1, 2)
     out = tree_to_forest(tree, decoration_formatter=_stub_formatter)
-    # Root vertex rv, no edge style at root
-    assert out.startswith("[{d42/a2}, rv[")
+    # Root vertex rv, no edge style at root, label in math mode
+    assert out.startswith("[{$d42/a2$}, rv[")
     # Children are leaves with rv-edge into the lf node
-    assert "[{1}, lf, re]" in out
-    assert "[{2}, lf, re]" in out
+    assert "[{$1$}, lf, re]" in out
+    assert "[{$2$}, lf, re]" in out
 
 
 def test_tree_to_forest_explicit_layer():
@@ -57,10 +57,10 @@ def test_tree_to_forest_explicit_layer():
     layer = Layer(STYLE_BLACK_VERTEX, STYLE_DASHED_EDGE)
     out = tree_to_forest(tree, decoration_formatter=_stub_formatter, layer=layer)
     assert "rv" not in out
-    assert "[{d7/a2}, bv[" in out
+    assert "[{$d7/a2$}, bv[" in out
     # The two leaves carry the dashed edge style
-    assert "[{1}, lf, de]" in out
-    assert "[{2}, lf, de]" in out
+    assert "[{$1$}, lf, de]" in out
+    assert "[{$2$}, lf, de]" in out
 
 
 def test_tree_to_forest_nested():
@@ -69,9 +69,9 @@ def test_tree_to_forest_nested():
     tree = RootedTree((0,), 1, inner)
     out = tree_to_forest(tree, decoration_formatter=_stub_formatter)
     # Outer root: rv with no edge
-    assert out.startswith("[{d0/a2}, rv[")
+    assert out.startswith("[{$d0/a2$}, rv[")
     # Inner vertex: rv with re edge from outer root
-    assert "[{d1/a2}, rv, re[" in out
+    assert "[{$d1/a2$}, rv, re[" in out
 
 
 def test_tree_to_forest_leaf_renderer_overrides_edge_styling():
