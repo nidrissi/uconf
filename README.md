@@ -36,15 +36,15 @@ pip install -e ".[dev]"
 Run the test suite:
 
 ```bash
-conda run -n sage pytest
+pytest
 ```
 
 Validate before committing:
 
 ```bash
-conda run -n sage ruff check tests src
-conda run -n sage ruff format --check tests src
-conda run -n sage python -m compileall -q src tests
+ruff check tests src
+ruff format --check tests src
+python -m compileall -q src tests
 ```
 
 ## HTML documentation
@@ -52,8 +52,8 @@ conda run -n sage python -m compileall -q src tests
 Install docs dependencies and build:
 
 ```bash
-conda run -n sage python -m pip install -e ".[docs]"
-conda run -n sage sphinx-build --keep-going -b html docs docs/_build/html
+python -m pip install -e ".[docs]"
+sphinx-build --keep-going -b html docs docs/_build/html
 ```
 
 The generated site is written to `docs/_build/html/`.
