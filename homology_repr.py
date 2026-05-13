@@ -11,7 +11,11 @@ import argparse
 
 from sage.all import GF, QQ, Integer, load, save
 
-from uconf import compute_homology_representatives, euclidean_unordered_configuration_model
+from uconf import (
+    compute_homology_representatives,
+    euclidean_unordered_configuration_model,
+    reps_to_tex_document,
+)
 
 # Matches benchmark.py's output name pattern for chain complex dumps, e.g.
 # "F2_d2_w3_m4_cc.sobj", "F3_d2_w3_m4_cc", or "Q_d2_w3_m4_cc".
@@ -21,20 +25,22 @@ _CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_d(\d+)_w(\d+)_m(\d+)_cc$")
 def parse_field(s: str):
     """Parse a --field argument into (Sage ring, filename token).
 
-    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    Accepts 'Q'/'QQ' for the rationals, a prime-power integer for a finite
+    field, or the canonical filename token form ``F<n>`` (so that round-trips
+    through ``_guess_params_from_dump`` -> ``parse_field`` work without losing
+    the prefix).
     """
-    if s.strip().lower() in ("q", "qq"):
+    t = s.strip()
+    if t.lower() in ("q", "qq"):
         return QQ, "Q"
+    # Accept the canonical filename token "F<n>" in addition to a raw integer.
+    digits = t[1:] if t[:1] in ("F", "f") and t[1:].isdigit() else t
     try:
-        n = Integer(int(s))
+        n = Integer(int(digits))
     except ValueError as e:
-        raise ValueError(
-            f"--field must be 'Q' or a prime-power integer, got {s!r}"
-        ) from e
+        raise ValueError(f"--field must be 'Q', a prime-power integer, or 'F<n>'; got {s!r}") from e
     if n < 2 or not n.is_prime_power():
-        raise ValueError(
-            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
-        )
+        raise ValueError(f"--field={n} is not a prime power; GF(n) only exists for prime powers")
     return GF(n), f"F{n}"
 
 
@@ -122,6 +128,11 @@ if __name__ == "__main__":
         "-y",
         action="store_true",
         help="Skip confirmation prompt when parameters are guessed from the filename.",
+    )
+    parser.add_argument(
+        "--tikz",
+        action="store_true",
+        help=("Also emit a .tex file with forest/TikZ snippets for each representative."),
     )
     args = parser.parse_args()
 
@@ -312,6 +323,17 @@ if __name__ == "__main__":
             for i, r in enumerate(reps):
                 f.write(f"  [{i}] {r}\n")
     print(f"Text report saved to {txt_path}")
+
+    # --- Save TikZ/forest snippets ---
+    if args.tikz:
+        tex_path = dump_dir / f"{path_prefix}_homology_reps.tex"
+        header = (
+            f"Generated from {dump_sobj}\n"
+            f"dim={dim}, weight={w}, degs={list(degs)}, algorithm={algorithm}\n"
+            f"Date: {datetime.now()}"
+        )
+        tex_path.write_text(reps_to_tex_document(representatives, header_comment=header))
+        print(f"TikZ snippets saved to {tex_path}")
 
     # --- Save representatives as a pickle file ---
     # BarAlgebraModule elements contain references to local closures that
