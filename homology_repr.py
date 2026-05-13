@@ -130,11 +130,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tikz",
         action="store_true",
-        help=(
-            "Also emit a .tex file with forest/TikZ snippets for each "
-            "representative.  Requires \\usepackage{uconf-trees} (see "
-            "tex/uconf-trees.sty) in the consuming document."
-        ),
+        help=("Also emit a .tex file with forest/TikZ snippets for each representative."),
     )
     args = parser.parse_args()
 
