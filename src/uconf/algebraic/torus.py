@@ -138,7 +138,7 @@ class ReducedTorusCochains(CombinatorialFreeModule):
         )
         self.rename("N*T²")
         self._generators = {gen: self(gen) for gen in generators}
-        self.connectivity = 0
+        self.connectivity = -2
         self.boundary = self.module_morphism(on_basis=lambda _: self.zero(), codomain=self)
 
     def degree_on_basis(self, element: str) -> int:
