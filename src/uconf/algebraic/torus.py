@@ -1,4 +1,4 @@
-r"""Rank-1 torus cochain models and explicit Surjection actions.
+r"""Rank-4 torus cochain models and explicit Surjection actions.
 
 This module implements the reduced cochain complex of ``S^1 × S^1`` (the torus)
 as a rank-4 module with basis elements [0], [α], [β], [γ] and equips it with
@@ -39,48 +39,7 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.display import latex_linear_combination
 from uconf.models.surjection import Surjection
 
-
-def _extract_concatenated_permutations(
-    u: tuple[int, ...], n: int, d: int
-) -> list[tuple[int, ...]] | None:
-    r"""Return the permutation blocks if u has the sphere-admissible form.
-
-    A surjection u of arity n and degree d*(n-1) is
-    sphere-admissible if it can be written as the concatenation of
-    (d+1) permutations σ_1,...,σ_{d+1} of {1,...,n} with
-    the overlap condition σ_j(n) = σ_{j+1}(1) for j=1,...,d.
-    """
-    if n <= 0:
-        return None
-    if n == 1:
-        if u == (1,):
-            return [(1,)]
-        return None
-
-    expected_len = n + d * (n - 1)
-    if len(u) != expected_len:
-        return None
-
-    perms: list[tuple[int, ...]] = []
-    valid = set(range(1, n + 1))
-    for i in range(0, len(u) - 1, n - 1):
-        block = tuple(u[i : i + n])
-        if set(block) != valid:
-            return None
-        perms.append(block)
-
-    return perms
-
-
-def _permutation_sign(perm: tuple[int, ...]) -> int:
-    """Return the sign of a permutation."""
-    inversions = 0
-    for i in range(len(perm)):
-        for j in range(i + 1, len(perm)):
-            if perm[i] > perm[j]:
-                inversions += 1
-    return -1 if inversions % 2 else 1
-
+#TODO: Rechecker si la formule ici correspond bien à celle du papier. De loin elle a l'air de correspondre, mais pas il y a plusieurs termes que je comprends pas, notamment pourquoi Claude a appelé la fonction _extract_concatenated_permutations dans son code. 
 
 def _psi_function(u_tuple: list[tuple[int, ...]], index_subset: tuple[int, ...]) -> int:
     r"""Compute the ψ_{I_S} function for Barratt-Eccles/surjection action.
@@ -114,6 +73,46 @@ def _psi_function(u_tuple: list[tuple[int, ...]], index_subset: tuple[int, ...])
     permutation_image = tuple(mapping[val] for val in first_occurrences)
 
     return _permutation_sign(permutation_image)
+
+def _extract_concatenated_permutations(
+    u: tuple[int, ...], n: int,
+) -> list[tuple[int, ...]] | None:
+    r"""Return the permutation blocks if u has the sphere-admissible form.
+
+    A surjection u of arity n and degree d*(n-1) is
+    sphere-admissible if it can be written as the concatenation of
+    (d+1) permutations σ_1,...,σ_{d+1} of {1,...,n} with
+    the overlap condition σ_j(n) = σ_{j+1}(1) for j=1,...,d.
+    """
+    if n <= 0:
+        return None
+    if n == 1:
+        if u == (1,):
+            return [(1,)]
+        return None
+
+    expected_len = n + d * (n - 1)
+    if len(u) != expected_len:
+        return None
+
+    perms: list[tuple[int, ...]] = []
+    valid = set(range(1, n + 1))
+    for i in range(0, len(u) - 1, n - 1):
+        block = tuple(u[i : i + n])
+        if set(block) != valid:
+            return None
+        perms.append(block)
+
+    return perms
+
+def _permutation_sign(perm: tuple[int, ...]) -> int:
+    """Return the sign of a permutation."""
+    inversions = 0
+    for i in range(len(perm)):
+        for j in range(i + 1, len(perm)):
+            if perm[i] > perm[j]:
+                inversions += 1
+    return -1 if inversions % 2 else 1
 
 
 class ReducedTorusCochains(CombinatorialFreeModule):
