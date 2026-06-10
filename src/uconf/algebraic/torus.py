@@ -17,53 +17,61 @@ class of ``C*(S¹)``, the four basis elements are
 :mod:`uconf.algebraic.spherical`, so the degrees are ``0, -1, -1, -2``.)
 
 **Algebra structure.**
-For ``σ̲ = (σ_0, …, σ_{s-1}) ∈ E(n)`` (an ``s``-tuple of permutations of
-``{1,…,n}``, of degree ``s-1``) and the combinatorial function
-``ψ_{I_S}`` defined in :func:`_psi`, the action is determined by the
-following operations (``article.tex`` Proposition, §"E_∞-algebra of the
-torus"):
+The structure is *defined* as the tensor square of the circle algebra: the
+Barratt--Eccles operad ``E`` is a Hopf operad via the levelwise
+Alexander--Whitney diagonal ``Δ_E(σ_0,…,σ_k) = Σ_i (σ_0,…,σ_i) ⊗
+(σ_i,…,σ_k)``, so ``C*(S¹) ⊗ C*(S¹)`` is an ``E``-algebra by
 
-1. ``μ_σ̲([0]^{⊗n}) = [0]`` when ``σ̲`` has a single permutation;
-2. ``μ_σ̲([α]^{⊗a}, [0]^{⊗d}) = (-1)^{a(a-1)/2} ψ_{I_A}(σ̲) [α]``
-   when ``s = a``;
-3. ``μ_σ̲([β]^{⊗b}, [0]^{⊗d}) = (-1)^{b(b-1)/2} ψ_{I_B}(σ̲) [β]``
-   when ``s = b``;
-4. for the mixed case producing ``[γ]`` (``c`` copies of ``[γ]``, ``a`` of
-   ``[α]``, ``b`` of ``[β]``, ``d`` of ``[0]``), when ``s = 2c+a+b-1``,
-   ``μ_σ̲(…) = (-1)^{ε} ψ_{I_{C⊔A}}(σ̲_1) ψ_{I_{C⊔B}}(σ̲_2) [γ]`` with
-   ``ε = c(c-1)/2 + a(a-1)/2 + b(b-1)/2 + ab + c + b - 1``;
+    ``μ_σ̲ = (μ^{S¹} ⊗ μ^{S¹}) ∘ Δ_E(σ̲)``
+
+with the Hadamard Koszul convention of
+:mod:`uconf.algebraic.hadamard_algebra`.  Here ``μ^{S¹}`` is the circle
+action ``μ_σ̲([*],…,[a_1],…) = (-1)^{s(s-1)/2} ψ_{I_S}(σ̲) [a_1]`` (with
+``s`` permutations and ``s`` inputs equal to ``[a_1]`` at positions
+``I_S``), i.e. the table-reduction pullback of the Berger--Fresse
+interval-cut action on ``N*(Δ¹)`` restricted along ``N*(S¹) ↪ N*(Δ¹)``.
+
+Evaluating the composite in closed form: for
+``σ̲ = (σ_0, …, σ_{s-1}) ∈ E(n)`` of degree ``s-1`` and inputs with ``c``
+copies of ``[γ]``, ``a`` of ``[α]``, ``b`` of ``[β]`` (rest ``[0]``) at
+positions ``I_C, I_A, I_B``, writing ``u = c+a`` and ``v = c+b``:
+
+1. ``μ_σ̲([0],…,[0]) = [0]`` when ``s = 1``;
+2. ``μ_σ̲(…) = (-1)^{a(a-1)/2} ψ_{I_A}(σ̲) [α]`` when ``b = c = 0`` and
+   ``s = a``;
+3. ``μ_σ̲(…) = (-1)^{b(b-1)/2} ψ_{I_B}(σ̲) [β]`` when ``a = c = 0`` and
+   ``s = b``;
+4. ``μ_σ̲(…) = (-1)^{ε} ψ_{I_{C⊔A}}(σ̲_1) ψ_{I_{C⊔B}}(σ̲_2) [γ]`` when
+   ``u ≥ 1``, ``v ≥ 1`` and ``s = u + v - 1``, where
+
+   - ``σ̲_1 = (σ_0,…,σ_{u-1})`` and ``σ̲_2 = (σ_{u-1},…,σ_{s-1})``
+     (the two halves of the AW diagonal *overlap* in ``σ_{u-1}``), and
+   - ``ε = u(u-1)/2 + v(v-1)/2 + u(v+1) + T`` with ``T`` the bi-graded
+     interleaving exponent of :func:`_interleaving_sign_exponent`,
+     ``T = #{p < q : z_p ∈ {γ,β}, z_q ∈ {γ,α}}``;
+
 5. every other product is zero.
 
-When the inputs are not in the article's normal order ``[γ]…[α]…[β]…[0]``
-the result is multiplied by the Koszul reordering sign (see
-:func:`_koszul_reordering_sign`).
+For inputs in the normal order ``[γ]…[α]…[β]…[0]`` one has
+``T = c(c-1)/2 + ca`` and the Case-4 exponent reduces to
+``ε ≡ c(c-1)/2 + a(a-1)/2 + b(b-1)/2 + ab + ca + a (mod 2)``.
 
-.. warning::
-   **Status.** The resulting chain complex satisfies ``d² = 0`` over
-   ``GF(2)`` (verified on thousands of basis elements), which is the
-   characteristic relevant to this project.  Over ``GF(3)``/``QQ`` the
-   Case-4 (``[γ]``-involving) sign is **not yet correct** — see the halt
-   note in :meth:`BarrattEcclesTorusCochainAlgebra._single_action`.  The
-   open conventions are flagged as OQ1/OQ2/OQ3 and must be resolved with
-   the author before relying on this model over ``ℚ``.
-
-Open questions:
-
-- OQ1 — meaning of k per case. The Proposition writes σ̲ = (σ_0,…,σ_{k-1}) (so
-#perms = k, degree k-1), yet Case 1 says "if k = 0" (which would be degree −1,
-impossible) while Cases 2–4 use k as the number of permutations (e.g. Case 2 "if
-k = a" needs #perms = a to match ψ on a size-a subset). My reading: Case 1 fires
-when σ̲ has a single permutation (degree 0); Cases 2/3 need #perms = a / = b; Case
-4 needs #perms = 2c+a+b-1. Please confirm.
-- OQ2 — length mismatch in Case 4. σ̲_2 = (σ_{c+a},…,σ_{2c+a+b-2}) has length
-c+b-1, but ψ_{I_{C⊔B}} requires an argument of length |I_{C⊔B}| = c+b. This is an
-off-by-one (possibly an intended overlap, i.e. σ̲_2 should start at σ_{c+a-1}, or a
-typo). It must be resolved before the Case-4 sign/ψ is correct.
-- OQ3 — input ordering. The article states each case for inputs in the normal order
-[γ]…[α]…[β]…[0]. In the operad action inputs arrive at arbitrary positions; the ψ
-factors already encode positions via the index-subsets, but please confirm no extra
-Koszul reordering sign on the (graded) inputs is required beyond what ψ + the
-count-based prefactor capture.
+.. note::
+   This corrects the Proposition in ``article.tex`` (as of 2026-06), whose
+   Case-4 exponent ``… + ab + c + b - 1`` and σ̲_2 starting at ``σ_{c+a}``
+   do not define a chain map: the stated sign differs from the one above
+   by ``(-1)^{ca + a + c + b + 1}`` in normal order (a discrepancy
+   containing the cross-term ``ca``, hence not removable by rescaling
+   basis elements), and the position dependence is *not* the naive Koszul
+   sign on total degrees — ``[γ]`` is even but both of its tensor factors
+   are odd, so transposing ``[γ]`` past ``[α]`` or ``[β]`` flips the sign.
+   The formula implemented here was verified over ``QQ`` against the
+   first-principles composite ``(μ^{S¹} ⊗ μ^{S¹}) ∘ Δ_E`` (with
+   ``μ^{S¹}`` computed by table reduction + the interval-cut action of
+   :mod:`uconf.algebraic.simplicial`) on all basis elements of ``E(n)_d``
+   for ``n ≤ 3``, ``d ≤ 3`` (``d ≤ 4`` for ``n = 2``) and all inputs, and
+   satisfies the chain-map identity ``μ_{∂σ̲} = 0`` for ``n ≤ 3``,
+   ``d ≤ 5``.
 """
 
 from __future__ import annotations
@@ -135,34 +143,33 @@ def _sign(exponent: int) -> int:
     return -1 if exponent % 2 else 1
 
 
-# Parity (degree mod 2) and normal-order key of each basis label. The article
-# states each product for inputs in the normal order ``[γ] … [α] … [β] … [0]``;
-# only ``[α]`` and ``[β]`` are odd, so the only Koszul sign incurred when the
-# actual inputs are in a different order comes from ``[β]``-before-``[α]`` pairs.
-_PARITY = {"0": 0, "α": 1, "β": 1, "γ": 0}
-_NORMAL_ORDER_KEY = {"γ": 0, "α": 1, "β": 2, "0": 3}
+# Tensor bi-grading of each basis label: writing ``z = x ⊗ y`` with
+# ``x, y ∈ {[*], [a_1]}``, ``_X_PARITY`` (resp. ``_Y_PARITY``) is the degree
+# parity of the first (resp. second) circle factor.
+_X_PARITY = {"0": 0, "α": 1, "β": 0, "γ": 1}
+_Y_PARITY = {"0": 0, "α": 0, "β": 1, "γ": 1}
 
 
-def _koszul_reordering_sign(labels: tuple[str, ...]) -> int:
-    r"""Koszul sign of stably sorting ``labels`` into the normal order.
+def _interleaving_sign_exponent(labels: tuple[str, ...]) -> int:
+    r"""Bi-graded Koszul exponent ``T = Σ_{p<q} υ(z_p)·ξ(z_q)``.
 
-    The normal order is ``γ, α, β, 0`` (see :data:`_NORMAL_ORDER_KEY`). The
-    sign is ``(-1)^{Σ}`` over pairs ``i < j`` that are out of normal order,
-    weighted by the product of their parities. Since only ``α``/``β`` are odd
-    and ``key(α) < key(β)``, this equals ``(-1)`` to the number of pairs
-    ``i < j`` with ``label_i = β`` and ``label_j = α``; it is ``+1`` whenever
-    at most one of ``α``/``β`` is present.
+    Writing each input as a tensor ``z_p = x_p ⊗ y_p`` of circle factors,
+    this is the Koszul exponent of the unshuffle
+    ``(x_1, y_1, …, x_n, y_n) ↦ (x_1, …, x_n, y_1, …, y_n)``, i.e. the
+    number of pairs ``p < q`` with ``z_p ∈ {γ, β}`` and ``z_q ∈ {γ, α}``.
+
+    This is *not* a function of the total degrees: ``[γ]`` is even, but
+    both of its tensor factors are odd, so transposing ``[γ]`` past
+    ``[α]`` or ``[β]`` flips the sign while transposing it past ``[0]``
+    or another ``[γ]`` does not.
     """
     exponent = 0
-    for i in range(len(labels)):
-        ki = _NORMAL_ORDER_KEY[labels[i]]
-        pi = _PARITY[labels[i]]
-        if pi == 0:
-            continue
-        for j in range(i + 1, len(labels)):
-            if ki > _NORMAL_ORDER_KEY[labels[j]]:
-                exponent += pi * _PARITY[labels[j]]
-    return _sign(exponent)
+    odd_y_seen = 0
+    for lab in labels:
+        if _X_PARITY[lab]:
+            exponent += odd_y_seen
+        odd_y_seen += _Y_PARITY[lab]
+    return exponent
 
 
 class ReducedTorusCochains(CombinatorialFreeModule):
@@ -229,9 +236,10 @@ class ReducedTorusCochains(CombinatorialFreeModule):
 class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
     r"""Explicit ``BarrattEccles``-algebra structure on the torus cochains.
 
-    Implements the operations of the Proposition in ``article.tex``,
-    §"The E_∞-algebra structure of C*(S¹) ⊗ C*(S¹)", on
-    :class:`ReducedTorusCochains`.
+    Implements the closed form of ``(μ^{S¹} ⊗ μ^{S¹}) ∘ Δ_E`` on
+    :class:`ReducedTorusCochains` — see the module docstring.  This is the
+    Proposition in ``article.tex``, §"The E_∞-algebra structure of
+    C*(S¹) ⊗ C*(S¹)", with the Case-4 sign corrected.
     """
 
     def __init__(self, base_ring):
@@ -257,67 +265,50 @@ class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
         I_C = tuple(i + 1 for i, lab in enumerate(labels) if lab == "γ")
         a, b, c = len(I_A), len(I_B), len(I_C)
 
-        # The article states each product for inputs in the normal order
-        # [γ]…[α]…[β]…[0]; recover arbitrary orderings via the Koszul sign of
-        # sorting the (graded) inputs into that order. This is +1 for Cases
-        # 1–3 and only bites in Case 4 (interleaved [α]/[β]).
-        koszul = _koszul_reordering_sign(labels)
-
         # Case 1: all inputs are [0].  The basepoint class is the algebra
         # unit, so a single (degree-0) permutation acts as the augmentation
         # and higher-degree elements act as zero.
         if a == 0 and b == 0 and c == 0:
             return ("0", 1 if s == 1 else 0)
 
-        # Case 2: copies of [α] and [0] only.
+        # Case 2: copies of [α] and [0] only — the circle action on the
+        # first tensor factor (the second factor contributes the unit).
         if c == 0 and b == 0:
             if s != a:
                 return ("α", 0)
-            return ("α", koszul * _sign(a * (a - 1) // 2) * _psi(perms, I_A))
+            return ("α", _sign(a * (a - 1) // 2) * _psi(perms, I_A))
 
         # Case 3: copies of [β] and [0] only.
         if c == 0 and a == 0:
             if s != b:
                 return ("β", 0)
-            return ("β", koszul * _sign(b * (b - 1) // 2) * _psi(perms, I_B))
+            return ("β", _sign(b * (b - 1) // 2) * _psi(perms, I_B))
 
-        # Case 4: mixed case producing [γ] (γ present, or both α and β).
-        #
-        # HALT / TODO (OQ2 + Case-4 sign — needs author confirmation):
-        # The σ̲-split below is the well-typed "overlap" reading of the
-        # article: σ̲_1 (length c+a) pairs with I_{C⊔A} and σ̲_2 (length c+b)
-        # with I_{C⊔B}, the two sharing σ_{c+a-1} so the total length is
-        # 2c+a+b-1 = s.  (article.tex literally writes σ̲_2 = (σ_{c+a}, …,
-        # σ_{2c+a+b-2}) of length c+b-1, which is one short of |I_{C⊔B}| = c+b
-        # and makes ψ ill-typed — see OQ2.)  This *structure* is correct, but
-        # the *sign* below is NOT yet right: with it, d² = 0 holds over GF(2)
-        # but FAILS over GF(3)/QQ on γ-involving products (residual ±2[γ]).
-        # The discrepancy is an ordering/σ-dependent sign that no count-only
-        # correction f(a,b,c) can fix (verified by search); swapping the
-        # ψ-pairing *does* give d²=0 but only by wrongly zeroing μ([γ],[α]),
-        # so it is rejected.  Per the project halt protocol, the Case-4 sign
-        # convention (OQ1/OQ2/OQ3) must be resolved with the author against
-        # Berger–Fresse / Roca i Lucio before this is trusted over ℚ.
-        if s != 2 * c + a + b - 1:
+        # Case 4: γ-output ([γ] present, or both [α] and [β]).  Exactly one
+        # term of the AW diagonal Δ_E(σ̲) = Σ_i (σ_0,…,σ_i) ⊗ (σ_i,…,σ_{s-1})
+        # survives, the one whose front half has u = c+a permutations (the
+        # number of odd inputs seen by the first circle factor); the two
+        # halves overlap in σ_{u-1}.  The exponent collects the two circle
+        # signs C(u,2) and C(v,2), the Hadamard interchange sign
+        # |σ̲_2|·u = (v-1)·u (folded with C(u,2) into u(v+1) mod 2), and the
+        # bi-graded input-unshuffle sign T.  See the module docstring.
+        u, v = c + a, c + b
+        if s != u + v - 1:
             return ("γ", 0)
         I_CA = tuple(sorted(I_C + I_A))
         I_CB = tuple(sorted(I_C + I_B))
-        sigma_1 = perms[: c + a]
-        sigma_2 = perms[c + a - 1 :]
-        exponent = c * (c - 1) // 2 + a * (a - 1) // 2 + b * (b - 1) // 2 + a * b + c + b - 1
-        return ("γ", koszul * _sign(exponent) * _psi(sigma_1, I_CA) * _psi(sigma_2, I_CB))
+        sigma_1 = perms[:u]
+        sigma_2 = perms[u - 1 :]
+        exponent = u * (u - 1) // 2 + v * (v - 1) // 2 + u * (v + 1)
+        exponent += _interleaving_sign_exponent(labels)
+        return ("γ", _sign(exponent) * _psi(sigma_1, I_CA) * _psi(sigma_2, I_CB))
 
     def _act_impl(self, p_element: BarrattEccles.Element, algebra_elements):
         r"""Implement ``μ_σ̲(x_1, …, x_n)`` on the torus cochains.
 
-        Inputs are identified by position; the article's normal-order
-        presentation is recovered through the index subsets ``I_S`` passed
-        to ``ψ`` together with the Koszul reordering sign of
-        :func:`_koszul_reordering_sign` (OQ3: an extra Koszul sign on the
-        graded inputs *is* required — without it ``[α]·[β]`` and ``[β]·[α]``
-        would coincide instead of being negatives, breaking ``d² = 0``).
-        See the Case-4 halt note in :meth:`_single_action` for the remaining
-        γ-involving sign that is not yet settled.
+        Inputs are identified by position; positions enter through the
+        index subsets ``I_S`` passed to ``ψ`` and through the bi-graded
+        interleaving sign of :func:`_interleaving_sign_exponent`.
         """
         if p_element.arity() == 0:
             return self.module.zero()
