@@ -108,9 +108,7 @@ class _ChainComplexProgressReporter:
             f"{self._completed}/{self._total_columns} columns ({pct}%){degree_msg}"
         )
         if self._interactive:
-            width = max(self._last_width, len(message))
-            self._last_width = width
-            _vprint(f"{message.ljust(width)}\r", True, stream=self._stream, end="")
+            _vprint(f"\033[K{message}\r", True, stream=self._stream, end="")
             return
         print(message, file=self._stream, flush=True)
 
