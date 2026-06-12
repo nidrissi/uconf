@@ -64,7 +64,7 @@ pytest tests/test_file.py::test_function
 
 Do not edit:
 
-- `article.tex`, `article.bib` — publication source, not code. Unless the user explicitly asks you to edit the LaTeX sources.
+- `article.tex`, `article.bib` — publication source, not code. Do not edit unless the user explicitly asks you to.
 - `old-computations/` — kept for historical reference; do not refactor.
 - `dump/` — output directory for `benchmark.py` and `homology_repr.py`.
   Agents may write artifacts here when running the CLI scripts, but do not
@@ -79,11 +79,12 @@ Run all four. They mirror CI. Substitute the environment prefix from §2.
 <env> ruff check tests src
 <env> ruff format --check tests src
 <env> python -m compileall -q src tests
-<env> pytest
 ```
 
 Ruff is configured to lint **both** `tests/` and `src/`. Linting only `src/`
 is incomplete and will fail CI.
+
+Afterwards, run the validation on the tests that are affected by the changes you made. Do not run the full test suite (which is time-expensive) unless the user specifically asks you to.
 
 ## 5. Mathematical invariants
 
