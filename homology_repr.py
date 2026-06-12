@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 import argparse
+from typing import Literal
 
 from sage.all import GF, QQ, Integer, load, save
 
@@ -16,10 +17,11 @@ from uconf import (
     euclidean_unordered_configuration_model,
     reps_to_tex_document,
 )
+from uconf.algebraic.torus_configuration import surjection_torus_configuration_model
 
 # Matches benchmark.py's output name pattern for chain complex dumps, e.g.
 # "F2_d2_w3_m4_cc.sobj", "F3_d2_w3_m4_cc", or "Q_d2_w3_m4_cc".
-_CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_d(\d+)_w(\d+)_m(\d+)_cc$")
+_CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_(T2|S\d+)_w(\d+)_m(\d+)_cc$")
 
 
 def parse_field(s: str):
@@ -44,13 +46,17 @@ def parse_field(s: str):
     return GF(n), f"F{n}"
 
 
-def _guess_params_from_dump(dump_stem: str) -> tuple[str, int, int, int] | None:
+def _guess_params_from_dump(dump_stem: str) -> tuple[str, int | Literal["torus"], int, int] | None:
     """Try to extract (field_token, dim, weight, deg_max) from a benchmark.py-style dump filename."""
     name = Path(dump_stem).name
     m = _CC_FILENAME_RE.match(name)
     if m is None:
         return None
-    return m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
+    if m.group(2) == "T2":
+        dim = "torus"
+    else:
+        dim = int(m.group(2)[1:])  # Strip the "S" prefix
+    return m.group(1), dim, int(m.group(3)), int(m.group(4))
 
 
 if __name__ == "__main__":
@@ -58,7 +64,8 @@ if __name__ == "__main__":
         description=(
             "Compute homology representatives from a saved chain complex dump. "
             "The dump must have been produced by benchmark.py (or an equivalent script). "
-            "Parameters (--dim, --weight, --deg_max) are guessed from the filename when possible."
+            "Parameters (--sphere-dim/--torus, --weight, --deg_max) are guessed "
+            "from the filename when possible."
         )
     )
     parser.add_argument(
@@ -69,13 +76,21 @@ if __name__ == "__main__":
             "with or without the .sobj extension)."
         ),
     )
-    parser.add_argument(
-        "--dim",
-        "-d",
+
+    model_group = parser.add_mutually_exclusive_group()
+    model_group.add_argument(
+        "--sphere-dim",
+        "-S",
         type=int,
-        default=None,
-        help="The dimension of the sphere (guessed from filename if omitted).",
+        help="The dimension of the sphere  (guessed from filename if omitted).",
     )
+    model_group.add_argument(
+        "--torus",
+        "-T",
+        action="store_true",
+        help="Use the torus configuration model instead of the sphere  (guessed from filename if omitted).",
+    )
+
     parser.add_argument(
         "--weight",
         "-w",
@@ -167,7 +182,8 @@ if __name__ == "__main__":
             return guessed_val
         return _DEFAULTS[name]
 
-    dim_resolved = _resolve_param("dim", args.dim, guessed_dim)
+    user_dim: int | Literal["torus"] | None = "torus" if args.torus else args.sphere_dim
+    dim_resolved = _resolve_param("dim", user_dim, guessed_dim)
     w_resolved = _resolve_param("weight", args.weight, guessed_w)
     deg_max_resolved = _resolve_param("deg_max", args.deg_max, guessed_deg_max)
     # For the field, compare on the canonical token ("F2", "F3", "Q") rather than
@@ -178,7 +194,7 @@ if __name__ == "__main__":
 
     # If any parameter was guessed (i.e. not provided by the user), ask for confirmation.
     guessed_params = {}
-    if args.dim is None and guessed_dim is not None:
+    if user_dim is None and guessed_dim is not None:
         guessed_params["dim"] = dim_resolved
     if args.weight is None and guessed_w is not None:
         guessed_params["weight"] = w_resolved
@@ -232,7 +248,10 @@ if __name__ == "__main__":
             flush=True,
         )
     start_model = time.perf_counter()
-    model = euclidean_unordered_configuration_model(base_ring, dim)
+    if dim == "torus":
+        model = surjection_torus_configuration_model(base_ring)
+    else:
+        model = euclidean_unordered_configuration_model(base_ring, dim)
     mod = model.module
     elapsed_model = time.perf_counter() - start_model
     if verbose:
@@ -283,7 +302,8 @@ if __name__ == "__main__":
             print(f"  [{i}] {r}")
 
     # --- Output paths ---
-    path_prefix = f"{field_token}_d{dim}_w{w}_m{deg_max_resolved}"
+    model_token = "T2" if dim == "torus" else f"S{dim}"
+    path_prefix = f"{field_token}_{model_token}_w{w}_m{deg_max_resolved}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dump_dir = Path("dump")
     dump_dir.mkdir(parents=True, exist_ok=True)

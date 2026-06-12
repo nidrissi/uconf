@@ -70,9 +70,8 @@ from uconf.core.morphism import OperadMorphism
 from uconf.core.twisting import TwistingMorphism
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
-from uconf.models import _compute_table_reduction_cached
 from uconf.morphisms.canonical_twisting import canonical_inclusion
-from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
+from uconf.morphisms.surjection_comodule import make_surjection_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
 
@@ -93,61 +92,6 @@ class ConfigurationLayers:
     pulled_back: PullbackAlgebra
     pi: TwistingMorphism
     bar: BarAlgebra
-
-
-def _make_surjection_comodule_morphism(cooperad_cls) -> OperadMorphism:
-    """Build the operad morphism Ω(C) → S ⊙ Ω(C).
-
-    Composes the e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) (where
-    E = BarrattEccles) with table reduction on the left factor, yielding
-    a morphism into S ⊙ Ω(C) (where S = Surjection).
-    """
-    be_comodule = make_e_comodule_morphism(cooperad_cls)
-    cobar = CobarConstruction(cooperad_cls)
-    surj_target = HadamardProduct(Surjection, cobar)
-
-    def _on_element(element):
-        # Apply the BE-valued e-comodule morphism
-        be_had_elem = be_comodule(element)
-
-        # Apply table_reduction to the left (BarrattEccles) factor
-        source_parent = be_had_elem.parent()
-        n = source_parent.arity()
-        base_ring = source_parent.base_ring()
-        target_n = surj_target(n, base_ring)
-
-        # Cache table_reduction results per BE basis key within this element,
-        # avoiding redundant computation for repeated keys.
-        tr_cache: dict = {}
-
-        # Accumulate result as {key: coeff} dict to avoid repeated element
-        # construction overhead.
-        result_dict: dict = {}
-        R = target_n.base_ring()
-
-        be_parent = source_parent.left_parent()
-        be_n = be_parent.arity()
-        be_ring = be_parent.base_ring()
-        for (be_key, cobar_key), coeff in be_had_elem:
-            if be_key in tr_cache:
-                surj_elem = tr_cache[be_key]
-            else:
-                # Call the cached table_reduction function directly,
-                # bypassing the BE element construction + morphism overhead.
-                surj_elem = _compute_table_reduction_cached(be_n, be_ring, be_key)
-                tr_cache[be_key] = surj_elem
-
-            for surj_key, surj_coeff in surj_elem:
-                combined_key = (surj_key, cobar_key)
-                combined_coeff = R(coeff * surj_coeff)
-                if combined_key in result_dict:
-                    result_dict[combined_key] += combined_coeff
-                else:
-                    result_dict[combined_key] = combined_coeff
-
-        return target_n._from_dict(result_dict, remove_zeros=True)
-
-    return OperadMorphism(cobar, surj_target, _on_element)
 
 
 def labelled_configuration_model(
@@ -207,7 +151,7 @@ def _build_labelled_layers(
     # manifold_model (a Surjection-algebra) is used directly.
     tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
 
-    comodule_morphism = _make_surjection_comodule_morphism(BXsLie)
+    comodule_morphism = make_surjection_comodule_morphism(BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     iota = canonical_inclusion(BXsLie)
     bar = BarAlgebra(iota, pulled_back)

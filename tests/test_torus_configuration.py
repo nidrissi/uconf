@@ -1,8 +1,9 @@
 """Tests for the torus (Barratt--Eccles) cochain model and configuration model.
 
 The torus cochains ``C*(S¹) ⊗ C*(S¹)`` carry an explicit *Barratt--Eccles*
-algebra structure (the surjection operad is not Hopf, so a Surjection-algebra
-structure is not available — see ``src/uconf/algebraic/torus.py``).
+algebra structure (the surjection operad is not Hopf, and the action provably
+does not factor through table reduction — see ``src/uconf/algebraic/torus.py``;
+the Surjection-algebra torus model is ``uconf.algebraic.torus_simplicial``).
 
 The closed-form action implemented in ``torus.py`` is the tensor square of
 the circle action via the Alexander--Whitney diagonal of the Barratt--Eccles
@@ -24,9 +25,13 @@ from uconf.models.barratt_eccles import BarrattEccles
 from uconf.models.simplicial import SimplicialCochains
 from uconf.algebraic.torus import BarrattEcclesTorusCochainAlgebra, ReducedTorusCochains
 from uconf.algebraic.torus_configuration import (
+    _build_surjection_torus_layers,
     _build_torus_layers,
+    surjection_torus_configuration_model,
     unordered_torus_configuration_model,
 )
+from uconf.homology import compute_chain_complex
+from uconf.models.surjection import Surjection
 
 
 # --------------------------------------------------------------------------- #
@@ -89,10 +94,25 @@ class TestTorusCochainAlgebra:
         assert alg.act(x, [gb, gg]) == -gg
         assert alg.act(x, [gg, gb]) == gg
 
+    @pytest.mark.parametrize("base_ring", [GF(2), GF(3), QQ])
+    def test_action_does_not_factor_through_surjection(self, base_ring):
+        """The BE action does not factor through the surjection operad:
+        ``z = x - section(TR(x))`` lies in ``ker(TR)`` but acts nontrivially
+        (established 2026-06; the witness has coefficient ±1, so this holds
+        over every base ring).  The Surjection-algebra torus model lives in
+        ``uconf.algebraic.torus_simplicial`` instead."""
+        alg = BarrattEcclesTorusCochainAlgebra(base_ring)
+        m = alg.module
+        x = BarrattEccles(3, base_ring)([[1, 2, 3], [1, 3, 2], [2, 1, 3]])
+        z = x - x.table_reduction().section()
+        assert not z.table_reduction()
+        inputs = [m.generator("β"), m.generator("γ"), m.generator("α")]
+        assert alg.act(z, inputs) == -m.generator("γ")
+
     @pytest.mark.parametrize("n,max_degree", [(2, 4), (3, 2)])
     def test_chain_map_identity_over_q(self, n, max_degree):
         """μ_{∂σ̲}(z̲) = 0: the action is a chain map (boundary on the module
-        is zero).  This is the axiom the pre-2026-06 Case-4 sign violated."""
+        is zero)."""
         alg = BarrattEcclesTorusCochainAlgebra(QQ)
         gens = [alg.module.generator(name) for name in ["0", "α", "β", "γ"]]
         E_n = BarrattEccles(n, QQ)
@@ -222,6 +242,45 @@ class TestTorusConfigurationModel:
                 for basis in mod.graded_basis_by_weight(d, w):
                     dd = mod.boundary(mod.boundary(mod(basis)))
                     assert dd == mod.zero(), f"d²≠0 at (w={w}, d={d}) on {basis}: {dd}"
+
+
+class TestSurjectionTorusConfigurationModel:
+    """The Surjection-operad torus pipeline (rank-6 simplicial model)."""
+
+    @pytest.mark.parametrize("base_ring", [GF(2), GF(3), QQ])
+    def test_model_builds(self, base_ring):
+        model = surjection_torus_configuration_model(base_ring)
+        assert model is not None
+        assert model.module is not None
+
+    def test_manifold_model_is_surjection_algebra(self):
+        layers = _build_surjection_torus_layers(GF(2))
+        assert layers.manifold_model.operad_cls == Surjection
+
+    @pytest.mark.parametrize("base_ring", [GF(2), GF(3)])
+    def test_d_squared_is_zero(self, base_ring):
+        mod = surjection_torus_configuration_model(base_ring).module
+        for w in range(1, 3):
+            for d in range(-3, 6):
+                for basis in mod.graded_basis_by_weight(d, w):
+                    dd = mod.boundary(mod.boundary(mod(basis)))
+                    assert dd == mod.zero(), f"d²≠0 at (w={w}, d={d}) on {basis}: {dd}"
+
+    @pytest.mark.parametrize("base_ring", [GF(2), QQ])
+    def test_homology_agrees_with_barratt_eccles_pipeline(self, base_ring):
+        """End-to-end: the rank-4 BE model and the rank-6 Surjection model
+        give the same factorization homology (weights 1 and 2)."""
+        be_module = unordered_torus_configuration_model(base_ring).module
+        xs_module = surjection_torus_configuration_model(base_ring).module
+        for w in [1, 2]:
+            cc_be = compute_chain_complex(be_module, range(-2, 7), weight=w)
+            cc_xs = compute_chain_complex(xs_module, range(-2, 7), weight=w)
+            for d in range(-1, 6):
+                assert cc_be.homology(d).dimension() == cc_xs.homology(d).dimension(), (
+                    base_ring,
+                    w,
+                    d,
+                )
 
 
 if __name__ == "__main__":

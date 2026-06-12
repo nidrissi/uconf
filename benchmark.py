@@ -12,6 +12,7 @@ import argparse
 from sage.all import GF, QQ, Integer, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
+from uconf.algebraic.torus_configuration import surjection_torus_configuration_model
 
 
 def parse_field(s: str):
@@ -24,13 +25,9 @@ def parse_field(s: str):
     try:
         n = Integer(int(s))
     except ValueError as e:
-        raise ValueError(
-            f"--field must be 'Q' or a prime-power integer, got {s!r}"
-        ) from e
+        raise ValueError(f"--field must be 'Q' or a prime-power integer, got {s!r}") from e
     if n < 2 or not n.is_prime_power():
-        raise ValueError(
-            f"--field={n} is not a prime power; GF(n) only exists for prime powers"
-        )
+        raise ValueError(f"--field={n} is not a prime power; GF(n) only exists for prime powers")
     return GF(n), f"F{n}"
 
 
@@ -38,7 +35,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Compute the chain complex of the unordered configuration model."
     )
-    parser.add_argument("--dim", "-d", type=int, default=2, help="The dimension of the sphere.")
+
+    model_group = parser.add_mutually_exclusive_group(required=True)
+    model_group.add_argument("--sphere-dim", "-S", type=int, help="The dimension of the sphere.")
+    model_group.add_argument(
+        "--torus",
+        "-T",
+        action="store_true",
+        help="Use the torus configuration model instead of the sphere.",
+    )
+
     parser.add_argument(
         "--weight", "-w", type=int, default=2, help="The weight of the configuration."
     )
@@ -71,19 +77,25 @@ if __name__ == "__main__":
     w = args.weight
     degs = range(-1, args.deg_max + 1)
     n_jobs = args.jobs
-    dim = args.dim
+    sphere_dim = args.sphere_dim
+    use_torus = args.torus
     verbose = args.verbose
     do_prewarm = not args.no_prewarm
     do_profile = not args.no_profile
     base_ring, field_token = parse_field(args.field)
+
+    model_name = "T2" if use_torus else f"S{sphere_dim}"
     print(
-        f"dim={dim}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}, field={field_token}",
+        f"{model_name}, weight={w}, degs={list(degs)}, n_jobs={n_jobs}, field={field_token}",
         flush=True,
     )
 
     if verbose:
         print(f"[{time.strftime('%H:%M:%S')}] building model...", file=sys.stderr, flush=True)
-    model = euclidean_unordered_configuration_model(base_ring, dim)
+    if use_torus:
+        model = surjection_torus_configuration_model(base_ring)
+    else:
+        model = euclidean_unordered_configuration_model(base_ring, sphere_dim)
     mod = model.module
     if verbose:
         print(f"[{time.strftime('%H:%M:%S')}] model ready", file=sys.stderr, flush=True)
@@ -111,7 +123,7 @@ if __name__ == "__main__":
         profile.disable()
     elapsed = time.perf_counter() - start
 
-    path_prefix_short = f"{field_token}_d{dim}_w{w}_m{args.deg_max}"
+    path_prefix_short = f"{field_token}_{model_name}_w{w}_m{args.deg_max}"
     path_prefix = f"{path_prefix_short}_j{n_jobs}"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     csv_path = Path(f"dump/{path_prefix_short}_cc.csv")
@@ -122,8 +134,8 @@ if __name__ == "__main__":
         assert prewarm_profile is not None
         assert worker_profile_paths is not None
 
-        report_path = Path(f"dump/benchmark_profile_{timestamp}_{path_prefix}.txt")
-        prewarm_report_path = Path(f"dump/benchmark_prewarm_profile_{timestamp}_{path_prefix}.txt")
+        report_path = Path(f"dump/{path_prefix}_benchmark_profile_{timestamp}.txt")
+        prewarm_report_path = Path(f"dump/{path_prefix}_benchmark_prewarm_profile_{timestamp}.txt")
 
         with report_path.open("w") as report_file:
             report_file.write(f"Date: {datetime.now()}\n")
@@ -169,7 +181,7 @@ if __name__ == "__main__":
         print(f"Betti numbers saved to {csv_path}")
 
     cc.save(cc_path)
-    print(f"Chain complex saved to {cc_path}.sobj")
+    print(f"Chain complex saved to {cc_path}")
 
     bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
     bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
