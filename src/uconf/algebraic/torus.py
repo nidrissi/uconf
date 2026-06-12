@@ -57,12 +57,7 @@ For inputs in the normal order ``[γ]…[α]…[β]…[0]`` one has
 ``ε ≡ c(c-1)/2 + a(a-1)/2 + b(b-1)/2 + ab + ca + a (mod 2)``.
 
 .. note::
-   This corrects the Proposition in ``article.tex`` (as of 2026-06), whose
-   Case-4 exponent ``… + ab + c + b - 1`` and σ̲_2 starting at ``σ_{c+a}``
-   do not define a chain map: the stated sign differs from the one above
-   by ``(-1)^{ca + a + c + b + 1}`` in normal order (a discrepancy
-   containing the cross-term ``ca``, hence not removable by rescaling
-   basis elements), and the position dependence is *not* the naive Koszul
+   The position dependence of the Case-4 sign is *not* the naive Koszul
    sign on total degrees — ``[γ]`` is even but both of its tensor factors
    are odd, so transposing ``[γ]`` past ``[α]`` or ``[β]`` flips the sign.
    The formula implemented here was verified over ``QQ`` against the
@@ -72,6 +67,16 @@ For inputs in the normal order ``[γ]…[α]…[β]…[0]`` one has
    for ``n ≤ 3``, ``d ≤ 3`` (``d ≤ 4`` for ``n = 2``) and all inputs, and
    satisfies the chain-map identity ``μ_{∂σ̲} = 0`` for ``n ≤ 3``,
    ``d ≤ 5``.
+
+.. note::
+   This action does **not** factor through the surjection operad:
+   ``x - section(TR(x))`` for ``x = ((1,2,3),(1,3,2),(2,1,3))`` lies in
+   ``ker(TR)`` yet acts by ``-[γ]`` on ``([β],[γ],[α])``, in every
+   characteristic.  Moreover no strict quasi-isomorphism of
+   Barratt--Eccles algebras connects this model to the simplicial
+   (interval-cut) one, in either direction, over ``QQ``, ``GF(2)`` or
+   ``GF(3)``.  For a torus model that *is* a ``Surjection``-algebra use
+   :mod:`uconf.algebraic.torus_simplicial`.
 """
 
 from __future__ import annotations
@@ -239,7 +244,7 @@ class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
     Implements the closed form of ``(μ^{S¹} ⊗ μ^{S¹}) ∘ Δ_E`` on
     :class:`ReducedTorusCochains` — see the module docstring.  This is the
     Proposition in ``article.tex``, §"The E_∞-algebra structure of
-    C*(S¹) ⊗ C*(S¹)", with the Case-4 sign corrected.
+    C*(S¹) ⊗ C*(S¹)".
     """
 
     def __init__(self, base_ring):

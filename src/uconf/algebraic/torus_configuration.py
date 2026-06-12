@@ -5,10 +5,19 @@ of the ordered/unordered configuration spaces of the torus T^2 = S^1 × S^1,
 following the construction in `article.tex`.
 
 The pipeline is identical to the Euclidean case in `configuration.py`, but
-uses the Barratt--Eccles-algebra structure on the torus cochains instead of
-the sphere cochains.  Because the torus is a tensor product of circles and
-its E_∞-structure lives over the (Hopf) Barratt--Eccles operad, the comodule
-morphism keeps its Barratt--Eccles left factor directly (no table reduction).
+uses a torus cochain model instead of the sphere cochains.  Two manifold
+models are supported, distinguished by their operad:
+
+- :class:`~uconf.algebraic.torus.BarrattEcclesTorusCochainAlgebra` — the
+  rank-4 tensor-square model.  Its E_∞-structure lives over the (Hopf)
+  Barratt--Eccles operad and provably does not factor through the
+  surjection operad, so the comodule morphism keeps its Barratt--Eccles
+  left factor directly (no table reduction).
+- :class:`~uconf.algebraic.torus_simplicial.SurjectionTorusSimplicialCochainAlgebra`
+  — the rank-6 simplicial model, a genuine ``Surjection``-algebra.  The
+  pipeline then mirrors the Euclidean case: the comodule morphism is
+  table-reduced to ``Surjection ⊙ Ω(C)``, which keeps the operad factor
+  small.
 
 Overview
 --------
@@ -25,12 +34,14 @@ Overview
 
     Layer 2: Torus model and free algebra
       manifold_model = BarrattEcclesTorusCochainAlgebra(R)
+                       # or SurjectionTorusSimplicialCochainAlgebra(R)
       coefficients = TrivialModule(2, R)     # Torus has dimension 2
       free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
 
     Layer 3: Tensor and pullback
       tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
       comodule_morphism: OBXsLie → BarrattEccles ⊙ OBXsLie
+                         # or OBXsLie → Surjection ⊙ OBXsLie
       pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
 
     Layer 4: Final bar algebra
@@ -63,6 +74,7 @@ from uconf.algebraic.free_algebra import FreeOperadAlgebra
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
 from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.algebraic.torus import BarrattEcclesTorusCochainAlgebra
+from uconf.algebraic.torus_simplicial import SurjectionTorusSimplicialCochainAlgebra
 from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
@@ -74,6 +86,7 @@ from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
 from uconf.morphisms.canonical_twisting import canonical_inclusion
 from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
+from uconf.morphisms.surjection_comodule import make_surjection_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 from uconf.wrappers.shifted_operad import ShiftedOperad
 
@@ -101,16 +114,17 @@ def labelled_torus_configuration_model(
 ):
     r"""Build the labelled configuration model for the torus.
 
-    Given a Barratt--Eccles-algebra ``manifold_model`` (encoding the torus's
-    cohomology with its E_∞-algebra structure) and a coefficient module,
-    this constructs the bar algebra whose homology computes the factorization
-    homology.
+    Given a torus manifold model (encoding the torus's cohomology with its
+    E_∞-algebra structure) and a coefficient module, this constructs the
+    bar algebra whose homology computes the factorization homology.
 
     Parameters
     ----------
     manifold_model:
-        A Barratt--Eccles-algebra, specifically
-        :class:`~uconf.algebraic.torus.BarrattEcclesTorusCochainAlgebra`.
+        Either a Barratt--Eccles-algebra
+        (:class:`~uconf.algebraic.torus.BarrattEcclesTorusCochainAlgebra`)
+        or a Surjection-algebra
+        (:class:`~uconf.algebraic.torus_simplicial.SurjectionTorusSimplicialCochainAlgebra`).
     coefficients:
         A graded module with boundary and connectivity, used as the label
         space for the free algebra.
@@ -121,25 +135,30 @@ def labelled_torus_configuration_model(
         The bar construction ``B_π(pulled_back)``.  Its ``.module`` gives
         the underlying dg-module for homology computation.
     """
-    assert manifold_model.operad_cls == BarrattEccles, (
-        "Manifold model must be a Barratt--Eccles algebra."
-    )
-
-    base_ring = coefficients.base_ring()
-    assert manifold_model.module.base_ring() == base_ring, (
-        "Coefficient module must have the same base ring as the manifold model."
-    )
     return _build_torus_labelled_layers(manifold_model, coefficients).bar
+
+
+def _torus_comodule_morphism(manifold_model: OperadAlgebra, BXsLie) -> OperadMorphism:
+    """Comodule morphism matching the manifold model's operad.
+
+    Barratt--Eccles models keep the E-comodule morphism
+    Δ: Ω(C) → E ⊙ Ω(C); Surjection models table-reduce its left factor to
+    Δ': Ω(C) → S ⊙ Ω(C), as in the Euclidean pipeline.
+    """
+    if manifold_model.operad_cls == BarrattEccles:
+        return make_e_comodule_morphism(BXsLie)
+    if manifold_model.operad_cls == Surjection:
+        return make_surjection_comodule_morphism(BXsLie)
+    raise TypeError(
+        "Torus manifold model must be a Barratt--Eccles or Surjection algebra, "
+        f"got operad {manifold_model.operad_cls!r}."
+    )
 
 
 def _build_torus_labelled_layers(
     manifold_model: OperadAlgebra, coefficients: CombinatorialFreeModule
 ) -> TorusConfigurationLayers:
     """Build all intermediate layers for the labelled torus configuration model."""
-    assert manifold_model.operad_cls == BarrattEccles, (
-        "Manifold model must be a Barratt--Eccles algebra."
-    )
-
     base_ring = coefficients.base_ring()
     assert manifold_model.module.base_ring() == base_ring, (
         "Coefficient module must have the same base ring as the manifold model."
@@ -153,7 +172,7 @@ def _build_torus_labelled_layers(
     free_alg = FreeOperadAlgebra(OBXsLie, coefficients)
 
     tensor_alg = HadamardTensorAlgebra(manifold_model, free_alg)
-    comodule_morphism = make_e_comodule_morphism(BXsLie)
+    comodule_morphism = _torus_comodule_morphism(manifold_model, BXsLie)
     pulled_back = PullbackAlgebra(comodule_morphism, tensor_alg)
     iota = canonical_inclusion(BXsLie)
     bar = BarAlgebra(iota, pulled_back)
@@ -207,6 +226,10 @@ class TrivialModule(CombinatorialFreeModule):
 def unordered_torus_configuration_model(base_ring):
     """Build the unordered configuration model for the torus T^2.
 
+    Uses the rank-4 Barratt--Eccles manifold model; see
+    :func:`surjection_torus_configuration_model` for the Surjection-based
+    variant.
+
     Parameters
     ----------
     base_ring:
@@ -226,9 +249,28 @@ def unordered_torus_configuration_model(base_ring):
     return _build_unordered_torus_layers(base_ring).bar
 
 
+def surjection_torus_configuration_model(base_ring):
+    """Build the unordered torus configuration model over the Surjection operad.
+
+    Same pipeline as :func:`unordered_torus_configuration_model`, but the
+    manifold model is the rank-6 simplicial torus
+    (:class:`~uconf.algebraic.torus_simplicial.SurjectionTorusSimplicialCochainAlgebra`)
+    and the comodule morphism is table-reduced to ``Surjection ⊙ Ω(C)``,
+    mirroring the Euclidean pipeline.
+    """
+    return _build_surjection_torus_layers(base_ring).bar
+
+
 def _build_unordered_torus_layers(base_ring) -> TorusConfigurationLayers:
     """Build all intermediate layers for the unordered torus configuration model."""
     manifold_model = BarrattEcclesTorusCochainAlgebra(base_ring)
+    coefficients = TrivialModule(2, base_ring)  # Torus dimension is 2
+    return _build_torus_labelled_layers(manifold_model, coefficients)
+
+
+def _build_surjection_torus_layers(base_ring) -> TorusConfigurationLayers:
+    """Build all intermediate layers for the Surjection-based torus model."""
+    manifold_model = SurjectionTorusSimplicialCochainAlgebra(base_ring)
     coefficients = TrivialModule(2, base_ring)  # Torus dimension is 2
     return _build_torus_labelled_layers(manifold_model, coefficients)
 

@@ -301,13 +301,13 @@ def surjection_cochain_action(
     `-\dim(\sigma)` for a simplex `\sigma`).  If `f_i` has homological
     degree `-n_i` (i.e.  is an `n_i`-cochain) and `u` has degree `d`,
     then `\mu_u(f_1 \otimes \dots \otimes f_r)` is an `n`-cochain where
-    `n = n_1 + \dots + n_r + d`.  Equivalently, the chain `x` that can
+    `n = n_1 + \dots + n_r - d`.  Equivalently, the chain `x` that can
     pair non-trivially with `\mu_u(f_1 \otimes \dots \otimes f_r)` has
     dimension
 
     .. math::
-        \dim(x) = n_1 + \dots + n_r + d
-        = \bigl(-\deg(f_1)\bigr) + \dots + \bigl(-\deg(f_r)\bigr) + d.
+        \dim(x) = n_1 + \dots + n_r - d
+        = \bigl(-\deg(f_1)\bigr) + \dots + \bigl(-\deg(f_r)\bigr) - d.
 
     **Implementation.**
     Iterate over all non-degenerate simplices `\sigma` of the correct
