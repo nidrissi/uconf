@@ -174,6 +174,14 @@ if __name__ == "__main__":
     else:
         print(f"Elapsed time: {elapsed:.4f}s")
 
+    cc.save(cc_path)
+    print(f"Chain complex saved to {cc_path}")
+
+    bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
+    bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
+    save(bases, bases_path)
+    print(f"Graded bases saved to {bases_path}")
+
     print("Computing Betti numbers...", flush=True)
     with csv_path.open("w") as f:
         print("d,dim,betti", file=f)
@@ -183,11 +191,3 @@ if __name__ == "__main__":
             print(f"-> Degree {d}: dim={rank}, betti={betti}", flush=True)
             print(f"{d},{rank},{betti}", file=f)
         print(f"Betti numbers saved to {csv_path}")
-
-    cc.save(cc_path)
-    print(f"Chain complex saved to {cc_path}")
-
-    bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
-    bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
-    save(bases, bases_path)
-    print(f"Graded bases saved to {bases_path}")
