@@ -174,10 +174,14 @@ if __name__ == "__main__":
     else:
         print(f"Elapsed time: {elapsed:.4f}s")
 
+    print("Computing Betti numbers...", flush=True)
     with csv_path.open("w") as f:
         print("d,dim,betti", file=f)
         for d in degs:
-            print(f"{d},{cc.free_module_rank(d)},{cc.betti(d)}", file=f)
+            print(f"-> Computing Betti numbers for degree {d}...", flush=True)
+            rank, betti = cc.free_module_rank(d), cc.betti(d)
+            print(f"-> Degree {d}: dim={rank}, betti={betti}", flush=True)
+            print(f"{d},{rank},{betti}", file=f)
         print(f"Betti numbers saved to {csv_path}")
 
     cc.save(cc_path)
