@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 
-from sage.all import GF, QQ, Integer, save
+from sage.all import GF, QQ, ZZ, Integer, save
 
 from uconf import compute_chain_complex, euclidean_unordered_configuration_model
 from uconf.algebraic.torus_configuration import surjection_torus_configuration_model
@@ -18,14 +18,16 @@ from uconf.algebraic.torus_configuration import surjection_torus_configuration_m
 def parse_field(s: str):
     """Parse a --field argument into (Sage ring, filename token).
 
-    Accepts 'Q'/'QQ' for the rationals or a prime-power integer for a finite field.
+    Accepts 'Q'/'QQ' for the rationals, 'Z'/'ZZ' for the integers, or a prime-power integer for a finite field.
     """
     if s.strip().lower() in ("q", "qq"):
         return QQ, "Q"
+    if s.strip().lower() in ("z", "zz"):
+        return ZZ, "Z"
     try:
         n = Integer(int(s))
     except ValueError as e:
-        raise ValueError(f"--field must be 'Q' or a prime-power integer, got {s!r}") from e
+        raise ValueError(f"--field must be 'Q', 'Z', or a prime-power integer, got {s!r}") from e
     if n < 2 or not n.is_prime_power():
         raise ValueError(f"--field={n} is not a prime power; GF(n) only exists for prime powers")
     return GF(n), f"F{n}"

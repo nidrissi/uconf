@@ -10,7 +10,7 @@ from pathlib import Path
 import argparse
 from typing import Literal
 
-from sage.all import GF, QQ, Integer, load, save
+from sage.all import GF, QQ, ZZ, Integer, load, save
 
 from uconf import (
     compute_homology_representatives,
@@ -21,13 +21,13 @@ from uconf.algebraic.torus_configuration import surjection_torus_configuration_m
 
 # Matches benchmark.py's output name pattern for chain complex dumps, e.g.
 # "F2_d2_w3_m4_cc.sobj", "F3_d2_w3_m4_cc", or "Q_d2_w3_m4_cc".
-_CC_FILENAME_RE = re.compile(r"^(F\d+|Q)_(T2|S\d+)_w(\d+)_m(\d+)_cc$")
+_CC_FILENAME_RE = re.compile(r"^(F\d+|Q|Z)_(T2|S\d+)_w(\d+)_m(\d+)_cc$")
 
 
 def parse_field(s: str):
     """Parse a --field argument into (Sage ring, filename token).
 
-    Accepts 'Q'/'QQ' for the rationals, a prime-power integer for a finite
+    Accepts 'Q'/'QQ' for the rationals, 'Z'/'ZZ' for the integers, a prime-power integer for a finite
     field, or the canonical filename token form ``F<n>`` (so that round-trips
     through ``_guess_params_from_dump`` -> ``parse_field`` work without losing
     the prefix).
@@ -35,12 +35,16 @@ def parse_field(s: str):
     t = s.strip()
     if t.lower() in ("q", "qq"):
         return QQ, "Q"
+    if t.lower() in ("z", "zz"):
+        return ZZ, "Z"
     # Accept the canonical filename token "F<n>" in addition to a raw integer.
     digits = t[1:] if t[:1] in ("F", "f") and t[1:].isdigit() else t
     try:
         n = Integer(int(digits))
     except ValueError as e:
-        raise ValueError(f"--field must be 'Q', a prime-power integer, or 'F<n>'; got {s!r}") from e
+        raise ValueError(
+            f"--field must be 'Q', 'Z', or a prime-power integer, or 'F<n>'; got {s!r}"
+        ) from e
     if n < 2 or not n.is_prime_power():
         raise ValueError(f"--field={n} is not a prime power; GF(n) only exists for prime powers")
     return GF(n), f"F{n}"
