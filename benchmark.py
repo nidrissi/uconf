@@ -195,9 +195,12 @@ if __name__ == "__main__":
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}")
 
-    for i in degs:
+    for i, M in cc.differential().items():
+        if M.nrows() == 0 and M.ncols() == 0:
+            print(f"Differential d_{i} is empty, skipping export")
+            continue
         mtx_path = Path(f"dump/{path_prefix_short}_d{i}.mtx")
-        mtx_export(cc.differential(i), path=mtx_path)
+        mtx_export(M, path=mtx_path)
         print(f"Differential d_{i} exported to {mtx_path}")
 
     bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
