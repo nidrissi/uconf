@@ -33,6 +33,22 @@ def parse_field(s: str):
     return GF(n), f"F{n}"
 
 
+def mtx_export(M, path: Path) -> None:
+    """
+    Exports a SageMath sparse matrix to a MatrixMarket coordinate file.
+    """
+    rows = M.nrows()
+    cols = M.ncols()
+    entries = M.dict()
+    nonzeros = len(entries)
+
+    with open(path, "w") as f:
+        f.write("%%MatrixMarket matrix coordinate integer general\n")
+        f.write(f"{rows} {cols} {nonzeros}\n")
+        for (i, j), val in entries.items():
+            f.write(f"{i + 1} {j + 1} {val}\n")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Compute the chain complex of the unordered configuration model."
@@ -178,6 +194,11 @@ if __name__ == "__main__":
 
     cc.save(cc_path)
     print(f"Chain complex saved to {cc_path}")
+
+    for i in degs:
+        mtx_path = Path(f"dump/{path_prefix_short}_d{i}.mtx")
+        mtx_export(cc.differential(i), path=mtx_path)
+        print(f"Differential d_{i} exported to {mtx_path}")
 
     bases_path = Path(f"dump/{path_prefix_short}_bases.sobj")
     bases = {d: [x.support()[0] for x in mod.graded_basis_by_weight(d, w)] for d in degs}
