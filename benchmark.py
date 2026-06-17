@@ -70,8 +70,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--field",
         "-f",
-        default="2",
-        help="Base field: prime p for GF(p), or 'Q' for QQ (default: 2).",
+        default="Z",
+        help="Base field: prime p for GF(p), or 'Q' or 'Z' (default: Z).",
     )
     parser.add_argument(
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
