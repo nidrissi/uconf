@@ -74,6 +74,12 @@ if __name__ == "__main__":
         help="Base field: prime p for GF(p), or 'Q' or 'Z' (default: Z).",
     )
     parser.add_argument(
+        "--betti",
+        "-b",
+        action="store_true",
+        help="Compute Betti numbers after computing the chain complex.",
+    )
+    parser.add_argument(
         "--jobs", "-j", type=int, default=1, help="The number of parallel jobs to use."
     )
     parser.add_argument(
@@ -98,6 +104,7 @@ if __name__ == "__main__":
     sphere_dim = args.sphere_dim
     use_torus = args.torus
     verbose = args.verbose
+    do_betti = args.betti
     do_prewarm = not args.no_prewarm
     do_profile = args.profile
     base_ring, field_token = parse_field(args.field)
@@ -208,12 +215,13 @@ if __name__ == "__main__":
     save(bases, bases_path)
     print(f"Graded bases saved to {bases_path}")
 
-    print("Computing Betti numbers...", flush=True)
-    with csv_path.open("w") as f:
-        print("d,dim,betti", file=f)
-        for d in degs:
-            print(f"-> Computing Betti numbers for degree {d}...", flush=True)
-            rank, betti = cc.free_module_rank(d), cc.betti(d)
-            print(f"-> Degree {d}: dim={rank}, betti={betti}", flush=True)
-            print(f"{d},{rank},{betti}", file=f)
-        print(f"Betti numbers saved to {csv_path}")
+    if do_betti:
+        print("Computing Betti numbers...", flush=True)
+        with csv_path.open("w") as f:
+            print("d,dim,betti", file=f)
+            for d in degs:
+                print(f"-> Computing Betti numbers for degree {d}...", flush=True)
+                rank, betti = cc.free_module_rank(d), cc.betti(d)
+                print(f"-> Degree {d}: dim={rank}, betti={betti}", flush=True)
+                print(f"{d},{rank},{betti}", file=f)
+            print(f"Betti numbers saved to {csv_path}")
