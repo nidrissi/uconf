@@ -70,9 +70,9 @@ if __name__ == "__main__":
         "--no-prewarm", action="store_true", help="Disable cache prewarm before forking workers."
     )
     parser.add_argument(
-        "--no-profile",
+        "--profile",
         action="store_true",
-        help="Disable cProfile (faster runs when profiling data is not needed).",
+        help="Enable cProfile (faster runs when profiling data is not needed).",
     )
     args = parser.parse_args()
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     use_torus = args.torus
     verbose = args.verbose
     do_prewarm = not args.no_prewarm
-    do_profile = not args.no_profile
+    do_profile = args.profile
     base_ring, field_token = parse_field(args.field)
 
     model_name = "T2" if use_torus else f"S{sphere_dim}"
