@@ -2,6 +2,8 @@
 
 Combinatorial operad/cooperad models (SageMath) for computations in algebraic topology and configuration spaces.
 
+[![DOI](https://zenodo.org/badge/1280106896.svg)](https://doi.org/10.5281/zenodo.20843321)
+
 ## Repository structure
 
 - `src/uconf/`: main implementation (active API).
