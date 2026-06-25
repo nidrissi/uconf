@@ -1,4 +1,4 @@
-# Najib and Victor Project
+# uconf
 
 Combinatorial operad/cooperad models (SageMath) for computations in algebraic topology and configuration spaces.
 
@@ -16,8 +16,6 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 - `pyproject.toml`: packaging plus pytest/ruff configuration.
 - `docs/`: Sphinx documentation sources.
 - `benchmark.py`, `homology_repr.py`: CLI scripts for configuration-model computations.
-- `article.tex`, `article.bib`: project-related scientific writing.
-- `old-computations/`: older notebooks/utilities kept for reference.
 
 ## Prerequisites
 
