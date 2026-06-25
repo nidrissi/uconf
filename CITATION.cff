@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: uconf
+message: >-
+  If you use this software, please cite it using the metadata from this file.
+type: software
+authors:
+  - given-names: Najib
+    family-names: Idrissi
+    email: najib.idrissi-kaitouni@u-pariscite.fr
+    orcid: "https://orcid.org/0000-0001-7288-6726"
+    affiliation: >-
+      Université Paris Cité and Sorbonne Université, CNRS, IMJ-PRG, F-75013
+      Paris, France
+  - given-names: Victor
+    family-names: Roca i Lucio
+    email: rocalucio@imj-prg.fr
+    orcid: 0000-0001-5609-6994
+    affiliation: >-
+      Université Paris Cité and Sorbonne Université, CNRS, IMJ-PRG, F-75013
+      Paris, France
+abstract: >-
+  Combinatorial operad/cooperad models (SageMath) for computations in algebraic
+  topology and configuration spaces.
+license: GPL-3.0-or-later
