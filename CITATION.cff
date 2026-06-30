@@ -14,10 +14,15 @@ authors:
   - given-names: Victor
     family-names: Roca i Lucio
     email: rocalucio@imj-prg.fr
-    orcid: 0000-0001-5609-6994
+    orcid: "https://orcid.org/0000-0001-5609-6994"
     affiliation: >-
       Université Paris Cité and Sorbonne Université, CNRS, IMJ-PRG, F-75013
       Paris, France
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20843321
+repository-code: "https://github.com/nidrissi/uconf"
+url: "https://nidrissi.github.io/uconf/"
 abstract: >-
   Combinatorial operad/cooperad models (SageMath) for computations in algebraic
   topology and configuration spaces.
