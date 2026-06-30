@@ -39,25 +39,33 @@ conda run -n sage ruff format --check tests src
 conda run -n sage python -m compileall -q src tests
 ```
 
-### Local development → venv
+### Local development → uv
 
-SageMath is installed system-wide; the venv inherits it via
-`--system-site-packages`. One-time setup:
+SageMath is installed system-wide; the [uv](https://docs.astral.sh/uv/)-managed
+venv inherits it via `--system-site-packages` (uv does **not** install
+SageMath). The venv must therefore be built on the interpreter that provides
+Sage; `pyproject.toml` sets `python-preference = "system"` so `uv venv` picks it
+instead of a managed download (add `--python <path>` if Sage is on a non-default
+interpreter). One-time setup:
 
 ```bash
-python3 -m venv .venv --system-site-packages   # flag goes on venv, not pip
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv venv --system-site-packages   # flag goes on the venv; Sage is inherited
+uv sync                          # installs the project + the `dev` group
 ```
 
-After activation, run `pytest`, `ruff check tests src`,
-`ruff format --check tests src`, and `python -m compileall -q src tests`
-directly.
+Then prefix every Python or tool command with `uv run`:
+
+```bash
+uv run pytest
+uv run ruff check tests src
+uv run ruff format --check tests src
+uv run python -m compileall -q src tests
+```
 
 Targeted test run (either environment, prefix as needed):
 
 ```bash
-pytest tests/test_file.py::test_function
+uv run pytest tests/test_file.py::test_function
 ```
 
 ## 3. Read-only files and directories
@@ -73,7 +81,7 @@ Do not edit:
 
 ## 4. Required validation before finalizing
 
-Run all four. They mirror CI. Substitute the environment prefix from §2.
+Run all three. They mirror CI. Substitute the environment prefix from §2.
 
 ```bash
 <env> ruff check tests src
