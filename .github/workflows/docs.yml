@@ -44,6 +44,7 @@ jobs:
                   channel-priority: strict
                   environment-file: environment.yml
                   use-mamba: true
+                  miniforge-version: latest
 
             - name: Install package with docs dependencies
               shell: bash -el {0}
