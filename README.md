@@ -3,6 +3,8 @@
 Combinatorial operad/cooperad models (SageMath) for computations in algebraic topology and configuration spaces.
 
 [![DOI](https://zenodo.org/badge/1280106896.svg)](https://doi.org/10.5281/zenodo.20843321)
+[![SWH](https://archive.softwareheritage.org/badge/origin/https://doi.org/10.5281/zenodo.20843321/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://doi.org/10.5281/zenodo.20843321)
+[![SWH](https://archive.softwareheritage.org/badge/swh:1:dir:3b1da03b3d36a215f52466b32c0de4b4ed354909/)](https://archive.softwareheritage.org/swh:1:dir:3b1da03b3d36a215f52466b32c0de4b4ed354909;origin=https://doi.org/10.5281/zenodo.20843321;visit=swh:1:snp:5c2e7344ee13233a027c32f3ed93dc0bd141f7dd;anchor=swh:1:rel:0587358e0e668b3c74e4c0c33794735034221dfb)
 
 ## Repository structure
 
