@@ -29,6 +29,7 @@ jobs:
                   channel-priority: strict
                   environment-file: environment.yml
                   use-mamba: true
+                  miniforge-version: latest
 
             - name: Verify SageMath Installation
               shell: bash -el {0}
