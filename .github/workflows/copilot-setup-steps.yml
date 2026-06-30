@@ -39,4 +39,5 @@ jobs:
             - name: Install package and dev dependencies
               shell: bash -el {0}
               run: |
-                  pip install -e ".[dev]"
+                  python -m pip install --upgrade pip
+                  pip install -e . --group dev

@@ -5,10 +5,12 @@
 The documentation build imports `uconf`, so it must run in the same SageMath
 environment used for tests and linting.
 
-Install the package with the documentation extra:
+Install the package with the documentation dependency group (the `--group` flag
+requires pip ≥ 25.1):
 
 ```bash
-conda run -n sage python -m pip install -e ".[docs]"
+conda run -n sage python -m pip install --upgrade pip
+conda run -n sage python -m pip install -e . --group docs
 ```
 
 Build the HTML site:

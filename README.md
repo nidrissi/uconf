@@ -29,33 +29,40 @@ If SageMath is not installed, the easiest way to get it is to install it with `c
 
 ## Development
 
+This project uses [uv](https://docs.astral.sh/uv/). SageMath is **not** managed
+by uv — the uv-managed venv inherits a system-wide (or conda) SageMath via
+`--system-site-packages`, so the venv must be built on the Python interpreter
+that provides Sage. `pyproject.toml` sets `python-preference = "system"` so
+`uv venv` selects it automatically; pass `--python <path>` if Sage lives on a
+non-default interpreter. Create the environment and install the `dev`
+dependency group:
+
 ```bash
-python3 -m venv .venv --system-site-packages
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv venv --system-site-packages
+uv sync
 ```
 
 Run the test suite:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Validate before committing:
 
 ```bash
-ruff check tests src
-ruff format --check tests src
-python -m compileall -q src tests
+uv run ruff check tests src
+uv run ruff format --check tests src
+uv run python -m compileall -q src tests
 ```
 
 ## HTML documentation
 
-Install docs dependencies and build:
+Install the `docs` dependency group and build:
 
 ```bash
-python -m pip install -e ".[docs]"
-sphinx-build --keep-going -b html docs docs/_build/html
+uv sync --group docs
+uv run sphinx-build --keep-going -b html docs docs/_build/html
 ```
 
 The generated site is written to `docs/_build/html/`.
