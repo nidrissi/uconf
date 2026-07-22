@@ -13,7 +13,7 @@ where:
   (Koszul sign rule).
 - ``d_α`` is the extra twisting differential.
 
-The twisting differential d_α acts on each leaf of a corolla:
+The twisting differential d_α acts on each leaf of a corolla::
 
     d_α(p ⊗ v_1 ⊗ … ⊗ v_n) = Σ_{i=1}^{n} Σ_{k≥2}
         (-1)^{|p| + |v_1| + … + |v_{i-1}|}

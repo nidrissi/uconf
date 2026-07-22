@@ -1236,7 +1236,7 @@ def compute_homology_representatives(
         weight: Weight filter for basis selection, or ``None``.
         cc: A SageMath :class:`~sage.homology.chain_complex.ChainComplex`
             built from *module* via :func:`compute_chain_complex`.  Must
-            contain differentials for *degree* and *degree*+1.
+            contain differentials for ``degree`` and ``degree + 1``.
         algorithm: Which algorithm to use: ``"fast"`` (default) or
             ``"sage"``.
 

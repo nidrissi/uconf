@@ -127,7 +127,7 @@ class CobarConstruction(UniqueRepresentation):
 
         In the free operad ``T(s⁻¹C̄)``, composition is tree grafting with a
         Koszul sign from inserting y's vertex factors into x's DFS
-        linearisation:
+        linearisation::
 
             x ∘_i y = (-1)^{|y| · A(x, i)} · graft(x, i, y)
 
