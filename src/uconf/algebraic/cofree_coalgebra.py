@@ -1,10 +1,13 @@
-"""Cofree conilpotent C-coalgebra on a dg-module M.
+r"""Cofree conilpotent C-coalgebra on a dg-module M.
 
 The cofree conilpotent C-coalgebra on a dg-module M is
 
-    T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}
+.. math::
+
+    T^c_C(M) = \bigoplus_{n\geq 1} C(n) \otimes_{S_n} M^{\otimes n}
 
 with:
+
 - Degree: deg(c_key, m_tuple) = deg_C(c_key) + Σ_i deg_M(m_i).
 - Differential d = d_C + d_M from the Koszul sign rule (Leibniz rule).
 - C-coalgebra costructure: the infinitesimal cocomposition Δ^{i;m,n} applies

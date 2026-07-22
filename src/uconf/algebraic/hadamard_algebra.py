@@ -4,19 +4,19 @@ Given a ``P``-algebra ``A`` and a ``Q``-algebra ``B``, this module builds the
 canonical ``(P ⊙ Q)``-algebra structure on ``A ⊗ B`` where ``⊙`` denotes the
 Hadamard product of operads.
 
-For homogeneous pure tensors, the action is
+For homogeneous pure tensors, the action is::
 
     (p ⊗ q) · ((a_1 ⊗ b_1), ..., (a_n ⊗ b_n))
       = ε · (p·(a_1,...,a_n)) ⊗ (q·(b_1,...,b_n)),
 
-where ``ε`` is the Koszul sign from the graded interchange
+where ``ε`` is the Koszul sign from the graded interchange::
 
     p ⊗ q ⊗ a_1 ⊗ b_1 ⊗ … ⊗ a_n ⊗ b_n
     ↦ p ⊗ a_1 ⊗ … ⊗ a_n ⊗ q ⊗ b_1 ⊗ … ⊗ b_n:
 
     ε = (-1)^{ |q| Σ_i |a_i|  +  Σ_{i<j} |b_i| · |a_j| }.
 
-The differential on ``A ⊗ B`` is the tensor one:
+The differential on ``A ⊗ B`` is the tensor one::
 
     d(a ⊗ b) = da ⊗ b + (-1)^|a| a ⊗ db.
 """

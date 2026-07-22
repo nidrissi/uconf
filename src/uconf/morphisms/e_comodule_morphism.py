@@ -130,7 +130,7 @@ def _non_identity_perms(n: int) -> list:
 def e_comodule_on_generator(dec_elem: Any) -> Any:
     r"""Compute the Le Grignou–Roca i Lucio E-comodule map on a cooperad element.
 
-    Given an element *dec_elem* :math:`c \in \mathcal{C}(n)` (planar or not),
+    Given an element ``dec_elem`` :math:`c \in \mathcal{C}(n)` (planar or not),
     returns the E-comodule structure map
 
     .. math::

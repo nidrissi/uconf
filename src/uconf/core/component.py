@@ -21,7 +21,7 @@ class ComponentProtocol(Protocol):
         """Returns the base ring of this component."""
         ...
 
-    def __call__(self, input) -> Element:
+    def __call__(self, input) -> ComponentProtocol.Element:
         """Returns the basis element corresponding to basis key ``input``."""
         ...
 
@@ -33,11 +33,11 @@ class ComponentProtocol(Protocol):
         """Returns the arity of this operad component."""
         ...
 
-    def term(self, x: object) -> Element:
+    def term(self, x: object) -> ComponentProtocol.Element:
         """Returns the basis element corresponding to basis key ``x``."""
         ...
 
-    def boundary(self, x: Element) -> Element:
+    def boundary(self, x: ComponentProtocol.Element) -> ComponentProtocol.Element:
         """Applies the differential to element ``x``."""
         ...
 
@@ -45,11 +45,11 @@ class ComponentProtocol(Protocol):
         """Returns degree of basis element ``x``."""
         ...
 
-    def sum_of_terms(self, terms: Iterator[tuple[Any, Any]]) -> Element:
+    def sum_of_terms(self, terms: Iterator[tuple[Any, Any]]) -> ComponentProtocol.Element:
         """Builds element from iterator of (basis, coeff) pairs."""
         ...
 
-    def zero(self) -> Element:
+    def zero(self) -> ComponentProtocol.Element:
         """Returns the zero element of this component."""
         ...
 

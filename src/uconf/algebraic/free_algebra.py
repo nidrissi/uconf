@@ -1,10 +1,14 @@
-"""Free P-algebra on a dg-module M.
+r"""Free P-algebra on a dg-module M.
 
 The free P-algebra on a dg-module M is the composite product
 
-    Free_P(M) = P ∘ M = ⊕_{n≥1} P(n) ⊗_{S_n} M^{⊗n}
+.. math::
+
+    \operatorname{Free}_P(M) = P \circ M
+    = \bigoplus_{n\geq 1} P(n) \otimes_{S_n} M^{\otimes n}
 
 with:
+
 - Degree: deg(p_key, m_tuple) = deg_P(p_key) + Σ_i deg_M(m_i).
 - Differential d = d_P + d_M from the Koszul sign rule (Leibniz rule).
 - P-algebra structure γ: P(k) ⊗ Free_P(M)^⊗k → Free_P(M) given by the

@@ -45,6 +45,7 @@ def canonical_projection(operad: OperadLike) -> TwistingMorphism:
     """Return the canonical projection π: B(P) → P.
 
     The projection sends a bar tree to:
+
     - The P-decoration of its root, if the tree is a single-vertex corolla
       (root vertex with all children being leaves).
     - Zero otherwise.

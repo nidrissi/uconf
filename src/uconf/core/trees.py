@@ -47,7 +47,7 @@ class RootedTree:
     ----------
     decoration : tuple
         Operad/cooperad basis key decorating this vertex.
-    *children : int | RootedTree
+    ``*children`` : int | RootedTree
         Ordered children.  Each child is either a leaf (``int``) or
         another ``RootedTree``.
 

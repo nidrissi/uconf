@@ -94,12 +94,12 @@ class TwistingMorphism:
     def star(self, other: "TwistingMorphism", c_elem):
         """Compute the pre-Lie convolution product (self ⋆ other)(c_elem).
 
-        For c ∈ C(n), the pre-Lie product is:
+        For c ∈ C(n), the pre-Lie product is::
 
             (α ⋆ β)(c) = Σ_{S, m} (-1)^{|c_L|} (α(c_L) ∘_{min(S)} β(c_R)) · σ_S
 
         where the sum is over all reduced splits Δ_{(1)}(c) = Σ c_L ⊗_S c_R with
-        |S| = n_r ≥ 2, m = n - n_r + 1 ≥ 2, and σ_S is the shuffle permutation
+        ``|S|`` = n_r ≥ 2, m = n - n_r + 1 ≥ 2, and σ_S is the shuffle permutation
         that maps the consecutive block {min(S), …, min(S)+n_r-1} back to the
         (possibly non-contiguous) leaf set S.  For contiguous S, σ_S = id.
 
@@ -195,12 +195,12 @@ class TwistingMorphism:
         This is the boundary of α as a map of graded modules (before the
         Maurer-Cartan equation twist).
 
-        The sign convention is ∂α = ∂_P ∘ α - (-1)^{|α|} α ∘ ∂_C.
-        Since |α| = -1, we have (-1)^{|α|} = -1, so:
+        The sign convention is ∂α = ∂_P ∘ α - ``(-1)^{|α|}`` α ∘ ∂_C.
+        Since ``|α| = -1``, we have ``(-1)^{|α|} = -1``, so:
         ∂α(c) = ∂_P(α(c)) + α(∂_C(c)).
 
         Note: some references use ∂α = ∂_P ∘ α + α ∘ ∂_C; this is the same
-        since |α| = -1.
+        since ``|α| = -1``.
 
         Args:
             c_elem: An element of C(n).

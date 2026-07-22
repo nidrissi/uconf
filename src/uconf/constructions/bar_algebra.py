@@ -14,7 +14,7 @@ where:
 - ``d_α`` is the extra twisting differential.
 
 The twisting differential d_α acts only on **corollas** (basis keys
-``(c, (a_1, …, a_n))`` where n ≥ 2):
+``(c, (a_1, …, a_n))`` where n ≥ 2)::
 
     d_α(c ⊗ a_1 ⊗ … ⊗ a_n) = γ(α(c); a_1, …, a_n)
 
@@ -22,8 +22,8 @@ where γ is the P-algebra structure map and α(c) ∈ P(n) is the image of
 c under the twisting morphism.  The result is a single-leaf element
 ``(id_C, (γ(α(c); a_1,…,a_n),))``.
 
-The sign convention is: d_α carries a Koszul sign (-1)^{|c|} since α has
-degree -1 and passes past c of degree |c| in the bar ordering.
+The sign convention is: d_α carries a Koszul sign ``(-1)^{|c|}`` since α has
+degree -1 and passes past c of degree ``|c|`` in the bar ordering.
 
 Maurer-Cartan equation ∂α + α ⋆ α = 0 ensures d² = 0.
 
