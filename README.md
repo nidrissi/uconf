@@ -6,6 +6,34 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 [![SWH](https://archive.softwareheritage.org/badge/origin/https://doi.org/10.5281/zenodo.20843321/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://doi.org/10.5281/zenodo.20843321)
 [![SWH](https://archive.softwareheritage.org/badge/swh:1:dir:3b1da03b3d36a215f52466b32c0de4b4ed354909/)](https://archive.softwareheritage.org/swh:1:dir:3b1da03b3d36a215f52466b32c0de4b4ed354909;origin=https://doi.org/10.5281/zenodo.20843321;visit=swh:1:snp:5c2e7344ee13233a027c32f3ed93dc0bd141f7dd;anchor=swh:1:rel:0587358e0e668b3c74e4c0c33794735034221dfb)
 
+## Installation
+
+`uconf-operads` requires Python 3.12 or later and SageMath 10.9 or later. The
+recommended installation uses conda-forge to provide SageMath:
+
+```bash
+conda create -n uconf -c conda-forge python=3.12 sage=10.9 pip
+conda activate uconf
+python -m pip install uconf-operads
+```
+
+If a compatible SageMath installation is already available in your Python
+environment, install the package directly:
+
+```bash
+python -m pip install uconf-operads
+```
+
+The distribution is named `uconf-operads`, but the Python package keeps the
+short import name:
+
+```python
+import uconf
+```
+
+For an environment matching the one used by the project, see
+[`environment.yml`](https://github.com/nidrissi/uconf/blob/main/environment.yml).
+
 ## Repository structure
 
 - `src/uconf/`: main implementation (active API).
@@ -25,17 +53,19 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 **SageMath** is required. `pytest` is needed to run the tests. `comch` is optional (used only by `test_comch_compatibility.py`).
 
-If SageMath is not installed, the easiest way to get it is to install it with `conda` (see [`environment.yml`](./environment.yml)) and prefix all subsequent commands with `conda run -n sage`.
+If SageMath is not installed, the easiest way to get it is to install it with
+conda (see the [installation instructions](#installation)). For development,
+the checked-in `environment.yml` creates an environment named `sage`, so
+commands can be run with the `conda run -n sage` prefix.
 
 ## Development
 
-This project uses [uv](https://docs.astral.sh/uv/). SageMath is **not** managed
-by uv — the uv-managed venv inherits a system-wide (or conda) SageMath via
-`--system-site-packages`, so the venv must be built on the Python interpreter
-that provides Sage. `pyproject.toml` sets `python-preference = "system"` so
-`uv venv` selects it automatically; pass `--python <path>` if Sage lives on a
-non-default interpreter. Create the environment and install the `dev`
-dependency group:
+This project uses [uv](https://docs.astral.sh/uv/). The uv-managed venv inherits
+a system-wide (or conda) SageMath via `--system-site-packages`, so the venv must
+be built on the Python interpreter that provides Sage. `pyproject.toml` sets
+`python-preference = "system"` so uv selects it automatically; pass
+`--python <path>` if Sage lives on a non-default interpreter. Create the
+environment and install the `dev` dependency group:
 
 ```bash
 uv venv --system-site-packages
@@ -62,7 +92,7 @@ Install the `docs` dependency group and build:
 
 ```bash
 uv sync --group docs
-uv run sphinx-build --keep-going -b html docs docs/_build/html
+uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 ```
 
 The generated site is written to `docs/_build/html/`.

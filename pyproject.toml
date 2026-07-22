@@ -3,12 +3,58 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "uconf"
-version = "1.0.2"
-authors = [{ name = "Najib Idrissi" }, { name = "Victor Roca i Lucio" }]
+name = "uconf-operads"
+version = "1.0.3"
+description = "Combinatorial operad/cooperad models for algebraic topology and configuration spaces"
+authors = [
+    { name = "Najib Idrissi", email = "najib.idrissi-kaitouni@u-pariscite.fr" },
+    { name = "Victor Roca i Lucio", email = "rocalucio@imj-prg.fr" },
+]
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.12"
+dependencies = ["sagemath>=10.9"]
+keywords = [
+    "algebraic topology",
+    "configuration spaces",
+    "cooperads",
+    "operads",
+    "SageMath",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.urls]
+Homepage = "https://nidrissi.github.io/uconf/"
+Documentation = "https://nidrissi.github.io/uconf/"
+Repository = "https://github.com/nidrissi/uconf"
+Issues = "https://github.com/nidrissi/uconf/issues"
+DOI = "https://doi.org/10.5281/zenodo.20843321"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uconf"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/AUTHORS",
+    "/CITATION.cff",
+    "/environment.yml",
+    "/LICENSE.md",
+    "/pyproject.toml",
+    "/README.md",
+]
+exclude = [
+    "/docs/_build",
+]
 
 [dependency-groups]
 dev = [
@@ -21,10 +67,10 @@ dev = [
 docs = ["myst-parser==5.1.0", "Sphinx==9.1.0"]
 
 [tool.uv]
-# SageMath is provided by the system (or conda) interpreter, not by uv. Prefer a
-# system Python so `uv venv --system-site-packages` builds on the interpreter
-# that actually has Sage, instead of a uv-managed download. Override per-invocation
-# with `uv venv --python <path>` if Sage lives on a non-default interpreter.
+# Although SageMath is declared as a runtime dependency, local development uses
+# the system or conda installation instead of rebuilding Sage through uv. Prefer
+# a system Python so `uv venv --system-site-packages` inherits that installation.
+# Override with `uv venv --python <path>` if Sage uses a non-default interpreter.
 python-preference = "system"
 
 [tool.pytest.ini_options]
