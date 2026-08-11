@@ -561,7 +561,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     Examples::
 
         cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M)
-        elem = cofree_coass.modul(((1, 2), (m1, m2)))
+        elem = cofree_coass.module(((1, 2), (m1, m2)))
         cofree_coass.coact(elem, 2)
 
     """
