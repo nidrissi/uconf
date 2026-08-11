@@ -111,7 +111,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 converted = self._symmetric_group(list(entries))
             elif isinstance(p, (tuple, list)):
                 entries = tuple(p)
-                converted = self._symmetric_group(p)
+                converted = self._symmetric_group(list(p))
             else:
                 raise TypeError(
                     f"Item {i} in basis tuple must be a permutation or one-line tuple/list. "
