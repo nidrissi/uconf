@@ -35,7 +35,7 @@ class BarrattEccles(CombinatorialFreeModule):
         sage: from sage.all import QQ
         sage: from uconf import BarrattEccles
         sage: E2 = BarrattEccles(2, QQ)
-        sage: x = E2(((1, 2), (2, 1)))
+        sage: x = E2(([1, 2], [2, 1]))
         sage: x.arity()
         2
         sage: E2.degree_on_basis(next(iter(x.support())))
@@ -111,7 +111,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 converted = self._symmetric_group(list(entries))
             elif isinstance(p, (tuple, list)):
                 entries = tuple(p)
-                converted = self._symmetric_group(list(p))
+                converted = self._symmetric_group(p)
             else:
                 raise TypeError(
                     f"Item {i} in basis tuple must be a permutation or one-line tuple/list. "
