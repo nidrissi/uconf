@@ -13,7 +13,7 @@ authors = [
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.12"
-dependencies = ["sagemath>=10.9"]
+dependencies = ["sagemath>=10.7"]
 keywords = [
     "algebraic topology",
     "configuration spaces",
