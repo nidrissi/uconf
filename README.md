@@ -8,7 +8,7 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 ## Installation
 
-`uconf-operads` requires Python 3.12 or later and SageMath 10.9 or later. The
+`uconf-operads` requires Python 3.12 or later and SageMath 10.7 or later. The
 recommended installation uses conda-forge to provide SageMath:
 
 ```bash
@@ -81,7 +81,7 @@ uv run python -c 'from importlib.metadata import version; print(version("sagemat
 ```
 
 Because SageMath is excluded from uv's resolution, uv does not check its
-version. The last command must report SageMath 10.9 or later.
+version. The last command must report SageMath 10.7 or later.
 
 Run the test suite:
 

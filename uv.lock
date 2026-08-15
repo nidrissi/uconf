@@ -637,7 +637,7 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sagemath", specifier = ">=10.9" }]
+requires-dist = [{ name = "sagemath", specifier = ">=10.7" }]
 
 [package.metadata.requires-dev]
 dev = [

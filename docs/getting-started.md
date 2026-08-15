@@ -24,7 +24,7 @@ conda run -n sage sphinx-build --keep-going -b html docs docs/_build/html
 ### uv with an existing SageMath installation
 
 For local development, uv treats SageMath as an externally managed dependency.
-The published package still declares `sagemath>=10.9`, but the
+The published package still declares `sagemath>=10.7`, but the
 `exclude-dependencies` setting in `pyproject.toml` prevents `uv sync` from
 downloading SageMath and its transitive dependencies. The virtual environment
 must instead inherit SageMath from the interpreter on which it is built:
@@ -37,7 +37,7 @@ uv run python -c 'from importlib.metadata import version; print(version("sagemat
 
 Use `uv venv --python <path> --system-site-packages` when SageMath belongs to a
 non-default interpreter. Since uv excludes SageMath from resolution, the last
-command must report version 10.9 or later. Then build with:
+command must report version 10.7 or later. Then build with:
 
 ```bash
 uv run sphinx-build --keep-going -b html docs docs/_build/html
