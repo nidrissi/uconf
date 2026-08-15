@@ -60,17 +60,28 @@ commands can be run with the `conda run -n sage` prefix.
 
 ## Development
 
-This project uses [uv](https://docs.astral.sh/uv/). The uv-managed venv inherits
-a system-wide (or conda) SageMath via `--system-site-packages`, so the venv must
-be built on the Python interpreter that provides Sage. `pyproject.toml` sets
-`python-preference = "system"` so uv selects it automatically; pass
-`--python <path>` if Sage lives on a non-default interpreter. Create the
-environment and install the `dev` dependency group:
+This project uses [uv](https://docs.astral.sh/uv/) for local development but
+treats SageMath as externally managed. SageMath remains in
+`project.dependencies`, so published wheels correctly require it, while
+[`exclude-dependencies`](https://docs.astral.sh/uv/concepts/resolution/#dependency-exclusions)
+removes it from uv's local resolution graph. Thus `uv sync` does not download
+SageMath or its dependencies.
+
+Excluding SageMath from resolution does not make it importable. The uv-managed
+venv must inherit a system-wide (or conda) SageMath via
+`--system-site-packages`, and it must be built on the Python interpreter that
+provides Sage. `pyproject.toml` sets `python-preference = "system"` so uv selects
+it automatically; pass `--python <path>` if Sage lives on a non-default
+interpreter. Create the environment and install the `dev` dependency group:
 
 ```bash
 uv venv --system-site-packages
 uv sync
+uv run python -c 'from importlib.metadata import version; print(version("sagemath"))'
 ```
+
+Because SageMath is excluded from uv's resolution, uv does not check its
+version. The last command must report SageMath 10.9 or later.
 
 Run the test suite:
 
