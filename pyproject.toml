@@ -67,9 +67,10 @@ dev = [
 docs = ["myst-parser==5.1.0", "Sphinx==9.1.0"]
 
 [tool.uv]
-# Although SageMath is declared as a runtime dependency, local development uses
-# the system or conda installation instead of rebuilding Sage through uv. Prefer
-# a system Python so `uv venv --system-site-packages` inherits that installation.
+# SageMath remains a published runtime dependency, but local development inherits
+# it from the system or conda installation instead of rebuilding it through uv.
+exclude-dependencies = ["sagemath"]
+# Prefer a system Python so `uv venv --system-site-packages` inherits SageMath.
 # Override with `uv venv --python <path>` if Sage uses a non-default interpreter.
 python-preference = "system"
 

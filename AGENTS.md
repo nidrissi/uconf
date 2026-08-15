@@ -42,15 +42,21 @@ conda run -n sage python -m compileall -q src tests
 ### Local development → uv
 
 SageMath is installed system-wide; the [uv](https://docs.astral.sh/uv/)-managed
-venv inherits it via `--system-site-packages` (uv does **not** install
-SageMath). The venv must therefore be built on the interpreter that provides
-Sage; `pyproject.toml` sets `python-preference = "system"` so `uv venv` picks it
+venv inherits it via `--system-site-packages`. SageMath remains in
+`project.dependencies` for correct published metadata, while
+`tool.uv.exclude-dependencies` prevents uv from installing SageMath or its
+transitive dependencies locally. Do not remove either half of this arrangement.
+
+The venv must be built on the interpreter that provides Sage;
+`pyproject.toml` sets `python-preference = "system"` so `uv venv` picks it
 instead of a managed download (add `--python <path>` if Sage is on a non-default
-interpreter). One-time setup:
+interpreter). Because the excluded dependency is not version-checked by uv,
+verify separately that SageMath 10.9 or later is inherited. One-time setup:
 
 ```bash
 uv venv --system-site-packages   # flag goes on the venv; Sage is inherited
 uv sync                          # installs the project + the `dev` group
+uv run python -c 'from importlib.metadata import version; print(version("sagemath"))'
 ```
 
 Then prefix every Python or tool command with `uv run`:
