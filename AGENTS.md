@@ -51,7 +51,7 @@ The venv must be built on the interpreter that provides Sage;
 `pyproject.toml` sets `python-preference = "system"` so `uv venv` picks it
 instead of a managed download (add `--python <path>` if Sage is on a non-default
 interpreter). Because the excluded dependency is not version-checked by uv,
-verify separately that SageMath 10.9 or later is inherited. One-time setup:
+verify separately that SageMath 10.7 or later is inherited. One-time setup:
 
 ```bash
 uv venv --system-site-packages   # flag goes on the venv; Sage is inherited
