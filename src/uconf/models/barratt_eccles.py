@@ -30,6 +30,11 @@ class BarrattEccles(CombinatorialFreeModule):
     Basis elements are tuples of permutations in ``S_n`` with no consecutive
     duplicates. Degenerate inputs map to zero, while malformed inputs raise.
 
+    Individual permutations follow Sage's :class:`SymmetricGroup` conventions:
+    a ``list`` is **one-line** notation and a ``tuple`` is **cycle** notation.
+    The two never coincide, so ``[1, 2]`` is the identity of ``S_2`` while
+    ``(1, 2)`` is the transposition.
+
     EXAMPLES::
 
         sage: from sage.all import QQ
@@ -40,6 +45,11 @@ class BarrattEccles(CombinatorialFreeModule):
         2
         sage: E2.degree_on_basis(next(iter(x.support())))
         1
+
+    The same element in cycle notation, with ``()`` for the identity::
+
+        sage: E2(((), (1, 2))) == x
+        True
     """
 
     name: ClassVar[str] = "ℰ"
@@ -69,8 +79,9 @@ class BarrattEccles(CombinatorialFreeModule):
     def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
         """Build elements from a basis key or a sparse coefficient dictionary.
 
-        Tuples with consecutive duplicate permutations map to zero. Invalid
-        permutation data raises.
+        Individual permutations are read with the notation rules documented on
+        :meth:`_validate_basis_key`. Keys with consecutive duplicate
+        permutations map to zero. Invalid permutation data raises.
         """
         if isinstance(x, dict):
             R = self.base_ring()
@@ -94,6 +105,21 @@ class BarrattEccles(CombinatorialFreeModule):
     ) -> tuple[SymmetricGroup] | None:
         """Validate a basis tuple and coerce entries to elements of ``S_n``.
 
+        Entries are read with Sage's :class:`SymmetricGroup` conventions:
+
+        - an element of ``S_n`` is taken as is;
+        - a ``list`` is **one-line** notation, so ``[2, 1]`` is the
+          transposition of ``S_2``;
+        - a ``tuple`` is **cycle** notation, so ``()`` is the identity of
+          ``S_2`` and ``(1, 2)`` is that same transposition;
+        - any other object exposing ``tuple()`` — a permutation of a different
+          symmetric group, say — is read through its one-line form.
+
+        Because the two notations disagree, a key round-trips only through the
+        one-line *list* form, ``tuple(list(p.tuple()) for p in key)``; dropping
+        the inner ``list`` re-reads one-line data as cycles and silently yields
+        a different permutation.
+
         Returns ``None`` for degenerate tuples with consecutive duplicates and
         raises on malformed permutation data.
         """
@@ -106,33 +132,16 @@ class BarrattEccles(CombinatorialFreeModule):
                 clean_tuple.append(p)
                 continue
 
-            if hasattr(p, "tuple") and not isinstance(p, (tuple, list)):
-                entries = tuple(p.tuple())
-                converted = self._symmetric_group(list(entries))
-            elif isinstance(p, (tuple, list)):
-                entries = tuple(p)
-                converted = self._symmetric_group(p)
+            if isinstance(p, tuple):
+                converted = self._permutation_from_cycles(p, i)
+            elif isinstance(p, list):
+                converted = self._permutation_from_one_line(tuple(p), i)
+            elif hasattr(p, "tuple"):
+                converted = self._permutation_from_one_line(tuple(p.tuple()), i)
             else:
                 raise TypeError(
-                    f"Item {i} in basis tuple must be a permutation or one-line tuple/list. "
-                    f"Got {p} ({type(p)})."
-                )
-
-            if len(entries) != self.arity():
-                raise ValueError(
-                    f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}; "
-                    f"got length {len(entries)}."
-                )
-            if any(not isinstance(entry, (int, Integer)) for entry in entries):
-                bad_entry = next(
-                    entry for entry in entries if not isinstance(entry, (int, Integer))
-                )
-                raise TypeError(
-                    f"Permutation entries must be integers. Got {bad_entry} ({type(bad_entry)})."
-                )
-            if set(entries) != set(range(1, self.arity() + 1)):
-                raise ValueError(
-                    f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}. Got {entries}."
+                    f"Item {i} in basis tuple must be a permutation, a one-line list, "
+                    f"or a cycle-notation tuple. Got {p} ({type(p)})."
                 )
             clean_tuple.append(converted)
 
@@ -141,6 +150,61 @@ class BarrattEccles(CombinatorialFreeModule):
                 if clean_tuple[i] == clean_tuple[i + 1]:
                     return None
         return tuple(clean_tuple)
+
+    def _permutation_from_one_line(self, entries: tuple, i: int):
+        """Coerce a one-line sequence of images to an element of ``S_n``."""
+        if len(entries) != self.arity():
+            raise ValueError(
+                f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}; "
+                f"got length {len(entries)}."
+            )
+        for entry in entries:
+            if not isinstance(entry, (int, Integer)):
+                raise TypeError(
+                    f"Permutation entries must be integers. Got {entry} ({type(entry)})."
+                )
+        if set(entries) != set(range(1, self.arity() + 1)):
+            raise ValueError(
+                f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}. Got {entries}."
+            )
+        return self._symmetric_group(list(entries))
+
+    def _permutation_from_cycles(self, cycles: tuple, i: int):
+        """Coerce cycle notation to an element of ``S_n``.
+
+        Accepts a single cycle such as ``(1, 2, 3)``, a tuple of disjoint
+        cycles such as ``((1, 2), (3, 4))``, and ``()`` for the identity.
+        """
+        if all(isinstance(c, (int, Integer)) for c in cycles):
+            cycle_list = [tuple(cycles)]
+        elif all(isinstance(c, (tuple, list)) for c in cycles):
+            cycle_list = [tuple(c) for c in cycles]
+        else:
+            raise TypeError(
+                f"Item {i} is not cycle notation: {cycles}. Give either a single cycle of "
+                f"integers such as (1, 2) or a tuple of disjoint cycles such as "
+                f"((1, 2), (3, 4))."
+            )
+
+        for cycle in cycle_list:
+            for point in cycle:
+                if not isinstance(point, (int, Integer)):
+                    raise TypeError(f"Cycle entries must be integers. Got {point} ({type(point)}).")
+                if not 1 <= point <= self.arity():
+                    raise ValueError(
+                        f"Item {i} must be a permutation of {{1, ..., {self.arity()}}}; "
+                        f"the cycle notation {cycles} moves the point {point}."
+                    )
+            if len(set(cycle)) != len(cycle):
+                raise ValueError(f"Item {i} repeats a point inside the cycle {cycle}.")
+
+        try:
+            return self._symmetric_group(cycles)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Item {i} is not a valid cycle-notation permutation of "
+                f"{{1, ..., {self.arity()}}}. Got {cycles}."
+            ) from exc
 
     def rho(self, data: tuple | list) -> BarrattEccles.Element:
         """Build the normalized element ``(id, sigma_1, sigma_1 sigma_2, ...)``."""
@@ -162,7 +226,7 @@ class BarrattEccles(CombinatorialFreeModule):
     @staticmethod
     def unit(base_ring) -> "BarrattEccles.Element":
         """Return the operadic unit in arity ``1``."""
-        return BarrattEccles(1, base_ring)(((1,),))
+        return BarrattEccles(1, base_ring)(([1],))
 
     @staticmethod
     def unit_key() -> tuple:
@@ -259,10 +323,13 @@ class BarrattEccles(CombinatorialFreeModule):
 
             sage: from sage.all import QQ
             sage: from uconf import BarrattEccles
-            sage: x = BarrattEccles(2, QQ)(((1, 2),))
-            sage: y = BarrattEccles(2, QQ)(((1, 2), (2, 1)))
-            sage: BarrattEccles.compose(x, 1, y).arity()
+            sage: x = BarrattEccles(2, QQ)(([1, 2],))
+            sage: y = BarrattEccles(2, QQ)(([1, 2], [2, 1]))
+            sage: z = BarrattEccles.compose(x, 1, y)
+            sage: z.arity()
             3
+            sage: z.is_zero()
+            False
         """
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
