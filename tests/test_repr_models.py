@@ -26,7 +26,7 @@ def test_surjection_element_repr_latex():
 
 
 def test_barratt_eccles_element_repr_latex():
-    _assert_latex_repr(BarrattEccles(2, QQ)(((1, 2),)))
+    _assert_latex_repr(BarrattEccles(2, QQ)(([2, 1],)))
 
 
 def test_lie_element_repr_latex():

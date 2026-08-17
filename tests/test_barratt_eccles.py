@@ -109,6 +109,50 @@ def test_barratt_eccles_constructor_raises_on_invalid_container() -> None:
         e2("12")
 
 
+def test_barratt_eccles_tuple_is_cycle_notation_list_is_one_line() -> None:
+    """Tuples are cycle notation, lists are one-line, following Sage."""
+    e2 = BarrattEccles(2, QQ)
+    assert e2(((1, 2),)) == e2(([2, 1],)), "Cycle (1,2) and one-line [2,1] are the same element."
+    assert e2(((),)) == e2(([1, 2],)), "The empty cycle and one-line [1,2] are both the identity."
+    assert e2(((1, 2),)) != e2(([1, 2],)), (
+        "Cycle (1,2) is the transposition while one-line [1,2] is the identity."
+    )
+
+
+def test_barratt_eccles_empty_tuple_is_the_identity() -> None:
+    """``()`` is accepted as cycle notation for the identity in every arity."""
+    for n in range(1, 4):
+        en = BarrattEccles(n, QQ)
+        identity = en._symmetric_group.identity()
+        assert _as_dict(en(((),))) == {(tuple(identity.tuple()),): 1}
+
+
+def test_barratt_eccles_key_round_trips_through_one_line_lists() -> None:
+    """A key survives ``tuple(list(p.tuple()) for p in key)`` but not without the list."""
+    e2 = BarrattEccles(2, QQ)
+    x = e2(([1, 2], [2, 1]))
+    key = next(iter(x.support()))
+    assert e2(tuple(list(p.tuple()) for p in key)) == x, "One-line round trip must be faithful."
+    # Without the inner list the one-line data is re-read as cycles, and both
+    # entries collapse onto the transposition, so the key becomes degenerate.
+    assert e2(tuple(tuple(p.tuple()) for p in key)) == e2.zero()
+
+
+@pytest.mark.parametrize(
+    ("key", "error_type"),
+    [
+        (((1, (2, 3)),), TypeError),
+        (((1, 1),), ValueError),
+        ((((1, 2), (1, 3)),), ValueError),
+    ],
+)
+def test_barratt_eccles_rejects_malformed_cycle_notation(
+    key: tuple[tuple[object, ...], ...], error_type: type[Exception]
+) -> None:
+    with pytest.raises(error_type):
+        BarrattEccles(3, QQ)(key)
+
+
 def test_barratt_eccles_dict_constructor_skips_only_degenerate_terms() -> None:
     e2 = BarrattEccles(2, QQ)
     element = e2({((1, 2),): 3, ((1, 2), (1, 2)): 5})

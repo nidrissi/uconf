@@ -558,12 +558,15 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
     The coprojection ``pi: T^c_C(M) -> M`` is given by ``project()``.
 
-    Examples::
+    EXAMPLES::
 
-        cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, module_M)
-        elem = cofree_coass.module(((1, 2), (m1, m2)))
-        cofree_coass.coact(elem, 2)
-
+        sage: from sage.all import QQ
+        sage: from uconf import CoAssociative, Commutative, CofreeConilpotentCoalgebra
+        sage: M = Commutative(1, QQ)
+        sage: cofree_coass = CofreeConilpotentCoalgebra(CoAssociative, M)
+        sage: elem = cofree_coass.module(((1, 2), ((), ())))
+        sage: cofree_coass.coact(elem, 2)
+        μ((1, 2)) # <μ((1,)); μ([1])> # <μ((1,)); μ([1])>
     """
 
     def __init__(self, cooperad_cls: QuasiPlanarLike, inner_module):
