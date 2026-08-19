@@ -83,10 +83,11 @@ uv run python -c 'from importlib.metadata import version; print(version("sagemat
 Because SageMath is excluded from uv's resolution, uv does not check its
 version. The last command must report SageMath 10.7 or later.
 
-Run the test suite:
+Run the test suite and Sage doctests:
 
 ```bash
 uv run pytest
+uv run python -m sage.doctest --force-lib src/uconf
 ```
 
 Validate before committing:
