@@ -5,40 +5,40 @@ from random import Random
 import pytest
 from sage.all import QQ
 
-import uconf.sampling as sampling
-from uconf.models.surjection import Surjection
-from uconf.models.lie import Lie
-from uconf.wrappers.shifted_operad import ShiftedOperad
-from uconf.wrappers.hadamard_operad import HadamardProduct
+from uconf import sampling
 from uconf.algebraic.spherical import (
     _extract_concatenated_permutations,
     _sphere_surjection_basis_sign,
 )
+from uconf.models.lie import Lie
+from uconf.models.surjection import Surjection
 from uconf.sampling import (
-    random_surjection_key,
-    random_surjection,
-    random_planar_surjection_key,
-    random_planar_surjection,
-    random_sphere_admissible_surjection_key,
-    random_sphere_admissible_surjection,
-    random_lie_key,
-    random_lie_element,
-    random_barratt_eccles_key,
-    random_barratt_eccles_element,
-    random_hadamard_key,
-    random_shuffle_tree,
     random_bar_element,
+    random_barratt_eccles_element,
+    random_barratt_eccles_key,
     random_cobar_element,
-    random_free_algebra_element,
     random_cofree_coalgebra_element,
+    random_free_algebra_element,
+    random_hadamard_key,
+    random_lie_element,
+    random_lie_key,
+    random_planar_surjection,
+    random_planar_surjection_key,
+    random_shuffle_tree,
+    random_sphere_admissible_surjection,
+    random_sphere_admissible_surjection_key,
+    random_surjection,
+    random_surjection_key,
     random_tree_module_element,
-    sample_basis,
-    sample_operad_basis,
-    sample_hadamard_basis,
     sample_algebra_pool,
-    sphere_nontrivial_surjection_iter,
+    sample_basis,
+    sample_hadamard_basis,
+    sample_operad_basis,
     sphere_nontrivial_operad_basis_iter,
+    sphere_nontrivial_surjection_iter,
 )
+from uconf.wrappers.hadamard_operad import HadamardProduct
+from uconf.wrappers.shifted_operad import ShiftedOperad
 
 
 @pytest.fixture
@@ -268,6 +268,7 @@ class TestSampleBasisEmptyFastFail:
 
     def test_sphere_nontrivial_wrong_degree(self, rng):
         import time
+
         from sage.all import GF
 
         from uconf.algebraic.configuration import _build_layers
@@ -286,7 +287,6 @@ class TestSampleBasisEmptyFastFail:
         def fake_invoke(*args, **kwargs):
             nonlocal calls
             calls += 1
-            return None
 
         monkeypatch.setattr(sampling, "_graded_basis_cache_get", lambda *args, **kwargs: None)
         monkeypatch.setattr(sampling, "_invoke_direct_sampler", fake_invoke)
@@ -395,7 +395,7 @@ class TestRandomShuffleTree:
             rng,
         )
         assert tree is not None
-        from uconf.core.trees import tree_arity, is_leaf
+        from uconf.core.trees import is_leaf, tree_arity
 
         assert not is_leaf(tree)
         assert tree_arity(tree) == 3
@@ -584,8 +584,8 @@ class TestSampleBasisDispatch:
 
 class TestRandomTreeModuleElement:
     def test_basic(self, rng):
-        from uconf.algebraic.tree_module import TreeModule
         from uconf.algebraic.configuration import TrivialModule
+        from uconf.algebraic.tree_module import TreeModule
 
         M = TrivialModule(1, QQ)
         tm = TreeModule(Surjection, M, name="TestTM")

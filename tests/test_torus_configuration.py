@@ -21,8 +21,6 @@ from sage.all import GF, QQ
 
 import uconf  # noqa: F401  — wires BarrattEccles.Element.table_reduction
 from uconf.algebraic.simplicial import surjection_cochain_action
-from uconf.models.barratt_eccles import BarrattEccles
-from uconf.models.simplicial import SimplicialCochains
 from uconf.algebraic.torus import BarrattEcclesTorusCochainAlgebra, ReducedTorusCochains
 from uconf.algebraic.torus_configuration import (
     _build_surjection_torus_layers,
@@ -31,8 +29,9 @@ from uconf.algebraic.torus_configuration import (
     unordered_torus_configuration_model,
 )
 from uconf.homology import compute_chain_complex
+from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.simplicial import SimplicialCochains
 from uconf.models.surjection import Surjection
-
 
 # --------------------------------------------------------------------------- #
 # The explicit Barratt--Eccles algebra on the torus cochains.

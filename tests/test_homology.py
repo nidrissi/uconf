@@ -9,6 +9,7 @@ import sys
 import pytest
 from sage.all import GF, QQ, cached_method
 
+import uconf.homology as homology_module
 from uconf import (
     BarrattEccles,
     Lie,
@@ -16,11 +17,10 @@ from uconf import (
     compute_chain_complex,
     homology_basis,
 )
-import uconf.homology as homology_module
 from uconf.homology import (
-    _WorkerManager,
     _boundary_matrix,
     _worker_loop,
+    _WorkerManager,
     compute_homology_representatives,
 )
 

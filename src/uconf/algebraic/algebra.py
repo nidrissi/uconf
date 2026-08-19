@@ -18,9 +18,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Generic, Protocol, TypeVar
+
 from sage.all import CombinatorialFreeModule, UniqueRepresentation
 
-from uconf.core.operad import OperadLike, OperadComponent
+from uconf.core.operad import OperadComponent, OperadLike
 
 AlgebraElementType = TypeVar("AlgebraElementType")
 OperadElementType = TypeVar("OperadElementType", bound=OperadComponent.Element)

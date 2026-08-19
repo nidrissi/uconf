@@ -28,12 +28,11 @@ from sage.all import SymmetricGroup, cached_function, tensor
 from uconf.constructions.cobar_construction import CobarConstruction
 from uconf.core.cooperad import CooperadComponent, CooperadLike
 from uconf.core.morphism import OperadMorphism
-from uconf.core.signs import sign_from_exponent
 from uconf.core.quasi_planar import QuasiPlanarMixin
+from uconf.core.signs import sign_from_exponent
 from uconf.core.trees import RootedTree, children, decoration, is_leaf, vertex_arity
 from uconf.models.barratt_eccles import BarrattEccles
 from uconf.wrappers.hadamard_operad import HadamardProduct
-
 
 # Module-level caches for hot paths in _nu_on_planar.  Keyed on
 # (arity, elem_key) so entries are shared across distinct top-level calls

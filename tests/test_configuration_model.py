@@ -48,7 +48,7 @@ from uconf.algebraic.configuration import (
     _build_layers,
 )
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
-from uconf.sampling import sample_basis, sample_algebra_pool
+from uconf.sampling import sample_algebra_pool, sample_basis
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -51,7 +51,7 @@ class Layer:
             for dashed, ``None`` for default solid black).
     """
 
-    __slots__ = ("vertex_style", "edge_style")
+    __slots__ = ("edge_style", "vertex_style")
 
     def __init__(self, vertex_style: str, edge_style: str | None):
         self.vertex_style = vertex_style
@@ -445,15 +445,15 @@ def reps_to_tex_document(
 
 
 __all__ = [
-    "Layer",
-    "default_layer_for_depth",
-    "tree_to_forest",
-    "element_to_tikz",
-    "reps_to_tex_document",
-    "STYLE_RED_VERTEX",
     "STYLE_BLACK_VERTEX",
     "STYLE_BLUE_BOX",
+    "STYLE_DASHED_EDGE",
     "STYLE_LEAF",
     "STYLE_RED_EDGE",
-    "STYLE_DASHED_EDGE",
+    "STYLE_RED_VERTEX",
+    "Layer",
+    "default_layer_for_depth",
+    "element_to_tikz",
+    "reps_to_tex_document",
+    "tree_to_forest",
 ]

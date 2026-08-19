@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -56,7 +56,7 @@ class ShiftedCooperad(UniqueRepresentation):
         base_k = getattr(self.cooperad_cls, "connectivity", 0)
         return base_k + self.shift_degree
 
-    def __call__(self, n: int, base_ring) -> "ShiftedCooperad.Component":
+    def __call__(self, n: int, base_ring) -> ShiftedCooperad.Component:
         return ShiftedCooperad.Component(self, n, base_ring)
 
     def unit_key(self) -> object:
@@ -66,7 +66,7 @@ class ShiftedCooperad(UniqueRepresentation):
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of a shifted cooperad."""
 
-        def __init__(self, factory: "ShiftedCooperad", n: int, base_ring):
+        def __init__(self, factory: ShiftedCooperad, n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(
@@ -86,7 +86,8 @@ class ShiftedCooperad(UniqueRepresentation):
             )
 
             if callable(getattr(self._base_parent, "planarize", None)):
-                from sage.all import SymmetricGroupAlgebra, tensor as sage_tensor
+                from sage.all import SymmetricGroupAlgebra
+                from sage.all import tensor as sage_tensor
 
                 self._pz_sga = SymmetricGroupAlgebra(base_ring, n)
                 self._pz_codomain = sage_tensor([self, self._pz_sga])
@@ -157,7 +158,7 @@ class ShiftedCooperad(UniqueRepresentation):
         def base_parent(self):
             return self._base_parent
 
-        def from_base(self, element) -> "ShiftedCooperad.Element":
+        def from_base(self, element) -> ShiftedCooperad.Element:
             R = self.base_ring()
             if element.parent() is self._base_parent:
                 return self.sum_of_terms((basis, R(coeff)) for basis, coeff in element)
@@ -166,7 +167,7 @@ class ShiftedCooperad(UniqueRepresentation):
             )
             return self.sum_of_terms((basis, coeff) for basis, coeff in base_coerced)
 
-        def basis_iter(self, d: int) -> "Iterator[ShiftedCooperad.Element]":
+        def basis_iter(self, d: int) -> Iterator[ShiftedCooperad.Element]:
             """Iterate over basis elements of this shifted-cooperad component in degree ``d``.
 
             The arity-``n`` component of ``ShiftedCooperad(C, s)`` has its degrees
@@ -211,7 +212,7 @@ class ShiftedCooperad(UniqueRepresentation):
                 return base_term(basis_element)
             return str(basis_element)
 
-        def counit(self, x: "ShiftedCooperad.Element"):
+        def counit(self, x: ShiftedCooperad.Element):
             R = self.base_ring()
             base_x = self.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
             return self.factory.cooperad_cls.counit(base_x)
@@ -220,12 +221,12 @@ class ShiftedCooperad(UniqueRepresentation):
             """Return the basis key of the counit generator in arity ``1``."""
             return self.factory.unit_key()
 
-        def reduced(self, x: "ShiftedCooperad.Element") -> "ShiftedCooperad.Element":
+        def reduced(self, x: ShiftedCooperad.Element) -> ShiftedCooperad.Element:
             R = self.base_ring()
             base_x = self.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
             return self.from_base(self.factory.cooperad_cls.reduced(base_x))
 
-        def infinitesimal_cocompose(self, x: "ShiftedCooperad.Element", i: int, m: int, n: int):
+        def infinitesimal_cocompose(self, x: ShiftedCooperad.Element, i: int, m: int, n: int):
             left_parent = self.factory(m, self.base_ring())
             right_parent = self.factory(n, self.base_ring())
             target = tensor([left_parent, right_parent])
@@ -262,7 +263,7 @@ class ShiftedCooperad(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "ShiftedCooperad.Element":
+        def boundary(self) -> ShiftedCooperad.Element:
             parent = self.parent()
             return parent.boundary(self)
 
@@ -271,7 +272,7 @@ class ShiftedCooperad(UniqueRepresentation):
             parent = self.parent()
             return parent.planarize(self)
 
-        def permute(self, sigma) -> "ShiftedCooperad.Element":
+        def permute(self, sigma) -> ShiftedCooperad.Element:
             parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)
@@ -293,7 +294,7 @@ class ShiftedCooperad(UniqueRepresentation):
             parent = self.parent()
             return parent.counit(self)
 
-        def reduced(self) -> "ShiftedCooperad.Element":
+        def reduced(self) -> ShiftedCooperad.Element:
             parent = self.parent()
             return parent.reduced(self)
 

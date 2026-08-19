@@ -11,13 +11,14 @@ for our use-cases) and M is an inner dg-module.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from itertools import chain
-from typing import Any, Iterator
+from typing import Any
 
 from sage.all import (
     CombinatorialFreeModule,
-    GradedModulesWithBasis,
     Family,
+    GradedModulesWithBasis,
     SymmetricGroup,
     cached_method,
 )
@@ -31,9 +32,9 @@ from uconf.core.trees import (
     enumerate_planar_trees_generic_in_degree,
     is_leaf,
     relabel_leaves,
+    tree_arity,
     tree_to_latex,
     tree_to_string,
-    tree_arity,
     vertex_arity,
     vertices_dfs,
 )
@@ -744,6 +745,6 @@ class TreeModule(CombinatorialFreeModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def boundary(self) -> "TreeModule.Element":
+        def boundary(self) -> TreeModule.Element:
             """Apply the differential d = d_P + d_M."""
             return self.parent().boundary(self)

@@ -78,7 +78,7 @@ class SurjectionDual(Surjection):
                 )
         return rows
 
-    def _boundary_on_basis(self, basis_element: tuple) -> "SurjectionDual.Element":
+    def _boundary_on_basis(self, basis_element: tuple) -> SurjectionDual.Element:
         """Compute the differential by transposing ``Surjection`` differential."""
         primal_degree = len(basis_element) - self.arity()
         row = self._boundary_rows_for_degree(primal_degree).get(basis_element, {})
@@ -118,7 +118,7 @@ class SurjectionDual(Surjection):
         return rows
 
     @staticmethod
-    def counit(x: "SurjectionDual.Element"):
+    def counit(x: SurjectionDual.Element):
         """Return the cooperadic counit evaluation.
 
         The counit is nonzero only on the arity-``1`` basis element ``(1,)``.
@@ -132,7 +132,7 @@ class SurjectionDual(Surjection):
         return value
 
     @staticmethod
-    def reduced(x: "SurjectionDual.Element") -> "SurjectionDual.Element":
+    def reduced(x: SurjectionDual.Element) -> SurjectionDual.Element:
         """Project to the reduced part.
 
         This removes the arity-``1`` counit component and is the identity in
@@ -143,7 +143,7 @@ class SurjectionDual(Surjection):
         return x - SurjectionDual.counit(x) * x.parent()((1,))
 
     @staticmethod
-    def infinitesimal_cocompose(x: "SurjectionDual.Element", i: int, m: int, n: int):
+    def infinitesimal_cocompose(x: SurjectionDual.Element, i: int, m: int, n: int):
         r"""Partial cocomposition dual to :meth:`Surjection.compose`.
 
         Parameters
@@ -203,7 +203,7 @@ class SurjectionDual(Surjection):
             """Return the cooperadic counit evaluation."""
             return SurjectionDual.counit(self)
 
-        def reduced(self) -> "SurjectionDual.Element":
+        def reduced(self) -> SurjectionDual.Element:
             """Project to the reduced part."""
             return SurjectionDual.reduced(self)
 

@@ -1,10 +1,10 @@
 """Tests for the Hadamard-product operad wrapper."""
 
 import pytest
-from sage.all import QQ, GF
+from sage.all import GF, QQ
 
-from uconf import HadamardProduct, Lie, ShiftedOperad, Surjection
 from tests.planarize_helpers import planarize_round_trip_ok
+from uconf import HadamardProduct, Lie, ShiftedOperad, Surjection
 
 
 def _as_dict(x):
@@ -104,6 +104,6 @@ def test_hadamard_planarize_round_trip() -> None:
     """Planarize round-trip holds when the right factor is quasi-planar."""
     had = HadamardProduct(Lie, Surjection)
     h3 = had(3, QQ)
-    for d in range(0, 3):
+    for d in range(3):
         for x in h3.basis_iter(d):
             assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"

@@ -6,7 +6,8 @@ differential. Arity ``0`` is the zero module.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator
+from collections.abc import Iterator
+from typing import ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -15,6 +16,7 @@ from sage.all import (
     SymmetricGroup,
     cached_method,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 

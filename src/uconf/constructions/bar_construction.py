@@ -24,30 +24,32 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 from __future__ import annotations
 
 import itertools
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from sage.all import (
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     UniqueRepresentation,
-    tensor,
-    Family,
     cached_method,
+    tensor,
 )
 
-from uconf.core.signs import (
-    koszul_sign_of_permutation,
-    sign_from_exponent,
-)
 from uconf.core.display import latex_linear_combination
 from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
+from uconf.core.signs import (
+    koszul_sign_of_permutation,
+    sign_from_exponent,
+)
 from uconf.core.trees import (
     RootedTree,
     children,
+    contract_edge,
     decoration,
     enumerate_planar_trees_generic_in_degree,
     enumerate_shuffle_trees_in_degree,
@@ -63,7 +65,6 @@ from uconf.core.trees import (
     validate_tree,
     vertex_arity,
     vertices_dfs,
-    contract_edge,
 )
 
 
@@ -110,25 +111,25 @@ class BarConstruction(UniqueRepresentation):
         """
         return getattr(self.operad_cls, "connectivity", 0)
 
-    def __call__(self, n: int, base_ring) -> "BarConstruction.Component":
+    def __call__(self, n: int, base_ring) -> BarConstruction.Component:
         return BarConstruction.Component(self, n, base_ring)
 
     @staticmethod
-    def counit(x: "BarConstruction.Element"):
+    def counit(x: BarConstruction.Element):
         """Cooperadic counit at the factory level."""
         return BarConstruction.Component.counit(x)
 
     @staticmethod
-    def reduced(x: "BarConstruction.Element") -> "BarConstruction.Element":
+    def reduced(x: BarConstruction.Element) -> BarConstruction.Element:
         """Reduced projection at the factory level."""
         return BarConstruction.Component.reduced(x)
 
     @staticmethod
-    def infinitesimal_cocompose(x: "BarConstruction.Element", i: int, m: int, n: int):
+    def infinitesimal_cocompose(x: BarConstruction.Element, i: int, m: int, n: int):
         """Infinitesimal cocomposition at the factory level."""
         return x.infinitesimal_cocompose(i, m, n)
 
-    def counit_element(self, base_ring) -> "BarConstruction.Element":
+    def counit_element(self, base_ring) -> BarConstruction.Element:
         """Return the counit element (single leaf tree in arity 1).
 
         The bar construction B(P) has a canonical counit ε: B(P)(1) → k,
@@ -152,7 +153,7 @@ class BarConstruction(UniqueRepresentation):
 
         name = "B"
 
-        def __init__(self, factory: "BarConstruction", n: int, base_ring):
+        def __init__(self, factory: BarConstruction, n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             self.factory = factory
             self._arity = int(n)
@@ -346,7 +347,7 @@ class BarConstruction(UniqueRepresentation):
             """
             return sigma_tuple
 
-        def planar_basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
+        def planar_basis_iter(self, d: int) -> Iterator[BarConstruction.Element]:
             """Iterate over planar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar
@@ -388,7 +389,7 @@ class BarConstruction(UniqueRepresentation):
             ):
                 yield self(tree)
 
-        def basis_iter(self, d: int) -> Iterator["BarConstruction.Element"]:
+        def basis_iter(self, d: int) -> Iterator[BarConstruction.Element]:
             """Iterate over shuffle-tree basis elements of degree ``d``.
 
             Works for **any** connected operad, not just quasi-planar ones.
@@ -432,7 +433,7 @@ class BarConstruction(UniqueRepresentation):
             return Family(self.planar_basis_iter(d))
 
         @cached_method
-        def _permute_on_basis(self, tree_key, sigma_tuple) -> "BarConstruction.Element":
+        def _permute_on_basis(self, tree_key, sigma_tuple) -> BarConstruction.Element:
             """Return the element obtained by permuting leaf labels of *tree_key* by *sigma_tuple*.
 
             Cached per ``(tree_key, sigma_tuple)`` pair so that permuting the
@@ -570,7 +571,7 @@ class BarConstruction(UniqueRepresentation):
             )
 
         @cached_method
-        def _boundary_on_basis(self, tree) -> "BarConstruction.Element":
+        def _boundary_on_basis(self, tree) -> BarConstruction.Element:
             """Compute the bar differential d = d_1 + d_2 on a tree basis element.
 
             - ``d_1`` applies ``P.boundary`` to each vertex decoration.
@@ -579,7 +580,7 @@ class BarConstruction(UniqueRepresentation):
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
         @cached_method
-        def _d1_on_basis(self, tree) -> "BarConstruction.Element":
+        def _d1_on_basis(self, tree) -> BarConstruction.Element:
             """Internal differential: apply operad boundary to each vertex.
 
             For each vertex v_j in DFS order (pre-order), the sign is:
@@ -632,7 +633,7 @@ class BarConstruction(UniqueRepresentation):
             return result
 
         @cached_method
-        def _d2_on_basis(self, tree) -> "BarConstruction.Element":
+        def _d2_on_basis(self, tree) -> BarConstruction.Element:
             """Structural differential: contract each internal edge.
 
             For each internal edge (parent p, position l, child c), the sign is:
@@ -721,7 +722,7 @@ class BarConstruction(UniqueRepresentation):
             return RootedTree(decoration(node), *new_children)
 
         @staticmethod
-        def counit(x: "BarConstruction.Element"):
+        def counit(x: BarConstruction.Element):
             """Cooperadic counit: extracts coefficient of the 'unit' tree.
 
             The counit ε: B(P)(1) → k is non-trivial only on the single-leaf
@@ -735,7 +736,7 @@ class BarConstruction(UniqueRepresentation):
             return x[1] if 1 in x.support() else x.parent().base_ring().zero()
 
         @staticmethod
-        def reduced(x: "BarConstruction.Element") -> "BarConstruction.Element":
+        def reduced(x: BarConstruction.Element) -> BarConstruction.Element:
             """Project to reduced part (kills counit component).
 
             For arity 1, removes the coefficient of the single-leaf tree.
@@ -760,7 +761,7 @@ class BarConstruction(UniqueRepresentation):
             """
             return 1
 
-        def infinitesimal_cocompose(self, x: "BarConstruction.Element", i: int, m: int, n: int):
+        def infinitesimal_cocompose(self, x: BarConstruction.Element, i: int, m: int, n: int):
             """Partial cocomposition dual to free operad composition.
 
             Computes the full infinitesimal cocomposition
@@ -996,17 +997,17 @@ class BarConstruction(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "BarConstruction.Element":
+        def boundary(self) -> BarConstruction.Element:
             """Apply the bar differential (d_1 + d_2) to this element."""
             parent = self.parent()
             return parent.boundary(self)
 
-        def d1(self) -> "BarConstruction.Element":
+        def d1(self) -> BarConstruction.Element:
             """Internal differential: applies operad boundary to vertex decorations."""
             parent = self.parent()
             return parent._d1(self)
 
-        def d2(self) -> "BarConstruction.Element":
+        def d2(self) -> BarConstruction.Element:
             """Structural differential: contracts internal edges."""
             parent = self.parent()
             return parent._d2(self)
@@ -1020,7 +1021,7 @@ class BarConstruction(UniqueRepresentation):
             parent = self.parent()
             return parent.planarize(self)
 
-        def permute(self, sigma) -> "BarConstruction.Element":
+        def permute(self, sigma) -> BarConstruction.Element:
             """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
 
@@ -1038,7 +1039,7 @@ class BarConstruction(UniqueRepresentation):
             """Evaluate the cooperadic counit on this element."""
             return BarConstruction.Component.counit(self)
 
-        def reduced(self) -> "BarConstruction.Element":
+        def reduced(self) -> BarConstruction.Element:
             """Project this element to the reduced bar cooperad."""
             return BarConstruction.Component.reduced(self)
 

@@ -34,7 +34,6 @@ from __future__ import annotations
 import itertools
 from typing import ClassVar
 
-
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.algebraic.free_algebra import FreeAlgebraModule
@@ -224,15 +223,15 @@ class CobarCoalgebraModule(FreeAlgebraModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def boundary(self) -> "CobarCoalgebraModule.Element":
+        def boundary(self) -> CobarCoalgebraModule.Element:
             """Apply the full twisted cobar differential d = d_{T_P} + d_α."""
             return self.parent().boundary(self)
 
-        def d_free(self) -> "CobarCoalgebraModule.Element":
+        def d_free(self) -> CobarCoalgebraModule.Element:
             """Apply only the free algebra differential."""
             return self.parent().d_free(self)
 
-        def d_alpha(self) -> "CobarCoalgebraModule.Element":
+        def d_alpha(self) -> CobarCoalgebraModule.Element:
             """Apply only the twisting differential."""
             return self.parent().d_alpha(self)
 

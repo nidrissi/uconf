@@ -16,7 +16,8 @@ Structures tested:
 import itertools
 
 import pytest
-from sage.all import CombinatorialFreeModule, GF, GradedModulesWithBasis, QQ, tensor as sage_tensor
+from sage.all import GF, QQ, CombinatorialFreeModule, GradedModulesWithBasis
+from sage.all import tensor as sage_tensor
 
 from uconf import (
     Associative,
@@ -732,7 +733,7 @@ class TestHadamardProductSurjSurj:
         """d²=0 for all arity-2 basis elements up to degree 4."""
         had = self._had()
         comp = had(2, R)
-        for d in range(0, 5):
+        for d in range(5):
             for elem in comp.basis_iter(d):
                 dd = elem.boundary().boundary()
                 assert dd == comp.zero(), f"d²≠0 at degree {d}"
@@ -741,7 +742,7 @@ class TestHadamardProductSurjSurj:
         """d²=0 for arity-3, degree 0 and 1 basis elements."""
         had = self._had()
         comp = had(3, R)
-        for d in range(0, 2):
+        for d in range(2):
             for elem in comp.basis_iter(d):
                 dd = elem.boundary().boundary()
                 assert dd == comp.zero(), f"d²≠0 at arity 3, degree {d}"

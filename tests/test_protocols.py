@@ -7,18 +7,18 @@ from uconf import (
     Associative,
     BarConstruction,
     BarrattEccles,
-    HadamardProduct,
     CoAssociative,
+    CobarConstruction,
     CoCommutative,
     Commutative,
     CooperadComponent,
+    HadamardProduct,
     Lie,
     OperadComponent,
     ShiftedCooperad,
     ShiftedOperad,
     Surjection,
     SurjectionDual,
-    CobarConstruction,
 )
 from uconf.core.quasi_planar import QuasiPlanarProtocol
 
