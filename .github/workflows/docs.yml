@@ -52,6 +52,11 @@ jobs:
                   python -m pip install --upgrade pip
                   python -m pip install -e . --group docs
 
+            - name: Run Sage doctests
+              shell: bash -el {0}
+              run: |
+                  python -m sage.doctest --force-lib --format github -p 0 src/uconf
+
             - name: Build HTML documentation
               shell: bash -el {0}
               run: |

@@ -49,10 +49,10 @@ The generated site is written to `docs/_build/html`.
 
 - narrative overview pages for the main package areas,
 - generated API reference pages for the `uconf` package and subpackages,
-- the existing project notes already stored in `docs/`.
+- the existing project notes already stored in `docs/`,
+- native Sage doctest execution for the examples in package docstrings.
 
 ## What is not wired yet
 
 - publishing to GitHub Pages or Read the Docs,
-- doctest execution for the Sage-flavoured examples in docstrings,
 - custom theming beyond the default Sphinx theme.
