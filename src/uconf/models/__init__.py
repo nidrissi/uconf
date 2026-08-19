@@ -1,8 +1,8 @@
 """Canonical operad/cooperad and simplicial model classes."""
 
-from sage.all import cached_function
-
 from itertools import combinations
+
+from sage.all import cached_function
 
 from uconf.models.associative import Associative
 from uconf.models.barratt_eccles import BarrattEccles

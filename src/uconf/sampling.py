@@ -37,8 +37,9 @@ Construction-aware samplers:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from random import Random
-from typing import Any, Iterator
+from typing import Any
 
 from sage.all import SymmetricGroup as SG
 

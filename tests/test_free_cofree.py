@@ -19,7 +19,7 @@ Basis key convention after the fix:
 """
 
 import pytest
-from sage.all import GradedModulesWithBasis, QQ
+from sage.all import QQ, GradedModulesWithBasis
 
 from uconf import (
     Associative,
@@ -27,12 +27,11 @@ from uconf import (
     Commutative,
     Lie,
 )
-from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
 from uconf.algebraic.cofree_coalgebra import (
     CofreeCoalgebraModule,
     CofreeConilpotentCoalgebra,
 )
-
+from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
 
 # ===========================================================================
 # Helpers

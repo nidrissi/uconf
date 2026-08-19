@@ -1,10 +1,10 @@
 """Tests for the shifted-operad wrapper."""
 
 import pytest
-from sage.all import ZZ, QQ
+from sage.all import QQ, ZZ
 
-from uconf import Lie, ShiftedOperad, Surjection
 from tests.planarize_helpers import planarize_round_trip_ok
+from uconf import Lie, ShiftedOperad, Surjection
 
 
 def _as_dict(x):

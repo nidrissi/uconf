@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from functools import reduce
 from itertools import combinations, pairwise
-from typing import TYPE_CHECKING
 
 from sage.all import tensor
 
@@ -27,13 +26,10 @@ from uconf.models.simplicial import SimplicialChains, SimplicialCochains
 from uconf.models.surjection import Surjection
 from uconf.models.surjection_dual import SurjectionDual
 
-if TYPE_CHECKING:
-    pass
-
 
 def surjection_chain_action(
-    surj: "Surjection.Element",
-    chain: "SimplicialChains.Element",
+    surj: Surjection.Element,
+    chain: SimplicialChains.Element,
 ):
     r"""Action of a surjection element on normalized simplicial chains.
 
@@ -279,9 +275,9 @@ def surjection_chain_action(
 
 
 def surjection_cochain_action(
-    surj: "Surjection.Element",
-    cochains: tuple["SimplicialCochains.Element", ...],
-) -> "SimplicialCochains.Element":
+    surj: Surjection.Element,
+    cochains: tuple[SimplicialCochains.Element, ...],
+) -> SimplicialCochains.Element:
     r"""Dual surjection action on simplicial cochains.
 
     For `u \in S(r)` of degree `d` and cochains
@@ -396,7 +392,7 @@ def surjection_cochain_action(
             value += contrib
         if value != 0:
             duality_sign_exp = d * cochain_total_degree
-            for i in range(0, r):
+            for i in range(r):
                 duality_sign_exp += cochain_degrees[i] * sum(cochain_degrees[i + 1 :])
             duality_sign = -1 if duality_sign_exp % 2 == 1 else 1
             value *= duality_sign
@@ -461,7 +457,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
             coaction_map=self._coact_impl,
         )
 
-    def _coact_impl(self, v_element: "SimplicialChains.Element", n: int):
+    def _coact_impl(self, v_element: SimplicialChains.Element, n: int):
         """C-coalgebra coaction δ_n via the surjection chain action.
 
         Returns an element of ``tensor([SurjectionDual(n)] + [SC]*n)``

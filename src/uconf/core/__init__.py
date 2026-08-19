@@ -8,9 +8,9 @@ from uconf.core.quasi_planar import QuasiPlanarMixin, QuasiPlanarProtocol
 from uconf.core.twisting import TwistingMorphism
 
 __all__ = [
+    "CooperadComponent",
     "OperadComponent",
     "OperadMorphism",
-    "CooperadComponent",
     "ParentedElementMixin",
     "QuasiPlanarMixin",
     "QuasiPlanarProtocol",

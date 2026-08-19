@@ -5,10 +5,10 @@ import math
 from random import Random
 
 import pytest
-from sage.all import ZZ, QQ, SymmetricGroup
+from sage.all import QQ, ZZ, SymmetricGroup
 
-from uconf import BarrattEccles
 from tests.planarize_helpers import planarize_round_trip_ok
+from uconf import BarrattEccles
 
 
 def _degree_matches(element, d: int) -> bool:
@@ -34,7 +34,7 @@ def _as_dict(x):
 
 
 @pytest.mark.parametrize("r", range(1, 5))
-@pytest.mark.parametrize("d", range(0, 3))
+@pytest.mark.parametrize("d", range(3))
 def test_be_basis(r: int, d: int) -> None:
     basis = list(BarrattEccles(r, QQ).basis_iter(d))
     if r == 1:
@@ -239,7 +239,7 @@ def test_stress_barratt_eccles_boundary_squared_zero() -> None:
 
 
 @pytest.mark.parametrize("n", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 3))
+@pytest.mark.parametrize("d", range(3))
 def test_barratt_eccles_right_action(n: int, d: int) -> None:
     """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
     BEn = BarrattEccles(n, QQ)
@@ -252,7 +252,7 @@ def test_barratt_eccles_right_action(n: int, d: int) -> None:
 
 
 @pytest.mark.parametrize("n", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 3))
+@pytest.mark.parametrize("d", range(3))
 def test_barratt_eccles_planarize_round_trip(n: int, d: int) -> None:
     """Planarize round-trip holds for homogeneous Barratt-Eccles elements."""
     BEn = BarrattEccles(n, QQ)
@@ -261,7 +261,7 @@ def test_barratt_eccles_planarize_round_trip(n: int, d: int) -> None:
 
 
 @pytest.mark.parametrize("r", range(2, 5))
-@pytest.mark.parametrize("d", range(0, 4))
+@pytest.mark.parametrize("d", range(4))
 def test_table_reduction_equivariant(r: int, d: int) -> None:
     Sr = SymmetricGroup(r)
     for x in BarrattEccles(r, QQ).planar_basis_iter(d):

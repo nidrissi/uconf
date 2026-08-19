@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Protocol, TypeAlias, runtime_checkable
+from collections.abc import Iterable
+from typing import Any, Protocol, TypeAlias, runtime_checkable
 
 from uconf.core.component import ComponentProtocol
 

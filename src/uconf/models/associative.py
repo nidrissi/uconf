@@ -7,7 +7,8 @@ with zero differential.
 from __future__ import annotations
 
 import itertools
-from typing import ClassVar, Iterator
+from collections.abc import Iterator
+from typing import ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -18,6 +19,7 @@ from sage.all import (
     cached_method,
     tensor,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 

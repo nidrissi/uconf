@@ -3,22 +3,24 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Iterator
 from itertools import combinations, combinations_with_replacement, pairwise
-from typing import TYPE_CHECKING, ClassVar, Iterator
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from uconf.models.barratt_eccles import BarrattEccles
 
 from sage.all import (
-    Integer,
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
+    Integer,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     cached_method,
     tensor,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
@@ -66,7 +68,7 @@ class Surjection(CombinatorialFreeModule):
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
 
-    def _element_constructor_(self, x: "Surjection.Element | dict | tuple | list"):
+    def _element_constructor_(self, x: Surjection.Element | dict | tuple | list):
         """Build elements from basis tuples or sparse dictionaries.
 
         Degenerate basis keys, namely non-surjective tuples or tuples with
@@ -90,7 +92,7 @@ class Surjection(CombinatorialFreeModule):
 
         raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
-    def _validate_basis_key(self, basis_tuple: "tuple | list") -> tuple | None:
+    def _validate_basis_key(self, basis_tuple: tuple | list) -> tuple | None:
         """Validate a basis tuple.
 
         Returns ``None`` for degenerate surjections and raises on malformed
@@ -123,7 +125,7 @@ class Surjection(CombinatorialFreeModule):
         return self._arity
 
     @staticmethod
-    def unit(base_ring) -> "Surjection.Element":
+    def unit(base_ring) -> Surjection.Element:
         """Return the operadic unit in arity ``1``."""
         return Surjection(1, base_ring)((1,))
 
@@ -193,7 +195,7 @@ class Surjection(CombinatorialFreeModule):
         word = "\\;".join(str(i) for i in basis_element)
         return "\\left\\{" + word + "\\right\\}"
 
-    def _boundary_on_basis(self, basis_element: tuple) -> "Surjection.Element":
+    def _boundary_on_basis(self, basis_element: tuple) -> Surjection.Element:
         """Compute the differential on a basis surjection."""
         # determining the signs of the summands
         signs = {}
@@ -211,7 +213,7 @@ class Surjection(CombinatorialFreeModule):
         R = self.base_ring()
 
         def term_generator():
-            for idx in range(0, len(basis_element)):
+            for idx in range(len(basis_element)):
                 bdry_summand = basis_element[:idx] + basis_element[idx + 1 :]
                 if (
                     basis_element[idx] in bdry_summand

@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from math import prod
 
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, cached_method, Family
+from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, cached_method
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.display import latex_linear_combination

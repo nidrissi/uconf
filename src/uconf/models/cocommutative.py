@@ -28,7 +28,7 @@ class CoCommutative(Commutative):
     name: ClassVar[str] = "coCom"
 
     @staticmethod
-    def counit(x: "CoCommutative.Element"):
+    def counit(x: CoCommutative.Element):
         """Cooperadic counit: extracts the coefficient of the arity-1 generator.
 
         The counit ``ε: CoCom(1) → k`` evaluates to 1 on the unique basis
@@ -41,14 +41,14 @@ class CoCommutative(Commutative):
         return x.parent().base_ring().zero()
 
     @staticmethod
-    def reduced(x: "CoCommutative.Element") -> "CoCommutative.Element":
+    def reduced(x: CoCommutative.Element) -> CoCommutative.Element:
         """Project to the reduced part (kills the arity-1 unit component)."""
         if x.arity() != 1:
             return x
         return x - CoCommutative.counit(x) * x.parent()(())
 
     @staticmethod
-    def infinitesimal_cocompose(x: "CoCommutative.Element", i: int, m: int, n: int):
+    def infinitesimal_cocompose(x: CoCommutative.Element, i: int, m: int, n: int):
         """Partial cocomposition dual to ``Commutative.compose(·, i, ·)``.
 
         Since ``Com.compose(e_m, i, e_n) = e_{m+n-1}`` for all ``i``, the
@@ -81,7 +81,7 @@ class CoCommutative(Commutative):
             """Return the cooperadic counit evaluation."""
             return CoCommutative.counit(self)
 
-        def reduced(self) -> "CoCommutative.Element":
+        def reduced(self) -> CoCommutative.Element:
             """Project to the reduced part."""
             return CoCommutative.reduced(self)
 
