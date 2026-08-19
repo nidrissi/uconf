@@ -29,9 +29,9 @@ The cooperad axioms tested here are:
   where ``|a|`` is the degree of the left factor.
 """
 
+import itertools
 from random import Random
 
-import itertools
 import pytest
 from sage.all import QQ
 

@@ -23,7 +23,8 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 6.
 
 from __future__ import annotations
 
-from typing import ClassVar, Iterator
+from collections.abc import Iterator
+from typing import ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -100,10 +101,10 @@ class CobarConstruction(UniqueRepresentation):
         """Connectivity inherited from the underlying cooperad."""
         return int(getattr(self.cooperad_cls, "connectivity", 0))
 
-    def __call__(self, n: int, base_ring) -> "CobarConstruction.Component":
+    def __call__(self, n: int, base_ring) -> CobarConstruction.Component:
         return CobarConstruction.Component(self, n, base_ring)
 
-    def unit(self, base_ring) -> "CobarConstruction.Element":
+    def unit(self, base_ring) -> CobarConstruction.Element:
         """Return the unit element (identity in arity 1).
 
         For the free operad, the unit is represented by a single leaf.
@@ -121,8 +122,8 @@ class CobarConstruction(UniqueRepresentation):
         return 1
 
     def compose(
-        self, x: "CobarConstruction.Element", i: int, y: "CobarConstruction.Element"
-    ) -> "CobarConstruction.Element":
+        self, x: CobarConstruction.Element, i: int, y: CobarConstruction.Element
+    ) -> CobarConstruction.Element:
         """Free operad composition: graft y onto leaf i of x.
 
         In the free operad ``T(s⁻¹C̄)``, composition is tree grafting with a
@@ -179,7 +180,7 @@ class CobarConstruction(UniqueRepresentation):
 
         name: ClassVar[str] = "Ω"
 
-        def __init__(self, factory: "CobarConstruction", n: int, base_ring):
+        def __init__(self, factory: CobarConstruction, n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             self.factory = factory
             self._arity = int(n)
@@ -318,7 +319,7 @@ class CobarConstruction(UniqueRepresentation):
 
             return result
 
-        def planar_basis_iter(self, d: int) -> "Iterator[CobarConstruction.Element]":
+        def planar_basis_iter(self, d: int) -> Iterator[CobarConstruction.Element]:
             """Iterate over planar cobar basis elements of degree ``d``.
 
             A tree is *planar* when every vertex decoration is a planar element
@@ -461,7 +462,7 @@ class CobarConstruction(UniqueRepresentation):
                 return 0
             return subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
 
-        def basis_iter(self, d: int) -> Iterator["CobarConstruction.Element"]:
+        def basis_iter(self, d: int) -> Iterator[CobarConstruction.Element]:
             """Iterate over shuffle-tree basis elements of degree *d*.
 
             Works for **any** connected cooperad.  For the cobar construction
@@ -528,7 +529,7 @@ class CobarConstruction(UniqueRepresentation):
             )
 
         @cached_method
-        def _boundary_on_basis(self, tree) -> "CobarConstruction.Element":
+        def _boundary_on_basis(self, tree) -> CobarConstruction.Element:
             """Compute the cobar differential d = d_1 + d_2 on a tree.
 
             - ``d_1`` applies ``C.boundary`` to each vertex decoration.
@@ -539,7 +540,7 @@ class CobarConstruction(UniqueRepresentation):
             return self._d1_on_basis(tree) + self._d2_on_basis(tree)
 
         @cached_method
-        def _d1_on_basis(self, tree) -> "CobarConstruction.Element":
+        def _d1_on_basis(self, tree) -> CobarConstruction.Element:
             """Internal differential: apply cooperad boundary to each vertex.
 
             For vertices in DFS order, the sign at vertex ``v_j`` is
@@ -586,7 +587,7 @@ class CobarConstruction(UniqueRepresentation):
             return result
 
         @cached_method
-        def _d2_on_basis(self, tree) -> "CobarConstruction.Element":
+        def _d2_on_basis(self, tree) -> CobarConstruction.Element:
             """Structural differential: expand vertices using cocomposition.
 
             For each vertex *c* of the cobar tree, d₂ inserts a new internal
@@ -874,7 +875,7 @@ class CobarConstruction(UniqueRepresentation):
             return RootedTree(decoration(node), *new_children)
 
         @staticmethod
-        def unit() -> "CobarConstruction.Element":
+        def unit() -> CobarConstruction.Element:
             """The operadic unit is handled by the factory."""
             raise NotImplementedError("Use factory.unit() instead")
 
@@ -888,8 +889,8 @@ class CobarConstruction(UniqueRepresentation):
             return 1
 
         def compose(
-            self, x: "CobarConstruction.Element", i: int, y: "CobarConstruction.Element"
-        ) -> "CobarConstruction.Element":
+            self, x: CobarConstruction.Element, i: int, y: CobarConstruction.Element
+        ) -> CobarConstruction.Element:
             """Delegate to factory compose."""
             return self.factory.compose(x, i, y)
 
@@ -906,22 +907,22 @@ class CobarConstruction(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "CobarConstruction.Element":
+        def boundary(self) -> CobarConstruction.Element:
             """Apply the cobar differential ``d = d_1 + d_2``."""
             parent = self.parent()
             return parent.boundary(self)
 
-        def d1(self) -> "CobarConstruction.Element":
+        def d1(self) -> CobarConstruction.Element:
             """Internal differential: applies cooperad boundary to vertex decorations."""
             parent = self.parent()
             return parent._d1(self)
 
-        def d2(self) -> "CobarConstruction.Element":
+        def d2(self) -> CobarConstruction.Element:
             """Structural differential: expands internal edges."""
             parent = self.parent()
             return parent._d2(self)
 
-        def permute(self, sigma) -> "CobarConstruction.Element":
+        def permute(self, sigma) -> CobarConstruction.Element:
             """Permute leaf labels by ``sigma`` (no extra sign)."""
             parent = self.parent()
             n = parent.arity()

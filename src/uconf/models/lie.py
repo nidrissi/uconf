@@ -1,7 +1,8 @@
 """Finite-arity model of the Lie operad in a Hall-type basis."""
 
 import itertools as py_itertools
-from typing import Any, ClassVar, Iterator
+from collections.abc import Iterator
+from typing import Any, ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -13,6 +14,7 @@ from sage.all import (
     matrix,
     vector,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 

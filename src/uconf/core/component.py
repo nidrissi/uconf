@@ -1,5 +1,8 @@
 from __future__ import annotations
-from typing import Any, Protocol, Self, runtime_checkable, Iterator
+
+from collections.abc import Iterator
+from typing import Any, Protocol, Self, runtime_checkable
+
 from sage.all import Family
 
 

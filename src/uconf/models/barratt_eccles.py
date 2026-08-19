@@ -3,23 +3,25 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Iterator
 from itertools import combinations, pairwise, permutations
-from typing import TYPE_CHECKING, ClassVar, Iterator
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from uconf.models.surjection import Surjection
 
 from sage.all import (
-    Integer,
     CombinatorialFreeModule,
     Family,
     GradedModulesWithBasis,
+    Integer,
     Permutations,
     SymmetricGroup,
     SymmetricGroupAlgebra,
     cached_method,
     tensor,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
 
@@ -224,7 +226,7 @@ class BarrattEccles(CombinatorialFreeModule):
         return self._arity
 
     @staticmethod
-    def unit(base_ring) -> "BarrattEccles.Element":
+    def unit(base_ring) -> BarrattEccles.Element:
         """Return the operadic unit in arity ``1``."""
         return BarrattEccles(1, base_ring)(([1],))
 
@@ -274,7 +276,7 @@ class BarrattEccles(CombinatorialFreeModule):
         permuted = tuple(p * perm_inverse for p in basis_element)
         return self(permuted).tensor(self._symmetric_group_algebra(perm))
 
-    def _boundary_on_basis(self, basis_element: tuple) -> "BarrattEccles.Element":
+    def _boundary_on_basis(self, basis_element: tuple) -> BarrattEccles.Element:
         """Standard simplicial boundary."""
         res = self.zero()
         if len(basis_element) <= 1:

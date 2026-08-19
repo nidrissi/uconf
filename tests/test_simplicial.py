@@ -1,15 +1,14 @@
 """Tests for simplicial chains, cochains, and the surjection action."""
 
+from collections.abc import Iterable
+from itertools import chain, combinations
 from random import Random
-from typing import Iterable
 
 import pytest
-from itertools import chain, combinations
 from sage.all import QQ, tensor
 
 from uconf import SimplicialChains, SimplicialCochains, Surjection
 from uconf.algebraic.simplicial import SurjectionSimplicialCochainAlgebra
-
 
 # ===========================================================================
 # Helpers
@@ -196,7 +195,7 @@ class TestAWDiagonal:
 
 
 class TestSurjectionAction:
-    @pytest.mark.parametrize("n", range(0, 4))
+    @pytest.mark.parametrize("n", range(4))
     def test_unit_action(self, n: int):
         """The operadic unit (1,) acts as the identity on cochains."""
         unit = Surjection.unit(QQ)  # (1,) in S(1)

@@ -4,8 +4,8 @@ from sage.all import QQ
 
 from uconf import (
     BarConstruction,
-    CobarConstruction,
     CoAssociative,
+    CobarConstruction,
     Lie,
     Surjection,
     element_to_tikz,
@@ -21,7 +21,6 @@ from uconf.tikz import (
     Layer,
     default_layer_for_depth,
 )
-
 
 # ---------------------------------------------------------------------------
 # tree_to_forest: low-level primitive

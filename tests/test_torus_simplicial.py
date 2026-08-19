@@ -15,12 +15,12 @@ import pytest
 from sage.all import GF, QQ
 
 import uconf  # noqa: F401  — wires BarrattEccles.Element.table_reduction
-from uconf.core.signs import koszul_sign_of_permutation
-from uconf.models.surjection import Surjection
 from uconf.algebraic.torus_simplicial import (
     SurjectionTorusSimplicialCochainAlgebra,
     TorusSimplicialCochains,
 )
+from uconf.core.signs import koszul_sign_of_permutation
+from uconf.models.surjection import Surjection
 
 GENERATORS = ["v", "a", "b", "g", "t1", "t2"]
 

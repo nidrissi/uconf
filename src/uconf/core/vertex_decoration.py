@@ -16,7 +16,6 @@ from typing import TypeAlias
 from uconf.core.cooperad import CooperadLike
 from uconf.core.operad import OperadLike
 
-
 VertexDecorationLike: TypeAlias = OperadLike | CooperadLike
 """Accepted decoration providers for shared tree-decorated base modules."""
 

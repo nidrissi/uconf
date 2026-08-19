@@ -11,7 +11,7 @@ import time
 from random import Random
 
 import pytest
-from sage.all import ZZ, QQ
+from sage.all import QQ, ZZ
 
 from uconf import Lie
 
@@ -20,7 +20,7 @@ def _as_dict(x):
     return {basis: coeff for basis, coeff in x}
 
 
-@pytest.mark.parametrize("n", range(0, 6))
+@pytest.mark.parametrize("n", range(6))
 def test_basis_it_size(n: int) -> None:
     basis = list(Lie(n, QQ).basis_iter(0))
     if n == 0:
@@ -286,7 +286,7 @@ def test_lie_equivariance_arity4_times_2(sigma: list[int], tau: list[int]) -> No
 # ===========================================================================
 
 
-@pytest.mark.parametrize("n", range(0, 7))
+@pytest.mark.parametrize("n", range(7))
 def test_lie_differential_squared_zero(n: int) -> None:
     """d²(x) = 0 for every basis element of Lie(n, QQ) (boundary is identically 0)."""
     l = Lie(n, QQ)

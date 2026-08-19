@@ -26,7 +26,7 @@ Reference: Loday-Vallette "Algebraic Operads", Section 6.4 and 11.1.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from uconf.core.cooperad import CooperadLike
 from uconf.core.operad import OperadLike
@@ -91,7 +91,7 @@ class TwistingMorphism:
     def _repr_(self) -> str:
         return f"TwistingMorphism({self.name})"
 
-    def star(self, other: "TwistingMorphism", c_elem):
+    def star(self, other: TwistingMorphism, c_elem):
         """Compute the pre-Lie convolution product (self ⋆ other)(c_elem).
 
         For c ∈ C(n), the pre-Lie product is::

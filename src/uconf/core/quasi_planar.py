@@ -19,7 +19,9 @@ This module provides:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Protocol, runtime_checkable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
 from sage.all import Family
 
 from uconf.core.component import ComponentProtocol

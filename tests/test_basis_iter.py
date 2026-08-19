@@ -23,7 +23,6 @@ from uconf.constructions.bar_algebra import BarAlgebra
 from uconf.constructions.cobar_coalgebra import CobarCoalgebra
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -607,7 +606,7 @@ class TestHadamardTensorAlgebraBasisWeightIter:
 
     def test_weight_correct(self, had_alg) -> None:
         """All yielded elements have the right weight (sum of both factors)."""
-        for w in range(0, 3):
+        for w in range(3):
             for d in range(3):
                 for elem in had_alg.basis_weight_iter(d, w):
                     for (lk, rk), _ in elem:

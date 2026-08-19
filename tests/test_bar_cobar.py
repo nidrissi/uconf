@@ -1,17 +1,19 @@
 """Tests for bar and cobar constructions."""
 
 import itertools
-import pytest
-from sage.all import CombinatorialFreeModule, GradedModulesWithBasis, tensor, QQ
 
+import pytest
+from sage.all import QQ, CombinatorialFreeModule, GradedModulesWithBasis, tensor
+
+from tests.planarize_helpers import planarize_round_trip_ok
 from uconf import (
     BarConstruction,
     BarrattEccles,
-    HadamardProduct,
     CoAssociative,
-    CoCommutative,
     CobarConstruction,
+    CoCommutative,
     Commutative,
+    HadamardProduct,
     Lie,
     ShiftedOperad,
     Surjection,
@@ -22,24 +24,23 @@ from uconf.core.trees import (
     RootedTree,
     children,
     contract_edge,
-    is_shuffle_tree,
-    min_leaf,
-    to_shuffle_tree_bar,
     decoration,
     expand_vertex,
     graft,
     internal_edges_dfs,
     is_internal,
     is_leaf,
+    is_shuffle_tree,
     leaves,
+    min_leaf,
     relabel_leaves,
+    to_shuffle_tree_bar,
     tree_arity,
     validate_tree,
     vertex_arity,
     vertices_dfs,
     weight,
 )
-from tests.planarize_helpers import planarize_round_trip_ok
 
 
 class TestTrees:

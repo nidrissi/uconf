@@ -1,9 +1,9 @@
-from uconf.algebraic.algebra import OperadAlgebra
-from uconf.core.morphism import OperadMorphism
+from typing import Any
+
 from sage.all import cached_method
 
-
-from typing import Any
+from uconf.algebraic.algebra import OperadAlgebra
+from uconf.core.morphism import OperadMorphism
 
 
 class PullbackAlgebra(OperadAlgebra):

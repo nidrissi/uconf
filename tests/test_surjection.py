@@ -5,10 +5,10 @@ import math
 from random import Random
 
 import pytest
-from sage.all import ZZ, QQ
+from sage.all import QQ, ZZ
 
-from uconf import Surjection
 from tests.planarize_helpers import planarize_round_trip_ok
+from uconf import Surjection
 
 
 def _degree_matches(element, d: int) -> bool:
@@ -124,7 +124,7 @@ def test_surjection_operadic_unit_axioms(input_pos: int) -> None:
 
 
 @pytest.mark.parametrize("r", range(1, 3))
-@pytest.mark.parametrize("d", range(0, 3))
+@pytest.mark.parametrize("d", range(3))
 def test_surjection_basis(r: int, d: int) -> None:
     basis = list(Surjection(r, QQ).basis_iter(d))
     assert len(basis) == len(set(basis)), "Duplicate elements found in basis_iter"
@@ -151,8 +151,8 @@ def test_planar_surjection_basis(r: int, d: int) -> None:
 
 @pytest.mark.parametrize("r1", range(2, 3))
 @pytest.mark.parametrize("r2", range(2, 3))
-@pytest.mark.parametrize("d1", range(0, 3))
-@pytest.mark.parametrize("d2", range(0, 3))
+@pytest.mark.parametrize("d1", range(3))
+@pytest.mark.parametrize("d2", range(3))
 def test_planar_preserved_under_composition_last_input(r1: int, d1: int, r2: int, d2: int) -> None:
     for s1 in Surjection(r1, QQ).planar_basis_iter(d1):
         for s2 in Surjection(r2, QQ).planar_basis_iter(d2):
@@ -164,7 +164,7 @@ def test_planar_preserved_under_composition_last_input(r1: int, d1: int, r2: int
 
 
 @pytest.mark.parametrize("r", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 4))
+@pytest.mark.parametrize("d", range(4))
 def test_section_right_inverse(r: int, d: int) -> None:
     for s in Surjection(r, QQ).planar_basis_iter(d):
         sect = s.section()
@@ -173,7 +173,7 @@ def test_section_right_inverse(r: int, d: int) -> None:
 
 
 @pytest.mark.parametrize("r", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 4))
+@pytest.mark.parametrize("d", range(4))
 def test_section_planar(r: int, d: int) -> None:
     for s in Surjection(r, QQ).planar_basis_iter(d):
         r = s.arity()
@@ -333,7 +333,7 @@ def test_surjection_equivariance(
 
 
 @pytest.mark.parametrize("n", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 4))
+@pytest.mark.parametrize("d", range(4))
 def test_surjection_right_action(n: int, d: int) -> None:
     """(x·σ)·τ = x·(στ) for all σ, τ ∈ S(n)."""
     Surjn = Surjection(n, QQ)
@@ -346,7 +346,7 @@ def test_surjection_right_action(n: int, d: int) -> None:
 
 
 @pytest.mark.parametrize("n", range(2, 4))
-@pytest.mark.parametrize("d", range(0, 3))
+@pytest.mark.parametrize("d", range(3))
 def test_surjection_planarize_round_trip(n: int, d: int) -> None:
     """Planarize round-trip holds for homogeneous Surjection basis elements."""
     Surjn = Surjection(n, QQ)

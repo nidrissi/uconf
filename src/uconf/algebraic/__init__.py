@@ -6,8 +6,14 @@ from uconf.algebraic.cofree_coalgebra import (
     CofreeCoalgebraModule,
     CofreeConilpotentCoalgebra,
 )
+from uconf.algebraic.configuration import (
+    euclidean_unordered_configuration_model,
+    labelled_configuration_model,
+    unordered_configuration_model,
+)
 from uconf.algebraic.free_algebra import FreeAlgebraModule, FreeOperadAlgebra
 from uconf.algebraic.hadamard_algebra import HadamardTensorAlgebra
+from uconf.algebraic.pullback_algebra import PullbackAlgebra
 from uconf.algebraic.simplicial import (
     SurjectionSimplicialChainCoalgebra,
     SurjectionSimplicialCochainAlgebra,
@@ -18,29 +24,23 @@ from uconf.algebraic.spherical import (
     ReducedSphereCochains,
     SurjectionSphereCochainAlgebra,
 )
-from uconf.algebraic.pullback_algebra import PullbackAlgebra
-from uconf.algebraic.configuration import (
-    labelled_configuration_model,
-    unordered_configuration_model,
-    euclidean_unordered_configuration_model,
-)
 
 __all__ = [
-    "OperadAlgebra",
+    "CofreeCoalgebraModule",
+    "CofreeConilpotentCoalgebra",
     "CooperadCoalgebra",
     "FreeAlgebraModule",
     "FreeOperadAlgebra",
-    "CofreeCoalgebraModule",
-    "CofreeConilpotentCoalgebra",
     "HadamardTensorAlgebra",
-    "SurjectionSimplicialCochainAlgebra",
+    "OperadAlgebra",
+    "PullbackAlgebra",
+    "ReducedSphereCochains",
     "SurjectionSimplicialChainCoalgebra",
+    "SurjectionSimplicialCochainAlgebra",
+    "SurjectionSphereCochainAlgebra",
+    "euclidean_unordered_configuration_model",
+    "labelled_configuration_model",
     "surjection_chain_action",
     "surjection_cochain_action",
-    "ReducedSphereCochains",
-    "SurjectionSphereCochainAlgebra",
-    "PullbackAlgebra",
-    "labelled_configuration_model",
     "unordered_configuration_model",
-    "euclidean_unordered_configuration_model",
 ]

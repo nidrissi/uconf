@@ -17,17 +17,17 @@ from __future__ import annotations
 from itertools import combinations, combinations_with_replacement, pairwise
 
 from sage.all import (
-    Family,
-    Integer,
     CombinatorialFreeModule,
+    Family,
     GradedModulesWithBasis,
+    Integer,
     Rational,
     cached_method,
     tensor,
 )
+
 from uconf.core.display import latex_linear_combination
 from uconf.core.parented_element import ParentedElementMixin
-
 
 # ---------------------------------------------------------------------------
 # SimplicialChains
@@ -95,7 +95,7 @@ class SimplicialChains(CombinatorialFreeModule):
         raise TypeError(f"Input must be a dict or a simplex tuple, got {type(x)}.")
 
     @staticmethod
-    def _validate_basis_key(key) -> "tuple | None":
+    def _validate_basis_key(key) -> tuple | None:
         """Validate a single simplex as a basis key.
 
         A valid simplex is a strictly-increasing non-empty tuple of
@@ -155,7 +155,7 @@ class SimplicialChains(CombinatorialFreeModule):
     # -- standard element ---------------------------------------------------
 
     @staticmethod
-    def fundamental_chain(n: int, base_ring) -> "SimplicialChains.Element":
+    def fundamental_chain(n: int, base_ring) -> SimplicialChains.Element:
         r"""The chain `[0, 1, \dots, n]` in `C_n(\Delta^n)`.
 
         Parameters
@@ -191,7 +191,7 @@ class SimplicialChains(CombinatorialFreeModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def boundary(self) -> "SimplicialChains.Element":
+        def boundary(self) -> SimplicialChains.Element:
             """Apply the simplicial boundary ∂."""
             parent = self.parent()
             return parent.boundary(self)
@@ -300,7 +300,7 @@ class SimplicialCochains(CombinatorialFreeModule):
             return self.term(k)
         raise TypeError(f"Expected dict or simplex tuple, got {type(x)}.")
 
-    def _validate_basis_key(self, key) -> "tuple | None":
+    def _validate_basis_key(self, key) -> tuple | None:
         """Validate a simplex tuple in the ambient simplex ``Δ^N``."""
         simplex = SimplicialChains._validate_basis_key(key)
         if simplex is None:
@@ -358,7 +358,7 @@ class SimplicialCochains(CombinatorialFreeModule):
             dim = len(simplex) - 1
             for j in range(dim + 2):
                 if j == 0:
-                    candidates = range(0, simplex[0])
+                    candidates = range(simplex[0])
                 elif j == dim + 1:
                     candidates = range(simplex[-1] + 1, self._N + 1)
                 else:
@@ -373,14 +373,14 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- volume form ---------------------------------------------------------
     @staticmethod
-    def volume_form(N: int, base_ring) -> "SimplicialCochains.Element":
+    def volume_form(N: int, base_ring) -> SimplicialCochains.Element:
         """The cochain evaluating to 1 on the fundamental chain of `Δ^N`."""
         return SimplicialCochains(N, base_ring)(tuple(range(N + 1)))
 
     # -- evaluation pairing -------------------------------------------------
 
     @staticmethod
-    def evaluate(cochain, chain) -> "int | Rational":
+    def evaluate(cochain, chain) -> int | Rational:
         r"""Kronecker pairing `\langle f, \sigma \rangle`.
 
         Both *cochain* and *chain* share the same simplex-tuple basis.
@@ -411,7 +411,7 @@ class SimplicialCochains(CombinatorialFreeModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def coboundary(self) -> "SimplicialCochains.Element":
+        def coboundary(self) -> SimplicialCochains.Element:
             """Apply the coboundary δ."""
             parent = self.parent()
             return parent.coboundary(self)

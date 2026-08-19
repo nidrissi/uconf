@@ -22,18 +22,19 @@ EXAMPLES::
 from __future__ import annotations
 
 import cProfile
+import gc
 import inspect
+import multiprocessing
+import multiprocessing.connection
 import os
+import signal
 import sys
 import tempfile
 import time
 import traceback
-from typing import Any, Iterator, Literal, Sequence, TextIO
+from collections.abc import Iterator, Sequence
+from typing import Any, Literal, TextIO
 
-import gc
-import multiprocessing
-import multiprocessing.connection
-import signal
 from sage.all import ChainComplex, matrix
 
 from uconf.core.signs import get_on_basis
@@ -411,8 +412,8 @@ def _prewarm_parallel_boundary_caches(
 
 
 def _worker_loop(
-    task_conn: "multiprocessing.connection.Connection",
-    result_conn: "multiprocessing.connection.Connection",
+    task_conn: multiprocessing.connection.Connection,
+    result_conn: multiprocessing.connection.Connection,
 ) -> None:
     """Worker main loop: receive tasks, compute results, send back, repeat.
 
@@ -683,10 +684,10 @@ class _WorkerManager:
             except Exception:  # noqa: BLE001
                 pass
 
-    def __enter__(self) -> "_WorkerManager":
+    def __enter__(self) -> _WorkerManager:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.kill_all()
 
 

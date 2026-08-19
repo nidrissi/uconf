@@ -458,15 +458,15 @@ class BarAlgebraModule(CofreeCoalgebraModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def boundary(self) -> "BarAlgebraModule.Element":
+        def boundary(self) -> BarAlgebraModule.Element:
             """Apply the full twisted bar differential d = d_{T^c} + d_α."""
             return self.parent().boundary(self)
 
-        def d_cofree(self) -> "BarAlgebraModule.Element":
+        def d_cofree(self) -> BarAlgebraModule.Element:
             """Apply only the cofree coalgebra differential."""
             return self.parent().d_cofree(self)
 
-        def d_alpha(self) -> "BarAlgebraModule.Element":
+        def d_alpha(self) -> BarAlgebraModule.Element:
             """Apply only the twisting differential."""
             return self.parent().d_alpha(self)
 

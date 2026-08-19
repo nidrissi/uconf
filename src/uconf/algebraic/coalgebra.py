@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, Generic, Protocol, TypeVar
 
-from uconf.core.cooperad import CooperadLike, CooperadComponent
+from uconf.core.cooperad import CooperadComponent, CooperadLike
 
 CoalgebraElementType = TypeVar("CoalgebraElementType")
 CooperadElementType = TypeVar("CooperadElementType", bound=CooperadComponent.Element)

@@ -27,9 +27,10 @@ decorated by ``(1,)`` with leaves 1 and 2, and whose second child is leaf 3.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from itertools import combinations
 from itertools import product as iter_product
-from typing import Any, Callable, Iterator, Literal
+from typing import Any, Literal
 
 from sage.all import cached_function
 
@@ -66,14 +67,14 @@ class RootedTree:
     """
 
     __slots__ = (
-        "_decoration",
-        "_children",
         "_arity",
-        "_weight",
+        "_children",
+        "_decoration",
+        "_hash",
         "_leaves",
         "_min_leaf",
         "_tree_arity",
-        "_hash",
+        "_weight",
     )
 
     def __init__(self, decoration: tuple, *children: int | RootedTree):
@@ -92,8 +93,7 @@ class RootedTree:
             else:
                 lv.add(c)
                 cml = c
-            if cml < ml:
-                ml = cml
+            ml = min(ml, cml)
 
         object.__setattr__(self, "_weight", w)
         object.__setattr__(self, "_leaves", frozenset(lv))

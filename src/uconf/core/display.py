@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Any
+from collections.abc import Callable
+from typing import Any
 
 
 def latex_linear_combination(

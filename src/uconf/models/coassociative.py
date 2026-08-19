@@ -27,7 +27,7 @@ class CoAssociative(Associative):
     name: ClassVar[str] = "coAss"
 
     @staticmethod
-    def counit(x: "CoAssociative.Element"):
+    def counit(x: CoAssociative.Element):
         """Cooperadic counit: extracts coefficient of the arity-1 generator.
 
         The counit ``ε: CoAss(1) → k`` evaluates to 1 on the unique basis
@@ -42,14 +42,14 @@ class CoAssociative(Associative):
         return value
 
     @staticmethod
-    def reduced(x: "CoAssociative.Element") -> "CoAssociative.Element":
+    def reduced(x: CoAssociative.Element) -> CoAssociative.Element:
         """Project to the reduced part (kills the arity-1 unit component)."""
         if x.arity() != 1:
             return x
         return x - CoAssociative.counit(x) * x.parent()((1,))
 
     @staticmethod
-    def infinitesimal_cocompose(x: "CoAssociative.Element", i: int, m: int, n: int):
+    def infinitesimal_cocompose(x: CoAssociative.Element, i: int, m: int, n: int):
         """Partial cocomposition dual to ``Associative.compose(·, i, ·)``.
 
         For each basis element ``sigma ∈ S_{m+n-1}`` in ``x``, returns
@@ -97,7 +97,7 @@ class CoAssociative(Associative):
             """Return the cooperadic counit evaluation."""
             return CoAssociative.counit(self)
 
-        def reduced(self) -> "CoAssociative.Element":
+        def reduced(self) -> CoAssociative.Element:
             """Project to the reduced part."""
             return CoAssociative.reduced(self)
 

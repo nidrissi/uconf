@@ -15,7 +15,6 @@ from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.trees import RootedTree
 from uconf.morphisms.e_comodule_morphism import e_comodule_on_generator
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

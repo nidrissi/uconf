@@ -32,7 +32,8 @@ Reference: Loday-Vallette "Algebraic Operads", Section 5.8.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Iterator
+from collections.abc import Iterator
+from typing import Any, ClassVar
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -52,8 +53,7 @@ from uconf.algebraic.tree_module import (
     _tuples_in_degree_and_weight,
 )
 from uconf.core.display import latex_linear_combination
-from uconf.core.signs import sign_from_exponent
-from uconf.core.signs import koszul_sign_of_permutation
+from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
 from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
@@ -120,7 +120,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     # Normalisation helper
     # ------------------------------------------------------------------
 
-    def _normalized_corolla_sum(self, c_elem, m_tuple) -> "CofreeCoalgebraModule.Element":
+    def _normalized_corolla_sum(self, c_elem, m_tuple) -> CofreeCoalgebraModule.Element:
         """Return the sum of canonical corollas for ``c_elem ⊗ m_tuple``.
 
         For each basis term ``(c_key, coeff)`` of ``c_elem ∈ C(n)``, applies
@@ -540,7 +540,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
 
-        def boundary(self) -> "CofreeCoalgebraModule.Element":
+        def boundary(self) -> CofreeCoalgebraModule.Element:
             """Apply the differential d = d_C + d_M."""
             return self.parent().boundary(self)
 

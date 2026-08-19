@@ -25,7 +25,6 @@ from uconf.core.trees import RootedTree, children, decoration, is_leaf, vertex_a
 from uconf.core.twisting import TwistingMorphism
 from uconf.morphisms.canonical_twisting import canonical_inclusion, canonical_projection
 
-
 # ===========================================================================
 # Helpers
 # ===========================================================================

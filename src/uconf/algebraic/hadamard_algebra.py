@@ -24,7 +24,7 @@ The differential on ``A ⊗ B`` is the tensor one::
 from __future__ import annotations
 
 import itertools
-from typing import Iterator
+from collections.abc import Iterator
 
 from sage.all import cached_method, tensor
 
@@ -267,7 +267,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
         min_d_left = left_mod.connectivity
         min_d_right = right_mod.connectivity
 
-        for w_left in range(0, w + 1):
+        for w_left in range(w + 1):
             w_right = w - w_left
             max_d_left = d - min_d_right
             if max_d_left < min_d_left:

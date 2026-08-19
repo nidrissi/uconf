@@ -12,7 +12,8 @@ operad ``P ⊙ Q``:
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -25,8 +26,8 @@ from sage.all import (
     tensor,
 )
 
-from uconf.core.operad import OperadLike
 from uconf.core.display import latex_linear_combination
+from uconf.core.operad import OperadLike
 from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.quasi_planar import QuasiPlanarMixin
 from uconf.core.signs import sign_from_exponent
@@ -101,11 +102,11 @@ class HadamardProduct(UniqueRepresentation):
         k_right = getattr(self.right_operad_cls, "connectivity", 0)
         return k_left + k_right
 
-    def __call__(self, n: int, base_ring) -> "HadamardProduct.Component":
+    def __call__(self, n: int, base_ring) -> HadamardProduct.Component:
         """Return the arity-``n`` Hadamard component over ``base_ring``."""
         return HadamardProduct.Component(self, n, base_ring)
 
-    def unit(self, base_ring) -> "HadamardProduct.Element":
+    def unit(self, base_ring) -> HadamardProduct.Element:
         """Return the diagonal operadic unit over ``base_ring``."""
         component = self(1, base_ring)
         return component.from_factors(
@@ -119,10 +120,10 @@ class HadamardProduct(UniqueRepresentation):
 
     def compose(
         self,
-        x: "HadamardProduct.Element",
+        x: HadamardProduct.Element,
         i: int,
-        y: "HadamardProduct.Element",
-    ) -> "HadamardProduct.Element":
+        y: HadamardProduct.Element,
+    ) -> HadamardProduct.Element:
         """Compose two Hadamard-product elements diagonally on both factors."""
         x_parent = x.parent()
         y_parent = y.parent()
@@ -171,7 +172,7 @@ class HadamardProduct(UniqueRepresentation):
     class Component(QuasiPlanarMixin, CombinatorialFreeModule):
         """A fixed-arity component of ``P ⊙ Q``."""
 
-        def __init__(self, factory: "HadamardProduct", n: int, base_ring):
+        def __init__(self, factory: HadamardProduct, n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(
@@ -342,7 +343,7 @@ class HadamardProduct(UniqueRepresentation):
             right_ltx = right_term(right_basis) if callable(right_term) else str(right_basis)
             return f"{left_ltx} \\odot {right_ltx}"
 
-        def basis_iter(self, d: int) -> Iterator["HadamardProduct.Element"]:
+        def basis_iter(self, d: int) -> Iterator[HadamardProduct.Element]:
             """Iterate over all basis elements of degree ``d``.
 
             Yields all pairs ``(left_key, right_key)`` with
@@ -382,7 +383,7 @@ class HadamardProduct(UniqueRepresentation):
                     for right_elem in right_elems:
                         yield self.from_factors(left_elem, right_elem)
 
-        def planar_basis_iter(self, d: int) -> Iterator["HadamardProduct.Element"]:
+        def planar_basis_iter(self, d: int) -> Iterator[HadamardProduct.Element]:
             """Iterate over planar basis elements of degree ``d``.
 
             A pair ``(left_key, right_key)`` is *planar* when ``right_key``
@@ -435,7 +436,7 @@ class HadamardProduct(UniqueRepresentation):
             """Return the ``Family`` of planar basis elements in degree ``d``."""
             return Family(self.planar_basis_iter(d))
 
-        def from_factors(self, left_element, right_element) -> "HadamardProduct.Element":
+        def from_factors(self, left_element, right_element) -> HadamardProduct.Element:
             left_parent = left_element.parent()
             right_parent = right_element.parent()
 
@@ -464,13 +465,13 @@ class HadamardProduct(UniqueRepresentation):
 
         def compose(
             self,
-            x: "HadamardProduct.Element",
+            x: HadamardProduct.Element,
             i: int,
-            y: "HadamardProduct.Element",
-        ) -> "HadamardProduct.Element":
+            y: HadamardProduct.Element,
+        ) -> HadamardProduct.Element:
             return self.factory.compose(x, i, y)
 
-        def unit(self) -> "HadamardProduct.Element":
+        def unit(self) -> HadamardProduct.Element:
             return self.factory.unit(self.base_ring())
 
         def unit_key(self) -> tuple:
@@ -489,7 +490,7 @@ class HadamardProduct(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "HadamardProduct.Element":
+        def boundary(self) -> HadamardProduct.Element:
             parent = self.parent()
             return parent.boundary(self)
 
@@ -498,7 +499,7 @@ class HadamardProduct(UniqueRepresentation):
             parent = self.parent()
             return parent.planarize(self)
 
-        def permute(self, sigma) -> "HadamardProduct.Element":
+        def permute(self, sigma) -> HadamardProduct.Element:
             parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)

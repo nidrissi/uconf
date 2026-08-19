@@ -8,7 +8,7 @@ sign rules from standard operad references.
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -18,9 +18,10 @@ from sage.all import (
     UniqueRepresentation,
     cached_method,
 )
+
 from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.operad import OperadLike
+from uconf.core.parented_element import ParentedElementMixin
 from uconf.core.signs import (
     shifted_boundary_sign,
     shifted_operadic_compose_sign,
@@ -77,11 +78,11 @@ class ShiftedOperad(UniqueRepresentation):
         base_k = getattr(self.operad_cls, "connectivity", 0)
         return base_k + self.shift_degree
 
-    def __call__(self, n: int, base_ring) -> "ShiftedOperad.Component":
+    def __call__(self, n: int, base_ring) -> ShiftedOperad.Component:
         """Return the shifted operad component in arity ``n`` over ``base_ring``."""
         return ShiftedOperad.Component(self, n, base_ring)
 
-    def unit(self, base_ring) -> "ShiftedOperad.Element":
+    def unit(self, base_ring) -> ShiftedOperad.Element:
         """Return the shifted operadic unit over ``base_ring``."""
         component = self(1, base_ring)
         return component.from_base(self.operad_cls.unit(base_ring))
@@ -91,8 +92,8 @@ class ShiftedOperad(UniqueRepresentation):
         return self.operad_cls.unit_key()
 
     def compose(
-        self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
-    ) -> "ShiftedOperad.Element":
+        self, x: ShiftedOperad.Element, i: int, y: ShiftedOperad.Element
+    ) -> ShiftedOperad.Element:
         """Compose two shifted-operad elements in this wrapper."""
         x_parent = x.parent()
         y_parent = y.parent()
@@ -134,7 +135,7 @@ class ShiftedOperad(UniqueRepresentation):
     class Component(CombinatorialFreeModule):
         """A fixed-arity component of a shifted operad."""
 
-        def __init__(self, factory: "ShiftedOperad", n: int, base_ring):
+        def __init__(self, factory: ShiftedOperad, n: int, base_ring):
             assert n >= 0, f"Arity must be non-negative. Got {n}."
             name = f"{factory.name}{n}"
             super().__init__(
@@ -178,7 +179,8 @@ class ShiftedOperad(UniqueRepresentation):
             #   (p ·_base σ, m_tuple) = sgn(σ)^d · (p_planar, σ · m_tuple)
             # in the coinvariant quotient ShiftedP(n) ⊗_{S_n} M^n.
             if callable(getattr(self._base_parent, "planarize", None)):
-                from sage.all import SymmetricGroupAlgebra, tensor as sage_tensor
+                from sage.all import SymmetricGroupAlgebra
+                from sage.all import tensor as sage_tensor
 
                 self._pz_sga = SymmetricGroupAlgebra(base_ring, n)
                 self._pz_codomain = sage_tensor([self, self._pz_sga])
@@ -241,7 +243,7 @@ class ShiftedOperad(UniqueRepresentation):
             base_bdry = sign * self._base_parent.boundary(self._base_parent(basis_element))
             return self.sum_of_terms((basis, R(coeff)) for basis, coeff in base_bdry)
 
-        def __call__(self, x) -> "ShiftedOperad.Element":
+        def __call__(self, x) -> ShiftedOperad.Element:
             return super().__call__(x)
 
         def arity(self) -> int:
@@ -261,7 +263,7 @@ class ShiftedOperad(UniqueRepresentation):
             """Return the underlying base-operad Sage parent in this arity."""
             return self._base_parent
 
-        def basis_iter(self, d: int) -> "Iterator[ShiftedOperad.Element]":
+        def basis_iter(self, d: int) -> Iterator[ShiftedOperad.Element]:
             """Iterate over basis elements of this shifted-operad component in degree ``d``.
 
             The arity-``n`` component of ``ShiftedOperad(P, s)`` has its degrees
@@ -285,7 +287,7 @@ class ShiftedOperad(UniqueRepresentation):
             """Return the ``Family`` of all basis elements in degree ``d``."""
             return Family(self.basis_iter(d))
 
-        def from_base(self, element) -> "ShiftedOperad.Element":
+        def from_base(self, element) -> ShiftedOperad.Element:
             R = self.base_ring()
             if element.parent() is self._base_parent:
                 return self.sum_of_terms((basis, R(coeff)) for basis, coeff in element)
@@ -317,11 +319,11 @@ class ShiftedOperad(UniqueRepresentation):
             return str(basis_element)
 
         def compose(
-            self, x: "ShiftedOperad.Element", i: int, y: "ShiftedOperad.Element"
-        ) -> "ShiftedOperad.Element":
+            self, x: ShiftedOperad.Element, i: int, y: ShiftedOperad.Element
+        ) -> ShiftedOperad.Element:
             return self.factory.compose(x, i, y)
 
-        def unit(self) -> "ShiftedOperad.Element":
+        def unit(self) -> ShiftedOperad.Element:
             return self.factory.unit(self.base_ring())
 
         def unit_key(self) -> object:
@@ -342,7 +344,7 @@ class ShiftedOperad(UniqueRepresentation):
         def arity(self) -> int:
             return self.parent().arity()
 
-        def boundary(self) -> "ShiftedOperad.Element":
+        def boundary(self) -> ShiftedOperad.Element:
             parent = self.parent()
             return parent.boundary(self)
 
@@ -351,7 +353,7 @@ class ShiftedOperad(UniqueRepresentation):
             parent = self.parent()
             return parent.planarize(self)
 
-        def permute(self, sigma) -> "ShiftedOperad.Element":
+        def permute(self, sigma) -> ShiftedOperad.Element:
             parent = self.parent()
             if isinstance(sigma, (list, tuple)):
                 sigma = parent._symmetric_group(sigma)

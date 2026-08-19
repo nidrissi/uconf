@@ -3,7 +3,7 @@
 import itertools
 
 import pytest
-from sage.all import ZZ, QQ
+from sage.all import QQ, ZZ
 
 from uconf import Commutative
 

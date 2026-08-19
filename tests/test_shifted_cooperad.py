@@ -3,10 +3,10 @@
 import itertools
 
 import pytest
-
-from uconf import ShiftedCooperad, SurjectionDual
 from sage.all import QQ
+
 from tests.planarize_helpers import planarize_round_trip_ok
+from uconf import ShiftedCooperad, SurjectionDual
 
 
 def _as_dict(x):

@@ -15,7 +15,8 @@ Given a ``Q``-algebra ``(A, γ^Q)`` and a morphism ``f: P → Q``, the
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from uconf.core.operad import OperadLike
 

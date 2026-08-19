@@ -1,8 +1,9 @@
 """Tests for the Hadamard tensor algebra wrapper."""
 
+from typing import cast
+
 import pytest
 from sage.all import QQ, ZZ, tensor
-from typing import cast
 
 from uconf import (
     Associative,
