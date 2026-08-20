@@ -57,7 +57,7 @@ jobs:
                   SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
                   uv export --frozen --no-hashes --no-emit-project --group docs -o /tmp/requirements-docs.txt
                   uv pip install --python "$SAGEPY" -r /tmp/requirements-docs.txt
-                  uv pip install --python "$SAGEPY" --no-deps -e .
+                  uv pip install --python "$SAGEPY" --no-deps --no-build-isolation -e .
 
             - name: Run Sage doctests
               run: |
