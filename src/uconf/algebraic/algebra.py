@@ -25,25 +25,27 @@ from uconf.core.operad import OperadComponent, OperadLike
 
 AlgebraElementType = TypeVar("AlgebraElementType")
 OperadElementType = TypeVar("OperadElementType", bound=OperadComponent.Element)
-OperadElementInputType = TypeVar(
-    "OperadElementInputType",
+OperadElementInputType_contra = TypeVar(
+    "OperadElementInputType_contra",
     bound=OperadComponent.Element,
     contravariant=True,
 )
 
 
-class StructureMap(Protocol[OperadElementInputType, AlgebraElementType]):
+class StructureMap(Protocol[OperadElementInputType_contra, AlgebraElementType]):
     """Type contract for operad action callables."""
 
     def __call__(
         self,
-        p_element: OperadElementInputType,
+        p_element: OperadElementInputType_contra,
         algebra_elements: Sequence[AlgebraElementType],
         /,
     ) -> AlgebraElementType: ...
 
 
-class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementType](UniqueRepresentation):
+class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementType](
+    UniqueRepresentation
+):
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an

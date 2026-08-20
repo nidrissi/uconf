@@ -277,16 +277,16 @@ class Surjection(CombinatorialFreeModule):
                 def caesuras(k: tuple[int, ...]):
                     """Returns the caesuras of a basis element."""
                     caesuras: list[int] = []
-                    for idx, i in enumerate(k):
-                        if i in k[idx + 1 :]:
+                    for idx, value in enumerate(k):
+                        if value in k[idx + 1 :]:
                             caesuras.append(idx)
                     return caesuras
 
                 def weights(cae: list[int], p: tuple[int, ...]):
                     """Returns the weights of the splitting knowing the caesuras."""
                     weights: list[int] = []
-                    for i, j in pairwise(p):
-                        closed_open = len([e for e in cae if i <= e < j])
+                    for left, right in pairwise(p):
+                        closed_open = len([e for e in cae if left <= e < right])
                         weights.append(closed_open)
                     return [value % 2 for value in weights]
 
@@ -416,9 +416,7 @@ class Surjection(CombinatorialFreeModule):
                 first_indices = [
                     first_occurrences[i] for i in range(1, r + 1) if i in first_occurrences
                 ]
-                return all(
-                    earlier < later for earlier, later in pairwise(first_indices)
-                )
+                return all(earlier < later for earlier, later in pairwise(first_indices))
 
             return all(_planar(key) for key in self.support())
 
