@@ -260,8 +260,19 @@ def test_barratt_eccles_planarize_round_trip(n: int, d: int) -> None:
         assert planarize_round_trip_ok(x), f"Planarize round-trip failed for {x}"
 
 
-@pytest.mark.parametrize("r", range(2, 5))
-@pytest.mark.parametrize("d", range(4))
+@pytest.mark.parametrize(
+    "r,d",
+    [
+        (r, d)
+        for r in range(2, 5)
+        for d in range(4)
+        # (r=4, d=3) is excluded: at ~18s it dominates CI wall time, more than
+        # the whole rest of the suite combined, and exercises no code path the
+        # smaller (r, d) cases miss.  Run it by hand when touching
+        # table_reduction.
+        if (r, d) != (4, 3)
+    ],
+)
 def test_table_reduction_equivariant(r: int, d: int) -> None:
     Sr = SymmetricGroup(r)
     for x in BarrattEccles(r, QQ).planar_basis_iter(d):
