@@ -15,6 +15,7 @@ checked over ``QQ``.
 """
 
 import itertools
+from typing import ClassVar
 
 import pytest
 from sage.all import GF, QQ
@@ -129,10 +130,20 @@ class TestTorusActionAgainstFirstPrinciples:
     """Compare the closed form with ``(μ^{S¹} ⊗ μ^{S¹}) ∘ Δ_E`` computed from
     table reduction and the interval-cut action on ``N*(Δ¹)``."""
 
-    LABELS = ["0", "α", "β", "γ"]
+    LABELS: ClassVar[list[str]] = ["0", "α", "β", "γ"]
     # label -> (first circle factor, second circle factor)
-    FACTORS = {"0": ("*", "*"), "α": ("a", "*"), "β": ("*", "a"), "γ": ("a", "a")}
-    COMBINE = {("*", "*"): "0", ("a", "*"): "α", ("*", "a"): "β", ("a", "a"): "γ"}
+    FACTORS: ClassVar[dict[str, tuple[str, str]]] = {
+        "0": ("*", "*"),
+        "α": ("a", "*"),
+        "β": ("*", "a"),
+        "γ": ("a", "a"),
+    }
+    COMBINE: ClassVar[dict[tuple[str, str], str]] = {
+        ("*", "*"): "0",
+        ("a", "*"): "α",
+        ("*", "a"): "β",
+        ("a", "a"): "γ",
+    }
 
     @pytest.fixture(scope="class")
     def cochains(self):

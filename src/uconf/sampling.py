@@ -171,7 +171,7 @@ def _connectivity_effective(
     if callable(c):
         try:
             c = c()
-        except Exception:
+        except Exception:  # noqa: BLE001
             c = None
     return c if isinstance(c, int) else None
 
@@ -434,7 +434,7 @@ def _graded_basis_cache_get(parent, degree: int, weight: int | None = None):
         try:
             if is_in_cache(degree, weight):
                 return gbw(degree, weight)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
         return None
 
@@ -447,7 +447,7 @@ def _graded_basis_cache_get(parent, degree: int, weight: int | None = None):
     try:
         if is_in_cache(degree):
             return gb(degree)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
     return None
 
@@ -904,9 +904,7 @@ def _random_from_iter(parent, degree: int, rng: Random):
     if basis_iter is None:
         return None
     chosen = None
-    count = 0
-    for elem in basis_iter(degree):
-        count += 1
+    for count, elem in enumerate(basis_iter(degree), start=1):
         if rng.randint(1, count) == 1:
             chosen = elem
     return chosen
@@ -1523,9 +1521,7 @@ def random_cobar_element(
 def _reservoir_sample_keys(keys: Iterator[Any], rng: Random):
     """Pick one key from an iterator using reservoir sampling."""
     chosen = None
-    count = 0
-    for key in keys:
-        count += 1
+    for count, key in enumerate(keys, start=1):
         if rng.randint(1, count) == 1:
             chosen = key
     return chosen
@@ -1772,9 +1768,7 @@ def random_free_algebra_element(
 def _random_from_planar_iter(comp, degree: int, rng: Random):
     """Pick a random element from the planar basis iterator using reservoir sampling."""
     chosen = None
-    count = 0
-    for elem in comp.planar_basis_iter(degree):
-        count += 1
+    for count, elem in enumerate(comp.planar_basis_iter(degree), start=1):
         if rng.randint(1, count) == 1:
             chosen = elem
     return chosen

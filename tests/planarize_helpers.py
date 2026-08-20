@@ -14,7 +14,7 @@ def planarize_round_trip_ok(element) -> bool:
         return True
 
     if not callable(getattr(element, "planarize", None)):
-        raise AttributeError(f"{type(element).__name__} does not define planarize")
+        raise TypeError(f"{type(element).__name__} does not define planarize")
 
     total = parent.zero()
     symmetric_group = SymmetricGroup(parent.arity())

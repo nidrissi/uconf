@@ -23,24 +23,29 @@ from uconf.core.cooperad import CooperadComponent, CooperadLike
 
 CoalgebraElementType = TypeVar("CoalgebraElementType")
 CooperadElementType = TypeVar("CooperadElementType", bound=CooperadComponent.Element)
-CoactionValueType = TypeVar(
-    "CoactionValueType",
+CoactionValueType_co = TypeVar(
+    "CoactionValueType_co",
     bound=Iterable[tuple[tuple[object, ...], object]],
     covariant=True,
 )
-CoalgebraElementInputType = TypeVar(
-    "CoalgebraElementInputType",
+CoalgebraElementInputType_contra = TypeVar(
+    "CoalgebraElementInputType_contra",
     contravariant=True,
 )
 
 
-class CoactionMap(Protocol[CoalgebraElementInputType, CoactionValueType]):
+class CoactionMap(Protocol[CoalgebraElementInputType_contra, CoactionValueType_co]):
     """Type contract for cooperad coaction callables."""
 
-    def __call__(self, v_element: CoalgebraElementInputType, n: int, /) -> CoactionValueType: ...
+    def __call__(
+        self, v_element: CoalgebraElementInputType_contra, n: int, /
+    ) -> CoactionValueType_co: ...
 
 
-class CooperadCoalgebra[CoalgebraElementType, CoactionValueType: Iterable[tuple[tuple[object, ...], object]]]:
+class CooperadCoalgebra[
+    CoalgebraElementType,
+    CoactionValueType: Iterable[tuple[tuple[object, ...], object]],
+]:
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a
