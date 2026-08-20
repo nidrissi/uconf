@@ -245,7 +245,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             raise ValueError(f"Invalid basis key {key!r}: expected a pair (p_key, m_tuple).")
         p_key_raw, m_tuple_raw = key[0], key[1]
         if not isinstance(m_tuple_raw, (tuple, list)):
-            raise ValueError(
+            raise TypeError(
                 f"Invalid basis key {key!r}: m_tuple must be a tuple/list of leaf keys."
             )
         n = len(m_tuple_raw)

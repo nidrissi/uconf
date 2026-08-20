@@ -472,7 +472,7 @@ def _worker_loop(
                     "boundary_profile": None,
                 }
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             pass
         while True:
             time.sleep(_WORKER_IDLE_SLEEP_SECONDS)
@@ -681,7 +681,7 @@ class _WorkerManager:
         for conn in self._task_conns + self._result_conns:
             try:
                 conn.close()
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     def __enter__(self) -> Self:

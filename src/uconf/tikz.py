@@ -341,13 +341,13 @@ def _module_term_latex(module: Any, key: Any) -> str:
     if callable(latex_term):
         try:
             return latex_term(key)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
     repr_term = getattr(module, "_repr_term", None)
     if callable(repr_term):
         try:
             return repr_term(key)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
     return str(key)
 
