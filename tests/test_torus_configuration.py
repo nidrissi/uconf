@@ -145,8 +145,9 @@ class TestTorusActionAgainstFirstPrinciples:
         ("a", "a"): "γ",
     }
 
+    @staticmethod
     @pytest.fixture(scope="class")
-    def cochains(self):
+    def cochains():
         C = SimplicialCochains(N=1, base_ring=QQ)
         # q*: N*(S¹) ↪ N*(Δ¹) for the quotient Δ¹ ↠ S¹ = Δ¹/∂Δ¹.
         return {"*": C((0,)) + C((1,)), "a": C((0, 1))}
