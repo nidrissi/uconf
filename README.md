@@ -90,7 +90,7 @@ packages rather than Sage's. Install into Sage's interpreter directly:
 
 ```bash
 docker run --rm -it -v "$PWD":/work -w /work sagemath/sagemath:10.9 bash
-sage -pip install uv   # the image ships no uv, curl or wget
+sage -pip install uv==0.11.25   # the image ships no uv, curl or wget
 SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
 sage -python -m uv export --frozen --no-hashes --no-emit-project --group dev -o /tmp/reqs.txt
 sage -python -m uv pip install --python "$SAGEPY" -r /tmp/reqs.txt

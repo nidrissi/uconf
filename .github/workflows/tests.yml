@@ -60,7 +60,7 @@ jobs:
                   SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
                   uv export --frozen --no-hashes --no-emit-project --group dev -o /tmp/requirements-dev.txt
                   uv pip install --python "$SAGEPY" -r /tmp/requirements-dev.txt
-                  uv pip install --python "$SAGEPY" --no-deps -e .
+                  uv pip install --python "$SAGEPY" --no-deps --no-build-isolation -e .
 
             - name: Run test suite
               # test_configuration_model.py is excluded: it is far too expensive
