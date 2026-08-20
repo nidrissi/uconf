@@ -8,20 +8,20 @@ Combinatorial operad/cooperad models (SageMath) for computations in algebraic to
 
 ## Installation
 
-`uconf-operads` requires Python 3.12 or later and SageMath 10.7 or later. The
-recommended installation uses conda-forge to provide SageMath:
+`uconf-operads` requires Python 3.12 or later and SageMath 10.7 or later.
+SageMath is not installed by this package. If a compatible SageMath is already
+available in your Python environment, install `uconf-operads` into it directly:
 
 ```bash
-conda create -n uconf -c conda-forge python=3.12 sage=10.9 pip
-conda activate uconf
 python -m pip install uconf-operads
 ```
 
-If a compatible SageMath installation is already available in your Python
-environment, install the package directly:
+Otherwise the quickest route to a working environment is the official SageMath
+Docker image, which is also what CI uses:
 
 ```bash
-python -m pip install uconf-operads
+docker run --rm -it sagemath/sagemath:10.9 bash
+sage -pip install uconf-operads
 ```
 
 The distribution is named `uconf-operads`, but the Python package keeps the
@@ -32,7 +32,8 @@ import uconf
 ```
 
 For an environment matching the one used by the project, see
-[`environment.yml`](https://github.com/nidrissi/uconf/blob/main/environment.yml).
+[`.github/workflows/tests.yml`](https://github.com/nidrissi/uconf/blob/main/.github/workflows/tests.yml),
+which pins the SageMath image tag.
 
 ## Repository structure
 
@@ -53,10 +54,9 @@ For an environment matching the one used by the project, see
 
 **SageMath** is required. `pytest` is needed to run the tests. `comch` is optional (used only by `test_comch_compatibility.py`).
 
-If SageMath is not installed, the easiest way to get it is to install it with
-conda (see the [installation instructions](#installation)). For development,
-the checked-in `environment.yml` creates an environment named `sage`, so
-commands can be run with the `conda run -n sage` prefix.
+If SageMath is not installed, see the
+[installation instructions](#installation) above; the official Docker image is
+the fastest way to get a complete environment.
 
 ## Development
 
@@ -68,20 +68,35 @@ removes it from uv's local resolution graph. Thus `uv sync` does not download
 SageMath or its dependencies.
 
 Excluding SageMath from resolution does not make it importable. The uv-managed
-venv must inherit a system-wide (or conda) SageMath via
-`--system-site-packages`, and it must be built on the Python interpreter that
-provides Sage. `pyproject.toml` sets `python-preference = "system"` so uv selects
-it automatically; pass `--python <path>` if Sage lives on a non-default
-interpreter. Create the environment and install the `dev` dependency group:
+venv must inherit a system-wide SageMath via `--system-site-packages`, and it
+must be built on the Python interpreter that provides Sage. `pyproject.toml`
+sets `python-preference = "system"` so uv selects it automatically; pass
+`--python <path>` if Sage lives on a non-default interpreter. Create the
+environment and install the `dev` dependency group:
 
 ```bash
 uv venv --system-site-packages
 uv sync
-uv run python -c 'from importlib.metadata import version; print(version("sagemath"))'
+uv run python -c 'import sage.version; print(sage.version.version)'
 ```
 
 Because SageMath is excluded from uv's resolution, uv does not check its
 version. The last command must report SageMath 10.7 or later.
+
+To reproduce CI exactly instead, work inside the SageMath image. Note that
+`uv venv --system-site-packages` does *not* work there: Sage's interpreter is
+itself a virtualenv, so a child venv inherits the base Ubuntu interpreter's
+packages rather than Sage's. Install into Sage's interpreter directly:
+
+```bash
+docker run --rm -it -v "$PWD":/work -w /work sagemath/sagemath:10.9 bash
+sage -pip install uv   # the image ships no uv, curl or wget
+SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
+sage -python -m uv export --frozen --no-hashes --no-emit-project --group dev -o /tmp/reqs.txt
+sage -python -m uv pip install --python "$SAGEPY" -r /tmp/reqs.txt
+sage -python -m uv pip install --python "$SAGEPY" --no-deps -e .
+sage -python -m pytest tests --ignore=tests/test_configuration_model.py
+```
 
 Run the test suite and Sage doctests:
 
