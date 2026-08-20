@@ -279,9 +279,7 @@ def _is_basis_feasible(
             return True
         # Min bar degree = sum(min_dec) + r >= c_P*(n-1) + r, r >= 1 ⇒ c_P*(n-1) + 1.
         min_bar = c_P * (n - 1) + 1
-        if degree < min_bar:
-            return False
-        return True
+        return not degree < min_bar
 
     if isinstance(parent, CobarConstruction.Component):
         n = parent._arity

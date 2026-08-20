@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 ParentT = TypeVar("ParentT")
 
 
-class ParentedElementMixin(Generic[ParentT]):
+class ParentedElementMixin[ParentT]:
     """Mixin providing typed ``parent()`` helpers.
 
     Sage element classes expose ``parent()`` dynamically. This mixin centralizes

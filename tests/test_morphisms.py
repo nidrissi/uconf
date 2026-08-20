@@ -342,13 +342,13 @@ class TestEComoduleMorphism:
 
     def test_output_is_hadamard_element(self):
         """Δ(x) is an element of HadamardProduct(BE, Ω(C))(n)."""
-        OBH, target, Delta, OBHn, target_n = self._setup(n=2)
+        _OBH, _target, Delta, OBHn, target_n = self._setup(n=2)
 
         # Find a degree-1 generator
         BH = BarConstruction(HadamardProduct(Lie, BarrattEccles))
         BH2 = BH(2, QQ)
         for elem in BH2.planar_basis_iter(1):
-            tree_key = list(elem.support())[0]
+            tree_key = next(iter(elem.support()))
             cobar_tree = RootedTree(tree_key, *range(1, 3))
             cobar_elem = OBHn(cobar_tree)
             result = Delta(cobar_elem)
@@ -357,7 +357,7 @@ class TestEComoduleMorphism:
 
     def test_on_zero(self):
         """Δ(0) = 0."""
-        OBH, target, Delta, OBHn, target_n = self._setup(n=2)
+        _OBH, _target, Delta, OBHn, _target_n = self._setup(n=2)
         result = Delta(OBHn.zero())
         assert not result
 
@@ -376,7 +376,7 @@ class TestEComoduleMorphism:
         assert len(planar_elems) > 0
 
         for elem in planar_elems[:2]:
-            dec_key = list(elem.support())[0]
+            dec_key = next(iter(elem.support()))
             # Build single-vertex cobar tree
             cobar_tree = RootedTree(dec_key, *range(1, 3))
             cobar_elem = OBH2(cobar_tree)

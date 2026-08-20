@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from uconf.core.component import ComponentProtocol
 
@@ -71,5 +71,5 @@ class OperadFactory(Protocol):
     class Component(OperadComponent): ...
 
 
-OperadLike: TypeAlias = type[OperadComponent] | OperadFactory
+type OperadLike = type[OperadComponent] | OperadFactory
 """Type alias for accepted operad inputs (class or factory instance)."""

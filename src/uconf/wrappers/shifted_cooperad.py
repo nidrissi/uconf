@@ -238,7 +238,7 @@ class ShiftedCooperad(UniqueRepresentation):
             def term_generator():
                 Rt = target.base_ring()
                 for key, coeff in base_delta:
-                    left_basis, right_basis = key
+                    _left_basis, right_basis = key
                     right_degree = right_parent.base_parent().degree_on_basis(right_basis)
                     sign = shifted_operadic_compose_sign(
                         self.factory.shift_degree,

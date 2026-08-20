@@ -203,7 +203,7 @@ def _join_vertices(
     for o in occurrences:
         lo, hi = intervals[o]
         vertices.extend(range(lo, hi + 1))
-    if any(x >= y for x, y in zip(vertices, vertices[1:])):
+    if any(x >= y for x, y in itertools.pairwise(vertices)):
         return None
     return tuple(vertices)
 

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from uconf.core.component import ComponentProtocol
 
@@ -82,5 +82,5 @@ class CooperadFactory(Protocol):
     class Component(CooperadComponent): ...
 
 
-CooperadLike: TypeAlias = type[CooperadComponent] | CooperadFactory
+type CooperadLike = type[CooperadComponent] | CooperadFactory
 """Type alias for accepted cooperad inputs (class or factory instance)."""
