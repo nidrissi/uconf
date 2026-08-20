@@ -279,7 +279,7 @@ class CobarCoalgebra(OperadAlgebra):
                     composed_elem = P(k, R)(q_key)
 
                     for j in range(k - 1, -1, -1):
-                        p_j_key, m_j_tuple = input_keys[j]
+                        p_j_key, _m_j_tuple = input_keys[j]
                         n_j = n_list[j]
                         p_j_elem = P(n_j, R)(p_j_key)
                         pos = j + 1

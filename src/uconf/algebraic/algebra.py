@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from sage.all import CombinatorialFreeModule, UniqueRepresentation
 
@@ -43,7 +43,7 @@ class StructureMap(Protocol[OperadElementInputType, AlgebraElementType]):
     ) -> AlgebraElementType: ...
 
 
-class OperadAlgebra(Generic[OperadElementType, AlgebraElementType], UniqueRepresentation):
+class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementType](UniqueRepresentation):
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an

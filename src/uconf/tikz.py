@@ -333,9 +333,7 @@ def _is_blue_box_module(module: Any) -> bool:
         return False
     if _is_cofree_or_free_module(module):
         return False
-    if callable(getattr(module, "tensor_factors", None)):
-        return False
-    return True
+    return not callable(getattr(module, "tensor_factors", None))
 
 
 def _module_term_latex(module: Any, key: Any) -> str:

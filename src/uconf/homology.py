@@ -33,7 +33,7 @@ import tempfile
 import time
 import traceback
 from collections.abc import Iterator, Sequence
-from typing import Any, Literal, TextIO
+from typing import Any, Literal, Self, TextIO
 
 from sage.all import ChainComplex, matrix
 
@@ -684,7 +684,7 @@ class _WorkerManager:
             except Exception:  # noqa: BLE001
                 pass
 
-    def __enter__(self) -> _WorkerManager:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:

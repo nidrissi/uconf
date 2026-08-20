@@ -227,7 +227,7 @@ class TestShuffleTrees:
 
         # For Commutative, single term expected
         assert len(terms) == 1
-        shuffle, sign = terms[0]
+        shuffle, _sign = terms[0]
 
         assert is_shuffle_tree(shuffle)
         # Children should be swapped: first child has min 1, second has min 3
@@ -1100,7 +1100,7 @@ class TestBarPlanarize:
         B2 = BS(2, QQ)
         basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
-        tree_key = list(basis[0].support())[0]
+        tree_key = next(iter(basis[0].support()))
         assert tree_key == RootedTree((1, 2), 1, 2)
 
     def test_planar_basis_it_surjection_degree1_arity3(self):
@@ -1109,7 +1109,7 @@ class TestBarPlanarize:
         B3 = BS(3, QQ)
         basis = list(B3.planar_basis_iter(1))
         assert len(basis) == 1
-        tree_key = list(basis[0].support())[0]
+        tree_key = next(iter(basis[0].support()))
         assert tree_key == RootedTree((1, 2, 3), 1, 2, 3)
 
     def test_planar_basis_it_surjection_degree2_arity2(self):
@@ -1118,7 +1118,7 @@ class TestBarPlanarize:
         B2 = BS(2, QQ)
         basis = list(B2.planar_basis_iter(2))
         assert len(basis) == 1
-        tree_key = list(basis[0].support())[0]
+        tree_key = next(iter(basis[0].support()))
         assert tree_key == RootedTree((1, 2, 1), 1, 2)
 
     def test_planar_basis_it_all_planar(self):
@@ -1142,7 +1142,7 @@ class TestBarPlanarize:
         B2 = BBE(2, QQ)
         basis = list(B2.planar_basis_iter(1))
         assert len(basis) == 1
-        tree_key = list(basis[0].support())[0]
+        tree_key = next(iter(basis[0].support()))
         dec = decoration(tree_key)
         # Planar means first permutation is the identity
         BE2 = BarrattEccles(2, QQ)
