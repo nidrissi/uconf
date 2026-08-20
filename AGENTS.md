@@ -24,28 +24,14 @@ ruff-flagged style — handle on your own. Anything mathematical: halt.
 
 ## 2. Environment
 
-Two paths exist; they are not stale relative to each other, they are for
-different agent contexts. Pick the one that matches your runtime.
+Local development uses [uv](https://docs.astral.sh/uv/) against a system-wide
+SageMath. There is no conda environment; CI gets Sage from the official
+`sagemath/sagemath` Docker image instead (see §8).
 
-### GitHub Copilot cloud agent → conda
-
-SageMath lives in a conda environment named `sage`. Prefix every Python or
-tool command with `conda run -n sage`:
-
-```bash
-conda run -n sage pytest
-conda run -n sage ruff check tests src
-conda run -n sage ruff format --check tests src
-conda run -n sage python -m compileall -q src tests
-```
-
-### Local development → uv
-
-SageMath is installed system-wide; the [uv](https://docs.astral.sh/uv/)-managed
-venv inherits it via `--system-site-packages`. SageMath remains in
-`project.dependencies` for correct published metadata, while
-`tool.uv.exclude-dependencies` prevents uv from installing SageMath or its
-transitive dependencies locally. Do not remove either half of this arrangement.
+SageMath remains in `project.dependencies` for correct published metadata,
+while `tool.uv.exclude-dependencies` prevents uv from installing SageMath or
+its transitive dependencies locally. Do not remove either half of this
+arrangement.
 
 The venv must be built on the interpreter that provides Sage;
 `pyproject.toml` sets `python-preference = "system"` so `uv venv` picks it
@@ -56,7 +42,7 @@ verify separately that SageMath 10.7 or later is inherited. One-time setup:
 ```bash
 uv venv --system-site-packages   # flag goes on the venv; Sage is inherited
 uv sync                          # installs the project + the `dev` group
-uv run python -c 'from importlib.metadata import version; print(version("sagemath"))'
+uv run python -c 'import sage.version; print(sage.version.version)'
 ```
 
 Then prefix every Python or tool command with `uv run`:
@@ -68,7 +54,7 @@ uv run ruff format --check tests src
 uv run python -m compileall -q src tests
 ```
 
-Targeted test run (either environment, prefix as needed):
+Targeted test run:
 
 ```bash
 uv run pytest tests/test_file.py::test_function
@@ -87,12 +73,12 @@ Do not edit:
 
 ## 4. Required validation before finalizing
 
-Run all three. They mirror CI. Substitute the environment prefix from §2.
+Run all three. They mirror CI.
 
 ```bash
-<env> ruff check tests src
-<env> ruff format --check tests src
-<env> python -m compileall -q src tests
+uv run ruff check tests src
+uv run ruff format --check tests src
+uv run python -m compileall -q src tests
 ```
 
 Ruff is configured to lint **both** `tests/` and `src/`. Linting only `src/`
@@ -225,3 +211,39 @@ e = sum((coeff * mod.monomial(key) for key, coeff in mc.items()), mod.zero())
 Preserve this convention if you add new persistence or serialization code.
 Do not try to pickle module elements directly — it will appear to work in
 small cases and break on closures.
+
+## 8. CI environment
+
+CI does not install SageMath. `tests.yml` and `docs.yml` run inside the
+official upstream image, pinned by tag:
+
+```yaml
+container:
+    image: sagemath/sagemath:10.9
+```
+
+Things about that image worth knowing before editing those workflows:
+
+- **`uv venv --system-site-packages` does not work inside it.** Sage's
+  interpreter is itself a virtualenv, so a child venv resolves `home` to
+  `/usr/bin` and inherits Ubuntu's `dist-packages` rather than Sage's —
+  `import sage.all` then fails. Install into Sage's interpreter directly:
+  `uv pip install --python "$(sage -python -c 'import sys; print(sys.executable)')"`.
+  The lock stays authoritative via `uv export --frozen`; `--no-deps` on the
+  project install is deliberate, since its only dependency is SageMath.
+- `sage` is on `PATH` at `/usr/bin/sage`, but Sage's `local/bin` is not — the
+  image exports it from `~/.bashrc`, which Actions' non-login shell never
+  sources. Use `sage -python` / `sage -pip`, not bare `python3`.
+- The image is **amd64 only**. Do not move these jobs to an arm runner.
+- The image ships no `curl`, `wget`, `git` or `unzip`. `astral-sh/setup-uv` is
+  a JavaScript action and does not need them, but `actions/checkout` falls back
+  to the GitHub REST API and produces a working tree with no `.git` directory —
+  fine for these jobs, but do not add steps that shell out to `git`. Working in
+  the image by hand, get uv with `sage -pip install uv` and call it as
+  `sage -python -m uv`.
+- The image tag is **not** tracked by dependabot (its docker ecosystem does not
+  scan workflow `container:` keys). Bumping SageMath means editing the tag in
+  both workflows by hand.
+- There is no Copilot cloud-agent environment: `copilot-setup-steps` ignores
+  `container:`, so it cannot use this image and was removed. An agent running
+  there has no SageMath and cannot run the test suite.

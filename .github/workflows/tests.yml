@@ -7,7 +7,7 @@ on:
             - "tests/**/*.py"
             - ".github/workflows/tests.yml"
             - "pyproject.toml"
-            - "environment.yml"
+            - "uv.lock"
     push:
         branches:
             - main
@@ -16,7 +16,7 @@ on:
             - "tests/**/*.py"
             - ".github/workflows/tests.yml"
             - "pyproject.toml"
-            - "environment.yml"
+            - "uv.lock"
     workflow_dispatch:
 
 permissions:
@@ -32,31 +32,41 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 60
 
+        # SageMath comes from the official upstream image rather than being
+        # installed; uv installs everything else from the lock file. The image
+        # is amd64-only, so this job must stay on an x86_64 runner.
+        container:
+            image: sagemath/sagemath:10.9
+
         steps:
             - name: Checkout
               uses: actions/checkout@v7
 
-            - name: Setup Conda and create Sage environment
-              uses: conda-incubator/setup-miniconda@v4
+            - name: Install uv
+              uses: astral-sh/setup-uv@v7
               with:
-                  activate-environment: sage
-                  channel-priority: strict
-                  environment-file: environment.yml
-                  use-mamba: true
-                  miniforge-version: latest
+                  version: "0.11.25"
+                  enable-cache: true
+                  cache-dependency-glob: "uv.lock"
 
-            - name: Install package and dev dependencies
-              shell: bash -el {0}
+            - name: Install locked dependencies into Sage's environment
+              # `uv venv --system-site-packages` cannot be used here: Sage's
+              # interpreter is itself a virtualenv, so a child venv resolves
+              # `home` to /usr/bin and inherits Ubuntu's dist-packages instead
+              # of Sage's. Install into Sage's interpreter directly instead.
+              # `--no-deps` on the project: its only dependency is SageMath,
+              # which the image provides.
               run: |
-                  python -m pip install --upgrade pip
-                  python -m pip install -e . --group dev
+                  SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
+                  uv export --frozen --no-hashes --no-emit-project --group dev -o /tmp/requirements-dev.txt
+                  uv pip install --python "$SAGEPY" -r /tmp/requirements-dev.txt
+                  uv pip install --python "$SAGEPY" --no-deps -e .
 
             - name: Run test suite
-              shell: bash -el {0}
               # test_configuration_model.py is excluded: it is far too expensive
               # to run on CI hardware. Run it locally when touching that model.
               run: |
-                  pytest tests \
+                  sage -python -m pytest tests \
                     --ignore=tests/test_configuration_model.py \
                     -n auto --dist loadfile \
                     --durations=15 \

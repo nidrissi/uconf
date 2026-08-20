@@ -8,7 +8,7 @@ on:
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
             - "pyproject.toml"
-            - "environment.yml"
+            - "uv.lock"
     push:
         branches:
             - main
@@ -18,7 +18,7 @@ on:
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
             - "pyproject.toml"
-            - "environment.yml"
+            - "uv.lock"
     workflow_dispatch:
 
 permissions:
