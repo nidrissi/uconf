@@ -43,10 +43,10 @@ jobs:
                   version: "0.11.25"
 
             - name: Ruff lint
-              run: uvx ruff@0.15.20 check --output-format=github tests src
+              run: uvx ruff@0.16.2 check --output-format=github tests src
 
             - name: Ruff format check
-              run: uvx ruff@0.15.20 format --check tests src
+              run: uvx ruff@0.16.2 format --check tests src
 
             - name: Python syntax smoke test
               run: uv run --no-project --python 3.12 python -m compileall -q src tests
