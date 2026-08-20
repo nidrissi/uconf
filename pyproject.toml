@@ -52,9 +52,7 @@ include = [
     "/pyproject.toml",
     "/README.md",
 ]
-exclude = [
-    "/docs/_build",
-]
+exclude = ["/docs/_build"]
 
 [dependency-groups]
 dev = [
@@ -62,7 +60,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
-    "ruff==0.16.2",
+    "ruff==0.16.3",
 ]
 docs = ["myst-parser==5.1.0", "Sphinx==9.1.0"]
 
