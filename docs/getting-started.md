@@ -5,20 +5,26 @@
 The documentation build imports `uconf`, so it must run in the same SageMath
 environment used for tests and linting.
 
-### Conda environment
+### SageMath Docker image
 
-Install the package with the documentation dependency group (the `--group` flag
-requires pip ≥ 25.1):
+This is what CI does. `uv venv --system-site-packages` cannot be used inside the
+image — Sage's interpreter is itself a virtualenv, so a child venv resolves its
+base to the system Python and misses Sage entirely. Install the locked
+documentation dependencies into Sage's interpreter instead:
 
 ```bash
-conda run -n sage python -m pip install --upgrade pip
-conda run -n sage python -m pip install -e . --group docs
+docker run --rm -it -v "$PWD":/work -w /work sagemath/sagemath:10.9 bash
+sage -pip install uv   # the image ships no uv, curl or wget
+SAGEPY=$(sage -python -c 'import sys; print(sys.executable)')
+sage -python -m uv export --frozen --no-hashes --no-emit-project --group docs -o /tmp/reqs.txt
+sage -python -m uv pip install --python "$SAGEPY" -r /tmp/reqs.txt
+sage -python -m uv pip install --python "$SAGEPY" --no-deps -e .
 ```
 
-Build the HTML site with conda:
+Build the HTML site:
 
 ```bash
-conda run -n sage sphinx-build --keep-going -b html docs docs/_build/html
+sage -python -m sphinx --keep-going -b html docs docs/_build/html
 ```
 
 ### uv with an existing SageMath installation
@@ -32,7 +38,7 @@ must instead inherit SageMath from the interpreter on which it is built:
 ```bash
 uv venv --system-site-packages
 uv sync --group docs
-uv run python -c 'from importlib.metadata import version; print(version("sagemath"))'
+uv run python -c 'import sage.version; print(sage.version.version)'
 ```
 
 Use `uv venv --python <path> --system-site-packages` when SageMath belongs to a
