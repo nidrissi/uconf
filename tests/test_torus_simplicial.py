@@ -198,7 +198,7 @@ class TestSurjectionTorusSimplicialAlgebra:
                             continue
                         reduced = tuple(w - 1 if w > i else w for w in u if w != i)
                         degenerate = not reduced or any(
-                            x == y for x, y in zip(reduced, reduced[1:])
+                            x == y for x, y in itertools.pairwise(reduced)
                         )
                         reduced_labels = labels[: i - 1] + labels[i:]
                         expected = (

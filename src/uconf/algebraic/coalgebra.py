@@ -17,7 +17,7 @@ Reference: Loday-Vallette "Algebraic Operads", Chapter 12.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from uconf.core.cooperad import CooperadComponent, CooperadLike
 
@@ -40,7 +40,7 @@ class CoactionMap(Protocol[CoalgebraElementInputType, CoactionValueType]):
     def __call__(self, v_element: CoalgebraElementInputType, n: int, /) -> CoactionValueType: ...
 
 
-class CooperadCoalgebra(Generic[CoalgebraElementType, CoactionValueType]):
+class CooperadCoalgebra[CoalgebraElementType, CoactionValueType: Iterable[tuple[tuple[object, ...], object]]]:
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a

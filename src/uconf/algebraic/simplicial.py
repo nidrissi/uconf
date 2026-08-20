@@ -161,7 +161,7 @@ def surjection_chain_action(
 
         # Find the indices of "final" intervals, i.e., the values i such that u_i is the last
         # occurrence of that value in surj_tuple. The other intervals are called "inner" intervals.
-        final_intervals: dict[int, int] = dict()
+        final_intervals: dict[int, int] = {}
         for i in reversed(range(len(surj_tuple))):
             u = surj_tuple[i]
             if u not in final_intervals:
@@ -257,7 +257,7 @@ def surjection_chain_action(
                     continue
 
                 # --- Step 3: Berger–Fresse sign ---
-                curr_vertices: list[int] = sorted(set(v for simplex in diag_key for v in simplex))
+                curr_vertices: list[int] = sorted({v for simplex in diag_key for v in simplex})
                 vertex_to_index = {v: idx for idx, v in enumerate(curr_vertices)}
                 sign = _compute_bf_sign(surj_tuple, diag_key, vertex_to_index)
                 coeff = sign * surj_coeff * diag_coeff

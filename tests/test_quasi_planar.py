@@ -207,7 +207,7 @@ class TestEComoduleMap:
         planar_elems = list(BH2.planar_basis_iter(1))
         assert len(planar_elems) >= 1, "Need at least one planar element"
 
-        dec_key = list(planar_elems[0].support())[0]
+        dec_key = next(iter(planar_elems[0].support()))
         dec_elem = BH2(dec_key)
 
         result = e_comodule_on_generator(dec_elem)
@@ -230,7 +230,7 @@ class TestEComoduleMap:
 
         for d in range(1, 3):
             for pl_elem in BH2.planar_basis_iter(d):
-                dec_key = list(pl_elem.support())[0]
+                dec_key = next(iter(pl_elem.support()))
                 dec_elem = BH2(dec_key)
                 result = e_comodule_on_generator(dec_elem)
 
@@ -306,12 +306,12 @@ class TestEComoduleMap:
 
     def test_comodule_result_in_tensor(self):
         """Output type is an element of BE(n) ⊗ C(n) (cooperad level)."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         planar = list(BH2.planar_basis_iter(1))
         if not planar:
             pytest.skip("No planar basis elements found")
 
-        dec_elem = BH2(list(planar[0].support())[0])
+        dec_elem = BH2(next(iter(planar[0].support())))
         result = e_comodule_on_generator(dec_elem)
 
         expected_parent = tensor([BE2, BH2])
@@ -359,7 +359,7 @@ class TestComoduleAxioms:
         For a degree-0 generator both ∂_C(x) and d(ν(x)) vanish,
         so the equality d(ν(x)) = ν(∂_C(x)) reduces to 0 = 0.
         """
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
 
@@ -392,7 +392,7 @@ class TestComoduleAxioms:
 
         Checks ν(∂_C x) = (d_E ⊗ 1 + 1 ⊗ ∂_C)(ν(x)).
         """
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         s21 = S2([2, 1])
@@ -420,11 +420,11 @@ class TestComoduleAxioms:
 
     def test_chain_map_all_degree1_planar_generators(self):
         """Chain-map axiom holds for every degree-1 planar B(Lie⊙E)(2) generator."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         T = tensor([BE2, BH2])
 
         for pl_elem in BH2.planar_basis_iter(2):  # BH-degree 2 = cobar-degree 1
-            dec_key = list(pl_elem.support())[0]
+            dec_key = next(iter(pl_elem.support()))
             dec_elem = BH2(dec_key)
 
             nu_x = e_comodule_on_generator(dec_elem)
@@ -446,7 +446,7 @@ class TestComoduleAxioms:
 
         ``(Δ_E ⊗ id)(ν(x)) == (id ⊗ ν)(ν(x))`` in BE ⊗ BE ⊗ C.
         """
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
 
@@ -474,7 +474,7 @@ class TestComoduleAxioms:
 
     def test_coassociativity_degree1_generator(self):
         """Coassociativity holds for the canonical degree-1 planar generator."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         S2 = BE2._symmetric_group
         id2 = S2.identity()
         s21 = S2([2, 1])
@@ -503,11 +503,11 @@ class TestComoduleAxioms:
 
     def test_coassociativity_all_degree1_planar_generators(self):
         """Coassociativity holds for every degree-1 planar generator of B(Lie⊙E)(2)."""
-        _, BH2, _, OBH2, BE2 = _BH_setup(2)
+        _, BH2, _, _OBH2, BE2 = _BH_setup(2)
         T_EEC = tensor([BE2, BE2, BH2])
 
         for pl_elem in BH2.planar_basis_iter(2):  # BH-degree 2 = cobar-degree 1
-            dec_key = list(pl_elem.support())[0]
+            dec_key = next(iter(pl_elem.support()))
             dec_elem = BH2(dec_key)
             nu_x = e_comodule_on_generator(dec_elem)
 

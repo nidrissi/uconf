@@ -417,7 +417,7 @@ class Surjection(CombinatorialFreeModule):
                     first_occurrences[i] for i in range(1, r + 1) if i in first_occurrences
                 ]
                 return all(
-                    earlier < later for earlier, later in zip(first_indices, first_indices[1:])
+                    earlier < later for earlier, later in pairwise(first_indices)
                 )
 
             return all(_planar(key) for key in self.support())

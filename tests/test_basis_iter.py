@@ -389,7 +389,7 @@ class TestHadamardTensorAlgebraBasisIter:
     def test_basis_it_tensor_module_keys(self, had_alg) -> None:
         """Yielded elements are elements of the tensor module with (left_key, right_key) pairs."""
         elems = list(had_alg.basis_iter(0))
-        key, coeff = next(iter(elems[0]))
+        key, _coeff = next(iter(elems[0]))
         left_key, right_key = key
         # Both sides are Comm(1) with sole key ().
         assert left_key == ()
