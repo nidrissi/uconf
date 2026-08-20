@@ -74,6 +74,13 @@ python-preference = "system"
 
 [tool.pytest.ini_options]
 addopts = "-q -rxXs"
+filterwarnings = [
+    # uconf.homology forks deliberately so workers inherit the pre-warmed
+    # caches via copy-on-write; spawn/forkserver cannot (see homology.py).
+    # Under pytest-xdist the parent carries an execnet receiver thread, so
+    # this fires in CI but never in single-threaded real usage.
+    "ignore:.*is multi-threaded, use of fork.*:DeprecationWarning:multiprocessing.popen_fork",
+]
 python_files = "tests/test_*.py"
 python_functions = "test_*"
 

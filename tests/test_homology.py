@@ -862,8 +862,9 @@ class TestHomologyRepresentativesConfigModel:
     chain-complex Betti number.
     """
 
+    @staticmethod
     @pytest.fixture(scope="class", params=[1, 2], ids=["dim1", "dim2"])
-    def bar_module(self, request):
+    def bar_module(request):
         from uconf.algebraic.configuration import _build_euclidean_layers
 
         layers = _build_euclidean_layers(GF(2), request.param)
