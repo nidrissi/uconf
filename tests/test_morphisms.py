@@ -424,6 +424,8 @@ class TestEComoduleMorphism:
         class _FakeCooperadComponent:
             def __init__(self, label):
                 self.label = label
+                # Distinct cooperads whose components share basis keys.
+                self.factory = object()
 
             def arity(self):
                 return 2

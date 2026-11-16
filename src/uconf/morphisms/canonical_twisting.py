@@ -29,8 +29,8 @@ from __future__ import annotations
 
 from uconf.constructions.bar_construction import BarConstruction
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.core.cooperad import CooperadLike
-from uconf.core.operad import OperadLike
+from uconf.core.cooperad import Cooperad
+from uconf.core.operad import Operad
 from uconf.core.trees import (
     RootedTree,
     children,
@@ -41,7 +41,7 @@ from uconf.core.trees import (
 from uconf.core.twisting import TwistingMorphism
 
 
-def canonical_projection(operad: OperadLike) -> TwistingMorphism:
+def canonical_projection(operad: Operad) -> TwistingMorphism:
     """Return the canonical projection π: B(P) → P.
 
     The projection sends a bar tree to:
@@ -103,7 +103,7 @@ def canonical_projection(operad: OperadLike) -> TwistingMorphism:
     )
 
 
-def canonical_inclusion(cooperad: CooperadLike) -> TwistingMorphism:
+def canonical_inclusion(cooperad: Cooperad) -> TwistingMorphism:
     """Return the canonical inclusion ι: C → Ω(C).
 
     The inclusion sends an element c ∈ C(n) (for n ≥ 2) to the single-vertex

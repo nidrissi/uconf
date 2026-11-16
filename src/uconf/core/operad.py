@@ -1,4 +1,4 @@
-"""Typing protocols for operad-like objects used in this project.
+"""Base class for operads.
 
 .. note::
    This package works exclusively with **connected** operads, i.e. operads P
@@ -10,66 +10,22 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-from uconf.core.component import ComponentProtocol
-
-
-@runtime_checkable
-class OperadComponent(ComponentProtocol, Protocol):
-    """Structural contract for one fixed-arity operad component."""
-
-    @staticmethod
-    def compose(
-        x: OperadComponent.Element, input: int, y: OperadComponent.Element
-    ) -> OperadComponent.Element:
-        """Computes ``x \\circ_i y``."""
-        ...
-
-    @staticmethod
-    def unit(base_ring: Any) -> OperadComponent.Element:
-        """Returns the unit element of the operad."""
-        ...
-
-    @staticmethod
-    def unit_key() -> Any:
-        """Returns the basis key of the unit element in arity ``1``."""
-        ...
+from uconf.core.component import ComponentBase, SymmetricSequence
 
 
-@runtime_checkable
-class OperadFactory(Protocol):
-    """Structural contract for operad factories and wrappers.
+class Operad[C: ComponentBase[Any]](SymmetricSequence[C]):
+    """A connected dg-operad, given by its components and structure maps.
 
-    Factory instances (for example shifted/Hadamard wrappers) are callable by
-    arity and expose operadic structure maps at the factory level.
+    Every operad in this package is an instance of a subclass, e.g. ``Lie``,
+    ``ShiftedOperad(Lie, 1)`` or ``CobarConstruction(CoAssociative)``.
     """
 
-    name: str
+    def compose(self, x: Any, i: int, y: Any, /) -> Any:
+        """Compute the partial composition ``x \\circ_i y``."""
+        raise NotImplementedError
 
-    def __call__(self, n: int, base_ring) -> Component:
-        """Returns the arity-``n`` component over ``base_ring``."""
-        ...
-
-    def unit(self, base_ring) -> Any:
-        """Returns the unit element of the operad."""
-        ...
-
-    def unit_key(self) -> Any:
-        """Returns the basis key of the unit element in arity ``1``."""
-        ...
-
-    def compose(
-        self,
-        x: Any,
-        i: int,
-        y: Any,
-    ) -> Any:
-        """Computes ``x \\circ_i y``."""
-        ...
-
-    class Component(OperadComponent): ...
-
-
-type OperadLike = type[OperadComponent] | OperadFactory
-"""Type alias for accepted operad inputs (class or factory instance)."""
+    def unit(self, base_ring: Any) -> Any:
+        """Return the operadic unit, an element of the arity-``1`` component."""
+        raise NotImplementedError

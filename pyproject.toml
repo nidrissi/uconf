@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "uconf-operads"
-version = "1.0.3"
+version = "2.0.0"
 description = "Combinatorial operad/cooperad models for algebraic topology and configuration spaces"
 authors = [
     { name = "Najib Idrissi", email = "najib.idrissi-kaitouni@u-pariscite.fr" },

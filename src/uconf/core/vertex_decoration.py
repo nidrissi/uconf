@@ -5,20 +5,19 @@ The shared tree-decorated base modules
 :class:`uconf.algebraic.cofree_coalgebra.CofreeCoalgebraModule`
 only require arity-indexed components with grading and differential.
 
-In practice, both operad-like and cooperad-like providers are used.
-This module defines a common alias for those accepted inputs.
+In practice, both operads and cooperads are used, so the common type is
+:class:`~uconf.core.component.SymmetricSequence`.
 """
 
 from __future__ import annotations
 
-from uconf.core.cooperad import CooperadLike
-from uconf.core.operad import OperadLike
+from uconf.core.component import SymmetricSequence
 
-type VertexDecorationLike = OperadLike | CooperadLike
+type VertexDecorationLike = SymmetricSequence
 """Accepted decoration providers for shared tree-decorated base modules."""
 
 # TODO Find a way to actually enforce that the provider is quasi-planar, e.g. by requiring a planarize method or something. Otherwise we might get runtime errors when we try to enumerate the basis of the composite module and find that the provider doesn't have enough basis elements to match the planar part.
-type QuasiPlanarLike = OperadLike | CooperadLike
+type QuasiPlanarLike = SymmetricSequence
 """Accepted decoration providers for free/cofree algebra composite modules.
 
 A quasi-planar operad/cooperad is one whose arity-n component ``P(n)``

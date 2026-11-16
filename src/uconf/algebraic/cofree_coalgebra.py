@@ -287,11 +287,10 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         n = len(m_tuple)
         c_parent = self._cooperad_cls(n, self.base_ring())
 
-        c_repr = getattr(c_parent, "_repr_term", None)
         m_repr = getattr(self._inner_module, "_repr_term", None)
 
-        c_str = c_repr(c_key) if callable(c_repr) else str(c_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        c_str = c_parent._repr_term(c_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"<{c_str}; {', '.join(leaves)}>"
 
     def _latex_term(self, basis_element) -> str:
@@ -300,11 +299,10 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         n = len(m_tuple)
         c_parent = self._cooperad_cls(n, self.base_ring())
 
-        c_repr = getattr(c_parent, "_latex_term", None)
         m_repr = getattr(self._inner_module, "_latex_term", None)
 
-        c_ltx = c_repr(c_key) if callable(c_repr) else str(c_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        c_ltx = c_parent._latex_term(c_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"\\langle {c_ltx}; {', '.join(leaves)} \\rangle"
 
     # ------------------------------------------------------------------
@@ -658,7 +656,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
 
             comp = self.cooperad_cls(k, base_ring)
             c_elem = comp(c_key)
-            cocomp = comp.infinitesimal_cocompose(c_elem, i, m, n)
+            cocomp = self.cooperad_cls.infinitesimal_cocompose(c_elem, i, m, n)
 
             # Split M-labels (1-indexed positions):
             # Left (arity m): mu_1..mu_i, mu_{i+n}..mu_{m+n-1}

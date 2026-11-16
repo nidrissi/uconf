@@ -21,13 +21,14 @@ from typing import Any, Protocol, TypeVar
 
 from sage.all import CombinatorialFreeModule, UniqueRepresentation
 
-from uconf.core.operad import OperadComponent, OperadLike
+from uconf.core.component import ElementBase
+from uconf.core.operad import Operad
 
 AlgebraElementType = TypeVar("AlgebraElementType")
-OperadElementType = TypeVar("OperadElementType", bound=OperadComponent.Element)
+OperadElementType = TypeVar("OperadElementType", bound=ElementBase[Any])
 OperadElementInputType_contra = TypeVar(
     "OperadElementInputType_contra",
-    bound=OperadComponent.Element,
+    bound=ElementBase[Any],
     contravariant=True,
 )
 
@@ -43,13 +44,11 @@ class StructureMap(Protocol[OperadElementInputType_contra, AlgebraElementType]):
     ) -> AlgebraElementType: ...
 
 
-class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementType](
-    UniqueRepresentation
-):
+class OperadAlgebra[OperadElementType: ElementBase[Any], AlgebraElementType](UniqueRepresentation):
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an
-    operad class ``operad_cls`` (satisfying :class:`uconf.operad.OperadComponent`)
+    operad class ``operad_cls`` (satisfying :class:`uconf.core.operad.Operad`)
     together with an explicit structure map.
 
     The structure map is supplied as a callable via ``structure_map``::
@@ -60,7 +59,7 @@ class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementTy
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        operad_cls: Operad provider (class or factory, OperadComponent-compatible).
+        operad_cls: The operad ``P``.
         structure_map: Callable implementing the P-algebra action γ.
 
     """
@@ -68,7 +67,7 @@ class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementTy
     def __init__(
         self,
         module: CombinatorialFreeModule,
-        operad_cls: OperadLike,
+        operad_cls: Operad,
         structure_map: StructureMap[OperadElementType, AlgebraElementType],
     ):
         if not callable(structure_map):
@@ -96,8 +95,8 @@ class OperadAlgebra[OperadElementType: OperadComponent.Element, AlgebraElementTy
             ValueError: If ``len(algebra_elements) != p_element.arity()``.
 
         """
-        element_cls = getattr(self.operad_cls, "Element", None)
-        if isinstance(element_cls, type) and not isinstance(p_element, element_cls):
+        element_cls = self.operad_cls.Element
+        if not isinstance(p_element, element_cls):
             raise TypeError(
                 f"Expected p_element of type {self.operad_cls.name}.Element, "
                 f"got {type(p_element).__name__}."

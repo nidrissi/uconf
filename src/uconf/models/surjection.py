@@ -5,92 +5,94 @@ from __future__ import annotations
 import itertools
 from collections.abc import Iterator
 from itertools import combinations, combinations_with_replacement, pairwise
-from typing import TYPE_CHECKING, ClassVar
-
-if TYPE_CHECKING:
-    from uconf.models.barratt_eccles import BarrattEccles
+from typing import TYPE_CHECKING
 
 from sage.all import (
-    CombinatorialFreeModule,
     Family,
-    GradedModulesWithBasis,
     Integer,
-    SymmetricGroup,
     SymmetricGroupAlgebra,
     cached_method,
     tensor,
 )
 
-from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
+from uconf.core.component import ComponentBase, ElementBase, SymmetricSequence
+from uconf.core.operad import Operad
+
+if TYPE_CHECKING:
+    from uconf.models.barratt_eccles import BarrattEcclesElement
 
 
-class Surjection(CombinatorialFreeModule):
-    r"""Surjection operad component in fixed arity.
+class SurjectionElement(ElementBase["SurjectionComponent"]):
+    """Elements of a fixed-arity surjection component."""
 
-    Basis elements are tuples ``u`` with values in ``{1, ..., n}`` that are
-    surjective and have no consecutive equal entries. Degenerate inputs map to
-    zero, while malformed inputs raise.
+    def planarize(self):
+        """Project to planar representative tensored with group element."""
+        parent = self.parent()
+        return parent.planarize(self)
 
-    EXAMPLES::
+    def complexity(self) -> int:
+        """Return the maximum pairwise complexity on basis support."""
+        parent = self.parent()
 
-        sage: from sage.all import QQ
-        sage: from uconf import Surjection
-        sage: S2 = Surjection(2, QQ)
-        sage: u = S2((1, 2, 1))
-        sage: u.arity()
-        2
-        sage: S2.degree_on_basis((1, 2, 1))
-        1
-    """
-
-    name: ClassVar[str] = "𝒳"
-    connectivity: ClassVar[int] = 0
-    """All components live in non-negative degrees."""
-
-    def __init__(self, n: int, base_ring):
-        """Initialize ``S_n`` over ``base_ring``."""
-        assert n >= 0, f"Arity must be non-negative. Got {n}."
-        name = f"{self.name}{n}"
-        super().__init__(
-            base_ring,
-            tuple,
-            prefix=name,
-            category=GradedModulesWithBasis(base_ring),
+        return max(
+            (parent._complexity_on_basis(basis) for basis in self.support()),
+            default=0,
         )
-        self.rename(name)
-        self._arity: int = n
-        self._symmetric_group = SymmetricGroup(n)
+
+    def permute(self, sigma) -> SurjectionElement:
+        """
+        Permutes the basis elements of self by precomposing with sigma.
+        """
+        parent = self.parent()
+        sigma = parent._coerce_permutation(sigma)
+
+        def permuted_term_generator():
+            R = parent.base_ring()
+            for u, coeff in self:
+                # Precompose each permutation in the basis tuple with sigma
+                permuted_basis = tuple(sigma(i) for i in u)
+                yield (permuted_basis, R(coeff))
+
+        return parent.sum_of_terms(permuted_term_generator())
+
+    def is_planar(self) -> bool:
+        """Return whether each supported basis term satisfies planarity."""
+        r = self.arity()
+
+        def _planar(input_list: tuple[int, ...]) -> bool:
+            """Check if the first occurrence of each integer in input_list
+            is in increasing order."""
+            first_occurrences = {}
+            for i, val in enumerate(input_list):
+                if val not in first_occurrences:
+                    first_occurrences[val] = i
+
+            first_indices = [
+                first_occurrences[i] for i in range(1, r + 1) if i in first_occurrences
+            ]
+            return all(earlier < later for earlier, later in pairwise(first_indices))
+
+        return all(_planar(key) for key in self.support())
+
+    def section(self) -> BarrattEcclesElement:
+        """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
+        raise NotImplementedError("Section is not implemented yet")
+
+
+class SurjectionComponent(ComponentBase["SurjectionElement"]):
+    """Arity-``n`` component, with basis the nondegenerate surjections onto ``{1, ..., n}``."""
+
+    Element = SurjectionElement
+
+    def __init__(self, factory: SymmetricSequence, n: int, base_ring):
+        """Initialize ``S_n`` over ``base_ring``."""
+        super().__init__(factory, n, base_ring)
         self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self.planarize = self.module_morphism(
             on_basis=self._planarize_on_basis,
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
-
-    def _element_constructor_(self, x: Surjection.Element | dict | tuple | list):
-        """Build elements from basis tuples or sparse dictionaries.
-
-        Degenerate basis keys, namely non-surjective tuples or tuples with
-        consecutive equal entries, map to zero. Invalid keys raise.
-        """
-        if isinstance(x, dict):
-            R = self.base_ring()
-            clean_dict = {}
-            for key, coeff in x.items():
-                clean_key = self._validate_basis_key(key)
-                if clean_key is None:
-                    continue
-                clean_dict[clean_key] = R(coeff)
-            return self.sum_of_terms(clean_dict.items())
-
-        if isinstance(x, (tuple, list)):
-            clean_key = self._validate_basis_key(x)
-            if clean_key is None:
-                return self.zero()
-            return self.term(clean_key)
-
-        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def _validate_basis_key(self, basis_tuple: tuple | list) -> tuple | None:
         """Validate a basis tuple.
@@ -120,21 +122,7 @@ class Surjection(CombinatorialFreeModule):
 
         return clean_tuple
 
-    def arity(self):
-        """Return the fixed arity of this operad component."""
-        return self._arity
-
-    @staticmethod
-    def unit(base_ring) -> Surjection.Element:
-        """Return the operadic unit in arity ``1``."""
-        return Surjection(1, base_ring)((1,))
-
-    @staticmethod
-    def unit_key() -> tuple:
-        """Return the basis key of the unit element in arity ``1``."""
-        return (1,)
-
-    def basis_iter(self, d: int) -> Iterator[Surjection.Element]:
+    def basis_iter(self, d: int) -> Iterator[SurjectionElement]:
         """Iterate over basis elements in degree ``d``."""
         if d < 0:
             return
@@ -145,14 +133,9 @@ class Surjection(CombinatorialFreeModule):
             if res != self.zero():
                 yield res
 
-    def planar_basis_iter(self, d: int) -> Iterator[Surjection.Element]:
+    def planar_basis_iter(self, d: int) -> Iterator[SurjectionElement]:
         """Iterate over planar basis elements in degree ``d``."""
         return filter(lambda u: u.is_planar(), self.basis_iter(d))
-
-    @cached_method
-    def graded_basis(self, d: int) -> Family:
-        """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_iter(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
@@ -195,7 +178,7 @@ class Surjection(CombinatorialFreeModule):
         word = "\\;".join(str(i) for i in basis_element)
         return "\\left\\{" + word + "\\right\\}"
 
-    def _boundary_on_basis(self, basis_element: tuple) -> Surjection.Element:
+    def _boundary_on_basis(self, basis_element: tuple) -> SurjectionElement:
         """Compute the differential on a basis surjection."""
         # determining the signs of the summands
         signs = {}
@@ -233,7 +216,61 @@ class Surjection(CombinatorialFreeModule):
         return result
 
     @staticmethod
-    def compose(x: Surjection.Element, i: int, y: Surjection.Element) -> Surjection.Element:
+    def _caesuras(u: tuple[int, ...]) -> list[int]:
+        """Return the list of caesuras in a surjection u,
+        i.e. the indices that are NOT the last occurrences of an element.
+        Indices are 0-based and returned in increasing order.
+
+        Args:
+            u: A tuple representing the surjection.
+
+        """
+        seen: set[int] = set()
+        res: list[int] = []
+        for i in range(len(u) - 1, -1, -1):
+            if u[i] in seen:
+                res.append(i)
+            else:
+                seen.add(u[i])
+        res.reverse()
+        return res
+
+
+class SurjectionOperad(Operad[SurjectionComponent]):
+    r"""The surjection operad; use the instance :data:`Surjection`.
+
+    In arity ``n``, basis elements are tuples ``u`` with values in ``{1, ..., n}`` that are
+    surjective and have no consecutive equal entries. Degenerate inputs map to
+    zero, while malformed inputs raise.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Surjection
+        sage: S2 = Surjection(2, QQ)
+        sage: u = S2((1, 2, 1))
+        sage: u.arity()
+        2
+        sage: S2.degree_on_basis((1, 2, 1))
+        1
+    """
+
+    Component = SurjectionComponent
+    Element = SurjectionElement
+
+    name = "𝒳"
+    connectivity = 0
+    """All components live in non-negative degrees."""
+
+    def unit(self, base_ring) -> SurjectionElement:
+        """Return the operadic unit in arity ``1``."""
+        return self(1, base_ring)((1,))
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (1,)
+
+    def compose(self, x: SurjectionElement, i: int, y: SurjectionElement) -> SurjectionElement:
         r"""Compose surjections by Berger--Fresse insertion at input ``i``.
 
         Parameters
@@ -245,7 +282,7 @@ class Surjection(CombinatorialFreeModule):
 
         Returns
         -------
-        Surjection.Element
+        SurjectionElement
             The composite ``x \circ_i y`` in arity
             ``x.arity() + y.arity() - 1``.
 
@@ -263,7 +300,7 @@ class Surjection(CombinatorialFreeModule):
         m = x.arity()
         n = y.arity()
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
-        target = Surjection(m + n - 1, base_ring=x.parent().base_ring())
+        target = self(m + n - 1, base_ring=x.parent().base_ring())
 
         def _compose_basis_tuple(x_tuple: tuple[int, ...], y_tuple: tuple[int, ...]):
             def bf_sign(
@@ -330,96 +367,5 @@ class Surjection(CombinatorialFreeModule):
 
         return target.sum_of_terms(term_generator())
 
-    @staticmethod
-    def _caesuras(u: tuple[int, ...]) -> list[int]:
-        """Return the list of caesuras in a surjection u,
-        i.e. the indices that are NOT the last occurrences of an element.
-        Indices are 0-based and returned in increasing order.
 
-        Args:
-            u: A tuple representing the surjection.
-
-        """
-        seen: set[int] = set()
-        res: list[int] = []
-        for i in range(len(u) - 1, -1, -1):
-            if u[i] in seen:
-                res.append(i)
-            else:
-                seen.add(u[i])
-        res.reverse()
-        return res
-
-    class Element(ParentedElementMixin["Surjection"], CombinatorialFreeModule.Element):
-        """Elements of a fixed-arity surjection component."""
-
-        def _repr_latex_(self) -> str:
-            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
-
-        def boundary(self) -> Surjection.Element:
-            """Apply the differential."""
-            parent = self.parent()
-            return parent.boundary(self)
-
-        def arity(self) -> int:
-            """Return the arity of this element."""
-            return self.parent().arity()
-
-        def planarize(self):
-            """Project to planar representative tensored with group element."""
-            parent = self.parent()
-            return parent.planarize(self)
-
-        def complexity(self) -> int:
-            """Return the maximum pairwise complexity on basis support."""
-            parent = self.parent()
-
-            return max(
-                (parent._complexity_on_basis(basis) for basis in self.support()),
-                default=0,
-            )
-
-        def permute(self, sigma) -> Surjection.Element:
-            """
-            Permutes the basis elements of self by precomposing with sigma.
-            """
-            parent = self.parent()
-            if isinstance(sigma, (list, tuple)):
-                sigma = parent._symmetric_group(sigma)
-            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
-                raise TypeError(
-                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
-                    f"got {type(sigma).__name__}: {sigma!r}."
-                )
-
-            def permuted_term_generator():
-                R = parent.base_ring()
-                for u, coeff in self:
-                    # Precompose each permutation in the basis tuple with sigma
-                    permuted_basis = tuple(sigma(i) for i in u)
-                    yield (permuted_basis, R(coeff))
-
-            return parent.sum_of_terms(permuted_term_generator())
-
-        def is_planar(self) -> bool:
-            """Return whether each supported basis term satisfies planarity."""
-            r = self.arity()
-
-            def _planar(input_list: tuple[int, ...]) -> bool:
-                """Check if the first occurrence of each integer in input_list
-                is in increasing order."""
-                first_occurrences = {}
-                for i, val in enumerate(input_list):
-                    if val not in first_occurrences:
-                        first_occurrences[val] = i
-
-                first_indices = [
-                    first_occurrences[i] for i in range(1, r + 1) if i in first_occurrences
-                ]
-                return all(earlier < later for earlier, later in pairwise(first_indices))
-
-            return all(_planar(key) for key in self.support())
-
-        def section(self) -> BarrattEccles.Element:
-            """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
-            raise NotImplementedError("Section is not implemented yet")
+Surjection = SurjectionOperad()

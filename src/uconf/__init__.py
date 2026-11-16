@@ -9,7 +9,9 @@ project:
 - :class:`Lie`
 - :class:`Associative`
 - :class:`Commutative`
-- :class:`CooperadComponent`
+
+Every operad (resp. cooperad) is an instance of :class:`Operad`
+(resp. :class:`Cooperad`); ``P(n, base_ring)`` is its arity-``n`` component.
 
 It also wires two standard maps at import time:
 
@@ -46,7 +48,15 @@ from uconf.constructions import (
     CobarCoalgebraModule,
     CobarConstruction,
 )
-from uconf.core import CooperadComponent, OperadComponent, OperadMorphism, TwistingMorphism
+from uconf.core import (
+    ComponentBase,
+    Cooperad,
+    ElementBase,
+    Operad,
+    OperadMorphism,
+    SymmetricSequence,
+    TwistingMorphism,
+)
 from uconf.homology import compute_chain_complex, compute_homology_representatives, homology_basis
 from uconf.models import (
     Associative,
@@ -115,16 +125,18 @@ __all__ = [
     "CofreeCoalgebraModule",
     "CofreeConilpotentCoalgebra",
     "Commutative",
+    "ComponentBase",
+    "Cooperad",
     "CooperadCoalgebra",
-    "CooperadComponent",
+    "ElementBase",
     "FreeAlgebraModule",
     "FreeOperadAlgebra",
     "HadamardProduct",
     "HadamardTensorAlgebra",
     "Layer",
     "Lie",
+    "Operad",
     "OperadAlgebra",
-    "OperadComponent",
     "OperadMorphism",
     "PullbackAlgebra",
     "ReducedSphereCochains",
@@ -137,6 +149,7 @@ __all__ = [
     "SurjectionSimplicialChainCoalgebra",
     "SurjectionSimplicialCochainAlgebra",
     "SurjectionSphereCochainAlgebra",
+    "SymmetricSequence",
     "TwistingMorphism",
     "ass_to_com",
     "canonical_inclusion",

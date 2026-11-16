@@ -7,40 +7,28 @@ differential. Arity ``0`` is the zero module.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import ClassVar
 
-from sage.all import (
-    CombinatorialFreeModule,
-    Family,
-    GradedModulesWithBasis,
-    SymmetricGroup,
-    cached_method,
-)
-
-from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
+from uconf.core.component import ComponentBase, ElementBase, SymmetricSequence
+from uconf.core.operad import Operad
 
 
-class Commutative(CombinatorialFreeModule):
-    """Commutative operad component in fixed arity."""
+class CommutativeElement(ElementBase["CommutativeComponent"]):
+    """Elements of a fixed-arity commutative component."""
 
-    name: ClassVar[str] = "Com"
-    connectivity: ClassVar[int] = 0
-    """All components live in non-negative degrees."""
+    def permute(self, sigma) -> CommutativeElement:
+        """Return the trivial symmetric-group action on this element."""
+        self.parent()._coerce_permutation(sigma)
+        return self
 
-    def __init__(self, n: int, base_ring):
+
+class CommutativeComponent(ComponentBase["CommutativeElement"]):
+    """Arity-``n`` component: rank one for ``n >= 1``, zero in arity ``0``."""
+
+    Element = CommutativeElement
+
+    def __init__(self, factory: SymmetricSequence, n: int, base_ring):
         """Initialize ``Com(n)`` over ``base_ring``."""
-        assert n >= 0, f"Arity must be non-negative. Got {n}."
-        name = f"{self.name}{n}"
-        super().__init__(
-            base_ring,
-            tuple,
-            prefix=name,
-            category=GradedModulesWithBasis(base_ring),
-        )
-        self.rename(name)
-        self._arity = int(n)
-        self._symmetric_group = SymmetricGroup(n)
+        super().__init__(factory, n, base_ring)
         self.boundary = self.module_morphism(on_basis=lambda basis: self.zero(), codomain=self)
 
     def _validate_basis_key(self, basis_key: tuple | list) -> tuple | None:
@@ -55,48 +43,10 @@ class Commutative(CombinatorialFreeModule):
             raise ValueError(f"The only basis key in arity {self.arity()} is ().")
         return clean
 
-    def _element_constructor_(self, x):
-        """Build elements from basis keys or sparse dictionaries."""
-        if isinstance(x, dict):
-            clean_dict = {}
-            for key, coeff in x.items():
-                clean_key = self._validate_basis_key(key)
-                if clean_key is None:
-                    continue
-                clean_dict[clean_key] = coeff
-            return super()._element_constructor_(clean_dict)
-
-        if isinstance(x, (tuple, list)):
-            clean_key = self._validate_basis_key(x)
-            if clean_key is None:
-                return self.zero()
-            return self.term(clean_key)
-
-        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
-
-    def arity(self) -> int:
-        """Return the fixed arity of this operad component."""
-        return self._arity
-
-    @staticmethod
-    def unit(base_ring):
-        """Return the operadic unit in arity ``1``."""
-        return Commutative(1, base_ring)(())
-
-    @staticmethod
-    def unit_key() -> tuple:
-        """Return the basis key of the unit element in arity ``1``."""
-        return ()
-
-    def basis_iter(self, d: int) -> Iterator[Commutative.Element]:
+    def basis_iter(self, d: int) -> Iterator[CommutativeElement]:
         """Iterate over basis elements in this arity and the given degree."""
         if self.arity() >= 1 and d == 0:
             yield self.term(())
-
-    @cached_method
-    def graded_basis(self, d: int) -> Family:
-        """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_iter(d))
 
     def degree_on_basis(self, basis_element: tuple) -> int:
         """Return homological degree of one basis element."""
@@ -108,12 +58,31 @@ class Commutative(CombinatorialFreeModule):
     def _latex_term(self, basis_element: tuple) -> str:
         return "\\mu_{" + str(self.arity()) + "}"
 
-    @staticmethod
+
+class CommutativeOperad(Operad[CommutativeComponent]):
+    """The commutative operad ``Com``; use the instance :data:`Commutative`."""
+
+    Component = CommutativeComponent
+    Element = CommutativeElement
+
+    name = "Com"
+    connectivity = 0
+    """All components live in non-negative degrees."""
+
+    def unit(self, base_ring) -> CommutativeElement:
+        """Return the operadic unit in arity ``1``."""
+        return self(1, base_ring)(())
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return ()
+
     def compose(
-        x,
+        self,
+        x: CommutativeElement,
         input: int,
-        y,
-    ):
+        y: CommutativeElement,
+    ) -> CommutativeElement:
         """Operadic composition ``x \\circ_i y``."""
         if x.parent().base_ring() != y.parent().base_ring():
             raise TypeError("Both elements must have the same base ring.")
@@ -122,37 +91,12 @@ class Commutative(CombinatorialFreeModule):
         n = y.arity()
         assert 1 <= input <= m, f"Index i must be between 1 and {m}. Got {input}."
 
-        target = Commutative(m + n - 1, base_ring=x.parent().base_ring())
+        target = self(m + n - 1, base_ring=x.parent().base_ring())
         result = target.zero()
         for _, x_coeff in x:
             for _, y_coeff in y:
                 result += target.term(()) * (x_coeff * y_coeff)
         return result
 
-    class Element(ParentedElementMixin["Commutative"], CombinatorialFreeModule.Element):
-        """Elements of a fixed-arity commutative component."""
 
-        def _repr_latex_(self) -> str:
-            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
-
-        def arity(self) -> int:
-            """Return the arity of this element."""
-            return self.parent().arity()
-
-        def boundary(self):
-            """Apply the differential."""
-            parent = self.parent()
-            return parent.boundary(self)
-
-        def permute(self, sigma):
-            """Return the trivial symmetric-group action on this element."""
-            parent = self.parent()
-
-            if isinstance(sigma, (list, tuple)):
-                parent._symmetric_group(sigma)
-            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
-                raise TypeError(
-                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
-                    f"got {type(sigma).__name__}: {sigma!r}."
-                )
-            return self
+Commutative = CommutativeOperad()

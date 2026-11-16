@@ -3,41 +3,25 @@
 from __future__ import annotations
 
 import itertools
-from typing import ClassVar
 
 from sage.all import cached_method, tensor
 
-from uconf.models.surjection import Surjection
+from uconf.core.cooperad import Cooperad, CooperadElement
+from uconf.models.surjection import Surjection, SurjectionComponent, SurjectionElement
 
 
-class SurjectionDual(Surjection):
-    r"""Linear dual companion of :class:`uconf.models.surjection.Surjection`.
+class SurjectionDualElement(SurjectionElement, CooperadElement["SurjectionDualComponent"]):
+    """Elements of a fixed-arity surjection linear-dual component."""
 
-    The basis is dual to the surjection basis, with degree equal to the
-    negative of the primal surjection degree.
 
-    EXAMPLES::
+class SurjectionDualComponent(SurjectionComponent):
+    """Arity-``n`` component, with the surjection basis in non-positive degrees."""
 
-        sage: from sage.all import QQ
-        sage: from uconf import SurjectionDual
-        sage: SD2 = SurjectionDual(2, QQ)
-        sage: x = SD2((1, 2, 1))
-        sage: x.arity()
-        2
-        sage: SD2.degree_on_basis((1, 2, 1))
-        -1
-    """
+    Element = SurjectionDualElement
 
-    name: ClassVar[str] = "𝒳*"
-    connectivity: ClassVar[int] = 0
-    """Elements live in non-positive degrees; the minimum degree is n - (n+d) = -d <= 0
-    for primal degree d >= 0.  We use k = 0 as the connectivity convention (inherited
-    from the primal surjection operad) since the cobar construction uses the arity bound
-    n - 1 for the weight, independent of the sign of the degree."""
-
-    def __init__(self, n: int, base_ring):
+    def __init__(self, factory: SurjectionDualCooperad, n: int, base_ring):
         """Initialize fixed-arity linear dual component."""
-        super().__init__(n, base_ring=base_ring)
+        super().__init__(factory, n, base_ring)
         self._primal_parent = Surjection(n, base_ring=self.base_ring())
 
     def basis_iter(self, d: int):
@@ -78,7 +62,7 @@ class SurjectionDual(Surjection):
                 )
         return rows
 
-    def _boundary_on_basis(self, basis_element: tuple) -> SurjectionDual.Element:
+    def _boundary_on_basis(self, basis_element: tuple) -> SurjectionDualElement:
         """Compute the differential by transposing ``Surjection`` differential."""
         primal_degree = len(basis_element) - self.arity()
         row = self._boundary_rows_for_degree(primal_degree).get(basis_element, {})
@@ -88,8 +72,8 @@ class SurjectionDual(Surjection):
     @cached_method
     def _cocompose_rows(self, i: int, m: int, n: int, u_degree: int) -> dict:
         """Return cached pairing rows for ``Δ^{i;m,n}`` in fixed primal degree."""
-        left_parent = SurjectionDual(m, base_ring=self.base_ring())
-        right_parent = SurjectionDual(n, base_ring=self.base_ring())
+        left_parent = self.factory(m, base_ring=self.base_ring())
+        right_parent = self.factory(n, base_ring=self.base_ring())
         rows: dict[tuple[int, ...], dict] = {}
 
         for left_degree in range(u_degree + 1):
@@ -117,8 +101,42 @@ class SurjectionDual(Surjection):
 
         return rows
 
-    @staticmethod
-    def counit(x: SurjectionDual.Element):
+
+class SurjectionDualCooperad(Cooperad[SurjectionDualComponent]):
+    r"""Linear dual of :data:`uconf.models.surjection.Surjection`.
+
+    Use the instance :data:`SurjectionDual`.
+
+    The basis is dual to the surjection basis, with degree equal to the
+    negative of the primal surjection degree.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import SurjectionDual
+        sage: SD2 = SurjectionDual(2, QQ)
+        sage: x = SD2((1, 2, 1))
+        sage: x.arity()
+        2
+        sage: SD2.degree_on_basis((1, 2, 1))
+        -1
+    """
+
+    Component = SurjectionDualComponent
+    Element = SurjectionDualElement
+
+    name = "𝒳*"
+    connectivity = 0
+    """Elements live in non-positive degrees; the minimum degree is n - (n+d) = -d <= 0
+    for primal degree d >= 0.  We use k = 0 as the connectivity convention (inherited
+    from the primal surjection operad) since the cobar construction uses the arity bound
+    n - 1 for the weight, independent of the sign of the degree."""
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the counit generator in arity ``1``."""
+        return (1,)
+
+    def counit(self, x: SurjectionDualElement):
         """Return the cooperadic counit evaluation.
 
         The counit is nonzero only on the arity-``1`` basis element ``(1,)``.
@@ -131,8 +149,7 @@ class SurjectionDual(Surjection):
                 value += coeff
         return value
 
-    @staticmethod
-    def reduced(x: SurjectionDual.Element) -> SurjectionDual.Element:
+    def reduced(self, x: SurjectionDualElement) -> SurjectionDualElement:
         """Project to the reduced part.
 
         This removes the arity-``1`` counit component and is the identity in
@@ -140,10 +157,9 @@ class SurjectionDual(Surjection):
         """
         if x.arity() != 1:
             return x
-        return x - SurjectionDual.counit(x) * x.parent()((1,))
+        return x - self.counit(x) * x.parent()((1,))
 
-    @staticmethod
-    def infinitesimal_cocompose(x: SurjectionDual.Element, i: int, m: int, n: int):
+    def infinitesimal_cocompose(self, x: SurjectionDualElement, i: int, m: int, n: int):
         r"""Partial cocomposition dual to :meth:`Surjection.compose`.
 
         Parameters
@@ -176,8 +192,8 @@ class SurjectionDual(Surjection):
             raise ValueError(f"Expected element in arity {m + n - 1}, got arity {x.arity()}.")
 
         base_ring = x.parent().base_ring()
-        left_parent = SurjectionDual(m, base_ring=base_ring)
-        right_parent = SurjectionDual(n, base_ring=base_ring)
+        left_parent = self(m, base_ring=base_ring)
+        right_parent = self(n, base_ring=base_ring)
         target = tensor([left_parent, right_parent])
 
         if not x:
@@ -196,20 +212,5 @@ class SurjectionDual(Surjection):
             result += u_coeff * _on_basis(u_basis)
         return result
 
-    class Element(Surjection.Element):
-        """Elements of a fixed-arity surjection linear-dual component."""
 
-        def counit(self):
-            """Return the cooperadic counit evaluation."""
-            return SurjectionDual.counit(self)
-
-        def reduced(self) -> SurjectionDual.Element:
-            """Project to the reduced part."""
-            return SurjectionDual.reduced(self)
-
-        def infinitesimal_cocompose(self, i: int, m: int, n: int):
-            """Return the partial cocomposition dual to ``compose``."""
-            return SurjectionDual.infinitesimal_cocompose(self, i, m, n)
-
-
-SurjectionDual.factory = SurjectionDual
+SurjectionDual = SurjectionDualCooperad()

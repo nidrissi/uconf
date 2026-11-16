@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from uconf.core.operad import OperadLike
+from uconf.core.operad import Operad
 
 
 class OperadMorphism:
@@ -26,9 +26,9 @@ class OperadMorphism:
 
     Parameters
     ----------
-    source : OperadLike
+    source : Operad
         Source operad (class or factory).
-    target : OperadLike
+    target : Operad
         Target operad (class or factory).
     on_element : callable
         A function mapping elements of ``P(n)`` to elements of ``Q(n)``.
@@ -37,8 +37,8 @@ class OperadMorphism:
 
     def __init__(
         self,
-        source: OperadLike,
-        target: OperadLike,
+        source: Operad,
+        target: Operad,
         on_element: Callable[[Any], Any],
     ):
         self.source = source

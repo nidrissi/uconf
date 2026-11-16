@@ -155,8 +155,9 @@ degrees ≥ 𝑘·(𝑛−1)).
 | `constructions/bar_algebra.py` | `BarAlgebra(alpha, alg)` | `B_α(A) = T^c_C(A)` for a twisting morphism `α: C→P` and a P-algebra `A`. |
 | `constructions/cobar_coalgebra.py` | `CobarCoalgebra(alpha, coalg)` | `Ω_α(V) = T_P(V)` for a C-coalgebra `V`. |
 
-Constructors taking operads/cooperads accept either a class (e.g. `Lie`) or a
-wrapper instance (e.g. `ShiftedOperad(Lie, -1)`, `HadamardProduct(Associative, Associative)`).
+Every operad (cooperad) is an instance of `Operad` (`Cooperad`): `Lie`, `ShiftedOperad(Lie, -1)`
+and `BarConstruction(Lie)` are all used the same way, and `P(n, base_ring)` returns the arity-`n`
+component.
 
 ### Morphisms
 
@@ -270,15 +271,14 @@ alg = SurjectionSimplicialCochainAlgebra(N=3, base_ring=QQ)
 alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
 ```
 
-### Protocols and utilities
+### Base classes and utilities
 
-- `core/operad.py` — `OperadComponent` (minimal structural contract for operads).
-- `core/cooperad.py` — `CooperadComponent` (dual cooperadic contract).
-- `core/operad.py` — `OperadLike` accepts either an operad class (for example
-  `Lie`) or an operad factory/wrapper instance (for example
-  `ShiftedOperad(Lie, -1)` and `HadamardProduct(Associative, Associative)`).
-- `core/cooperad.py` — `CooperadLike` similarly accepts cooperad classes or
-  cooperad wrapper instances (for example `BarConstruction(Lie)`).
+- `core/component.py` — `SymmetricSequence` (common base of operads and cooperads),
+  `ComponentBase` (a fixed-arity component, a `CombinatorialFreeModule` subclass) and
+  `ElementBase` (its elements).
+- `core/operad.py` — `Operad`: `compose(x, i, y)`, `unit(base_ring)`.
+- `core/cooperad.py` — `Cooperad`: `counit`, `reduced`, `infinitesimal_cocompose`;
+  `CooperadElement` exposes them as element methods.
 - `core/signs.py` — shared sign conventions (permutation signature, suspension signs).
 
 ### Wrappers
@@ -426,10 +426,11 @@ practice.
 ### Shifted operad
 
 ```python
+from sage.all import QQ
 from uconf import Lie, ShiftedOperad
 
 ShiftLie = ShiftedOperad(Lie, 1)
-L2 = ShiftLie(2)
+L2 = ShiftLie(2, QQ)
 x = L2((1,))
 y = x.permute([2, 1])
 z = ShiftLie.compose(x, 2, x)

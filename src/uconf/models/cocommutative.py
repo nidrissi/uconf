@@ -9,26 +9,42 @@ is ``()`` (empty tuple) and the infinitesimal cocomposition satisfies
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 from sage.all import tensor
 
-from uconf.models.commutative import Commutative
+from uconf.core.cooperad import Cooperad, CooperadElement
+from uconf.models.commutative import CommutativeComponent, CommutativeElement
 
 
-class CoCommutative(Commutative):
-    """Cocommutative cooperad component in fixed arity.
+class CoCommutativeElement(CommutativeElement, CooperadElement["CoCommutativeComponent"]):
+    """Elements of a fixed-arity cocommutative cooperad component."""
 
-    This is the linear dual of :class:`uconf.commutative.Commutative`.
-    As a graded module it is identical to ``Commutative``; the additional
-    cooperad structure is provided by :meth:`counit`, :meth:`reduced`, and
-    :meth:`infinitesimal_cocompose`.
+
+class CoCommutativeComponent(CommutativeComponent):
+    """Arity-``n`` component; the same graded module as ``Com(n)``."""
+
+    Element = CoCommutativeElement
+
+
+class CoCommutativeCooperad(Cooperad[CoCommutativeComponent]):
+    """The cocommutative cooperad ``Com^*``; use the instance :data:`CoCommutative`.
+
+    This is the linear dual of :data:`uconf.models.commutative.Commutative`.
+    Its components are the same graded modules as those of ``Commutative``;
+    the additional cooperad structure is provided by :meth:`counit`,
+    :meth:`reduced`, and :meth:`infinitesimal_cocompose`.
     """
 
-    name: ClassVar[str] = "coCom"
+    Component = CoCommutativeComponent
+    Element = CoCommutativeElement
 
-    @staticmethod
-    def counit(x: CoCommutative.Element):
+    name = "coCom"
+    connectivity = 0
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the counit generator in arity ``1``."""
+        return ()
+
+    def counit(self, x: CoCommutativeElement):
         """Cooperadic counit: extracts the coefficient of the arity-1 generator.
 
         The counit ``ε: CoCom(1) → k`` evaluates to 1 on the unique basis
@@ -40,15 +56,13 @@ class CoCommutative(Commutative):
             return coeff
         return x.parent().base_ring().zero()
 
-    @staticmethod
-    def reduced(x: CoCommutative.Element) -> CoCommutative.Element:
+    def reduced(self, x: CoCommutativeElement) -> CoCommutativeElement:
         """Project to the reduced part (kills the arity-1 unit component)."""
         if x.arity() != 1:
             return x
-        return x - CoCommutative.counit(x) * x.parent()(())
+        return x - self.counit(x) * x.parent()(())
 
-    @staticmethod
-    def infinitesimal_cocompose(x: CoCommutative.Element, i: int, m: int, n: int):
+    def infinitesimal_cocompose(self, x: CoCommutativeElement, i: int, m: int, n: int):
         """Partial cocomposition dual to ``Commutative.compose(·, i, ·)``.
 
         Since ``Com.compose(e_m, i, e_n) = e_{m+n-1}`` for all ``i``, the
@@ -62,8 +76,8 @@ class CoCommutative(Commutative):
             raise ValueError(f"Expected element in arity {m + n - 1}, got arity {x.arity()}.")
 
         base_ring = x.parent().base_ring()
-        left_parent = CoCommutative(m, base_ring=base_ring)
-        right_parent = CoCommutative(n, base_ring=base_ring)
+        left_parent = self(m, base_ring=base_ring)
+        right_parent = self(n, base_ring=base_ring)
         target = tensor([left_parent, right_parent])
 
         if not x:
@@ -74,20 +88,5 @@ class CoCommutative(Commutative):
             result += coeff * left_parent(()).tensor(right_parent(()))
         return result
 
-    class Element(Commutative.Element):
-        """Elements of a fixed-arity cocommutative cooperad component."""
 
-        def counit(self):
-            """Return the cooperadic counit evaluation."""
-            return CoCommutative.counit(self)
-
-        def reduced(self) -> CoCommutative.Element:
-            """Project to the reduced part."""
-            return CoCommutative.reduced(self)
-
-        def infinitesimal_cocompose(self, i: int, m: int, n: int):
-            """Return the partial cocomposition dual to ``Commutative.compose``."""
-            return CoCommutative.infinitesimal_cocompose(self, i, m, n)
-
-
-CoCommutative.factory = CoCommutative
+CoCommutative = CoCommutativeCooperad()

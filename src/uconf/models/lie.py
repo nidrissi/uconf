@@ -1,67 +1,48 @@
 """Finite-arity model of the Lie operad in a Hall-type basis."""
 
+from __future__ import annotations
+
 import itertools as py_itertools
 from collections.abc import Iterator
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from sage.all import (
-    CombinatorialFreeModule,
-    Family,
-    GradedModulesWithBasis,
     Permutation,
-    SymmetricGroup,
     cached_method,
     matrix,
     vector,
 )
 
-from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
+from uconf.core.component import ComponentBase, ElementBase
+from uconf.core.operad import Operad
 
 
-class Lie(CombinatorialFreeModule):
-    r"""Lie operad component in arity ``n``.
+class LieElement(ElementBase["LieComponent"]):
+    """Elements of a fixed-arity Lie component."""
 
-    Basis keys are permutations of ``(1, ..., n-1)`` and encode nested brackets
-    ``[x_i, -]`` ending in ``x_n``.
+    def permute(self, sigma: Permutation | list | tuple) -> LieElement:
+        """Apply the right action of a permutation on generators."""
+        parent = self.parent()
+        sigma_tuple = parent._coerce_permutation(sigma).tuple()
+        result = parent.zero()
+        for key, coeff in self:
+            result += coeff * parent._permute_on_basis(key, sigma_tuple)
+        return result
 
-    Computational data (PBW matrix, its left-inverse, word/basis-key lists, and
-    associative expansions) are cached via :func:`sage.misc.cachefunc.cached_method`.
-    Since :class:`~sage.combinat.free_module.CombinatorialFreeModule` inherits from
-    :class:`~sage.structure.unique_representation.UniqueRepresentation`, ``Lie(n,
-    base_ring)`` always returns the same instance for a given ``(n, base_ring)`` pair,
-    so these instance-level caches are automatically shared across all callers—including
-    :meth:`compose`, which creates a new ``Lie`` parent on each invocation.
 
-    EXAMPLES::
+class LieComponent(ComponentBase["LieElement"]):
+    """Arity-``n`` component, with basis the nested brackets ``[x_i, -]`` ending in ``x_n``."""
 
-        sage: from sage.all import QQ
-        sage: from uconf import Lie
-        sage: L3 = Lie(3, QQ)
-        sage: x = L3((1, 2))
-        sage: x.arity()
-        3
-        sage: x.permute([2, 1, 3]).parent() is L3
-        True
-    """
+    Element = LieElement
 
-    name: ClassVar[str] = "Lie"
-    connectivity: ClassVar[int] = 0
-    """All components live in degree 0 (the Lie operad is concentrated in degree 0)."""
+    if TYPE_CHECKING:
 
-    def __init__(self, n, base_ring):
+        @property
+        def factory(self) -> LieOperad: ...
+
+    def __init__(self, factory: LieOperad, n: int, base_ring):
         """Initialize ``Lie(n)`` over ``base_ring``."""
-        assert n >= 0, f"Arity must be non-negative. Got {n}."
-        name = f"{self.name}{n}"
-        super().__init__(
-            base_ring,
-            tuple,
-            prefix=name,
-            category=GradedModulesWithBasis(base_ring),
-        )
-        self.rename(name)
-        self._arity = n
-        self._symmetric_group = SymmetricGroup(n)
+        super().__init__(factory, n, base_ring)
         self.boundary = self.module_morphism(on_basis=lambda basis: self.zero(), codomain=self)
 
     @cached_method
@@ -105,25 +86,6 @@ class Lie(CombinatorialFreeModule):
             raise ValueError(f"Basis key must be a permutation of 1..{n - 1}. Got {clean}.")
 
         return clean
-
-    def _element_constructor_(self, x):
-        """Build elements from basis keys or sparse dictionaries."""
-        if isinstance(x, dict):
-            clean_dict = {}
-            for key, coeff in x.items():
-                clean_key = self._validate_basis_key(key)
-                if clean_key is None:
-                    continue
-                clean_dict[clean_key] = coeff
-            return super()._element_constructor_(clean_dict)
-
-        if isinstance(x, (tuple, list)):
-            clean_key = self._validate_basis_key(x)
-            if clean_key is None:
-                return self.zero()
-            return self.term(clean_key)
-
-        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def _bracket(self, left: dict[tuple[int, ...], Any], right: dict[tuple[int, ...], Any]):
         """Compute commutator ``[left, right]`` on associative expansions."""
@@ -249,7 +211,7 @@ class Lie(CombinatorialFreeModule):
 
         return sub_inv * selector
 
-    def _element_from_assoc(self, assoc: dict[tuple[int, ...], Any]) -> "Lie.Element":
+    def _element_from_assoc(self, assoc: dict[tuple[int, ...], Any]) -> LieElement:
         """Reconstruct a Lie element from associative coefficients.
 
         Uses the precomputed left-inverse of the PBW matrix (a single
@@ -274,30 +236,11 @@ class Lie(CombinatorialFreeModule):
             (keys[i], self.base_ring()(coords[i])) for i in range(len(keys)) if coords[i] != 0
         )
 
-    def arity(self) -> int:
-        """Return the arity of this Lie operad component."""
-        return self._arity
-
-    def basis_iter(self, d: int) -> Iterator["Lie.Element"]:
+    def basis_iter(self, d: int) -> Iterator[LieElement]:
         """Iterate over the canonical Lie basis in this fixed arity and the given degree."""
         if d == 0:
             for key in self._basis_keys():
                 yield self.term(key)
-
-    @cached_method
-    def graded_basis(self, d: int) -> Family:
-        """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_iter(d))
-
-    @staticmethod
-    def unit(base_ring):
-        """Return the operadic unit in arity ``1``."""
-        return Lie(1, base_ring)(())
-
-    @staticmethod
-    def unit_key() -> tuple:
-        """Return the basis key of the unit element in arity ``1``."""
-        return ()
 
     def degree_on_basis(self, element) -> int:
         """Return homological degree on basis elements (always ``0`` here)."""
@@ -330,7 +273,7 @@ class Lie(CombinatorialFreeModule):
         return expr
 
     @cached_method
-    def _permute_on_basis(self, basis_key: tuple, sigma_tuple: tuple) -> "Lie.Element":
+    def _permute_on_basis(self, basis_key: tuple, sigma_tuple: tuple) -> LieElement:
         """Permute a single Lie basis key by a permutation given as a tuple.
 
         Caching this at the component level means each ``(basis_key, σ)`` pair
@@ -347,8 +290,49 @@ class Lie(CombinatorialFreeModule):
         assoc = {w: c for w, c in assoc.items() if c != 0}
         return self._element_from_assoc(assoc)
 
-    @staticmethod
-    def compose(x: "Lie.Element", i: int, y: "Lie.Element") -> "Lie.Element":
+
+class LieOperad(Operad[LieComponent]):
+    r"""The Lie operad; use the instance :data:`Lie`.
+
+    In arity ``n``, basis keys are permutations of ``(1, ..., n-1)`` and encode nested brackets
+    ``[x_i, -]`` ending in ``x_n``.
+
+    Computational data (PBW matrix, its left-inverse, word/basis-key lists, and
+    associative expansions) are cached via :func:`sage.misc.cachefunc.cached_method`.
+    Since :class:`~sage.combinat.free_module.CombinatorialFreeModule` inherits from
+    :class:`~sage.structure.unique_representation.UniqueRepresentation`, ``Lie(n,
+    base_ring)`` always returns the same instance for a given ``(n, base_ring)`` pair,
+    so these instance-level caches are automatically shared across all callers—including
+    :meth:`compose`, which creates a new ``Lie`` parent on each invocation.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import Lie
+        sage: L3 = Lie(3, QQ)
+        sage: x = L3((1, 2))
+        sage: x.arity()
+        3
+        sage: x.permute([2, 1, 3]).parent() is L3
+        True
+    """
+
+    Component = LieComponent
+    Element = LieElement
+
+    name = "Lie"
+    connectivity = 0
+    """All components live in degree 0 (the Lie operad is concentrated in degree 0)."""
+
+    def unit(self, base_ring) -> LieElement:
+        """Return the operadic unit in arity ``1``."""
+        return self(1, base_ring)(())
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return ()
+
+    def compose(self, x: LieElement, i: int, y: LieElement) -> LieElement:
         r"""Operadic composition ``x \circ_i y`` in the Lie operad.
 
         Parameters
@@ -393,7 +377,7 @@ class Lie(CombinatorialFreeModule):
         if x_parent.base_ring() != y_parent.base_ring():
             raise TypeError("Both elements must have the same base ring.")
 
-        target = Lie(m + n - 1, base_ring=x_parent.base_ring())
+        target = self(m + n - 1, base_ring=x_parent.base_ring())
         base_ring = target.base_ring()
 
         # --- Step 1: aggregate the full associative expansion of x ------------
@@ -429,37 +413,5 @@ class Lie(CombinatorialFreeModule):
         result_assoc = {w: c for w, c in result_assoc.items() if c != 0}
         return target._element_from_assoc(result_assoc)
 
-    class Element(ParentedElementMixin["Lie"], CombinatorialFreeModule.Element):
-        """Elements of a fixed-arity Lie component."""
 
-        def _repr_latex_(self) -> str:
-            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
-
-        def arity(self) -> int:
-            """Return the element arity."""
-            return self.parent().arity()
-
-        def boundary(self) -> "Lie.Element":
-            """Apply the differential (trivial in this model)."""
-            parent = self.parent()
-            return parent.boundary(self)
-
-        def permute(self, sigma: Permutation | list | tuple) -> "Lie.Element":
-            """Apply the right action of a permutation on generators."""
-            parent = self.parent()
-
-            if isinstance(sigma, (list, tuple)):
-                sigma_perm: Permutation = parent._symmetric_group(sigma)
-            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
-                raise TypeError(
-                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
-                    f"got {type(sigma).__name__}: {sigma!r}."
-                )
-            else:
-                sigma_perm: Permutation = sigma
-
-            sigma_tuple = sigma_perm.tuple()
-            result = parent.zero()
-            for key, coeff in self:
-                result += coeff * parent._permute_on_basis(key, sigma_tuple)
-            return result
+Lie = LieOperad()

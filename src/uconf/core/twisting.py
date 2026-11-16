@@ -28,8 +28,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from uconf.core.cooperad import CooperadLike
-from uconf.core.operad import OperadLike
+from uconf.core.cooperad import Cooperad
+from uconf.core.operad import Operad
 from uconf.core.signs import sign_from_exponent
 
 
@@ -45,8 +45,8 @@ class TwistingMorphism:
     The map should be zero on C(1) (the coaugmentation coideal kills the counit).
 
     Args:
-        cooperad: The source cooperad C (a ``CooperadLike``).
-        operad: The target operad P (an ``OperadLike``).
+        cooperad: The source cooperad C (a :class:`~uconf.core.cooperad.Cooperad`).
+        operad: The target operad P (an :class:`~uconf.core.operad.Operad`).
         morphism_fn: A callable ``(c_element) -> p_element`` implementing the
             degree -1 linear map.  The function receives an element of ``C(n)``
             and must return an element of ``P(n)`` (of one degree lower).
@@ -66,8 +66,8 @@ class TwistingMorphism:
 
     def __init__(
         self,
-        cooperad: CooperadLike,
-        operad: OperadLike,
+        cooperad: Cooperad,
+        operad: Operad,
         morphism_fn: Callable,
         *,
         name: str | None = None,

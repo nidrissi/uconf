@@ -332,11 +332,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         n = len(m_tuple)
         p_parent = self._operad_cls(n, self.base_ring())
 
-        p_repr = getattr(p_parent, "_repr_term", None)
         m_repr = getattr(self._inner_module, "_repr_term", None)
 
-        p_str = p_repr(p_key) if callable(p_repr) else str(p_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        p_str = p_parent._repr_term(p_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"<{p_str}; {', '.join(leaves)}>"
 
     def _latex_term(self, basis_element) -> str:
@@ -345,11 +344,10 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         n = len(m_tuple)
         p_parent = self._operad_cls(n, self.base_ring())
 
-        p_repr = getattr(p_parent, "_latex_term", None)
         m_repr = getattr(self._inner_module, "_latex_term", None)
 
-        p_ltx = p_repr(p_key) if callable(p_repr) else str(p_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        p_ltx = p_parent._latex_term(p_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"\\langle {p_ltx}; {', '.join(leaves)} \\rangle"
 
     # ------------------------------------------------------------------

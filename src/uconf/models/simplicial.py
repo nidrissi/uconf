@@ -15,6 +15,7 @@ linear dual over a fixed standard simplex ``Δ^N``.
 from __future__ import annotations
 
 from itertools import combinations, combinations_with_replacement, pairwise
+from typing import TYPE_CHECKING
 
 from sage.all import (
     CombinatorialFreeModule,
@@ -27,7 +28,6 @@ from sage.all import (
 )
 
 from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
 
 # ---------------------------------------------------------------------------
 # SimplicialChains
@@ -185,8 +185,12 @@ class SimplicialChains(CombinatorialFreeModule):
     # Element class
     # -----------------------------------------------------------------------
 
-    class Element(ParentedElementMixin["SimplicialChains"], CombinatorialFreeModule.Element):
+    class Element(CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialChains`."""
+
+        if TYPE_CHECKING:
+
+            def parent(self) -> SimplicialChains: ...
 
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
@@ -405,8 +409,12 @@ class SimplicialCochains(CombinatorialFreeModule):
 
     # -- Element class ------------------------------------------------------
 
-    class Element(ParentedElementMixin["SimplicialCochains"], CombinatorialFreeModule.Element):
+    class Element(CombinatorialFreeModule.Element):
         """Elements of :class:`SimplicialCochains`."""
+
+        if TYPE_CHECKING:
+
+            def parent(self) -> SimplicialCochains: ...
 
         def _repr_latex_(self) -> str:
             return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
