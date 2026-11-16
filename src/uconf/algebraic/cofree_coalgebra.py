@@ -52,9 +52,9 @@ from uconf.algebraic.tree_module import (
     _tuples_in_degree,
     _tuples_in_degree_and_weight,
 )
+from uconf.core.cooperad import Cooperad
 from uconf.core.display import latex_linear_combination
 from uconf.core.signs import koszul_sign_of_permutation, sign_from_exponent
-from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
 class CofreeCoalgebraModule(CombinatorialFreeModule):
@@ -77,7 +77,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        cooperad_cls: QuasiPlanarLike,
+        cooperad: Cooperad,
         inner_module: CombinatorialFreeModule,
         *,
         name: str | None = None,
@@ -85,7 +85,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         """Initialize the cofree conilpotent C-coalgebra module ``T^c_C(M)``.
 
         Args:
-            cooperad_cls: Arity-indexed **quasi-planar** cooperad provider.
+            cooperad: Arity-indexed **quasi-planar** cooperad provider.
             inner_module: Cogenerating dg-module M.
             name: Display name override.  Defaults to ``T^c_C(M)``.
 
@@ -94,15 +94,15 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
 
         """
         if name is None:
-            name = f"T^c_{cooperad_cls.name}({inner_module})"
-        self._cooperad_cls = cooperad_cls
+            name = f"T^c_{cooperad.name}({inner_module})"
+        self._cooperad = cooperad
         self._inner_module = inner_module
         base_ring = inner_module.base_ring()
         # Runtime check: cooperad must be quasi-planar (free S_n-action)
-        _comp2 = cooperad_cls(2, base_ring)
+        _comp2 = cooperad(2, base_ring)
         if not callable(getattr(_comp2, "planarize", None)):
             raise TypeError(
-                f"Cooperad {cooperad_cls.name!r} is not quasi-planar: "
+                f"Cooperad {cooperad.name!r} is not quasi-planar: "
                 f"its arity-2 component does not expose 'planarize'.  "
                 "Only quasi-planar cooperads (CoAssociative, SurjectionDual, "
                 "and their wrappers) are accepted."
@@ -187,7 +187,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
     @cached_method
     def _cooperad_planarize_on_basis(self, n: int):
         """Return the arity-``n`` fast planarization hook or ``None``."""
-        return getattr(self._cooperad_cls(n, self.base_ring()), "_planarize_on_basis", None)
+        return getattr(self._cooperad(n, self.base_ring()), "_planarize_on_basis", None)
 
     # ------------------------------------------------------------------
     # Basis key validation
@@ -214,7 +214,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         # NOTE: Component construction C(n, R) must never fail—all cooperads
         # support every non-negative arity.  Any exception here is a real bug
         # and should propagate, not be silently ignored.
-        comp = self._cooperad_cls(n, self.base_ring())
+        comp = self._cooperad(n, self.base_ring())
         validate_fn = getattr(comp, "_validate_basis_key", None)
         if validate_fn is not None:
             c_key = validate_fn(c_key_raw)
@@ -235,7 +235,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 if k is not None:
                     c_key_raw, m_tuple_raw = k
                     n = len(m_tuple_raw)
-                    comp = self._cooperad_cls(n, self.base_ring())
+                    comp = self._cooperad(n, self.base_ring())
                     normalized = self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
                     for out_key, out_coeff in normalized:
                         combined = R(coeff * out_coeff)
@@ -248,7 +248,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
                 return self.zero()
             c_key_raw, m_tuple_raw = k
             n = len(m_tuple_raw)
-            comp = self._cooperad_cls(n, self.base_ring())
+            comp = self._cooperad(n, self.base_ring())
             return self._normalized_corolla_sum(comp.term(c_key_raw), m_tuple_raw)
 
         raise TypeError(
@@ -276,7 +276,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         """Degree = deg_C(c_key) + sum_i deg_M(m_i)."""
         c_key, m_tuple = key
         n = len(m_tuple)
-        comp = self._cooperad_cls(n, self.base_ring())
+        comp = self._cooperad(n, self.base_ring())
         c_deg = comp.degree_on_basis(c_key)
         m_deg = sum(self._inner_module.degree_on_basis(mk) for mk in m_tuple)
         return c_deg + m_deg
@@ -285,26 +285,24 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         """Readable basis-term notation for ``T^c_C(M)`` corollas."""
         c_key, m_tuple = basis_element
         n = len(m_tuple)
-        c_parent = self._cooperad_cls(n, self.base_ring())
+        c_parent = self._cooperad(n, self.base_ring())
 
-        c_repr = getattr(c_parent, "_repr_term", None)
         m_repr = getattr(self._inner_module, "_repr_term", None)
 
-        c_str = c_repr(c_key) if callable(c_repr) else str(c_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        c_str = c_parent._repr_term(c_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"<{c_str}; {', '.join(leaves)}>"
 
     def _latex_term(self, basis_element) -> str:
         """LaTeX basis-term notation for ``T^c_C(M)`` corollas."""
         c_key, m_tuple = basis_element
         n = len(m_tuple)
-        c_parent = self._cooperad_cls(n, self.base_ring())
+        c_parent = self._cooperad(n, self.base_ring())
 
-        c_repr = getattr(c_parent, "_latex_term", None)
         m_repr = getattr(self._inner_module, "_latex_term", None)
 
-        c_ltx = c_repr(c_key) if callable(c_repr) else str(c_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        c_ltx = c_parent._latex_term(c_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"\\langle {c_ltx}; {', '.join(leaves)} \\rangle"
 
     # ------------------------------------------------------------------
@@ -324,7 +322,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
         """
         c_key, m_tuple = key
         n = len(m_tuple)
-        comp = self._cooperad_cls(n, self.base_ring())
+        comp = self._cooperad(n, self.base_ring())
         R = self.base_ring()
         zero = R.zero()
         result_dict = {}
@@ -384,7 +382,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             ValueError: when arity is unbounded.
         """
         M = self._inner_module
-        C = self._cooperad_cls
+        C = self._cooperad
         R = self.base_ring()
 
         connectivity = int(getattr(C, "connectivity", 0))
@@ -476,7 +474,7 @@ class CofreeCoalgebraModule(CombinatorialFreeModule):
             return
 
         M = self._inner_module
-        C = self._cooperad_cls
+        C = self._cooperad
         R = self.base_ring()
 
         connectivity = int(getattr(C, "connectivity", 0))
@@ -553,7 +551,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
     C-coalgebra coaction.
 
     Args:
-        cooperad_cls: Quasi-planar cooperad provider C.
+        cooperad: Quasi-planar cooperad provider C.
         inner_module: The cogenerating dg-module M.
 
     The coprojection ``pi: T^c_C(M) -> M`` is given by ``project()``.
@@ -569,9 +567,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         μ((1, 2)) # <μ((1,)); μ([1])> # <μ((1,)); μ([1])>
     """
 
-    def __init__(self, cooperad_cls: QuasiPlanarLike, inner_module):
-        cofree_module = CofreeCoalgebraModule(cooperad_cls, inner_module)
-        super().__init__(cofree_module, cooperad_cls, self._coact_impl)
+    def __init__(self, cooperad: Cooperad, inner_module):
+        cofree_module = CofreeCoalgebraModule(cooperad, inner_module)
+        super().__init__(cofree_module, cooperad, self._coact_impl)
         self._inner_module = inner_module
         self._base_ring = inner_module.base_ring()
 
@@ -589,16 +587,16 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         Returns an element of ``C(n) x T^c_C(M)^{xn}``.
         """
         base_ring = self._base_ring
-        coop_parent = self.cooperad_cls(n, base_ring)
+        coop_parent = self.cooperad(n, base_ring)
         cofree_mod = self.module
 
         # Get identity key of C(1)
-        comp_1 = self.cooperad_cls(1, base_ring)
+        comp_1 = self.cooperad(1, base_ring)
         comp_1_list = list(comp_1.basis_iter(0))
         assert len(comp_1_list) == 1, (
             f"C(1) must have exactly one basis element. Got {len(comp_1_list)}."
         )
-        id_key = self.cooperad_cls.unit_key()
+        id_key = self.cooperad.unit_key()
 
         right_factors = [cofree_mod] * n
         target = tensor([coop_parent] + right_factors)
@@ -656,9 +654,9 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
             if k != m + n - 1:
                 continue
 
-            comp = self.cooperad_cls(k, base_ring)
+            comp = self.cooperad(k, base_ring)
             c_elem = comp(c_key)
-            cocomp = comp.infinitesimal_cocompose(c_elem, i, m, n)
+            cocomp = self.cooperad.infinitesimal_cocompose(c_elem, i, m, n)
 
             # Split M-labels (1-indexed positions):
             # Left (arity m): mu_1..mu_i, mu_{i+n}..mu_{m+n-1}
@@ -690,7 +688,7 @@ class CofreeConilpotentCoalgebra(CooperadCoalgebra):
         result = inner.zero()
 
         # Get the unique C(1) identity key
-        id_key = self.cooperad_cls.unit_key()
+        id_key = self.cooperad.unit_key()
 
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:

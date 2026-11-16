@@ -1,4 +1,4 @@
-"""Typing protocols for cooperad-like objects used in this project.
+"""Base class for cooperads.
 
 .. note::
    This package works exclusively with **connected** cooperads, i.e. cooperads C
@@ -10,77 +10,49 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Self, cast
 
-from uconf.core.component import ComponentProtocol
-
-
-@runtime_checkable
-class CooperadComponent(ComponentProtocol, Protocol):
-    """Structural contract for one fixed-arity cooperad component."""
-
-    factory: CooperadLike
-    """Reference to the parent cooperad factory, used for printing and error
-    messages."""
-
-    @staticmethod
-    def counit(x: CooperadComponent.Element) -> object:
-        """Returns the counit evaluation on ``x``."""
-        ...
-
-    @staticmethod
-    def unit_key() -> Any:
-        """Returns the basis key of the counit generator in arity ``1``."""
-        ...
-
-    @staticmethod
-    def reduced(x: CooperadComponent.Element) -> CooperadComponent.Element:
-        """Projects ``x`` to the reduced part (kills counit in arity 1)."""
-        ...
-
-    @staticmethod
-    def infinitesimal_cocompose(
-        x: CooperadComponent.Element, i: int, m: int, n: int
-    ) -> Iterable[tuple]:
-        """Returns the partial cocomposition in slot ``i``, arities ``(m, n)``."""
-        ...
+from uconf.core.component import ComponentBase, ElementBase, SymmetricSequence
 
 
-@runtime_checkable
-class CooperadFactory(Protocol):
-    """Structural contract for cooperad factories and wrappers."""
+class Cooperad[C: ComponentBase[Any]](SymmetricSequence[C]):
+    """A connected dg-cooperad, given by its components and structure maps.
 
-    name: str
+    Every cooperad in this package is an instance of a subclass, e.g.
+    ``CoAssociative``, ``ShiftedCooperad(SurjectionDual, 1)`` or
+    ``BarConstruction(Lie)``.
+    """
 
-    def __call__(self, n: int, base_ring) -> Component:
-        """Returns the arity-``n`` component over ``base_ring``."""
-        ...
-
-    def counit(self, x: Any) -> object:
-        """Returns the counit evaluation on ``x``."""
-        ...
-
-    def unit_key(self) -> Any:
-        """Returns the basis key of the counit generator in arity ``1``."""
-        ...
+    def counit(self, x: Any) -> Any:
+        """Return the counit evaluation of ``x``, an element of the base ring."""
+        raise NotImplementedError
 
     def reduced(self, x: Any) -> Any:
-        """Projects ``x`` to the reduced part."""
-        ...
+        """Project ``x`` to the reduced part (kills the counit in arity ``1``)."""
+        raise NotImplementedError
 
-    def infinitesimal_cocompose(
-        self,
-        x: Any,
-        i: int,
-        m: int,
-        n: int,
-    ) -> Any:
-        """Returns the partial cocomposition in slot ``i``."""
-        ...
+    def infinitesimal_cocompose(self, x: Any, i: int, m: int, n: int) -> Any:
+        """Return the partial cocomposition of ``x`` in slot ``i``, arities ``(m, n)``.
 
-    class Component(CooperadComponent): ...
+        The result lives in ``C(m) ⊗ C(n)``.
+        """
+        raise NotImplementedError
 
 
-type CooperadLike = type[CooperadComponent] | CooperadFactory
-"""Type alias for accepted cooperad inputs (class or factory instance)."""
+class CooperadElement[P: ComponentBase[Any]](ElementBase[P]):
+    """Element of a cooperad component, with the structure maps as methods."""
+
+    def _cooperad(self) -> Cooperad[Any]:
+        return cast(Cooperad[Any], self.parent().factory)
+
+    def counit(self) -> Any:
+        """Return the counit evaluation of this element."""
+        return self._cooperad().counit(self)
+
+    def reduced(self) -> Self:
+        """Project to the reduced part."""
+        return self._cooperad().reduced(self)
+
+    def infinitesimal_cocompose(self, i: int, m: int, n: int) -> Any:
+        """Return the partial cocomposition in slot ``i``, arities ``(m, n)``."""
+        return self._cooperad().infinitesimal_cocompose(self, i, m, n)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "uconf-operads"
-version = "1.0.3"
+version = "2.0.0"
 description = "Combinatorial operad/cooperad models for algebraic topology and configuration spaces"
 authors = [
     { name = "Najib Idrissi", email = "najib.idrissi-kaitouni@u-pariscite.fr" },
@@ -44,6 +44,7 @@ packages = ["src/uconf"]
 include = [
     "/src",
     "/tests",
+    "/typings",
     "/docs",
     "/AUTHORS",
     "/CITATION.cff",
@@ -56,6 +57,7 @@ exclude = ["/docs/_build"]
 [dependency-groups]
 dev = [
     "comch==0.2.0",
+    "pyright==1.1.414",
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
@@ -82,6 +84,12 @@ filterwarnings = [
 ]
 python_files = "tests/test_*.py"
 python_functions = "test_*"
+
+[tool.pyright]
+include = ["src"]
+stubPath = "typings"
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
 
 [tool.ruff]
 line-length = 100

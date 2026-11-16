@@ -87,7 +87,7 @@ from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, ca
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.display import latex_linear_combination
-from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.barratt_eccles import BarrattEccles, BarrattEcclesElement
 
 # Basis labels and their homological (negative) degrees, matching the
 # convention of :mod:`uconf.algebraic.spherical`.
@@ -251,7 +251,7 @@ class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
         module = ReducedTorusCochains(base_ring=base_ring)
         super().__init__(
             module=module,
-            operad_cls=BarrattEccles,
+            operad=BarrattEccles,
             structure_map=self._act_impl,
         )
 
@@ -308,7 +308,7 @@ class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
         exponent += _interleaving_sign_exponent(labels)
         return ("γ", _sign(exponent) * _psi(sigma_1, I_CA) * _psi(sigma_2, I_CB))
 
-    def _act_impl(self, p_element: BarrattEccles.Element, algebra_elements):
+    def _act_impl(self, p_element: BarrattEcclesElement, algebra_elements):
         r"""Implement ``μ_σ̲(x_1, …, x_n)`` on the torus cochains.
 
         Inputs are identified by position; positions enter through the

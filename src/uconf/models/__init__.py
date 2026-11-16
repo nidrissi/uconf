@@ -1,17 +1,19 @@
 """Canonical operad/cooperad and simplicial model classes."""
 
+from __future__ import annotations
+
 from itertools import combinations
 
 from sage.all import cached_function
 
 from uconf.models.associative import Associative
-from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.barratt_eccles import BarrattEccles, BarrattEcclesComponent, BarrattEcclesElement
 from uconf.models.coassociative import CoAssociative
 from uconf.models.cocommutative import CoCommutative
 from uconf.models.commutative import Commutative
 from uconf.models.lie import Lie
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
-from uconf.models.surjection import Surjection
+from uconf.models.surjection import Surjection, SurjectionComponent, SurjectionElement
 from uconf.models.surjection_dual import SurjectionDual
 
 __all__ = [
@@ -46,7 +48,7 @@ def _compositions(m: int, k: int):
 
 
 @cached_function
-def _compute_table_reduction_cached(n, base_ring, basis_element: tuple) -> Surjection.Element:
+def _compute_table_reduction_cached(n, base_ring, basis_element: tuple) -> SurjectionElement:
     """Compute table reduction on one Barratt--Eccles basis element (cached).
 
     Cached on (arity, base_ring, basis_element) so repeated calls with the
@@ -79,7 +81,7 @@ def _compute_table_reduction_cached(n, base_ring, basis_element: tuple) -> Surje
     return target.sum_of_terms(term_generator())
 
 
-def _table_reduction_on_basis(self: BarrattEccles):
+def _table_reduction_on_basis(self: BarrattEcclesComponent):
     """Create the basis-level table-reduction map ``E_n -> S_n``.
 
     Returns a callable compatible with ``module_morphism(on_basis=...)``.
@@ -87,13 +89,13 @@ def _table_reduction_on_basis(self: BarrattEccles):
     n = self.arity()
     base_ring = self.base_ring()
 
-    def _compute_table_reduction(basis_element: tuple) -> Surjection.Element:
+    def _compute_table_reduction(basis_element: tuple) -> SurjectionElement:
         return _compute_table_reduction_cached(n, base_ring, basis_element)
 
     return _compute_table_reduction
 
 
-def _table_reduction(self: BarrattEccles.Element) -> Surjection.Element:
+def _table_reduction(self: BarrattEcclesElement) -> SurjectionElement:
     """Evaluate table reduction on an element of the Barratt--Eccles operad."""
     parent = self.parent()
     if not hasattr(parent, "_table_reduction"):
@@ -104,17 +106,17 @@ def _table_reduction(self: BarrattEccles.Element) -> Surjection.Element:
     return parent._table_reduction(self)
 
 
-def _section_on_basis(self: Surjection):
+def _section_on_basis(self: SurjectionComponent):
     """Create the basis-level section map ``S_n -> E_n``.
 
     Returns a callable compatible with ``module_morphism(on_basis=...)``.
     """
 
-    def _compute_section(u: tuple) -> BarrattEccles.Element:
+    def _compute_section(u: tuple) -> BarrattEcclesElement:
         """Compute the section image of one surjection basis element."""
         n = self.arity()
         target = BarrattEccles(n, self.base_ring())
-        caesura_indices = Surjection._caesuras(u)
+        caesura_indices = SurjectionComponent._caesuras(u)
         sections = [[i for i in range(len(u)) if i not in caesura_indices]]
         for d in reversed(caesura_indices):
             # add a new element to section based on the last element
@@ -137,7 +139,7 @@ def _section_on_basis(self: Surjection):
     return _compute_section
 
 
-def _section(self: Surjection.Element) -> BarrattEccles.Element:
+def _section(self: SurjectionElement) -> BarrattEcclesElement:
     """Evaluate the section map on an element of the surjection operad."""
     parent = self.parent()
     if not hasattr(parent, "_section"):

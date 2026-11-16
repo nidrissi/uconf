@@ -231,7 +231,7 @@ class TestPullbackAlgebra:
     def test_pullback_ass_to_com(self, trivial_com_algebra):
         """Pull back a Com-algebra along Ass → Com to get an Ass-algebra."""
         ass_alg = PullbackAlgebra(ass_to_com, trivial_com_algebra)
-        assert ass_alg.operad_cls is Associative
+        assert ass_alg.operad is Associative
 
         # Act with an Ass(2) element
         mu = Associative(2, QQ)((1, 2))
@@ -424,6 +424,8 @@ class TestEComoduleMorphism:
         class _FakeCooperadComponent:
             def __init__(self, label):
                 self.label = label
+                # Distinct cooperads whose components share basis keys.
+                self.factory = object()
 
             def arity(self):
                 return 2

@@ -51,8 +51,8 @@ from uconf.algebraic.tree_module import (
     _tuples_in_degree,
 )
 from uconf.core.display import latex_linear_combination
+from uconf.core.operad import Operad
 from uconf.core.signs import get_on_basis, koszul_sign_of_permutation, sign_from_exponent
-from uconf.core.vertex_decoration import QuasiPlanarLike
 
 
 class FreeAlgebraModule(CombinatorialFreeModule):
@@ -75,7 +75,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
     def __init__(
         self,
-        operad_cls: QuasiPlanarLike,
+        operad: Operad,
         inner_module: CombinatorialFreeModule,
         *,
         name: str | None = None,
@@ -83,8 +83,8 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Initialize the free P-algebra module ``P ∘ M``.
 
         Args:
-            operad_cls: Arity-indexed **quasi-planar** operad provider.  Each
-                component ``operad_cls(n, base_ring)`` must expose ``planarize``.
+            operad: Arity-indexed **quasi-planar** operad provider.  Each
+                component ``operad(n, base_ring)`` must expose ``planarize``.
             inner_module: Generating dg-module M (a ``CombinatorialFreeModule``).
             name: Display name override.  Defaults to ``P ∘ M``.
 
@@ -93,15 +93,15 @@ class FreeAlgebraModule(CombinatorialFreeModule):
 
         """
         if name is None:
-            name = f"{operad_cls.name} ∘ {inner_module}"
-        self._operad_cls = operad_cls
+            name = f"{operad.name} ∘ {inner_module}"
+        self._operad = operad
         self._inner_module = inner_module
         base_ring = inner_module.base_ring()
         # Runtime check: operad must be quasi-planar (free S_n-action)
-        _comp2 = operad_cls(2, base_ring)
+        _comp2 = operad(2, base_ring)
         if not callable(getattr(_comp2, "planarize", None)):
             raise TypeError(
-                f"Operad {operad_cls.name!r} is not quasi-planar: "
+                f"Operad {operad.name!r} is not quasi-planar: "
                 f"its arity-2 component does not expose 'planarize'.  "
                 "Only quasi-planar operads (Associative, Surjection, BarrattEccles, "
                 "and their wrappers) are accepted."
@@ -160,7 +160,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         returns the planarization expansion as ``((planar_key, sigma_key), coeff)``
         terms.
         """
-        return getattr(self._operad_cls(n, self.base_ring()), "_planarize_on_basis", None)
+        return getattr(self._operad(n, self.base_ring()), "_planarize_on_basis", None)
 
     @cached_method
     def _operad_boundary_on_basis(self, n: int):
@@ -169,7 +169,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         When present, the returned callable takes a basis key of ``P(n)`` and
         returns the boundary expansion as ``(basis_key, coeff)`` terms.
         """
-        return get_on_basis(self._operad_cls(n, self.base_ring()).boundary)
+        return get_on_basis(self._operad(n, self.base_ring()).boundary)
 
     @cached_method
     def _inner_boundary_on_basis(self):
@@ -188,7 +188,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """
         p_key, m_tuple = key
         n = len(m_tuple)
-        comp = self._operad_cls(n, self.base_ring())
+        comp = self._operad(n, self.base_ring())
         planarize_on_basis = self._operad_planarize_on_basis(n)
         if planarize_on_basis is not None:
             planarized = planarize_on_basis(p_key)
@@ -258,7 +258,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         # NOTE: Component construction P(n, R) must never fail—all operads
         # support every non-negative arity.  Any exception here is a real bug
         # and should propagate, not be silently ignored.
-        comp = self._operad_cls(n, self.base_ring())
+        comp = self._operad(n, self.base_ring())
         validate_fn = getattr(comp, "_validate_basis_key", None)
         if validate_fn is not None:
             p_key = validate_fn(p_key_raw)
@@ -321,7 +321,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Degree = deg_P(p_key) + Σ_i deg_M(m_i)."""
         p_key, m_tuple = key
         n = len(m_tuple)
-        comp = self._operad_cls(n, self.base_ring())
+        comp = self._operad(n, self.base_ring())
         p_deg = comp.degree_on_basis(p_key)
         m_deg = sum(self._inner_module.degree_on_basis(mk) for mk in m_tuple)
         return p_deg + m_deg
@@ -330,26 +330,24 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """Readable basis-term notation for ``P ∘ M`` corollas."""
         p_key, m_tuple = basis_element
         n = len(m_tuple)
-        p_parent = self._operad_cls(n, self.base_ring())
+        p_parent = self._operad(n, self.base_ring())
 
-        p_repr = getattr(p_parent, "_repr_term", None)
         m_repr = getattr(self._inner_module, "_repr_term", None)
 
-        p_str = p_repr(p_key) if callable(p_repr) else str(p_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        p_str = p_parent._repr_term(p_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"<{p_str}; {', '.join(leaves)}>"
 
     def _latex_term(self, basis_element) -> str:
         """LaTeX basis-term notation for ``P ∘ M`` corollas."""
         p_key, m_tuple = basis_element
         n = len(m_tuple)
-        p_parent = self._operad_cls(n, self.base_ring())
+        p_parent = self._operad(n, self.base_ring())
 
-        p_repr = getattr(p_parent, "_latex_term", None)
         m_repr = getattr(self._inner_module, "_latex_term", None)
 
-        p_ltx = p_repr(p_key) if callable(p_repr) else str(p_key)
-        leaves = [m_repr(mk) if callable(m_repr) else str(mk) for mk in m_tuple]
+        p_ltx = p_parent._latex_term(p_key)
+        leaves = [str(m_repr(mk)) if callable(m_repr) else str(mk) for mk in m_tuple]
         return f"\\langle {p_ltx}; {', '.join(leaves)} \\rangle"
 
     # ------------------------------------------------------------------
@@ -364,7 +362,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
         """
         p_key, m_tuple = key
         n = len(m_tuple)
-        comp = self._operad_cls(n, self.base_ring())
+        comp = self._operad(n, self.base_ring())
         R = self.base_ring()
         zero = R.zero()
         result_dict = {}
@@ -416,7 +414,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
                 generators).
         """
         M = self._inner_module
-        P = self._operad_cls
+        P = self._operad
         R = self.base_ring()
 
         # Collect inner-module keys by degree.  The operad may contribute
@@ -528,7 +526,7 @@ class FreeAlgebraModule(CombinatorialFreeModule):
             return
 
         M = self._inner_module
-        P = self._operad_cls
+        P = self._operad
         R = self.base_ring()
 
         if w == 1:
@@ -608,7 +606,7 @@ class FreeOperadAlgebra(OperadAlgebra):
     are **not** accepted.
 
     Args:
-        operad_cls: Quasi-planar operad provider P (class or factory instance).
+        operad: Quasi-planar operad instance P.
         inner_module: The generating dg-module M.
 
     The inclusion ``η: M → Free_P(M)`` is::
@@ -635,9 +633,9 @@ class FreeOperadAlgebra(OperadAlgebra):
 
     """
 
-    def __init__(self, operad_cls: QuasiPlanarLike, inner_module: CombinatorialFreeModule):
-        free_module = FreeAlgebraModule(operad_cls, inner_module)
-        super().__init__(free_module, operad_cls, self._act_impl)
+    def __init__(self, operad: Operad, inner_module: CombinatorialFreeModule):
+        free_module = FreeAlgebraModule(operad, inner_module)
+        super().__init__(free_module, operad, self._act_impl)
         self._inner_module = inner_module
         self._base_ring = inner_module.base_ring()
 
@@ -645,7 +643,7 @@ class FreeOperadAlgebra(OperadAlgebra):
     def _act_on_basis_tuple(self, q_key: Any, input_keys: tuple):
         """Return ``γ(q; a_1, ..., a_k)`` for basis inputs."""
         k = len(input_keys)
-        P = self.operad_cls
+        P = self.operad
         R = self._base_ring
 
         # Full substitution: compose q with each p_i from left to right.
@@ -700,7 +698,7 @@ class FreeOperadAlgebra(OperadAlgebra):
         via ``planarize``, permuting the concatenated M-tuple accordingly.
 
         Args:
-            p_element: An element of ``operad_cls(k)`` for some arity ``k``.
+            p_element: An element of ``operad(k)`` for some arity ``k``.
             algebra_elements: A list of ``k`` elements of ``free_module``.
 
         Returns:
@@ -744,5 +742,5 @@ class FreeOperadAlgebra(OperadAlgebra):
             is the unique basis key of ``P(1)``.
 
         """
-        id_key = self.operad_cls.unit_key()
+        id_key = self.operad.unit_key()
         return self.module.term((id_key, (m_key,)))

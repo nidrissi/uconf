@@ -58,10 +58,10 @@ def test_hadamard_tensor_algebra_construction() -> None:
     right = TrivialAssAlgebra()
 
     had_alg = HadamardTensorAlgebra(left, right)
-    had = cast(HadamardProduct, had_alg.operad_cls)
+    had = cast(HadamardProduct, had_alg.operad)
 
-    assert had.left_operad_cls is Associative
-    assert had.right_operad_cls is Associative
+    assert had.left_operad is Associative
+    assert had.right_operad is Associative
 
 
 def test_unit_action_on_tensor_module() -> None:
@@ -69,7 +69,7 @@ def test_unit_action_on_tensor_module() -> None:
     had_alg = HadamardTensorAlgebra(alg, alg)
 
     x = tensor((alg(()), alg(())))
-    unit = had_alg.operad_cls.unit(QQ)
+    unit = had_alg.operad.unit(QQ)
 
     assert had_alg.act(unit, [x]) == x
 
@@ -77,7 +77,7 @@ def test_unit_action_on_tensor_module() -> None:
 def test_binary_action_multiplies_tensor_scalars() -> None:
     alg = TrivialAssAlgebra()
     had_alg = HadamardTensorAlgebra(alg, alg)
-    had = cast(HadamardProduct, had_alg.operad_cls)
+    had = cast(HadamardProduct, had_alg.operad)
 
     x = tensor((alg(()), alg(())))
     p = had(2, QQ)(((1, 2), (1, 2)))

@@ -210,17 +210,11 @@ class TreeModule(CombinatorialFreeModule):
 
     def _repr_vertex_decoration(self, dec_key, arity: int) -> str:
         comp = self._symmetric_sequence_cls(arity, self.base_ring())
-        term_repr = getattr(comp, "_repr_term", None)
-        if callable(term_repr):
-            return self._short(str(term_repr(dec_key)))
-        return self._short(str(dec_key))
+        return self._short(str(comp._repr_term(dec_key)))
 
     def _latex_vertex_decoration(self, dec_key, arity: int) -> str:
         comp = self._symmetric_sequence_cls(arity, self.base_ring())
-        latex_repr = getattr(comp, "_latex_term", None)
-        if callable(latex_repr):
-            return str(latex_repr(dec_key))
-        return str(dec_key)
+        return str(comp._latex_term(dec_key))
 
     def _repr_inner_key(self, m_key) -> str:
         term_repr = getattr(self._inner_module, "_repr_term", None)

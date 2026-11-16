@@ -310,10 +310,10 @@ class TestBarConstructionLie:
 
         # Create element: 3 * (single leaf)
         elem = 3 * B1(1)
-        assert B1.counit(elem) == 3
+        assert BLie.counit(elem) == 3
 
         # Zero element
-        assert B1.counit(B1.zero()) == 0
+        assert BLie.counit(B1.zero()) == 0
 
     def test_bar_lie_counit_zero_for_higher_arity(self):
         """Test that counit is zero for arity != 1."""
@@ -321,7 +321,7 @@ class TestBarConstructionLie:
         B2 = BLie(2, QQ)
         tree = RootedTree((1,), 1, 2)
         elem = B2(tree)
-        assert B2.counit(elem) == 0
+        assert BLie.counit(elem) == 0
 
     def test_bar_lie_reduced(self):
         """Test that reduced removes the counit component."""
@@ -330,13 +330,13 @@ class TestBarConstructionLie:
 
         # Element with only the single-leaf tree
         elem = 5 * B1(1)
-        assert B1.reduced(elem) == B1.zero()
+        assert BLie.reduced(elem) == B1.zero()
 
         # For arity 2, reduced is identity
         B2 = BLie(2, QQ)
         tree = RootedTree((1,), 1, 2)
         elem2 = B2(tree)
-        assert B2.reduced(elem2) == elem2
+        assert BLie.reduced(elem2) == elem2
 
     def test_bar_lie_counit_axiom_right(self):
         """Right counit axiom: (id⊗ε) ∘ Δ^{i;m,1}(x) = x."""
@@ -345,11 +345,11 @@ class TestBarConstructionLie:
         B1 = BLie(1, QQ)
         for x in B2.graded_basis(0):
             for i in range(1, 3):
-                delta = B2.infinitesimal_cocompose(x, i, 2, 1)
+                delta = BLie.infinitesimal_cocompose(x, i, 2, 1)
                 # Apply (id⊗ε): sum coeff * left * ε(right)
                 result = B2.zero()
                 for (lk, rk), c in delta:
-                    eps = B1.counit(B1.term(rk))
+                    eps = BLie.counit(B1.term(rk))
                     result += c * eps * B2.term(lk)
                 assert result == x
 
@@ -364,7 +364,7 @@ class TestBarConstructionLie:
                 # Apply (ε⊗id): sum coeff * ε(left) * right
                 result = Bn.zero()
                 for (lk, rk), c in delta:
-                    eps = B1.counit(B1.term(lk))
+                    eps = BLie.counit(B1.term(lk))
                     result += c * eps * Bn.term(rk)
                 assert result == x
 
@@ -373,7 +373,7 @@ class TestBarConstructionLie:
         BLie = BarConstruction(Lie)
         B1 = BLie(1, QQ)
         eta = B1.term(BLie.unit_key())
-        delta = B1.infinitesimal_cocompose(eta, 1, 1, 1)
+        delta = BLie.infinitesimal_cocompose(eta, 1, 1, 1)
         expected = eta.tensor(eta)
         assert delta == expected
 
@@ -709,12 +709,12 @@ class TestBarCoderivation:
 
         # LHS: Δ_{i;m,n}(d(x)), recast into tgt
         lhs = tgt.zero()
-        for (ak, bk), coeff in B.infinitesimal_cocompose(dx, i, m, n):
+        for (ak, bk), coeff in factory.infinitesimal_cocompose(dx, i, m, n):
             lhs += coeff * Bm(ak).tensor(Bn(bk))
 
         # RHS: (d⊗id + (-1)^|a| id⊗d)(Δ_{i;m,n}(x))
         rhs = tgt.zero()
-        for (ak, bk), coeff in B.infinitesimal_cocompose(x, i, m, n):
+        for (ak, bk), coeff in factory.infinitesimal_cocompose(x, i, m, n):
             a_deg = Bm.degree_on_basis(ak)
             for dak, da_coeff in Bm(ak).boundary():
                 rhs += coeff * da_coeff * Bm(dak).tensor(Bn(bk))

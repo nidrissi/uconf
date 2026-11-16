@@ -19,10 +19,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, Protocol, TypeVar
 
-from uconf.core.cooperad import CooperadComponent, CooperadLike
+from uconf.core.component import ElementBase
+from uconf.core.cooperad import Cooperad
 
 CoalgebraElementType = TypeVar("CoalgebraElementType")
-CooperadElementType = TypeVar("CooperadElementType", bound=CooperadComponent.Element)
+CooperadElementType = TypeVar("CooperadElementType", bound=ElementBase[Any])
 CoactionValueType_co = TypeVar(
     "CoactionValueType_co",
     bound=Iterable[tuple[tuple[object, ...], object]],
@@ -49,8 +50,8 @@ class CooperadCoalgebra[
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a
-    cooperad provider ``cooperad_cls`` (satisfying
-    :class:`uconf.cooperad.CooperadComponent`) together with an explicit
+    cooperad provider ``cooperad`` (satisfying
+    :class:`uconf.core.cooperad.Cooperad`) together with an explicit
     costructure map.
 
     The coaction map is supplied as a callable via ``coaction_map``::
@@ -61,7 +62,7 @@ class CooperadCoalgebra[
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        cooperad_cls: Cooperad provider (class or factory, CooperadComponent-compatible).
+        cooperad: The cooperad ``C``.
         coaction_map: Callable implementing the C-coalgebra coaction δ_n.
 
     """
@@ -69,13 +70,13 @@ class CooperadCoalgebra[
     def __init__(
         self,
         module,
-        cooperad_cls: CooperadLike,
+        cooperad: Cooperad,
         coaction_map: CoactionMap[CoalgebraElementType, CoactionValueType],
     ):
         if not callable(coaction_map):
             raise TypeError("coaction_map must be callable.")
         self.module = module
-        self.cooperad_cls = cooperad_cls
+        self.cooperad = cooperad
         self._coaction_map = coaction_map
 
     def coact(self, v_element: CoalgebraElementType, n: int) -> CoactionValueType:

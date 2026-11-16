@@ -145,13 +145,13 @@ def _torus_comodule_morphism(manifold_model: OperadAlgebra, BXsLie) -> OperadMor
     Δ: Ω(C) → E ⊙ Ω(C); Surjection models table-reduce its left factor to
     Δ': Ω(C) → S ⊙ Ω(C), as in the Euclidean pipeline.
     """
-    if manifold_model.operad_cls == BarrattEccles:
+    if manifold_model.operad == BarrattEccles:
         return make_e_comodule_morphism(BXsLie)
-    if manifold_model.operad_cls == Surjection:
+    if manifold_model.operad == Surjection:
         return make_surjection_comodule_morphism(BXsLie)
     raise TypeError(
         "Torus manifold model must be a Barratt--Eccles or Surjection algebra, "
-        f"got operad {manifold_model.operad_cls!r}."
+        f"got operad {manifold_model.operad!r}."
     )
 
 

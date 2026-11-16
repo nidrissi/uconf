@@ -12,7 +12,7 @@ used by the configuration models whose manifold model is a
 from __future__ import annotations
 
 from uconf.constructions.cobar_construction import CobarConstruction
-from uconf.core.cooperad import CooperadLike
+from uconf.core.cooperad import Cooperad
 from uconf.core.morphism import OperadMorphism
 from uconf.models import _compute_table_reduction_cached
 from uconf.models.surjection import Surjection
@@ -20,15 +20,15 @@ from uconf.morphisms.e_comodule_morphism import make_e_comodule_morphism
 from uconf.wrappers.hadamard_operad import HadamardProduct
 
 
-def make_surjection_comodule_morphism(cooperad_cls: CooperadLike) -> OperadMorphism:
+def make_surjection_comodule_morphism(cooperad: Cooperad) -> OperadMorphism:
     """Build the operad morphism Ω(C) → S ⊙ Ω(C).
 
     Composes the e-comodule morphism Δ: Ω(C) → E ⊙ Ω(C) (where
     E = BarrattEccles) with table reduction on the left factor, yielding
     a morphism into S ⊙ Ω(C) (where S = Surjection).
     """
-    be_comodule = make_e_comodule_morphism(cooperad_cls)
-    cobar = CobarConstruction(cooperad_cls)
+    be_comodule = make_e_comodule_morphism(cooperad)
+    cobar = CobarConstruction(cooperad)
     surj_target = HadamardProduct(Surjection, cobar)
 
     def _on_element(element):

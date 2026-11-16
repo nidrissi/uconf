@@ -82,10 +82,10 @@ def _connectivity_effective(
     r"""Effective connectivity ``c`` such that basis elements at arity ``n`` have
     degree bounded below by ``c * (n - 1)``.
 
-    Recognizes the base operad/cooperad classes and the wrappers
+    Recognizes the base operad/cooperad singletons and the wrappers
     (``ShiftedOperad``, ``ShiftedCooperad``, ``HadamardProduct``,
     ``BarConstruction``, ``CobarConstruction``).  Accepts either a factory
-    class / instance or an instantiated fixed-arity component.
+    instance or an instantiated fixed-arity component.
 
     Under ``sphere_nontrivial=True`` the Surjection factor is pinned to degree
     ``sphere_dim * (n - 1)``, so its effective connectivity is ``sphere_dim``.
@@ -96,41 +96,32 @@ def _connectivity_effective(
     if obj is None:
         return None
 
-    # SurjectionDual first: it is a subclass of Surjection but has non-positive
-    # degrees that are not bounded below by a linear connectivity.
-    if isinstance(obj, type):
-        if issubclass(obj, SurjectionDual):
-            return None
-        if issubclass(obj, Surjection):
-            return sphere_dim if sphere_nontrivial else 0
-        if issubclass(obj, BarrattEccles):
-            return 0
-        if issubclass(obj, Lie):
-            return 0
-        if issubclass(obj, (Associative, Commutative)):
-            return 0
-        c = getattr(obj, "connectivity", None)
-        return c if isinstance(c, int) else None
+    # Recognize model factories by singleton identity. Dual degrees are not
+    # bounded below by a linear connectivity.
+    if obj is SurjectionDual:
+        return None
+    if obj is Surjection:
+        return sphere_dim if sphere_nontrivial else 0
 
     # Factory (UniqueRepresentation) instances that compose inner factories.
     if isinstance(obj, ShiftedOperad):
         base_c = _connectivity_effective(
-            obj.operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+            obj.operad, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
         )
         return None if base_c is None else base_c + obj.shift_degree
     if isinstance(obj, ShiftedCooperad):
         base_c = _connectivity_effective(
-            obj.cooperad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+            obj.cooperad, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
         )
         return None if base_c is None else base_c + obj.shift_degree
     if isinstance(obj, HadamardProduct):
         left_c = _connectivity_effective(
-            obj.left_operad_cls,
+            obj.left_operad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
         right_c = _connectivity_effective(
-            obj.right_operad_cls,
+            obj.right_operad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
@@ -139,11 +130,11 @@ def _connectivity_effective(
         return left_c + right_c
     if isinstance(obj, BarConstruction):
         return _connectivity_effective(
-            obj.operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+            obj.operad, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
         )
     if isinstance(obj, CobarConstruction):
         return _connectivity_effective(
-            obj.cooperad_cls,
+            obj.cooperad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
@@ -156,13 +147,13 @@ def _connectivity_effective(
         )
     if isinstance(obj, BarConstruction.Component):
         return _connectivity_effective(
-            obj._operad_cls,
+            obj._operad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
     if isinstance(obj, CobarConstruction.Component):
         return _connectivity_effective(
-            obj._cooperad_cls,
+            obj._cooperad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
@@ -196,18 +187,18 @@ def _is_basis_feasible(
     mathematically impossible.
     """
     # --- Degree-concentrated leaf types ---
-    if isinstance(parent, (Associative, Commutative)):
+    if isinstance(parent, (Associative.Component, Commutative.Component)):
         return degree == 0
     # Lie is degree-0 at every arity; check after Associative/Commutative in
     # case of shared class hierarchy (none currently, but defensive).
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         return degree == 0
 
-    if isinstance(parent, SurjectionDual):
+    if isinstance(parent, SurjectionDual.Component):
         # Dual lives in non-positive degrees.
         return degree <= 0
 
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         n = parent._arity
         if degree < 0:
             return False
@@ -219,7 +210,7 @@ def _is_basis_feasible(
             return degree == sphere_dim * (n - 1)
         return True
 
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         n = parent._arity
         if degree < 0:
             return False
@@ -271,7 +262,7 @@ def _is_basis_feasible(
         if n == 1:
             return degree == 0
         c_P = _connectivity_effective(
-            parent._operad_cls,
+            parent._operad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
@@ -286,7 +277,7 @@ def _is_basis_feasible(
         if n == 1:
             return degree == 0
         c_C = _connectivity_effective(
-            parent._cooperad_cls,
+            parent._cooperad,
             sphere_nontrivial=sphere_nontrivial,
             sphere_dim=sphere_dim,
         )
@@ -301,7 +292,7 @@ def _is_basis_feasible(
         # check is exact: the root decoration must live at degree + 1 in the
         # inner cooperad.
         if n == 2:
-            inner_parent = parent._cooperad_cls(n, parent.base_ring())
+            inner_parent = parent._cooperad(n, parent.base_ring())
             return _is_basis_feasible(
                 inner_parent,
                 degree + 1,
@@ -339,14 +330,18 @@ def _hadamard_feasibility(
         if sphere_dim is None:
             return True  # let downstream raise
         surj_deg = sphere_dim * (n - 1)
-        if isinstance(left, Surjection) and not isinstance(left, SurjectionDual):
+        if isinstance(left, Surjection.Component) and not isinstance(
+            left, SurjectionDual.Component
+        ):
             return _is_basis_feasible(
                 right,
                 degree - surj_deg,
                 sphere_nontrivial=False,
                 sphere_dim=sphere_dim,
             )
-        if isinstance(right, Surjection) and not isinstance(right, SurjectionDual):
+        if isinstance(right, Surjection.Component) and not isinstance(
+            right, SurjectionDual.Component
+        ):
             return _is_basis_feasible(
                 left,
                 degree - surj_deg,
@@ -381,10 +376,10 @@ def _algebraic_module_feasibility(
     split exists.
     """
     if isinstance(parent, FreeAlgebraModule):
-        S = parent._operad_cls
+        S = parent._operad
         vertex_shift = 0
     elif isinstance(parent, CofreeCoalgebraModule):
-        S = parent._cooperad_cls
+        S = parent._cooperad
         vertex_shift = 0
     elif isinstance(parent, TreeModule):
         S = parent._symmetric_sequence_cls
@@ -642,7 +637,7 @@ def sphere_nontrivial_surjection_iter(n: int, dim: int, base_ring) -> Iterator:
 
 
 def sphere_nontrivial_operad_basis_iter(
-    operad_cls,
+    operad,
     n: int,
     dim: int,
     base_ring,
@@ -656,9 +651,9 @@ def sphere_nontrivial_operad_basis_iter(
     d = dim
     surj_degree = d * (n - 1)
 
-    parent = operad_cls(n, base_ring)
+    parent = operad(n, base_ring)
 
-    if hasattr(operad_cls, "__name__") and operad_cls.__name__ == "Surjection":
+    if hasattr(operad, "__name__") and operad.__name__ == "Surjection":
         # Direct surjection: only degree d(n-1) can act nontrivially
         yield from parent.basis_iter(surj_degree)
         return
@@ -819,17 +814,17 @@ def _random_operad_element(
     ):
         return None
 
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         if sphere_nontrivial:
             if sphere_dim is None:
                 raise ValueError("sphere_dim is required when sphere_nontrivial=True")
             return random_sphere_admissible_surjection(n, sphere_dim, R, rng)
         return random_surjection(n, degree, R, rng)
 
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         return random_barratt_eccles_element(n, degree, R, rng)
 
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         if degree != 0:
             return None
         key = random_lie_key(n, rng)
@@ -960,8 +955,8 @@ def random_hadamard_key(
         # The Surjection factor is constrained to degree d*(n-1).
         # Detect which factor is Surjection and apply the admissibility filter.
         surj_degree = sphere_dim * (n - 1)
-        left_is_surj = isinstance(left_parent, Surjection)
-        right_is_surj = isinstance(right_parent, Surjection)
+        left_is_surj = isinstance(left_parent, Surjection.Component)
+        right_is_surj = isinstance(right_parent, Surjection.Component)
 
         if left_is_surj:
             # Left factor is Surjection: sample sphere-admissible, propagate right
@@ -1152,7 +1147,7 @@ def _random_partition(sorted_leaves: tuple, k: int, rng: Random) -> list[tuple] 
 def random_shuffle_tree(
     leaf_set: tuple,
     max_weight: int,
-    operad_cls,
+    operad,
     base_ring,
     target_degree: int,
     vertex_offset: int,
@@ -1185,14 +1180,14 @@ def random_shuffle_tree(
     if max_weight < 1:
         return None
 
-    connectivity = getattr(operad_cls, "connectivity", 0)
+    connectivity = getattr(operad, "connectivity", 0)
     sorted_ls = tuple(sorted(leaf_set))
 
     for _ in range(max_attempts):
         result = _random_subtree(
             sorted_ls,
             max_weight,
-            operad_cls,
+            operad,
             base_ring,
             target_degree,
             vertex_offset,
@@ -1210,7 +1205,7 @@ def random_shuffle_tree(
 def _random_subtree(
     sorted_ls: tuple,
     max_weight: int,
-    operad_cls,
+    operad,
     base_ring,
     target_degree: int,
     vertex_offset: int,
@@ -1231,7 +1226,7 @@ def _random_subtree(
     # eff_conn*(n-1) + r*vertex_offset with r in [1, n-1].  The overall
     # minimum is reached at r=1 when vertex_offset >= 0 and at r=n-1 otherwise.
     eff_conn = _connectivity_effective(
-        operad_cls, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
+        operad, sphere_nontrivial=sphere_nontrivial, sphere_dim=sphere_dim
     )
     if eff_conn is not None:
         if vertex_offset >= 0:
@@ -1246,7 +1241,7 @@ def _random_subtree(
     rng.shuffle(possible_arities)
 
     for v_arity in possible_arities:
-        root_parent = operad_cls(v_arity, base_ring)
+        root_parent = operad(v_arity, base_ring)
 
         if v_arity == n:
             # Corolla: all leaves are direct children
@@ -1304,7 +1299,7 @@ def _random_subtree(
             children_result = _random_children(
                 parts,
                 max_weight - 1,
-                operad_cls,
+                operad,
                 base_ring,
                 child_total,
                 vertex_offset,
@@ -1322,7 +1317,7 @@ def _random_subtree(
 def _random_children(
     parts: list,
     max_weight: int,
-    operad_cls,
+    operad,
     base_ring,
     total_deg: int,
     vertex_offset: int,
@@ -1381,7 +1376,7 @@ def _random_children(
         subtree = _random_subtree(
             tuple(sorted(p)),
             max_weight,
-            operad_cls,
+            operad,
             base_ring,
             child_degs[j],
             vertex_offset,
@@ -1447,7 +1442,7 @@ def random_bar_element(
     tree = random_shuffle_tree(
         tuple(range(1, n + 1)),
         n - 1,  # max_weight = arity - 1
-        parent._operad_cls,
+        parent._operad,
         parent.base_ring(),
         degree,
         +1,  # bar degree convention
@@ -1500,7 +1495,7 @@ def random_cobar_element(
     tree = random_shuffle_tree(
         tuple(range(1, n + 1)),
         n - 1,  # max_weight
-        parent._cooperad_cls,
+        parent._cooperad,
         parent.base_ring(),
         degree,
         -1,  # cobar degree convention
@@ -1688,7 +1683,7 @@ def random_free_algebra_element(
     ):
         return None
 
-    P = parent._operad_cls
+    P = parent._operad
     M = parent._inner_module
     R = parent.base_ring()
     connectivity = int(getattr(P, "connectivity", 0))
@@ -1825,7 +1820,7 @@ def random_cofree_coalgebra_element(
     ):
         return None
 
-    C = parent._cooperad_cls
+    C = parent._cooperad
     M = parent._inner_module
     R = parent.base_ring()
     connectivity = int(getattr(C, "connectivity", 0))
@@ -2146,11 +2141,11 @@ def _get_direct_sampler(parent, weight):
         return "cofree_coalgebra"
     if isinstance(parent, HadamardProduct.Component):
         return "hadamard"
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         return "surjection"
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         return "barratt_eccles"
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         return "lie"
 
     return None
@@ -2268,7 +2263,7 @@ def _invoke_direct_sampler(
 
 
 def sample_operad_basis(
-    operad_cls,
+    operad,
     n: int,
     degree: int,
     k: int,
@@ -2282,7 +2277,7 @@ def sample_operad_basis(
 
     Parameters
     ----------
-    operad_cls
+    operad
         Operad factory (e.g. ``Surjection``, ``HadamardProduct`` factory, etc.).
     n : int
         Arity.
@@ -2300,7 +2295,7 @@ def sample_operad_basis(
     sphere_dim : int or None
         Required when ``sphere_nontrivial=True``.
     """
-    parent = operad_cls(n, base_ring)
+    parent = operad(n, base_ring)
 
     if sphere_nontrivial and isinstance(parent, HadamardProduct.Component):
         return sample_hadamard_basis(

@@ -23,12 +23,12 @@ from sage.all import tensor
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.coalgebra import CooperadCoalgebra
 from uconf.models.simplicial import SimplicialChains, SimplicialCochains
-from uconf.models.surjection import Surjection
+from uconf.models.surjection import Surjection, SurjectionElement
 from uconf.models.surjection_dual import SurjectionDual
 
 
 def surjection_chain_action(
-    surj: Surjection.Element,
+    surj: SurjectionElement,
     chain: SimplicialChains.Element,
 ):
     r"""Action of a surjection element on normalized simplicial chains.
@@ -71,7 +71,7 @@ def surjection_chain_action(
 
     Parameters
     ----------
-    surj : Surjection.Element
+    surj : SurjectionElement
         Homogeneous element of the surjection operad of arity ``r``.
     chain : SimplicialChains.Element
         Element of :class:`~uconf.models.simplicial.SimplicialChains`.
@@ -275,7 +275,7 @@ def surjection_chain_action(
 
 
 def surjection_cochain_action(
-    surj: Surjection.Element,
+    surj: SurjectionElement,
     cochains: tuple[SimplicialCochains.Element, ...],
 ) -> SimplicialCochains.Element:
     r"""Dual surjection action on simplicial cochains.
@@ -313,7 +313,7 @@ def surjection_cochain_action(
 
     Parameters
     ----------
-    surj : Surjection.Element
+    surj : SurjectionElement
         Homogeneous element of the surjection operad of arity ``r``.
     cochains : tuple of SimplicialCochains.Element
         Exactly ``r`` cochains, all on the same ``Δ^N``.
@@ -424,13 +424,13 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
     def __init__(self, N: int, base_ring):
         super().__init__(
             module=SimplicialCochains(N=N, base_ring=base_ring),
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 
     def _act_impl(
         self,
-        p_element: Surjection.Element,
+        p_element: SurjectionElement,
         algebra_elements,
     ):
         return surjection_cochain_action(p_element, tuple(algebra_elements))
@@ -453,7 +453,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
 
         super().__init__(
             module=SimplicialChains(base_ring=base_ring),
-            cooperad_cls=SurjectionDual,
+            cooperad=SurjectionDual,
             coaction_map=self._coact_impl,
         )
 

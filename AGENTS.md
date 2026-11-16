@@ -100,7 +100,7 @@ bar/cobar construction by $n-1$ internal vertices and makes every
 `(arity, degree)` basis finite — which is why no external `max_weight` cap
 is needed. Breaking this breaks termination, not just correctness.
 
-Each operad/cooperad class exposes a `connectivity: int` attribute (the
+Each operad/cooperad exposes a `connectivity: int` attribute (the
 constant $k$ such that $P(n)$ is concentrated in degrees $\geq k(n-1)$).
 Respect it when composing wrappers; `ShiftedOperad(P, d).connectivity` is
 `P.connectivity + d`, and similarly for `HadamardProduct`.
@@ -131,14 +131,27 @@ Leave both where they are. Do not move them to class bodies, do not eagerly
 construct them at module import, and do not add new attachments alongside
 without coordinating with the user.
 
-### Provider API for operads and cooperads
+### One type for operads and cooperads
 
-Constructors that take an operad or cooperad accept **either** the class
-(e.g., `Lie`) **or** a wrapper instance (e.g., `ShiftedOperad(Lie, -1)`,
-`HadamardProduct(Associative, Associative)`, `BarConstruction(Lie)`). This
-is the `OperadLike` / `CooperadLike` contract in `core/operad.py` and
-`core/cooperad.py`. New constructors should accept the same — do not
-hard-code "must be a class" or "must be an instance."
+Every operad is an **instance** of `Operad` (`core/operad.py`) and every
+cooperad an instance of `Cooperad` (`core/cooperad.py`): the models are
+singletons (`Lie = LieOperad()`), the wrappers and constructions are
+instances too (`ShiftedOperad(Lie, -1)`, `BarConstruction(Lie)`). Calling one,
+`P(n, base_ring)`, returns its arity-`n` component, a `ComponentBase`
+subclass of Sage's `CombinatorialFreeModule` (`core/component.py`).
+
+- Structure maps (`compose`, `unit`, `counit`, `reduced`,
+  `infinitesimal_cocompose`) live on the operad/cooperad object, not on
+  components. Cooperad elements also expose them as methods via
+  `CooperadElement`. A component reaches its owner through `.factory`.
+- Each sequence `XOperad` has module-level `XComponent` / `XElement` classes,
+  exposed as `XOperad.Component` / `XOperad.Element`, with
+  `XComponent.Element = XElement`. Do not nest them inside `XOperad`: type
+  checkers cannot resolve generic arguments that refer back into the
+  enclosing class. For the same reason a component narrows `factory` with an
+  `if TYPE_CHECKING:` property instead of a type parameter.
+- Annotate parameters as `Operad` / `Cooperad`; type-check membership with
+  `isinstance(parent, Lie.Component)`, never `isinstance(parent, Lie)`.
 
 ## 6. Coding conventions
 

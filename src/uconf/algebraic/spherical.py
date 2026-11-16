@@ -34,7 +34,7 @@ from sage.all import CombinatorialFreeModule, Family, GradedModulesWithBasis, ca
 
 from uconf.algebraic.algebra import OperadAlgebra
 from uconf.core.display import latex_linear_combination
-from uconf.models.surjection import Surjection
+from uconf.models.surjection import Surjection, SurjectionElement
 
 
 def _extract_concatenated_permutations(
@@ -262,7 +262,7 @@ class SurjectionSphereCochainAlgebra(OperadAlgebra):
         self._sphere_dim = d
         super().__init__(
             module=module,
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 
@@ -274,7 +274,7 @@ class SurjectionSphereCochainAlgebra(OperadAlgebra):
                 coeff += scalar
         return coeff
 
-    def _act_impl(self, p_element: Surjection.Element, algebra_elements):
+    def _act_impl(self, p_element: SurjectionElement, algebra_elements):
         r"""Implement `\mu_u(g, \ldots, g) = \varepsilon(u) \cdot g`.
 
         Since `N^*(S^d)` is rank-1, every input is a scalar multiple of

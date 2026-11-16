@@ -5,15 +5,10 @@ from __future__ import annotations
 import itertools
 from collections.abc import Iterator
 from itertools import combinations, pairwise, permutations
-from typing import TYPE_CHECKING, ClassVar
-
-if TYPE_CHECKING:
-    from uconf.models.surjection import Surjection
+from typing import TYPE_CHECKING
 
 from sage.all import (
-    CombinatorialFreeModule,
     Family,
-    GradedModulesWithBasis,
     Integer,
     Permutations,
     SymmetricGroup,
@@ -22,85 +17,102 @@ from sage.all import (
     tensor,
 )
 
-from uconf.core.display import latex_linear_combination
-from uconf.core.parented_element import ParentedElementMixin
+from uconf.core.component import ComponentBase, ElementBase
+from uconf.core.operad import Operad
+
+if TYPE_CHECKING:
+    from uconf.models.surjection import SurjectionElement
 
 
-class BarrattEccles(CombinatorialFreeModule):
-    r"""Barratt--Eccles operad component in fixed arity.
+class BarrattEcclesElement(ElementBase["BarrattEcclesComponent"]):
+    """Elements of the Barratt--Eccles operad component."""
 
-    Basis elements are tuples of permutations in ``S_n`` with no consecutive
-    duplicates. Degenerate inputs map to zero, while malformed inputs raise.
+    def planarize(self):
+        """Project to planar representative tensored with a group element."""
+        parent = self.parent()
+        return parent.planarize(self)
 
-    Individual permutations follow Sage's :class:`SymmetricGroup` conventions:
-    a ``list`` is **one-line** notation and a ``tuple`` is **cycle** notation.
-    The two never coincide, so ``[1, 2]`` is the identity of ``S_2`` while
-    ``(1, 2)`` is the transposition.
+    def complexity(self) -> int:
+        """Return the maximum pairwise complexity on basis support."""
+        parent = self.parent()
 
-    EXAMPLES::
-
-        sage: from sage.all import QQ
-        sage: from uconf import BarrattEccles
-        sage: E2 = BarrattEccles(2, QQ)
-        sage: x = E2(([1, 2], [2, 1]))
-        sage: x.arity()
-        2
-        sage: E2.degree_on_basis(next(iter(x.support())))
-        1
-
-    The same element in cycle notation, with ``()`` for the identity::
-
-        sage: E2(((), (1, 2))) == x
-        True
-    """
-
-    name: ClassVar[str] = "ℰ"
-    connectivity: ClassVar[int] = 0
-    """All components live in non-negative degrees."""
-
-    def __init__(self, n, base_ring):
-        """Initialize ``E_n`` over ``base_ring``."""
-        assert n >= 0, f"Arity must be non-negative. Got {n}."
-        name = f"{self.name}{n}"
-        super().__init__(
-            base_ring,
-            tuple,
-            prefix=name,
-            category=GradedModulesWithBasis(base_ring),
+        return max(
+            (parent._complexity_on_basis(basis) for basis in self.support()),
+            default=0,
         )
-        self.rename(name)
-        self._arity = n
-        self._symmetric_group = SymmetricGroup(n)
+
+    def permute(self, sigma) -> BarrattEcclesElement:
+        r"""Apply the right `S_n` action: `(p_0, \ldots, p_k) \cdot \sigma = (p_0 \sigma, \ldots, p_k \sigma)`.
+
+        This is the standard operad right action (postcomposition)
+        and is compatible with table reduction equivariance:
+        ``tr(e.permute(σ)) == tr(e).permute(σ)``.
+        """
+        parent = self.parent()
+        sigma = parent._coerce_permutation(sigma)
+
+        def permuted_term_generator():
+            R = parent.base_ring()
+            for basis, coeff in self:
+                permuted_basis = tuple(p * sigma for p in basis)
+                yield (permuted_basis, R(coeff))
+
+        return parent.sum_of_terms(permuted_term_generator())
+
+    def diagonal(self):
+        """Compute the Alexander--Whitney diagonal ``E -> E \\otimes E``."""
+        # 1. Construct the Tensor Product Parent
+        # Sage handles this automatically: self.tensor(self) creates the module E (x) E
+
+        parent = self.parent()
+        tensor_module = parent.tensor(parent)
+
+        result = tensor_module.zero()
+
+        # 2. Iterate linearly
+        for basis_tuple, coeff in self:
+            k = len(basis_tuple) - 1  # Degree (length - 1)
+
+            # 3. Apply formula: Sum (front_face) (x) (back_face)
+            for i in range(k + 1):
+                # Left side: (sigma_0 ... sigma_i)
+                left_basis = basis_tuple[: i + 1]
+
+                # Right side: (sigma_i ... sigma_k)
+                right_basis = basis_tuple[i:]
+
+                # Create the tensor element
+                # In Sage, tensor basis is ((left_key, right_key))
+                tensor_term = tensor_module.term((left_basis, right_basis))
+
+                result += coeff * tensor_term
+
+        return result
+
+    def table_reduction(self) -> SurjectionElement:
+        """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
+        raise NotImplementedError("Table reduction is not implemented yet")
+
+
+class BarrattEcclesComponent(ComponentBase["BarrattEcclesElement"]):
+    """Arity-``n`` component, with basis the nondegenerate sequences of permutations."""
+
+    Element = BarrattEcclesElement
+
+    if TYPE_CHECKING:
+
+        @property
+        def factory(self) -> BarrattEcclesOperad: ...
+
+    def __init__(self, factory: BarrattEcclesOperad, n: int, base_ring):
+        """Initialize ``E_n`` over ``base_ring``."""
+        super().__init__(factory, n, base_ring)
         self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
         self.boundary = self.module_morphism(on_basis=self._boundary_on_basis, codomain=self)
         self.planarize = self.module_morphism(
             on_basis=self._planarize_on_basis,
             codomain=tensor([self, SymmetricGroupAlgebra(base_ring, n)]),
         )
-
-    def _element_constructor_(self, x: BarrattEccles.Element | dict | tuple | list):
-        """Build elements from a basis key or a sparse coefficient dictionary.
-
-        Individual permutations are read with the notation rules documented on
-        :meth:`_validate_basis_key`. Keys with consecutive duplicate
-        permutations map to zero. Invalid permutation data raises.
-        """
-        if isinstance(x, dict):
-            R = self.base_ring()
-            clean_dict = {}
-            for key, coeff in x.items():
-                clean_key = self._validate_basis_key(key)
-                if clean_key is None:
-                    continue
-                clean_dict[clean_key] = R(coeff)
-            return self.sum_of_terms(clean_dict.items())
-
-        if isinstance(x, (tuple, list)):
-            clean_key = self._validate_basis_key(x)
-            if clean_key is None:
-                return self.zero()
-            return self.term(clean_key)
-        raise TypeError(f"Expected dict or tuple/list; got {type(x).__name__}: {x!r}.")
 
     def _validate_basis_key(
         self, basis_tuple: tuple | list, keep_dupes=False
@@ -208,7 +220,7 @@ class BarrattEccles(CombinatorialFreeModule):
                 f"{{1, ..., {self.arity()}}}. Got {cycles}."
             ) from exc
 
-    def rho(self, data: tuple | list) -> BarrattEccles.Element:
+    def rho(self, data: tuple | list) -> BarrattEcclesElement:
         """Build the normalized element ``(id, sigma_1, sigma_1 sigma_2, ...)``."""
         clean_data = self._validate_basis_key(data, keep_dupes=True)
         if clean_data is None:
@@ -221,21 +233,7 @@ class BarrattEccles(CombinatorialFreeModule):
             ret.append(perm * ret[-1])
         return self.term(tuple(ret))
 
-    def arity(self) -> int:
-        """Return the fixed arity of this operad component."""
-        return self._arity
-
-    @staticmethod
-    def unit(base_ring) -> BarrattEccles.Element:
-        """Return the operadic unit in arity ``1``."""
-        return BarrattEccles(1, base_ring)(([1],))
-
-    @staticmethod
-    def unit_key() -> tuple:
-        """Return the basis key of the unit element in arity ``1``."""
-        return (SymmetricGroup(1).identity(),)
-
-    def planar_basis_iter(self, d: int) -> Iterator[BarrattEccles.Element]:
+    def planar_basis_iter(self, d: int) -> Iterator[BarrattEcclesElement]:
         """Iterate over planar basis elements in degree ``d``."""
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
@@ -247,17 +245,12 @@ class BarrattEccles(CombinatorialFreeModule):
             ):
                 yield self((u,) + tuple(list(v) for v in values))
 
-    def basis_iter(self, d: int) -> Iterator[BarrattEccles.Element]:
+    def basis_iter(self, d: int) -> Iterator[BarrattEcclesElement]:
         """Iterate over all basis elements in degree ``d``."""
         assert d >= 0, f"d must be a non-negative integer. Got d={d}."
         perm = permutations(range(1, self._arity + 1))
         for sigma, x in itertools.product(perm, self.planar_basis_iter(d)):
             yield x.permute(list(sigma))
-
-    @cached_method
-    def graded_basis(self, d: int) -> Family:
-        """Return the ``Family`` of all basis elements in degree ``d``."""
-        return Family(self.basis_iter(d))
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
@@ -276,7 +269,7 @@ class BarrattEccles(CombinatorialFreeModule):
         permuted = tuple(p * perm_inverse for p in basis_element)
         return self(permuted).tensor(self._symmetric_group_algebra(perm))
 
-    def _boundary_on_basis(self, basis_element: tuple) -> BarrattEccles.Element:
+    def _boundary_on_basis(self, basis_element: tuple) -> BarrattEcclesElement:
         """Standard simplicial boundary."""
         res = self.zero()
         if len(basis_element) <= 1:
@@ -305,8 +298,70 @@ class BarrattEccles(CombinatorialFreeModule):
         )
         return f"\\left[{perms}\\right]"
 
-    @staticmethod
-    def compose(x: BarrattEccles, i: int, y: BarrattEccles) -> BarrattEccles:
+    def _complexity_on_basis(self, element: tuple) -> int:
+        """Return pairwise complexity of a basis element."""
+        result = 0
+        n = self.arity()
+
+        for i, j in combinations(range(1, n + 1), 2):
+            seq = list(
+                filter(
+                    lambda x: x == i or x == j,
+                    (val for perm in element for val in perm.tuple()),
+                )
+            )
+            complexity = len([p for p, q in pairwise(seq) if p != q])
+            result = max(result, complexity)
+        return result
+
+
+class BarrattEcclesOperad(Operad[BarrattEcclesComponent]):
+    r"""The Barratt--Eccles operad; use the instance :data:`BarrattEccles`.
+
+    In arity ``n``, basis elements are tuples of permutations in ``S_n`` with no consecutive
+    duplicates. Degenerate inputs map to zero, while malformed inputs raise.
+
+    Individual permutations follow Sage's :class:`SymmetricGroup` conventions:
+    a ``list`` is **one-line** notation and a ``tuple`` is **cycle** notation.
+    The two never coincide, so ``[1, 2]`` is the identity of ``S_2`` while
+    ``(1, 2)`` is the transposition.
+
+    EXAMPLES::
+
+        sage: from sage.all import QQ
+        sage: from uconf import BarrattEccles
+        sage: E2 = BarrattEccles(2, QQ)
+        sage: x = E2(([1, 2], [2, 1]))
+        sage: x.arity()
+        2
+        sage: E2.degree_on_basis(next(iter(x.support())))
+        1
+
+    The same element in cycle notation, with ``()`` for the identity::
+
+        sage: E2(((), (1, 2))) == x
+        True
+    """
+
+    Component = BarrattEcclesComponent
+    # This singleton fixes the element class; instances never reassign it.
+    Element: type[BarrattEcclesElement] = BarrattEcclesElement  # pyright: ignore[reportIncompatibleVariableOverride]
+
+    name = "ℰ"
+    connectivity = 0
+    """All components live in non-negative degrees."""
+
+    def unit(self, base_ring) -> BarrattEcclesElement:
+        """Return the operadic unit in arity ``1``."""
+        return self(1, base_ring)(([1],))
+
+    def unit_key(self) -> tuple:
+        """Return the basis key of the unit element in arity ``1``."""
+        return (SymmetricGroup(1).identity(),)
+
+    def compose(
+        self, x: BarrattEcclesElement, i: int, y: BarrattEcclesElement
+    ) -> BarrattEcclesElement:
         r"""Operadic composition ``x \circ_i y`` using shuffle/EZ lifting.
 
         Parameters
@@ -318,7 +373,7 @@ class BarrattEccles(CombinatorialFreeModule):
 
         Returns
         -------
-        BarrattEccles.Element
+        BarrattEcclesElement
             The composite in arity ``x.arity() + y.arity() - 1``.
 
         EXAMPLES::
@@ -338,7 +393,7 @@ class BarrattEccles(CombinatorialFreeModule):
         m = x.parent().arity()
         n = y.parent().arity()
         assert 1 <= i <= m, f"Index i must be between 1 and {m}. Got {i}."
-        target = BarrattEccles(m + n - 1, base_ring=x.parent().base_ring())
+        target = self(m + n - 1, base_ring=x.parent().base_ring())
 
         # --- Helper: Composition of single permutations ---
         def _compose_perm_tuple(sigma, idx, tau):
@@ -413,105 +468,5 @@ class BarrattEccles(CombinatorialFreeModule):
 
         return target.sum_of_terms(term_generator())
 
-    def _complexity_on_basis(self, element: tuple) -> int:
-        """Return pairwise complexity of a basis element."""
-        result = 0
-        n = self.arity()
 
-        for i, j in combinations(range(1, n + 1), 2):
-            seq = list(
-                filter(
-                    lambda x: x == i or x == j,
-                    (val for perm in element for val in perm.tuple()),
-                )
-            )
-            complexity = len([p for p, q in pairwise(seq) if p != q])
-            result = max(result, complexity)
-        return result
-
-    class Element(ParentedElementMixin["BarrattEccles"], CombinatorialFreeModule.Element):
-        """Elements of the Barratt--Eccles operad component."""
-
-        def _repr_latex_(self) -> str:
-            return latex_linear_combination(self, lambda basis: self.parent()._latex_term(basis))
-
-        def arity(self) -> int:
-            """Return the arity of this element."""
-            return self.parent().arity()
-
-        def planarize(self):
-            """Project to planar representative tensored with a group element."""
-            parent = self.parent()
-            return parent.planarize(self)
-
-        def boundary(self) -> BarrattEccles.Element:
-            """Apply the simplicial differential."""
-            parent = self.parent()
-            return parent.boundary(self)
-
-        def complexity(self) -> int:
-            """Return the maximum pairwise complexity on basis support."""
-            parent = self.parent()
-
-            return max(
-                (parent._complexity_on_basis(basis) for basis in self.support()),
-                default=0,
-            )
-
-        def permute(self, sigma) -> BarrattEccles.Element:
-            r"""Apply the right `S_n` action: `(p_0, \ldots, p_k) \cdot \sigma = (p_0 \sigma, \ldots, p_k \sigma)`.
-
-            This is the standard operad right action (postcomposition)
-            and is compatible with table reduction equivariance:
-            ``tr(e.permute(σ)) == tr(e).permute(σ)``.
-            """
-            parent = self.parent()
-            if isinstance(sigma, (list, tuple)):
-                sigma = parent._symmetric_group(sigma)
-            elif not (hasattr(sigma, "parent") and sigma.parent() == parent._symmetric_group):
-                raise TypeError(
-                    f"Permutation must be a list, tuple, or S_{parent.arity()} element; "
-                    f"got {type(sigma).__name__}: {sigma!r}."
-                )
-
-            def permuted_term_generator():
-                R = parent.base_ring()
-                for basis, coeff in self:
-                    permuted_basis = tuple(p * sigma for p in basis)
-                    yield (permuted_basis, R(coeff))
-
-            return parent.sum_of_terms(permuted_term_generator())
-
-        def diagonal(self):
-            """Compute the Alexander--Whitney diagonal ``E -> E \\otimes E``."""
-            # 1. Construct the Tensor Product Parent
-            # Sage handles this automatically: self.tensor(self) creates the module E (x) E
-
-            parent = self.parent()
-            tensor_module = parent.tensor(parent)
-
-            result = tensor_module.zero()
-
-            # 2. Iterate linearly
-            for basis_tuple, coeff in self:
-                k = len(basis_tuple) - 1  # Degree (length - 1)
-
-                # 3. Apply formula: Sum (front_face) (x) (back_face)
-                for i in range(k + 1):
-                    # Left side: (sigma_0 ... sigma_i)
-                    left_basis = basis_tuple[: i + 1]
-
-                    # Right side: (sigma_i ... sigma_k)
-                    right_basis = basis_tuple[i:]
-
-                    # Create the tensor element
-                    # In Sage, tensor basis is ((left_key, right_key))
-                    tensor_term = tensor_module.term((left_basis, right_basis))
-
-                    result += coeff * tensor_term
-
-            return result
-
-        def table_reduction(self) -> Surjection.Element:
-            """Placeholder, replaced at import time by :mod:`uconf.__init__`."""
-            raise NotImplementedError("Table reduction is not implemented yet")
+BarrattEccles = BarrattEcclesOperad()

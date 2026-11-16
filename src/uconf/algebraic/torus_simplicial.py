@@ -121,7 +121,7 @@ from uconf.algebraic.algebra import OperadAlgebra
 from uconf.algebraic.simplicial import surjection_cochain_action
 from uconf.core.display import latex_linear_combination
 from uconf.models.simplicial import SimplicialCochains
-from uconf.models.surjection import Surjection
+from uconf.models.surjection import Surjection, SurjectionElement
 
 # Nondegenerate simplices of T² = (Δ¹/∂Δ¹)²: label -> (dimension, (j_x, j_y)).
 _SIMPLICES: dict[str, tuple[int, tuple[int, int]]] = {
@@ -327,7 +327,7 @@ class SurjectionTorusSimplicialCochainAlgebra(OperadAlgebra):
         module = TorusSimplicialCochains(base_ring=base_ring)
         super().__init__(
             module=module,
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 
@@ -415,7 +415,7 @@ class SurjectionTorusSimplicialCochainAlgebra(OperadAlgebra):
                 result.append((x_label, value))
         return tuple(result)
 
-    def _act_impl(self, p_element: Surjection.Element, algebra_elements):
+    def _act_impl(self, p_element: SurjectionElement, algebra_elements):
         r"""Implement ``θ_u(z_1, …, z_n)`` on the simplicial torus cochains."""
         if p_element.arity() == 0:
             return self.module.zero()

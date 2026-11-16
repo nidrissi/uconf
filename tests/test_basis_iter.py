@@ -44,9 +44,9 @@ def _count(basis_iter):
 class TrivialAlgebra(OperadAlgebra):
     """A P-algebra structure on Com(1) with trivial multiplication."""
 
-    def __init__(self, operad_cls, base_ring=QQ):
+    def __init__(self, operad, base_ring=QQ):
         mod = Commutative(1, base_ring=base_ring)
-        super().__init__(mod, operad_cls, self._structure_map)
+        super().__init__(mod, operad, self._structure_map)
 
     def _structure_map(self, p_element, algebra_elements):
         result = self.module.zero()
@@ -268,9 +268,9 @@ class TestCobarCoalgebraBasisIter:
     @pytest.fixture
     def trivial_cobar(self):
         class _TrivialCoalgebra(CooperadCoalgebra):
-            def __init__(self, cooperad_cls, base_ring=QQ):
+            def __init__(self, cooperad, base_ring=QQ):
                 mod = Commutative(1, base_ring=base_ring)
-                super().__init__(mod, cooperad_cls, self._co)
+                super().__init__(mod, cooperad, self._co)
 
             def _co(self, v_elem, k):
                 return v_elem.parent().zero()

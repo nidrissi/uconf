@@ -24,16 +24,17 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from sage.all import Family
 
-from uconf.core.component import ComponentProtocol
+from uconf.core.component import ComponentBase, ElementBase
 from uconf.core.signs import get_on_basis
 
 
 @runtime_checkable
-class QuasiPlanarProtocol(ComponentProtocol, Protocol):
-    """Structural contract for a quasi-planar operad/cooperad component.
+class QuasiPlanarProtocol(Protocol):
+    """Capability check for a quasi-planar operad/cooperad component.
 
-    A class satisfies this protocol when it exposes ``planarize`` and
-    ``boundary`` (both linear maps) and ``arity()``.
+    Whether a component is quasi-planar is decided at runtime (wrappers
+    expose ``planarize`` only when the operads they wrap do), so this is a
+    structural protocol on top of :class:`~uconf.core.component.ComponentBase`.
     """
 
     def planar_basis_iter(self, d: int) -> Iterable:
@@ -44,20 +45,13 @@ class QuasiPlanarProtocol(ComponentProtocol, Protocol):
         """Returns the planar basis of this component in degree d."""
         ...
 
-    def planarize(self, x: QuasiPlanarProtocol.Element) -> Any: ...
+    def planarize(self, x: Any) -> Any: ...
 
 
-# We use a conditional base class because otherwise we have a conflict with Protocol and the SageMath metaclass.
-if TYPE_CHECKING:
-    __quasi_planar_base = QuasiPlanarProtocol
-else:
-    __quasi_planar_base = object
-
-
-class QuasiPlanarMixin(__quasi_planar_base):
+class QuasiPlanarMixin[E: ElementBase[Any]](ComponentBase[E]):
     """Mixin providing ``d_sigma`` from ``boundary`` and ``planarize``.
 
-    Mix this into any ``CombinatorialFreeModule`` component that already
+    Use it as the base of any component class that already
     implements ``planarize`` (element → C_pl ⊗ k[S_n]) and ``boundary``.
 
     The ``d_sigma`` method computes the σ-component of the differential
@@ -68,6 +62,10 @@ class QuasiPlanarMixin(__quasi_planar_base):
     where ``π_σ`` is the projection onto the σ-factor of the symmetric
     decomposition ``P(n) = P_pl(n) ⊗ k[S_n]``.
     """
+
+    if TYPE_CHECKING:
+
+        def planarize(self, x: Any) -> Any: ...
 
     def is_planar_key(self, key: Any) -> bool:
         """Return ``True`` if ``key`` is a planar basis key.
