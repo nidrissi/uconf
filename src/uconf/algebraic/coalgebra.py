@@ -50,7 +50,7 @@ class CooperadCoalgebra[
     """A dg-module equipped with a C-coalgebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module V) and a
-    cooperad provider ``cooperad_cls`` (satisfying
+    cooperad provider ``cooperad`` (satisfying
     :class:`uconf.core.cooperad.Cooperad`) together with an explicit
     costructure map.
 
@@ -62,7 +62,7 @@ class CooperadCoalgebra[
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        cooperad_cls: The cooperad ``C``.
+        cooperad: The cooperad ``C``.
         coaction_map: Callable implementing the C-coalgebra coaction δ_n.
 
     """
@@ -70,13 +70,13 @@ class CooperadCoalgebra[
     def __init__(
         self,
         module,
-        cooperad_cls: Cooperad,
+        cooperad: Cooperad,
         coaction_map: CoactionMap[CoalgebraElementType, CoactionValueType],
     ):
         if not callable(coaction_map):
             raise TypeError("coaction_map must be callable.")
         self.module = module
-        self.cooperad_cls = cooperad_cls
+        self.cooperad = cooperad
         self._coaction_map = coaction_map
 
     def coact(self, v_element: CoalgebraElementType, n: int) -> CoactionValueType:

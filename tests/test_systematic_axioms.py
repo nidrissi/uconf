@@ -480,7 +480,7 @@ class TestHadamardTensorAlgebraAxioms:
         left_mod = had_ass.left_module
         right_mod = had_ass.right_module
         x = tensor((left_mod(()), right_mod(())))
-        unit = had_ass.operad_cls.unit(R)
+        unit = had_ass.operad.unit(R)
         result = had_ass.act(unit, [x])
         assert _as_dict(result) == _as_dict(x)
 
@@ -490,7 +490,7 @@ class TestHadamardTensorAlgebraAxioms:
         """Binary action: γ(p⊗q; x, y) is well-defined."""
         from sage.all import tensor
 
-        had = had_ass.operad_cls
+        had = had_ass.operad
         left_mod = had_ass.left_module
         right_mod = had_ass.right_module
         x = tensor((left_mod(()), right_mod(())))

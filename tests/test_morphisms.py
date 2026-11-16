@@ -231,7 +231,7 @@ class TestPullbackAlgebra:
     def test_pullback_ass_to_com(self, trivial_com_algebra):
         """Pull back a Com-algebra along Ass → Com to get an Ass-algebra."""
         ass_alg = PullbackAlgebra(ass_to_com, trivial_com_algebra)
-        assert ass_alg.operad_cls is Associative
+        assert ass_alg.operad is Associative
 
         # Act with an Ass(2) element
         mu = Associative(2, QQ)((1, 2))

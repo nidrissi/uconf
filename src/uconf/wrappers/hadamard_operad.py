@@ -88,8 +88,8 @@ class HadamardProductComponent(QuasiPlanarMixin["HadamardProductElement"]):
 
     def __init__(self, factory: HadamardProduct, n: int, base_ring):
         super().__init__(factory, n, base_ring)
-        self._left_parent = factory.left_operad_cls(n, base_ring)
-        self._right_parent = factory.right_operad_cls(n, base_ring)
+        self._left_parent = factory.left_operad(n, base_ring)
+        self._right_parent = factory.right_operad(n, base_ring)
         self._symmetric_group_algebra = SymmetricGroupAlgebra(base_ring, n)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis,
@@ -343,30 +343,30 @@ class HadamardProduct(Operad[HadamardProductComponent]):
 
     def __init__(
         self,
-        left_operad_cls: Operad,
-        right_operad_cls: Operad,
+        left_operad: Operad,
+        right_operad: Operad,
     ):
-        self.left_operad_cls = left_operad_cls
-        self.right_operad_cls = right_operad_cls
-        self.name = f"{left_operad_cls.name}⊙{right_operad_cls.name}"
+        self.left_operad = left_operad
+        self.right_operad = right_operad
+        self.name = f"{left_operad.name}⊙{right_operad.name}"
         # ``(P ⊙ Q)(n)`` lives in degrees >= (k_P + k_Q)(n - 1) since the degree
         # of ``(p, q)`` is ``deg_P(p) + deg_Q(q) >= k_P (n - 1) + k_Q (n - 1)``.
-        self.connectivity = left_operad_cls.connectivity + right_operad_cls.connectivity
+        self.connectivity = left_operad.connectivity + right_operad.connectivity
 
     def _repr_latex_(self) -> str:
-        return f"{self.left_operad_cls.name} \\odot {self.right_operad_cls.name}"
+        return f"{self.left_operad.name} \\odot {self.right_operad.name}"
 
     def unit(self, base_ring) -> HadamardProductElement:
         """Return the diagonal operadic unit over ``base_ring``."""
         component = self(1, base_ring)
         return component.from_factors(
-            self.left_operad_cls.unit(base_ring),
-            self.right_operad_cls.unit(base_ring),
+            self.left_operad.unit(base_ring),
+            self.right_operad.unit(base_ring),
         )
 
     def unit_key(self) -> tuple:
         """Return the basis key of the unit element in arity ``1``."""
-        return (self.left_operad_cls.unit_key(), self.right_operad_cls.unit_key())
+        return (self.left_operad.unit_key(), self.right_operad.unit_key())
 
     def compose(
         self,
@@ -408,8 +408,8 @@ class HadamardProduct(Operad[HadamardProductComponent]):
                 # (a⊗b) ∘_i (c⊗d) = (-1)^{|b|·|c|} (a∘_i c) ⊗ (b∘_i d)
                 koszul_sign = sign_from_exponent(right_x_degree * left_y_degree)
 
-                left_composed = self.left_operad_cls.compose(left_x_term, i, left_y_term)
-                right_composed = self.right_operad_cls.compose(right_x_term, i, right_y_term)
+                left_composed = self.left_operad.compose(left_x_term, i, left_y_term)
+                right_composed = self.right_operad.compose(right_x_term, i, right_y_term)
 
                 for left_basis, left_coeff in left_composed:
                     for right_basis, right_coeff in right_composed:

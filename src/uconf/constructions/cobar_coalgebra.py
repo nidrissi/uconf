@@ -63,11 +63,11 @@ class CobarCoalgebraModule(FreeAlgebraModule):
     ):
         self._alpha = alpha
         self._coalgebra = coalgebra
-        operad_cls = alpha.operad
+        operad = alpha.operad
         inner_module = coalgebra.module
 
         super().__init__(
-            operad_cls,
+            operad,
             inner_module,
             name=f"Ω_{{{alpha.name}}}({inner_module})",
         )
@@ -114,7 +114,7 @@ class CobarCoalgebraModule(FreeAlgebraModule):
         p_key, m_tuple = key
         n = len(m_tuple)
         base_ring = self.base_ring()
-        P = self._operad_cls
+        P = self._operad
         C = self._alpha.cooperad
         M = self._inner_module
 

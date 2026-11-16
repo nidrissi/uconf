@@ -108,7 +108,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
 
     def __init__(self, factory: CobarConstruction, n: int, base_ring):
         super().__init__(factory, n, base_ring)
-        self._cooperad_cls = factory.cooperad_cls
+        self._cooperad = factory.cooperad
         self._max_weight = max(0, self._arity - 1)
 
         self.boundary = self.module_morphism(
@@ -137,7 +137,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
 
     def _cooperad_has_planarize(self) -> bool:
         """Check if the base cooperad components have ``planarize``."""
-        test = self._cooperad_cls(2, self.base_ring())
+        test = self._cooperad(2, self.base_ring())
         return callable(getattr(test, "planarize", None))
 
     @cached_method
@@ -174,7 +174,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
 
             k = vertex_arity(node)
             dec = decoration(node)
-            coop_parent = self._cooperad_cls(k, base_ring)
+            coop_parent = self._cooperad(k, base_ring)
 
             dec_elem = coop_parent(dec)
             planarized = coop_parent.planarize(dec_elem)
@@ -183,7 +183,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             # Cobar-degrees of the original children (needed for Koszul
             # signs when children are reordered by the vertex planarize).
             old_ch_degrees = [
-                subtree_degree_cobar(ch, self._cooperad_cls, base_ring) if not is_leaf(ch) else 0
+                subtree_degree_cobar(ch, self._cooperad, base_ring) if not is_leaf(ch) else 0
                 for ch in old_ch
             ]
             results = []
@@ -244,7 +244,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         """
         if not self._cooperad_has_planarize():
             raise NotImplementedError(
-                f"planar_basis_iter requires {self._cooperad_cls.name!r} to implement "
+                f"planar_basis_iter requires {self._cooperad.name!r} to implement "
                 "planarize and planar_basis_iter (quasi-planar cooperad). "
                 "Use basis_iter() for the full shuffle-tree basis instead."
             )
@@ -260,7 +260,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         for tree in enumerate_planar_trees_generic_in_degree(
             n,
             self._max_weight,
-            self._cooperad_cls,
+            self._cooperad,
             base_ring,
             d,
             vertex_offset=-1,
@@ -288,7 +288,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             else:
                 raise ValueError(f"Invalid basis key for arity 1: expected 1. Got {basis_key!r}.")
 
-        return validate_tree(basis_key, self._arity, self._cooperad_cls, self.base_ring())
+        return validate_tree(basis_key, self._arity, self._cooperad, self.base_ring())
 
     @cached_method
     def _normalize_to_shuffle(self, tree):
@@ -300,7 +300,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         """
         if is_leaf(tree):
             return ((tree, 1),)
-        return tuple(to_shuffle_tree_cobar(tree, self._cooperad_cls, self.base_ring()))
+        return tuple(to_shuffle_tree_cobar(tree, self._cooperad, self.base_ring()))
 
     def _element_constructor_(self, x) -> CobarConstructionElement:
         """Build elements from tree basis keys or sparse dictionaries.
@@ -360,7 +360,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         """
         if is_leaf(tree):
             return 0
-        return subtree_degree_cobar(tree, self._cooperad_cls, self.base_ring())
+        return subtree_degree_cobar(tree, self._cooperad, self.base_ring())
 
     def basis_iter(self, d: int) -> Iterator[CobarConstructionElement]:
         """Iterate over shuffle-tree basis elements of degree *d*.
@@ -385,7 +385,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             return
 
         for tree in enumerate_shuffle_trees_cobar_in_degree(
-            n, self._max_weight, self._cooperad_cls, base_ring, d
+            n, self._max_weight, self._cooperad, base_ring, d
         ):
             yield self(tree)
 
@@ -395,7 +395,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             return "id"
 
         def _dec_fmt(dec, arity):
-            return self.factory.cooperad_cls(arity, self.base_ring())._repr_term(dec)
+            return self.factory.cooperad(arity, self.base_ring())._repr_term(dec)
 
         return tree_to_string(
             basis_element,
@@ -408,7 +408,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             return "\\eta"
 
         def _dec_fmt(dec, arity):
-            return self.factory.cooperad_cls(arity, self.base_ring())._latex_term(dec)
+            return self.factory.cooperad(arity, self.base_ring())._latex_term(dec)
 
         return tree_to_latex(
             basis_element,
@@ -451,7 +451,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         for j, vertex in enumerate(verts):
             v_arity = vertex_arity(vertex)
             dec = decoration(vertex)
-            cooperad_parent = self._cooperad_cls(v_arity, base_ring)
+            cooperad_parent = self._cooperad(v_arity, base_ring)
 
             # Degree of this vertex in s⁻¹C̄
             vertex_sinv_degree = cooperad_parent.degree_on_basis(dec) - 1
@@ -517,7 +517,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         for curr_vertex in verts:
             curr_arity = vertex_arity(curr_vertex)
             curr_dec = decoration(curr_vertex)
-            curr_parent = self._cooperad_cls(curr_arity, base_ring)
+            curr_parent = self._cooperad(curr_arity, base_ring)
 
             # Cumulative s^{-1}C-degree of DFS vertices before current
             global_accum = 0
@@ -525,7 +525,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
                 if vertex is curr_vertex:
                     break
                 v_arity = vertex_arity(vertex)
-                v_deg = self._cooperad_cls(v_arity, base_ring).degree_on_basis(decoration(vertex))
+                v_deg = self._cooperad(v_arity, base_ring).degree_on_basis(decoration(vertex))
                 global_accum += v_deg - 1
 
             # Use _iter_all_splits when available (bar cooperad) so that
@@ -571,16 +571,16 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
         for m in range(2, curr_arity):
             n = curr_arity - m + 1
             for i in range(1, m + 1):
-                cocomp = self._cooperad_cls.infinitesimal_cocompose(curr_elem, i, m, n)
+                cocomp = self._cooperad.infinitesimal_cocompose(curr_elem, i, m, n)
                 for (dec_left, dec_right), coeff in cocomp:
-                    right_parent = self._cooperad_cls(n, base_ring)
+                    right_parent = self._cooperad(n, base_ring)
                     right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
 
-                    left_parent = self._cooperad_cls(m, base_ring)
+                    left_parent = self._cooperad(m, base_ring)
                     left_degree = left_parent.degree_on_basis(dec_left)
 
                     before_deg = sum(
-                        subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                        subtree_degree_cobar(ch, self._cooperad, base_ring)
                         for j, ch in enumerate(children(curr_vertex), start=1)
                         if j < i
                     )
@@ -623,15 +623,15 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             pos_set = set(child_positions)
             min_pos = child_positions[0]
 
-            right_parent = self._cooperad_cls(n, base_ring)
+            right_parent = self._cooperad(n, base_ring)
             right_sinv_deg = right_parent.degree_on_basis(dec_right) - 1
 
-            left_parent = self._cooperad_cls(m, base_ring)
+            left_parent = self._cooperad(m, base_ring)
             left_degree = left_parent.degree_on_basis(dec_left)
 
             # before_deg: cobar-degree of children in S^c before min(S)
             before_deg = sum(
-                subtree_degree_cobar(ch, self._cooperad_cls, base_ring)
+                subtree_degree_cobar(ch, self._cooperad, base_ring)
                 for j, ch in enumerate(orig_children, start=1)
                 if j < min_pos and j not in pos_set
             )
@@ -689,7 +689,7 @@ class CobarConstructionComponent(ComponentBase["CobarConstructionElement"]):
             return 0
 
         # Compute weighted inversions
-        degrees = [subtree_degree_cobar(c, self._cooperad_cls, base_ring) for c in orig_children]
+        degrees = [subtree_degree_cobar(c, self._cooperad, base_ring) for c in orig_children]
         exponent = 0
         for i_idx in range(len(expanded)):
             for j_idx in range(i_idx + 1, len(expanded)):
@@ -762,7 +762,7 @@ class CobarConstruction(Operad[CobarConstructionComponent]):
     """The cobar construction ``Ω(C)`` of a connected dg-cooperad, a dg-operad.
 
     Args:
-        cooperad_cls: Base cooperad provider (class or wrapper instance).
+        cooperad: Base cooperad instance.
             Must be a **connected** cooperad (C(0) = 0, C(1) = k·counit).
 
     The cobar construction Ω(C) is a dg-operad whose arity-n component has
@@ -783,14 +783,14 @@ class CobarConstruction(Operad[CobarConstructionComponent]):
     Component = CobarConstructionComponent
     Element = CobarConstructionElement
 
-    def __init__(self, cooperad_cls: Cooperad):
-        self.cooperad_cls = cooperad_cls
-        self.name = f"Ω({cooperad_cls.name})"
+    def __init__(self, cooperad: Cooperad):
+        self.cooperad = cooperad
+        self.name = f"Ω({cooperad.name})"
         # Connectivity inherited from the underlying cooperad.
-        self.connectivity = cooperad_cls.connectivity
+        self.connectivity = cooperad.connectivity
 
     def _repr_latex_(self) -> str:
-        return f"\\Omega({self.cooperad_cls.name})"
+        return f"\\Omega({self.cooperad.name})"
 
     def unit(self, base_ring) -> CobarConstructionElement:
         """Return the unit element (identity in arity 1).
@@ -847,8 +847,8 @@ class CobarConstruction(Operad[CobarConstructionComponent]):
 
         for x_tree, x_coeff in x:
             for y_tree, y_coeff in y:
-                y_deg = subtree_degree_cobar(y_tree, self.cooperad_cls, base_ring)
-                a_deg = after_cobar_deg(x_tree, i, self.cooperad_cls, base_ring)
+                y_deg = subtree_degree_cobar(y_tree, self.cooperad, base_ring)
+                a_deg = after_cobar_deg(x_tree, i, self.cooperad, base_ring)
                 sign = sign_from_exponent(y_deg * a_deg)
                 grafted = graft(x_tree, i, y_tree)
                 outer_coeff = R(sign * x_coeff * y_coeff)

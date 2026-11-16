@@ -44,6 +44,7 @@ packages = ["src/uconf"]
 include = [
     "/src",
     "/tests",
+    "/typings",
     "/docs",
     "/AUTHORS",
     "/CITATION.cff",
@@ -86,6 +87,7 @@ python_functions = "test_*"
 
 [tool.pyright]
 include = ["src"]
+stubPath = "typings"
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 

@@ -25,7 +25,7 @@ class PullbackAlgebra(OperadAlgebra):
         self.morphism = morphism
         self.algebra = algebra
         self.module = algebra.module
-        self.operad_cls = morphism.source
+        self.operad = morphism.source
         # Cache morphism results: the morphism f(p) depends only on p,
         # not on the algebra elements. We cache by the frozenset of
         # (key, coeff) pairs, which is hashable and identifies the element.
@@ -36,7 +36,7 @@ class PullbackAlgebra(OperadAlgebra):
         """Apply the pullback action to basis inputs and cache the result."""
         arity = len(algebra_input_keys)
         base_ring = self.module.base_ring()
-        p_element = self.operad_cls(arity, base_ring)._from_dict(dict(p_terms), remove_zeros=True)
+        p_element = self.operad(arity, base_ring)._from_dict(dict(p_terms), remove_zeros=True)
         q_element = self._morphism_cache.get(p_terms)
         if q_element is None:
             q_element = self.morphism(p_element)

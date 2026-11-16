@@ -27,9 +27,9 @@ class OperadMorphism:
     Parameters
     ----------
     source : Operad
-        Source operad (class or factory).
+        Source operad instance.
     target : Operad
-        Target operad (class or factory).
+        Target operad instance.
     on_element : callable
         A function mapping elements of ``P(n)`` to elements of ``Q(n)``.
         Must be linear in the element.

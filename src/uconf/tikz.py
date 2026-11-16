@@ -142,12 +142,12 @@ def tree_to_forest(
 # ---------------------------------------------------------------------------
 
 
-def _operad_decoration_formatter(operad_cls, base_ring) -> Callable[[Any, int], str]:
+def _operad_decoration_formatter(operad, base_ring) -> Callable[[Any, int], str]:
     """Build a decoration formatter that delegates to the operad's
     ``_latex_term`` per arity."""
 
     def fmt(dec: Any, arity: int) -> str:
-        comp = operad_cls(arity, base_ring)
+        comp = operad(arity, base_ring)
         latex_term = getattr(comp, "_latex_term", None)
         if callable(latex_term):
             return latex_term(dec)
@@ -212,13 +212,13 @@ def _basis_key_to_forest(
             if depth == 0
             else Layer(STYLE_BLACK_VERTEX, None)
         )
-        fmt = _operad_decoration_formatter(parent.factory.operad_cls, parent.base_ring())
+        fmt = _operad_decoration_formatter(parent.factory.operad, parent.base_ring())
         return tree_to_forest(key, decoration_formatter=fmt, layer=layer)
 
     if _is_cobar_construction_component(parent):
         # Cobar always uses dashed black edges, regardless of depth.
         layer = Layer(STYLE_BLACK_VERTEX, STYLE_DASHED_EDGE)
-        fmt = _operad_decoration_formatter(parent.factory.cooperad_cls, parent.base_ring())
+        fmt = _operad_decoration_formatter(parent.factory.cooperad, parent.base_ring())
         return tree_to_forest(key, decoration_formatter=fmt, layer=layer)
 
     if _is_cofree_or_free_module(parent):
@@ -235,8 +235,8 @@ def _basis_key_to_forest(
     return _node_open(label, STYLE_LEAF) + "]"
 
 
-def _underlying_operad_cls(operad_cls: Any) -> Any:
-    """If ``operad_cls`` is a Bar/Cobar construction wrapper, return the
+def _underlying_operad(operad: Any) -> Any:
+    """If ``operad`` is a Bar/Cobar construction wrapper, return the
     underlying (co)operad whose basis decorates the tree vertices.
 
     Vertex decorations of a :class:`BarConstruction(P)` basis tree are
@@ -247,11 +247,11 @@ def _underlying_operad_cls(operad_cls: Any) -> Any:
     from uconf.constructions.bar_construction import BarConstruction
     from uconf.constructions.cobar_construction import CobarConstruction
 
-    if isinstance(operad_cls, BarConstruction):
-        return operad_cls.operad_cls
-    if isinstance(operad_cls, CobarConstruction):
-        return operad_cls.cooperad_cls
-    return operad_cls
+    if isinstance(operad, BarConstruction):
+        return operad.operad
+    if isinstance(operad, CobarConstruction):
+        return operad.cooperad
+    return operad
 
 
 def _render_corolla(key: tuple, parent: Any, *, depth: int) -> str:
@@ -262,12 +262,12 @@ def _render_corolla(key: tuple, parent: Any, *, depth: int) -> str:
     ``m_tuple[i-1]``.
     """
     tree_key, m_tuple = key
-    operad_cls = getattr(parent, "_cooperad_cls", None) or parent._operad_cls
+    operad = getattr(parent, "_cooperad", None) or parent._operad
     # When the corolla's (co)operad is itself a Bar/Cobar construction, the
     # basis tree's vertex decorations come from the *underlying* (co)operad —
     # use that for the per-vertex formatter so we don't try to render a single
     # vertex decoration as if it were a whole tree.
-    underlying = _underlying_operad_cls(operad_cls)
+    underlying = _underlying_operad(operad)
     layer = default_layer_for_depth(depth)
     fmt = _operad_decoration_formatter(underlying, parent.base_ring())
 

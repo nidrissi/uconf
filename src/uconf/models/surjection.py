@@ -256,7 +256,8 @@ class SurjectionOperad(Operad[SurjectionComponent]):
     """
 
     Component = SurjectionComponent
-    Element = SurjectionElement
+    # This singleton fixes the element class; instances never reassign it.
+    Element: type[SurjectionElement] = SurjectionElement  # pyright: ignore[reportIncompatibleVariableOverride]
 
     name = "𝒳"
     connectivity = 0

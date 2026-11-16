@@ -373,7 +373,7 @@ def _nu_on_planar(
 
 
 def make_e_comodule_morphism(
-    cooperad_cls: Cooperad,
+    cooperad: Cooperad,
 ) -> OperadMorphism:
     """Build the operad morphism Δ: Ω(C) → E ⊗ Ω(C).
 
@@ -385,17 +385,17 @@ def make_e_comodule_morphism(
 
     Parameters
     ----------
-    cooperad_cls : Cooperad
-        A quasi-planar cooperad (class or factory) for which the cobar
+    cooperad : Cooperad
+        A quasi-planar cooperad instance for which the cobar
         construction Ω(C) is defined.
 
     Returns
     -------
     OperadMorphism
-        The morphism Δ whose source is ``CobarConstruction(cooperad_cls)``
-        and whose target is ``HadamardProduct(BarrattEccles, CobarConstruction(cooperad_cls))``.
+        The morphism Δ whose source is ``CobarConstruction(cooperad)``
+        and whose target is ``HadamardProduct(BarrattEccles, CobarConstruction(cooperad))``.
     """
-    cobar = CobarConstruction(cooperad_cls)
+    cobar = CobarConstruction(cooperad)
     target_factory = HadamardProduct(BarrattEccles, cobar)
     root_image_cache: dict = {}
     tree_image_cache: dict = {}
@@ -406,7 +406,7 @@ def make_e_comodule_morphism(
         if cached is not None:
             return cached
 
-        cooperad_parent = cooperad_cls(k, base_ring)
+        cooperad_parent = cooperad(k, base_ring)
         gen_elem = cooperad_parent(dec)
         root_tensor = e_comodule_on_generator(gen_elem)
 

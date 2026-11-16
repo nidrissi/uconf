@@ -34,7 +34,7 @@ Reference: Loday-Vallette "Algebraic Operads", Section 11.2.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from sage.all import cached_method
 
@@ -67,11 +67,11 @@ class BarAlgebraModule(CofreeCoalgebraModule):
     ):
         self._alpha = alpha
         self._algebra = algebra
-        cooperad_cls = alpha.cooperad
+        cooperad = alpha.cooperad
         inner_module = algebra.module
 
         super().__init__(
-            cooperad_cls,
+            cooperad,
             inner_module,
             name=f"B_{{{alpha.name}}}({inner_module})",
         )
@@ -133,7 +133,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             return self.zero()
 
         base_ring = self.base_ring()
-        C = self._cooperad_cls
+        C = self._cooperad
         c_comp = C(n, base_ring)
 
         # Use _iter_all_splits when available (bar construction cooperads)
@@ -146,17 +146,17 @@ class BarAlgebraModule(CofreeCoalgebraModule):
     @cached_method
     def _alpha_on_basis(self, arity, c_key):
         """Return ``α(c_key)`` for a cooperad basis key."""
-        c_comp = self._cooperad_cls(arity, self.base_ring())
+        c_comp = self._cooperad(arity, self.base_ring())
         return self._alpha(c_comp.term(c_key))
 
     @cached_method
     def _normalized_left_corolla(self, arity, c_left_key, new_m):
         """Return the normalized corolla for a cached left cooperad factor."""
-        c_left_comp = self._cooperad_cls(arity, self.base_ring())
+        c_left_comp = self._cooperad(arity, self.base_ring())
         return self._normalized_corolla_sum(c_left_comp.term(c_left_key), new_m)
 
     @cached_method
-    def _act_on_basis_slice(self, arity, c_right_key, a_slice_keys):
+    def _act_on_basis_slice(self, arity, c_right_key, a_slice_keys) -> Any:
         """Return ``γ(α(c_R); a_slice)`` for basis inputs."""
         alpha_c_right = self._alpha_on_basis(arity, c_right_key)
         if not alpha_c_right:
@@ -179,7 +179,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
     @cached_method
     def _split_left_key_is_canonical(self, arity, c_left_key):
         """Return whether an ``_iter_all_splits`` left factor is already canonical."""
-        comp = self._cooperad_cls(arity, self.base_ring())
+        comp = self._cooperad(arity, self.base_ring())
         planarize_on_basis = self._cooperad_planarize_on_basis(arity)
         if planarize_on_basis is not None:
             planarized = tuple(planarize_on_basis(c_left_key))
@@ -243,7 +243,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             if n <= 1:
                 continue
 
-            c_comp = self._cooperad_cls(n, base_ring)
+            c_comp = self._cooperad(n, base_ring)
             if hasattr(c_comp, "_iter_all_splits"):
                 # Bar-construction cooperads expose ``_iter_all_splits`` to
                 # enumerate all internal-edge cuts, including non-contiguous
@@ -274,7 +274,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
             for n_r in range(1, n + 1):
                 m = n - n_r + 1
                 for i in range(1, m + 1):
-                    cocomp = self._cooperad_cls.infinitesimal_cocompose(c_elem, i, m, n_r)
+                    cocomp = self._cooperad.infinitesimal_cocompose(c_elem, i, m, n_r)
                     for (c_left_key, c_right_key), _ in cocomp:
                         alpha_cache_key = (n_r, c_right_key)
                         if alpha_cache_key not in seen_alpha_keys:
@@ -300,7 +300,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
 
     def _dalpha_contiguous(self, c_key, m_tuple, n, base_ring, c_comp):
         """d_α via contiguous partial cocompositions (original path)."""
-        C = self._cooperad_cls
+        C = self._cooperad
         result_dict: dict = {}
         zero = base_ring.zero()
         c_elem = c_comp.term(c_key)
@@ -359,7 +359,7 @@ class BarAlgebraModule(CofreeCoalgebraModule):
           the whole element *c*.  The sign is +1 because *η* has
           bar degree 0.
         """
-        C = self._cooperad_cls
+        C = self._cooperad
         result_dict: dict = {}
         zero = base_ring.zero()
         m_degrees = [self._inner_module.degree_on_basis(m_key) for m_key in m_tuple]
@@ -503,7 +503,7 @@ class BarAlgebra(CooperadCoalgebra):
         from sage.all import tensor
 
         base_ring = self.module.base_ring()
-        C = self.cooperad_cls
+        C = self.cooperad
         coop_parent = C(n, base_ring)
         cofree_mod = self.module
         id_key = C.unit_key()
@@ -530,7 +530,7 @@ class BarAlgebra(CooperadCoalgebra):
         ``(id_key, (a,))`` terms.
         """
         inner = self._algebra.module
-        id_key = self.cooperad_cls.unit_key()
+        id_key = self.cooperad.unit_key()
         result = inner.zero()
         for (c_key, m_tuple), coeff in x:
             if len(m_tuple) == 1 and c_key == id_key:

@@ -54,7 +54,7 @@ class ShiftedCooperadComponent(ComponentBase["ShiftedCooperadElement"]):
 
     def __init__(self, factory: ShiftedCooperad, n: int, base_ring):
         super().__init__(factory, n, base_ring)
-        self._base_parent = factory.cooperad_cls(n, base_ring)
+        self._base_parent = factory.cooperad(n, base_ring)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis,
             codomain=self,
@@ -159,29 +159,29 @@ class ShiftedCooperad(Cooperad[ShiftedCooperadComponent]):
     Component = ShiftedCooperadComponent
     Element = ShiftedCooperadElement
 
-    def __init__(self, cooperad_cls: Cooperad, shift_degree: int):
-        self.cooperad_cls = cooperad_cls
+    def __init__(self, cooperad: Cooperad, shift_degree: int):
+        self.cooperad = cooperad
         self.shift_degree = int(shift_degree)
-        self.name = f"{cooperad_cls.name}[{self.shift_degree}]"
+        self.name = f"{cooperad.name}[{self.shift_degree}]"
         # ``C[d](n)`` lives in degrees >= (k + d)(n - 1) where k is the
         # connectivity of C: the shift by d(n - 1) raises the lower bound.
-        self.connectivity = cooperad_cls.connectivity + self.shift_degree
+        self.connectivity = cooperad.connectivity + self.shift_degree
 
     def unit_key(self) -> object:
         """Return the basis key of the counit generator in arity ``1``."""
-        return self.cooperad_cls.unit_key()
+        return self.cooperad.unit_key()
 
     def counit(self, x: ShiftedCooperadElement):
         parent = x.parent()
         R = parent.base_ring()
         base_x = parent.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
-        return self.cooperad_cls.counit(base_x)
+        return self.cooperad.counit(base_x)
 
     def reduced(self, x: ShiftedCooperadElement) -> ShiftedCooperadElement:
         parent = x.parent()
         R = parent.base_ring()
         base_x = parent.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
-        return parent.from_base(self.cooperad_cls.reduced(base_x))
+        return parent.from_base(self.cooperad.reduced(base_x))
 
     def infinitesimal_cocompose(self, x: ShiftedCooperadElement, i: int, m: int, n: int):
         parent = x.parent()
@@ -191,7 +191,7 @@ class ShiftedCooperad(Cooperad[ShiftedCooperadComponent]):
 
         R = parent.base_ring()
         base_x = parent.base_parent().sum_of_terms((basis, R(coeff)) for basis, coeff in x)
-        base_delta = self.cooperad_cls.infinitesimal_cocompose(base_x, i, m, n)
+        base_delta = self.cooperad.infinitesimal_cocompose(base_x, i, m, n)
 
         def term_generator():
             Rt = target.base_ring()

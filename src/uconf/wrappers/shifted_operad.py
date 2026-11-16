@@ -70,7 +70,7 @@ class ShiftedOperadComponent(ComponentBase["ShiftedOperadElement"]):
 
     def __init__(self, factory: ShiftedOperad, n: int, base_ring):
         super().__init__(factory, n, base_ring)
-        self._base_parent = factory.operad_cls(n, base_ring)
+        self._base_parent = factory.operad(n, base_ring)
         self.boundary = self.module_morphism(
             on_basis=self._boundary_on_basis,
             codomain=self,
@@ -200,7 +200,7 @@ class ShiftedOperad(Operad[ShiftedOperadComponent]):
     r"""The shifted operad ``P[d]``.
 
     Args:
-        operad_cls: Base operad class (e.g. ``Lie`` or ``Surjection``).
+        operad: Base operad instance (e.g. ``Lie`` or ``Surjection``).
         shift_degree: Integer ``d`` in the arity-dependent shift ``d (n-1)``.
 
     The construction uses the following conventions for homogeneous terms:
@@ -224,22 +224,22 @@ class ShiftedOperad(Operad[ShiftedOperadComponent]):
     Component = ShiftedOperadComponent
     Element = ShiftedOperadElement
 
-    def __init__(self, operad_cls: Operad, shift_degree: int):
-        self.operad_cls = operad_cls
+    def __init__(self, operad: Operad, shift_degree: int):
+        self.operad = operad
         self.shift_degree = int(shift_degree)
-        self.name = f"{operad_cls.name}[{self.shift_degree}]"
+        self.name = f"{operad.name}[{self.shift_degree}]"
         # ``P[d](n)`` lives in degrees >= (k + d)(n - 1) where k is the
         # connectivity of P: the shift by d(n - 1) raises the lower bound.
-        self.connectivity = operad_cls.connectivity + self.shift_degree
+        self.connectivity = operad.connectivity + self.shift_degree
 
     def unit(self, base_ring) -> ShiftedOperadElement:
         """Return the shifted operadic unit over ``base_ring``."""
         component = self(1, base_ring)
-        return component.from_base(self.operad_cls.unit(base_ring))
+        return component.from_base(self.operad.unit(base_ring))
 
     def unit_key(self) -> object:
         """Return the basis key of the unit element in arity ``1``."""
-        return self.operad_cls.unit_key()
+        return self.operad.unit_key()
 
     def compose(
         self, x: ShiftedOperadElement, i: int, y: ShiftedOperadElement
@@ -264,7 +264,7 @@ class ShiftedOperad(Operad[ShiftedOperadComponent]):
             for y_basis, y_coeff in y:
                 y_term = y_parent.base_parent()(y_basis)
                 y_degree = y_parent.base_parent().degree_on_basis(y_basis)
-                base_composed = self.operad_cls.compose(x_term, i, y_term)
+                base_composed = self.operad.compose(x_term, i, y_term)
                 sign = shifted_operadic_compose_sign(
                     self.shift_degree,
                     i,

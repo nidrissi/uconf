@@ -5,6 +5,7 @@ on:
         paths:
             - "src/uconf/**/*.py"
             - "tests/**/*.py"
+            - "typings/**/*.pyi"
             - ".github/workflows/tests.yml"
             - "pyproject.toml"
             - "uv.lock"
@@ -14,6 +15,7 @@ on:
         paths:
             - "src/uconf/**/*.py"
             - "tests/**/*.py"
+            - "typings/**/*.pyi"
             - ".github/workflows/tests.yml"
             - "pyproject.toml"
             - "uv.lock"

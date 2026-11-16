@@ -921,7 +921,7 @@ class TestLayer4_S_ΩBH_Kd:
     class TestUnitAction:
         def test_unit(self, layers: ConfigurationLayers):
             ta = layers.tensor_alg
-            unit = ta.operad_cls.unit(layers.bar.module.base_ring())
+            unit = ta.operad.unit(layers.bar.module.base_ring())
             for deg in range(-1, 4):
                 for elem in ta.graded_basis_by_weight(deg, 1):
                     assert _as_dict(ta.act(unit, [elem])) == _as_dict(elem)
@@ -934,7 +934,7 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
-            Q = ta.operad_cls
+            Q = ta.operad
             Q2 = Q(2, R)
             if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
@@ -975,7 +975,7 @@ class TestLayer4_S_ΩBH_Kd:
         def test_leibniz(self, p_deg, dim, layers: ConfigurationLayers, rng):
             ta = layers.tensor_alg
             R = layers.bar.module.base_ring()
-            Q = ta.operad_cls
+            Q = ta.operad
             Q2 = Q(2, R)
             if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
@@ -1005,7 +1005,7 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
-            Q = ta.operad_cls
+            Q = ta.operad
             Q2 = Q(2, R)
             if not list(Q2.graded_basis(p_deg)):
                 pytest.skip(f"No Q(2) elements at degree {p_deg}")
@@ -1033,7 +1033,7 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
-            Q = ta.operad_cls
+            Q = ta.operad
             Q3 = Q(3, R)
             if not list(Q3.graded_basis(p_deg)):
                 pytest.skip(f"No Q(3) elements at degree {p_deg}")
@@ -1060,7 +1060,7 @@ class TestLayer4_S_ΩBH_Kd:
             ta = layers.tensor_alg
             mod = ta.module
             R = layers.bar.module.base_ring()
-            Q = ta.operad_cls
+            Q = ta.operad
             Q4 = Q(4, R)
             # Use sample_basis as a fast existence probe instead of materializing
             # the full Q4 basis (which is expensive for Hadamard products of complex operads).

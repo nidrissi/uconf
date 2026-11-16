@@ -139,20 +139,20 @@ class TestBarAlgebra:
 
     def test_construction(self, bar):
         assert bar.module is not None
-        assert bar.cooperad_cls is not None
+        assert bar.cooperad is not None
 
     def test_single_leaf_degree(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = bar.module((C.unit_key(), ((),)))
         assert elem.degree() == 0
 
     def test_single_leaf_boundary_zero(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = bar.module((C.unit_key(), ((),)))
         assert bar.module.boundary(elem) == bar.module.zero()
 
     def test_d_squared_zero_weight1(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp2 = C(2, QQ)
         for p_elem in comp2.planar_basis_iter(1):
             for c_key in p_elem.support():
@@ -162,7 +162,7 @@ class TestBarAlgebra:
                 return
 
     def test_d_squared_zero_weight1_ternary(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp3 = C(3, QQ)
         for p_elem in comp3.planar_basis_iter(1):
             for c_key in p_elem.support():
@@ -173,7 +173,7 @@ class TestBarAlgebra:
 
     def test_d_squared_zero_all_weight1_gf2(self, bar_gf2):
         bar = bar_gf2
-        C = bar.cooperad_cls
+        C = bar.cooperad
         R = GF(2)
         for n in range(2, 5):
             comp_n = C(n, R)
@@ -187,7 +187,7 @@ class TestBarAlgebra:
 
     def test_d_squared_zero_all_weight1_qq(self, bar):
         """d² = 0 for all weight-1 elements over QQ up to degree 4."""
-        C = bar.cooperad_cls
+        C = bar.cooperad
         R = QQ
         for n in range(2, 6):
             comp_n = C(n, R)
@@ -223,13 +223,13 @@ class TestBarAlgebra:
             BarAlgebra(pi, alg)
 
     def test_coalgebra_coaction(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = bar.module((C.unit_key(), ((),)))
         coaction = bar.coact(elem, 1)
         assert coaction != 0
 
     def test_project(self, bar):
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = bar.module((C.unit_key(), ((),)))
         proj = bar.project(elem)
         assert proj == bar._algebra.module(())
@@ -253,16 +253,16 @@ class TestBarAlgebraFreeAlgebra:
         assert bar.module is not None
 
     def test_single_leaf_degree(self, bar):
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         elem = bar.module((C.unit_key(), (inner_key,)))
         assert elem.degree() == 1
 
     def test_weight2_d_squared_zero(self, bar):
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp2 = C(2, QQ)
@@ -273,8 +273,8 @@ class TestBarAlgebraFreeAlgebra:
             assert dd == bar.module.zero()
 
     def test_weight3_d_squared_zero(self, bar):
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp3 = C(3, QQ)
@@ -286,8 +286,8 @@ class TestBarAlgebraFreeAlgebra:
                 assert dd == bar.module.zero()
 
     def test_weight4_d_squared_zero(self, bar):
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp4 = C(4, QQ)
@@ -300,8 +300,8 @@ class TestBarAlgebraFreeAlgebra:
 
     def test_weight5_d_squared_zero(self, bar):
         """d² = 0 for all arity-5 elements over QQ (up to degree 4)."""
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp5 = C(5, QQ)
@@ -334,30 +334,30 @@ class TestCobarCoalgebra:
 
     def test_construction(self, cobar):
         assert cobar.module is not None
-        assert cobar.operad_cls is not None
+        assert cobar.operad is not None
 
     def test_single_leaf_degree(self, cobar):
-        P = cobar.operad_cls
+        P = cobar.operad
         elem = cobar.module((P.unit_key(), ((),)))
         assert elem.degree() == 0
 
     def test_d_alpha_on_leaf_gf2(self, cobar_gf2):
         """d_α on leaf vanishes over GF(2) (n! = 0 mod 2 for n ≥ 2)."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         elem = cobar_gf2.module((P.unit_key(), ((),)))
         d_alpha = cobar_gf2.module.d_alpha(elem)
         assert d_alpha == cobar_gf2.module.zero()
 
     def test_d_squared_zero_leaf_gf2(self, cobar_gf2):
         """d² = 0 on single leaf over GF(2)."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         elem = cobar_gf2.module((P.unit_key(), ((),)))
         dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
         assert dd == cobar_gf2.module.zero()
 
     def test_d_alpha_nonzero_on_leaf_qq(self, cobar):
         """d_α on leaf over QQ is nonzero (2·(arity-2 corolla))."""
-        P = cobar.operad_cls
+        P = cobar.operad
         elem = cobar.module((P.unit_key(), ((),)))
         d_alpha = cobar.module.d_alpha(elem)
         assert d_alpha != cobar.module.zero()
@@ -365,14 +365,14 @@ class TestCobarCoalgebra:
     def test_include(self, cobar):
         """The inclusion η: V → Ω_α(V) works."""
         elem = cobar.include(())
-        P = cobar.operad_cls
+        P = cobar.operad
         expected = cobar.module((P.unit_key(), ((),)))
         assert elem == expected
 
     def test_d_squared_zero_weight2_gf2(self, cobar_gf2):
         """d² = 0 on all arity-2 elements over GF(2)."""
         cobar = cobar_gf2
-        P = cobar.operad_cls
+        P = cobar.operad
         R = GF(2)
         for n in range(2, 4):
             comp_n = P(n, R)
@@ -387,7 +387,7 @@ class TestCobarCoalgebra:
     def test_d_squared_zero_weight4_gf2(self, cobar_gf2):
         """d² = 0 on all arity-4 elements over GF(2) up to degree 3."""
         cobar = cobar_gf2
-        P = cobar.operad_cls
+        P = cobar.operad
         R = GF(2)
         comp4 = P(4, R)
         m_tuple = ((),) * 4
@@ -428,7 +428,7 @@ class TestBarAlgebraNontrivialDifferential:
 
     def test_d_squared_zero_weight1_all_generators(self, bar):
         """d² = 0 on all weight-1 elements decorated by x or y."""
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp2 = C(2, QQ)
         for d in range(3):
             for p_elem in comp2.planar_basis_iter(d):
@@ -443,7 +443,7 @@ class TestBarAlgebraNontrivialDifferential:
 
     def test_d_squared_zero_weight1_ternary(self, bar):
         """d² = 0 on arity-3 weight-1 elements."""
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp3 = C(3, QQ)
         for d in range(3):
             for p_elem in comp3.planar_basis_iter(d):
@@ -459,7 +459,7 @@ class TestBarAlgebraNontrivialDifferential:
 
     def test_boundary_uses_module_differential(self, bar):
         """The cofree differential should include d_M terms (dx=y)."""
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = bar.module((C.unit_key(), ("x",)))
         d = bar.module.boundary(elem)
         # d((id, (x,))) should include (id, (y,)) from d_M(x)=y
@@ -497,8 +497,8 @@ class TestBarAlgebraFreeSurjection:
 
     def test_d_squared_zero_weight2(self, bar):
         """d² = 0 on weight-2 elements with B(Surjection) cooperad."""
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp2 = C(2, QQ)
@@ -511,8 +511,8 @@ class TestBarAlgebraFreeSurjection:
 
     def test_d_squared_zero_weight3(self, bar):
         """d² = 0 on weight-3 elements with B(Surjection) cooperad."""
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp3 = C(3, QQ)
@@ -526,8 +526,8 @@ class TestBarAlgebraFreeSurjection:
     def test_d_squared_zero_weight2_gf2(self, bar_gf2):
         """d² = 0 over GF(2)."""
         bar = bar_gf2
-        C = bar.cooperad_cls
-        P = bar._algebra.operad_cls
+        C = bar.cooperad
+        P = bar._algebra.operad
         id_key = P.unit_key()
         inner_key = (id_key, ((),))
         comp2 = C(2, GF(2))
@@ -570,7 +570,7 @@ class TestCobarCoalgebraNontrivialDifferential:
 
     def test_d_squared_zero_leaves_gf2(self, cobar_gf2):
         """d² = 0 on leaf elements (x and y) over GF(2)."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         p_unit = P.unit_key()
         for v in ["x", "y"]:
             elem = cobar_gf2.module((p_unit, (v,)))
@@ -579,7 +579,7 @@ class TestCobarCoalgebraNontrivialDifferential:
 
     def test_d_squared_zero_weight2_gf2(self, cobar_gf2):
         """d² = 0 on weight-2 elements over GF(2)."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         R = GF(2)
         comp2 = P(2, R)
         for d in range(3):
@@ -595,7 +595,7 @@ class TestCobarCoalgebraNontrivialDifferential:
 
     def test_boundary_uses_module_differential(self, cobar_gf2):
         """The free differential should include d_M terms (dx=y)."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         p_unit = P.unit_key()
         elem = cobar_gf2.module((p_unit, ("x",)))
         d = cobar_gf2.module.boundary(elem)
@@ -633,7 +633,7 @@ class TestCobarCoalgebraCofreeBarSurjection:
         """d² = 0 on a single-leaf element over GF(2)."""
         BSurj = BarConstruction(Surjection)
         inner_key = (BSurj.unit_key(), ((),))
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         elem = cobar_gf2.module((P.unit_key(), (inner_key,)))
         dd = cobar_gf2.module.boundary(cobar_gf2.module.boundary(elem))
         assert dd == cobar_gf2.module.zero()

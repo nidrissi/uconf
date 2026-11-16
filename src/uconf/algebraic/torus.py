@@ -251,7 +251,7 @@ class BarrattEcclesTorusCochainAlgebra(OperadAlgebra):
         module = ReducedTorusCochains(base_ring=base_ring)
         super().__init__(
             module=module,
-            operad_cls=BarrattEccles,
+            operad=BarrattEccles,
             structure_map=self._act_impl,
         )
 

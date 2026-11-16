@@ -118,7 +118,7 @@ def labelled_configuration_model(
         The bar construction ``B_π(pulled_back)``.  Its ``.module`` gives
         the underlying dg-module for homology computation.
     """
-    assert manifold_model.operad_cls == Surjection, "Manifold model must be a surjection algebra."
+    assert manifold_model.operad == Surjection, "Manifold model must be a surjection algebra."
 
     base_ring = coefficients.base_ring()
     assert manifold_model.module.base_ring() == base_ring, (
@@ -131,7 +131,7 @@ def _build_labelled_layers(
     manifold_model: OperadAlgebra, coefficients: CombinatorialFreeModule
 ) -> ConfigurationLayers:
     """Build all intermediate layers for the labelled configuration model."""
-    assert manifold_model.operad_cls == Surjection, "Manifold model must be a surjection algebra."
+    assert manifold_model.operad == Surjection, "Manifold model must be a surjection algebra."
 
     base_ring = coefficients.base_ring()
     assert manifold_model.module.base_ring() == base_ring, (

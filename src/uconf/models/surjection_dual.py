@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 from sage.all import cached_method, tensor
 
@@ -18,6 +20,12 @@ class SurjectionDualComponent(SurjectionComponent):
     """Arity-``n`` component, with the surjection basis in non-positive degrees."""
 
     Element = SurjectionDualElement
+
+    if TYPE_CHECKING:
+
+        def sum_of_terms(
+            self, terms: Iterable[tuple[Any, Any]], distinct: bool = False
+        ) -> SurjectionDualElement: ...
 
     def __init__(self, factory: SurjectionDualCooperad, n: int, base_ring):
         """Initialize fixed-arity linear dual component."""

@@ -424,7 +424,7 @@ class SurjectionSimplicialCochainAlgebra(OperadAlgebra):
     def __init__(self, N: int, base_ring):
         super().__init__(
             module=SimplicialCochains(N=N, base_ring=base_ring),
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 
@@ -453,7 +453,7 @@ class SurjectionSimplicialChainCoalgebra(CooperadCoalgebra):
 
         super().__init__(
             module=SimplicialChains(base_ring=base_ring),
-            cooperad_cls=SurjectionDual,
+            cooperad=SurjectionDual,
             coaction_map=self._coact_impl,
         )
 

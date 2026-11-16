@@ -5,6 +5,7 @@ on:
         paths:
             - "src/uconf/**/*.py"
             - "tests/**/*.py"
+            - "typings/**/*.pyi"
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
             - "pyproject.toml"
@@ -15,6 +16,7 @@ on:
         paths:
             - "src/uconf/**/*.py"
             - "tests/**/*.py"
+            - "typings/**/*.pyi"
             - ".github/workflows/*.yml"
             - ".github/workflows/*.yaml"
             - "pyproject.toml"
@@ -43,10 +45,10 @@ jobs:
                   version: "0.11.25"
 
             - name: Ruff lint
-              run: uvx ruff@0.16.3 check --output-format=github tests src
+              run: uvx ruff@0.16.3 check --output-format=github tests src typings
 
             - name: Ruff format check
-              run: uvx ruff@0.16.3 format --check tests src
+              run: uvx ruff@0.16.3 format --check tests src typings
 
             - name: Python syntax smoke test
               run:

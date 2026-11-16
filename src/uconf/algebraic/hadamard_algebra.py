@@ -54,8 +54,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
             raise TypeError("Both algebra modules must have the same base ring.")
 
         hadamard_operad = HadamardProduct(
-            left_algebra.operad_cls,
-            right_algebra.operad_cls,
+            left_algebra.operad,
+            right_algebra.operad,
         )
 
         self.left_algebra = left_algebra
@@ -65,7 +65,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
 
         super().__init__(
             module=tensor([self.left_module, self.right_module]),
-            operad_cls=hadamard_operad,
+            operad=hadamard_operad,
             structure_map=self._act_impl,
         )
 
@@ -98,8 +98,8 @@ class HadamardTensorAlgebra(OperadAlgebra):
         left_basis, right_basis = had_basis
         arity = len(tensor_basis_tuple)
         base_ring = self.module.base_ring()
-        left_operad_parent = self.left_algebra.operad_cls(arity, base_ring)
-        right_operad_parent = self.right_algebra.operad_cls(arity, base_ring)
+        left_operad_parent = self.left_algebra.operad(arity, base_ring)
+        right_operad_parent = self.right_algebra.operad(arity, base_ring)
 
         left_op = left_operad_parent.term(left_basis)
         right_op = right_operad_parent.term(right_basis)
@@ -167,7 +167,7 @@ class HadamardTensorAlgebra(OperadAlgebra):
         return self.module._from_dict(result_dict, remove_zeros=True)
 
     def _act_impl(self, p_element, algebra_elements):
-        if p_element.parent().factory is not self.operad_cls:
+        if p_element.parent().factory is not self.operad:
             raise TypeError("p_element must belong to this Hadamard operad.")
 
         if p_element.parent().base_ring() != self.module.base_ring():

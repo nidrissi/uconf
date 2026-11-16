@@ -327,7 +327,7 @@ class SurjectionTorusSimplicialCochainAlgebra(OperadAlgebra):
         module = TorusSimplicialCochains(base_ring=base_ring)
         super().__init__(
             module=module,
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 

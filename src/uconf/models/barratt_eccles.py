@@ -344,7 +344,8 @@ class BarrattEcclesOperad(Operad[BarrattEcclesComponent]):
     """
 
     Component = BarrattEcclesComponent
-    Element = BarrattEcclesElement
+    # This singleton fixes the element class; instances never reassign it.
+    Element: type[BarrattEcclesElement] = BarrattEcclesElement  # pyright: ignore[reportIncompatibleVariableOverride]
 
     name = "ℰ"
     connectivity = 0

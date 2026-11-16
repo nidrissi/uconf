@@ -221,7 +221,7 @@ class TestTorusConfigurationModel:
 
     def test_manifold_model_is_barratt_eccles_algebra(self):
         layers = _build_torus_layers(GF(2))
-        assert layers.manifold_model.operad_cls == BarrattEccles
+        assert layers.manifold_model.operad == BarrattEccles
 
     def test_coefficients_dimension(self):
         layers = _build_torus_layers(GF(2))
@@ -266,7 +266,7 @@ class TestSurjectionTorusConfigurationModel:
 
     def test_manifold_model_is_surjection_algebra(self):
         layers = _build_surjection_torus_layers(GF(2))
-        assert layers.manifold_model.operad_cls == Surjection
+        assert layers.manifold_model.operad == Surjection
 
     @pytest.mark.parametrize("base_ring", [GF(2), GF(3)])
     def test_d_squared_is_zero(self, base_ring):

@@ -262,7 +262,7 @@ class SurjectionSphereCochainAlgebra(OperadAlgebra):
         self._sphere_dim = d
         super().__init__(
             module=module,
-            operad_cls=Surjection,
+            operad=Surjection,
             structure_map=self._act_impl,
         )
 

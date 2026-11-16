@@ -191,10 +191,10 @@ class TestFreeOperadAlgebra:
     """Tests for Free_P(M) as a P-algebra."""
 
     def test_construction_associative(self):
-        """FreeOperadAlgebra stores operad_cls and exposes module."""
+        """FreeOperadAlgebra stores operad and exposes module."""
         M = _zero_diff_module()
         F = FreeOperadAlgebra(Associative, M)
-        assert F.operad_cls is Associative
+        assert F.operad is Associative
         assert isinstance(F.module, FreeAlgebraModule)
 
     def test_include(self):
@@ -393,7 +393,7 @@ class TestCofreeConilpotentCoalgebra:
     def test_construction(self):
         M = _zero_diff_module()
         T = CofreeConilpotentCoalgebra(CoAssociative, M)
-        assert T.cooperad_cls is CoAssociative
+        assert T.cooperad is CoAssociative
         assert isinstance(T.module, CofreeCoalgebraModule)
 
     def test_project_single_leaf(self):
@@ -492,7 +492,7 @@ class TestFreeAlgebraBarComplex:
         bar = BarAlgebra(canonical_projection(Associative), F)
         B = bar.module
 
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp2 = C(2, QQ)
         id_key = Associative.unit_key()
         inner_key = (id_key, ((),))
@@ -511,7 +511,7 @@ class TestFreeAlgebraBarComplex:
         bar = BarAlgebra(canonical_projection(Associative), F)
         B = bar.module
 
-        C = bar.cooperad_cls
+        C = bar.cooperad
         comp2 = C(2, QQ)
         id_key = Associative.unit_key()
         inner_key = (id_key, ((),))

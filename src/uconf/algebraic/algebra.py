@@ -48,7 +48,7 @@ class OperadAlgebra[OperadElementType: ElementBase[Any], AlgebraElementType](Uni
     """A dg-module equipped with a P-algebra structure.
 
     Wraps an underlying ``CombinatorialFreeModule`` (the module A) and an
-    operad class ``operad_cls`` (satisfying :class:`uconf.core.operad.Operad`)
+    operad instance ``operad`` (of type :class:`uconf.core.operad.Operad`)
     together with an explicit structure map.
 
     The structure map is supplied as a callable via ``structure_map``::
@@ -59,7 +59,7 @@ class OperadAlgebra[OperadElementType: ElementBase[Any], AlgebraElementType](Uni
 
     Args:
         module: Underlying dg-module (a ``CombinatorialFreeModule``).
-        operad_cls: The operad ``P``.
+        operad: The operad ``P``.
         structure_map: Callable implementing the P-algebra action γ.
 
     """
@@ -67,14 +67,14 @@ class OperadAlgebra[OperadElementType: ElementBase[Any], AlgebraElementType](Uni
     def __init__(
         self,
         module: CombinatorialFreeModule,
-        operad_cls: Operad,
+        operad: Operad,
         structure_map: StructureMap[OperadElementType, AlgebraElementType],
     ):
         if not callable(structure_map):
             raise TypeError("structure_map must be callable.")
         self.module = module
         self._structure_map = structure_map
-        self.operad_cls = operad_cls
+        self.operad = operad
 
     def act(
         self,
@@ -84,21 +84,21 @@ class OperadAlgebra[OperadElementType: ElementBase[Any], AlgebraElementType](Uni
         """Apply the P-algebra structure map γ(p; a_1, ..., a_n).
 
         Args:
-            p_element: An element of ``operad_cls(n)`` for some arity ``n``.
+            p_element: An element of ``operad(n)`` for some arity ``n``.
             algebra_elements: A list of ``n`` elements of the algebra module.
 
         Returns:
             An element of the algebra module A.
 
         Raises:
-            TypeError: If ``p_element`` is not an element of ``operad_cls``.
+            TypeError: If ``p_element`` is not an element of ``operad``.
             ValueError: If ``len(algebra_elements) != p_element.arity()``.
 
         """
-        element_cls = self.operad_cls.Element
+        element_cls = self.operad.Element
         if not isinstance(p_element, element_cls):
             raise TypeError(
-                f"Expected p_element of type {self.operad_cls.name}.Element, "
+                f"Expected p_element of type {self.operad.name}.Element, "
                 f"got {type(p_element).__name__}."
             )
 

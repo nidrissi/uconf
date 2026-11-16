@@ -108,10 +108,16 @@ uv run python -m sage.doctest --force-lib src/uconf
 Validate before committing:
 
 ```bash
-uv run ruff check tests src
-uv run ruff format --check tests src
+uv run ruff check tests src typings
+uv run ruff format --check tests src typings
 uv run python -m compileall -q src tests
 ```
+
+Local Sage stubs in `typings/` let Pyright distinguish operads from cooperads,
+check element attributes, and preserve cached-method signatures and cache
+helpers. These stubs affect static checking only; Sage supplies the runtime
+implementations. Run `uv run pytest tests/test_typing.py` to check both valid
+calls and intentionally invalid calls that Pyright must reject.
 
 ## HTML documentation
 
@@ -159,13 +165,16 @@ Every operad (cooperad) is an instance of `Operad` (`Cooperad`): `Lie`, `Shifted
 and `BarConstruction(Lie)` are all used the same way, and `P(n, base_ring)` returns the arity-`n`
 component.
 
+Attributes and constructor keywords holding these instances are named `operad`,
+`cooperad`, `left_operad`, and `right_operad`; the former `_cls` suffix is removed.
+
 ### Morphisms
 
 | Module | Exports |
 |---|---|
 | `morphisms/classical.py` | `ass_to_com`, `lie_to_ass` |
 | `morphisms/canonical_twisting.py` | `canonical_projection(P)`, `canonical_inclusion(C)` |
-| `morphisms/e_comodule_morphism.py` | `make_e_comodule_morphism(cooperad_cls)` — builds `Δ: Ω(C) → E⊗Ω(C)` |
+| `morphisms/e_comodule_morphism.py` | `make_e_comodule_morphism(cooperad)` — builds `Δ: Ω(C) → E⊗Ω(C)` |
 | `algebraic/pullback_algebra.py` | `PullbackAlgebra(morphism, algebra)` |
 
 ### Chain complexes and homology (`homology.py`)
@@ -304,7 +313,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
   - Action is diagonal on factors and multilinear on tensor arguments.
   - `basis_iter(d)` — iterates over all `(left_key, right_key)` tensor basis elements with total degree `d`.
 
-- `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad_cls, inner_module)`
+- `algebraic/free_algebra.py` — `FreeOperadAlgebra(operad, inner_module)`
   - Free P-algebra on a dg-module M: `P ∘ M = ⊕_{n≥1} P(n) ⊗_{S_n} M^{⊗n}`.
   - Basis keys are `(tree, m_tuple)` pairs where `tree` is a shuffle tree and
     `m_tuple` is a tuple of M-basis keys.
@@ -318,7 +327,7 @@ alg.act(u, [f, f])            # μ_u(f⊗f) ∈ SimplicialCochains(N=3)
     explicit `S_n`-orbit sums. This keeps the same coinvariant information while
     avoiding expensive orbit construction.
 
-- `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad_cls, inner_module)`
+- `algebraic/cofree_coalgebra.py` — `CofreeConilpotentCoalgebra(cooperad, inner_module)`
   - Cofree conilpotent C-coalgebra on a dg-module M: `T^c_C(M) = ⊕_{n≥1} C(n) ⊗_{S_n} M^{⊗n}`.
   - Same basis key convention as `FreeAlgebraModule` (shuffle trees + M-tuple).
   - `CofreeCoalgebraModule.basis_iter(d)` — iterates over planar representatives
@@ -458,7 +467,7 @@ xp = x.permute([2, 1])
 from uconf import HadamardTensorAlgebra
 
 AB = HadamardTensorAlgebra(A, B)  # A: P-algebra, B: Q-algebra
-u = AB.operad_cls.unit()          # unit in (P ⊙ Q)(1)
+u = AB.operad.unit(AB.module.base_ring())  # unit in (P ⊙ Q)(1)
 t = AB.module.term((a_key, b_key))
 
 AB.act(u, [t])

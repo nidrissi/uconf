@@ -135,7 +135,7 @@ class TestOperadAlgebra:
     """Tests for OperadAlgebra wrapper."""
 
     def test_construction(self, trivial_ass_algebra):
-        assert trivial_ass_algebra.operad_cls is Associative
+        assert trivial_ass_algebra.operad is Associative
         assert trivial_ass_algebra.module is not None
 
     def test_act_unary(self, trivial_ass_algebra, R):
@@ -179,7 +179,7 @@ class TestCooperadCoalgebra:
 
     def test_construction(self):
         coalg = TrivialCoassCoalgebra()
-        assert coalg.cooperad_cls is CoAssociative
+        assert coalg.cooperad is CoAssociative
         assert coalg.module is not None
 
     def test_boundary_zero(self, trivial_coass_coalgebra):
@@ -415,7 +415,7 @@ class TestCobarCoalgebra:
 
     def test_single_leaf_degree(self, cobar):
         """Weight-0 element (single leaf) has degree = deg_V(v)."""
-        P = cobar.operad_cls
+        P = cobar.operad
         assert cobar.module.degree_on_basis((P.unit_key(), ((),))) == 0
 
     def test_weight1_binary_degree(self, cobar):
@@ -435,7 +435,7 @@ class TestCobarCoalgebra:
 
     def test_dalpha_on_leaf_expands(self, cobar):
         """d_α on a single leaf produces weight-1 cobar trees."""
-        P = cobar.operad_cls
+        P = cobar.operad
         elem = cobar.module((P.unit_key(), ((),)))
         result = cobar.module.d_alpha(elem)
         assert result != cobar.module.zero()
@@ -463,7 +463,7 @@ class TestCobarCoalgebra:
 
     def test_d_squared_zero_linear_combo(self, cobar_gf2):
         """d² = 0 on a linear combination of cobar elements."""
-        P = cobar_gf2.operad_cls
+        P = cobar_gf2.operad
         t1 = cobar_gf2.module((P.unit_key(), ((),)))
         c_dec = (1, 2)
         t2 = cobar_gf2.module((RootedTree(c_dec, 1, 2), ((), ())))

@@ -112,7 +112,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
 
     def __init__(self, factory: BarConstruction, n: int, base_ring):
         super().__init__(factory, n, base_ring)
-        self._operad_cls = factory.operad_cls
+        self._operad = factory.operad
         # The maximum number of internal vertices in arity n is n - 1,
         # because every internal vertex has arity >= 2 (connected operad)
         # and sum(arity_v - 1) = n - 1 for a tree with n leaves.
@@ -141,7 +141,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
 
     def _operad_has_planarize(self) -> bool:
         """Check if the base operad components have ``planarize``."""
-        test = self._operad_cls(2, self.base_ring())
+        test = self._operad(2, self.base_ring())
         return hasattr(test, "planarize")
 
     @cached_method
@@ -193,7 +193,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
 
             k = vertex_arity(node)
             dec = decoration(node)
-            op_parent = self._operad_cls(k, base_ring)
+            op_parent = self._operad(k, base_ring)
 
             dec_elem = op_parent.term(dec)
             # Bypass morphism overhead: call _planarize_on_basis directly
@@ -207,8 +207,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
             # Bar-degrees of original children (needed for Koszul sign
             # when children are reordered by the vertex planarize σ_v).
             old_ch_degrees = [
-                subtree_degree(c, self._operad_cls, base_ring) if not is_leaf(c) else 0
-                for c in old_ch
+                subtree_degree(c, self._operad, base_ring) if not is_leaf(c) else 0 for c in old_ch
             ]
             results = []
             for (planar_dec_key, sigma_key), dec_coeff in planarized:
@@ -268,7 +267,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         for v in vertices_dfs(tree):
             k = vertex_arity(v)
             dec = decoration(v)
-            op_parent = self._operad_cls(k, base_ring)
+            op_parent = self._operad(k, base_ring)
             if not hasattr(op_parent, "planarize"):
                 return False
             planarized = op_parent.planarize(op_parent(dec))
@@ -308,7 +307,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         """
         if not self._operad_has_planarize():
             raise NotImplementedError(
-                f"planar_basis_iter requires {self._operad_cls.name!r} to implement "
+                f"planar_basis_iter requires {self._operad.name!r} to implement "
                 "planarize and planar_basis_iter (quasi-planar operad). "
                 "Use basis_iter() for the full shuffle-tree basis instead."
             )
@@ -324,7 +323,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         for tree in enumerate_planar_trees_generic_in_degree(
             n,
             self._max_weight,
-            self._operad_cls,
+            self._operad,
             base_ring,
             d,
             vertex_offset=+1,
@@ -357,13 +356,13 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
             return
 
         for tree in enumerate_shuffle_trees_in_degree(
-            n, self._max_weight, self._operad_cls, base_ring, d
+            n, self._max_weight, self._operad, base_ring, d
         ):
             yield self(tree)
 
     def _validate_basis_key(self, basis_key):
         """Validate a tree basis key."""
-        return validate_tree(basis_key, self._arity, self._operad_cls, self.base_ring())
+        return validate_tree(basis_key, self._arity, self._operad, self.base_ring())
 
     @cached_method
     def graded_planar_basis(self, d: int) -> Family:
@@ -399,7 +398,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         """
         if is_leaf(tree):
             return ((tree, 1),)
-        return tuple(to_shuffle_tree_bar(tree, self._operad_cls, self.base_ring()))
+        return tuple(to_shuffle_tree_bar(tree, self._operad, self.base_ring()))
 
     def _element_constructor_(self, x) -> BarConstructionElement:
         """Build elements from tree basis keys or sparse dictionaries.
@@ -466,13 +465,13 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         This is the grading convention implemented by ``subtree_degree``
         and used consistently in the bar differential sign exponents.
         """
-        return subtree_degree(tree, self._operad_cls, self.base_ring())
+        return subtree_degree(tree, self._operad, self.base_ring())
 
     def _repr_term(self, basis_element) -> str:
         """String representation of one bar basis tree."""
 
         def _dec_fmt(dec, arity):
-            return self.factory.operad_cls(arity, self.base_ring())._repr_term(dec)
+            return self.factory.operad(arity, self.base_ring())._repr_term(dec)
 
         return tree_to_string(
             basis_element,
@@ -483,7 +482,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         """LaTeX representation of one bar basis tree."""
 
         def _dec_fmt(dec, arity):
-            return self.factory.operad_cls(arity, self.base_ring())._latex_term(dec)
+            return self.factory.operad(arity, self.base_ring())._latex_term(dec)
 
         return tree_to_latex(
             basis_element,
@@ -529,7 +528,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
         for j, vertex in enumerate(verts):
             v_arity = vertex_arity(vertex)
             dec = decoration(vertex)
-            operad_parent = self._operad_cls(v_arity, base_ring)
+            operad_parent = self._operad(v_arity, base_ring)
 
             # Degree of this vertex in sP̄
             vertex_sp_degree = operad_parent.degree_on_basis(dec) + 1
@@ -585,8 +584,8 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
             p_dec = decoration(parent_vertex)
             c_dec = decoration(child_vertex)
 
-            p_parent = self._operad_cls(p_arity, base_ring)
-            c_parent = self._operad_cls(c_arity, base_ring)
+            p_parent = self._operad(p_arity, base_ring)
+            c_parent = self._operad(c_arity, base_ring)
 
             p_deg_P = p_parent.degree_on_basis(p_dec)
             c_deg_P = c_parent.degree_on_basis(c_dec)
@@ -597,13 +596,13 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
                 if v is parent_vertex:
                     break
                 v_arity = vertex_arity(v)
-                v_deg = self._operad_cls(v_arity, base_ring).degree_on_basis(decoration(v))
+                v_deg = self._operad(v_arity, base_ring).degree_on_basis(decoration(v))
                 global_accum += v_deg - 1
 
             # Koszul sign: sP̄-degree of child times bar-degree before position l
             c_sp_deg = c_deg_P - 1
             before_deg = sum(
-                subtree_degree(ch, self._operad_cls, base_ring)
+                subtree_degree(ch, self._operad, base_ring)
                 for i, ch in enumerate(children(parent_vertex), start=1)
                 if i < child_pos
             )
@@ -614,7 +613,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
             # Compute composition p ∘_l c
             p_elem = p_parent(p_dec)
             c_elem = c_parent(c_dec)
-            composed = self._operad_cls.compose(p_elem, child_pos, c_elem)
+            composed = self._operad.compose(p_elem, child_pos, c_elem)
 
             # For each term in the composition, build the contracted tree
             for new_dec, coeff in composed:
@@ -693,7 +692,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
             result = target.zero()
             target_leaves = set(range(i, i + n))
             base_ring = self.base_ring()
-            operad_cls = self._operad_cls
+            operad = self._operad
 
             # Find all internal vertices whose subtree leaves are exactly target_leaves
             all_verts = vertices_dfs(tree)
@@ -740,7 +739,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
                     #   ε = (-1)^{|after_total| · |bottom_total|}
                     #
                     # where |·| denotes the total sP̄-degree (bar degree).
-                    bottom_deg = subtree_degree(vertex, operad_cls, base_ring)
+                    bottom_deg = subtree_degree(vertex, operad, base_ring)
 
                     # Compute after_deg: total bar-degree of vertices that come
                     # after the split subtree in DFS order of the full tree.
@@ -748,7 +747,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
                     bottom_verts = vertices_dfs(vertex)
                     n_bottom = len(bottom_verts)
                     after_deg = sum(
-                        operad_cls(vertex_arity(v), base_ring).degree_on_basis(decoration(v)) + 1
+                        operad(vertex_arity(v), base_ring).degree_on_basis(decoration(v)) + 1
                         for v in all_verts[vertex_idx + n_bottom :]
                     )
 
@@ -796,7 +795,7 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
           is always ``+1`` (the identity element η has bar degree 0).
         """
         base_ring = self.base_ring()
-        operad_cls = self._operad_cls
+        operad = self._operad
         k = self._arity
 
         unit_key = self.factory.unit_key()
@@ -846,12 +845,12 @@ class BarConstructionComponent(QuasiPlanarMixin["BarConstructionElement"]):
                 continue
 
             # Koszul sign (same convention as infinitesimal_cocompose) -----
-            bottom_deg = subtree_degree(vertex, operad_cls, base_ring)
+            bottom_deg = subtree_degree(vertex, operad, base_ring)
             vertex_idx = next(j for j, v in enumerate(all_verts) if v is vertex)
             bottom_verts = vertices_dfs(vertex)
             n_bottom = len(bottom_verts)
             after_deg = sum(
-                operad_cls(vertex_arity(v), base_ring).degree_on_basis(decoration(v)) + 1
+                operad(vertex_arity(v), base_ring).degree_on_basis(decoration(v)) + 1
                 for v in all_verts[vertex_idx + n_bottom :]
             )
             koszul_sign = sign_from_exponent(after_deg * bottom_deg)
@@ -868,7 +867,7 @@ class BarConstruction(Cooperad[BarConstructionComponent]):
     """The bar construction ``B(P)`` of a connected dg-operad, a dg-cooperad.
 
     Args:
-        operad_cls: Base operad provider (class or wrapper instance).
+        operad: Base operad instance.
             Must be a **connected** operad (P(0) = 0, P(1) = k·unit).
 
     The bar construction B(P) is a dg-cooperad whose arity-n component has
@@ -886,16 +885,16 @@ class BarConstruction(Cooperad[BarConstructionComponent]):
 
     def __init__(
         self,
-        operad_cls: Operad,
+        operad: Operad,
     ):
-        self.operad_cls = operad_cls
-        self.name = f"B({operad_cls.name})"
+        self.operad = operad
+        self.name = f"B({operad.name})"
         # For an operad P with connectivity k (degrees >= k*(n-1)), the minimum
         # bar degree of a single-vertex tree in arity n is k*(n-1) + 1.  The
         # connectivity of B(P) as a cooperad is therefore k + 1 in the sense that
         # B(P)(n) is concentrated in degrees >= (k+1)*(n-1) + 1 (for k >= 0).
         # We store k here as a reference value derived from the underlying operad.
-        self.connectivity = operad_cls.connectivity
+        self.connectivity = operad.connectivity
 
     def counit(self, x: BarConstructionElement):
         """Cooperadic counit: extracts coefficient of the 'unit' tree.

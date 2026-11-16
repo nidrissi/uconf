@@ -301,7 +301,7 @@ class TestBarAlgebra:
         alg = _trivial_ass_algebra()
         bar = BarAlgebra(pi, alg)
         B = bar.module
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = B((C.unit_key(), ((),)))
         assert elem.degree() == 0
 
@@ -311,7 +311,7 @@ class TestBarAlgebra:
         alg = _trivial_ass_algebra()
         bar = BarAlgebra(pi, alg)
         B = bar.module
-        C = bar.cooperad_cls
+        C = bar.cooperad
         R = QQ
         # Get a degree-1 c_key from C(2)
         c2 = C(2, R)
@@ -350,7 +350,7 @@ class TestBarAlgebraIota:
         alg = _trivial_omega_bar_ass_algebra()
         bar = BarAlgebra(iota, alg)
         B = bar.module
-        C = bar.cooperad_cls
+        C = bar.cooperad
         elem = B((C.unit_key(), ((),)))
         assert elem.degree() == 0
 
@@ -400,7 +400,7 @@ class TestCobarCoalgebra:
         coalg = _trivial_coass_coalgebra()
         cobar = CobarCoalgebra(iota, coalg)
         O = cobar.module
-        P = cobar.operad_cls
+        P = cobar.operad
         assert O.degree_on_basis((P.unit_key(), ((),))) == 0
 
     def test_dalpha_nonzero_on_leaf(self):
@@ -409,7 +409,7 @@ class TestCobarCoalgebra:
         coalg = _trivial_coass_coalgebra()
         cobar = CobarCoalgebra(iota, coalg)
         O = cobar.module
-        P = cobar.operad_cls
+        P = cobar.operad
         elem = O((P.unit_key(), ((),)))
         result = O.d_alpha(elem)
         assert result != O.zero()
