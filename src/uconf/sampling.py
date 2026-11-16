@@ -82,10 +82,10 @@ def _connectivity_effective(
     r"""Effective connectivity ``c`` such that basis elements at arity ``n`` have
     degree bounded below by ``c * (n - 1)``.
 
-    Recognizes the base operad/cooperad classes and the wrappers
+    Recognizes the base operad/cooperad singletons and the wrappers
     (``ShiftedOperad``, ``ShiftedCooperad``, ``HadamardProduct``,
     ``BarConstruction``, ``CobarConstruction``).  Accepts either a factory
-    class / instance or an instantiated fixed-arity component.
+    instance or an instantiated fixed-arity component.
 
     Under ``sphere_nontrivial=True`` the Surjection factor is pinned to degree
     ``sphere_dim * (n - 1)``, so its effective connectivity is ``sphere_dim``.
@@ -96,21 +96,12 @@ def _connectivity_effective(
     if obj is None:
         return None
 
-    # SurjectionDual first: it is a subclass of Surjection but has non-positive
-    # degrees that are not bounded below by a linear connectivity.
-    if isinstance(obj, type):
-        if issubclass(obj, SurjectionDual):
-            return None
-        if issubclass(obj, Surjection):
-            return sphere_dim if sphere_nontrivial else 0
-        if issubclass(obj, BarrattEccles):
-            return 0
-        if issubclass(obj, Lie):
-            return 0
-        if issubclass(obj, (Associative, Commutative)):
-            return 0
-        c = getattr(obj, "connectivity", None)
-        return c if isinstance(c, int) else None
+    # Recognize model factories by singleton identity. Dual degrees are not
+    # bounded below by a linear connectivity.
+    if obj is SurjectionDual:
+        return None
+    if obj is Surjection:
+        return sphere_dim if sphere_nontrivial else 0
 
     # Factory (UniqueRepresentation) instances that compose inner factories.
     if isinstance(obj, ShiftedOperad):
@@ -196,18 +187,18 @@ def _is_basis_feasible(
     mathematically impossible.
     """
     # --- Degree-concentrated leaf types ---
-    if isinstance(parent, (Associative, Commutative)):
+    if isinstance(parent, (Associative.Component, Commutative.Component)):
         return degree == 0
     # Lie is degree-0 at every arity; check after Associative/Commutative in
     # case of shared class hierarchy (none currently, but defensive).
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         return degree == 0
 
-    if isinstance(parent, SurjectionDual):
+    if isinstance(parent, SurjectionDual.Component):
         # Dual lives in non-positive degrees.
         return degree <= 0
 
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         n = parent._arity
         if degree < 0:
             return False
@@ -219,7 +210,7 @@ def _is_basis_feasible(
             return degree == sphere_dim * (n - 1)
         return True
 
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         n = parent._arity
         if degree < 0:
             return False
@@ -339,14 +330,18 @@ def _hadamard_feasibility(
         if sphere_dim is None:
             return True  # let downstream raise
         surj_deg = sphere_dim * (n - 1)
-        if isinstance(left, Surjection) and not isinstance(left, SurjectionDual):
+        if isinstance(left, Surjection.Component) and not isinstance(
+            left, SurjectionDual.Component
+        ):
             return _is_basis_feasible(
                 right,
                 degree - surj_deg,
                 sphere_nontrivial=False,
                 sphere_dim=sphere_dim,
             )
-        if isinstance(right, Surjection) and not isinstance(right, SurjectionDual):
+        if isinstance(right, Surjection.Component) and not isinstance(
+            right, SurjectionDual.Component
+        ):
             return _is_basis_feasible(
                 left,
                 degree - surj_deg,
@@ -819,17 +814,17 @@ def _random_operad_element(
     ):
         return None
 
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         if sphere_nontrivial:
             if sphere_dim is None:
                 raise ValueError("sphere_dim is required when sphere_nontrivial=True")
             return random_sphere_admissible_surjection(n, sphere_dim, R, rng)
         return random_surjection(n, degree, R, rng)
 
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         return random_barratt_eccles_element(n, degree, R, rng)
 
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         if degree != 0:
             return None
         key = random_lie_key(n, rng)
@@ -960,8 +955,8 @@ def random_hadamard_key(
         # The Surjection factor is constrained to degree d*(n-1).
         # Detect which factor is Surjection and apply the admissibility filter.
         surj_degree = sphere_dim * (n - 1)
-        left_is_surj = isinstance(left_parent, Surjection)
-        right_is_surj = isinstance(right_parent, Surjection)
+        left_is_surj = isinstance(left_parent, Surjection.Component)
+        right_is_surj = isinstance(right_parent, Surjection.Component)
 
         if left_is_surj:
             # Left factor is Surjection: sample sphere-admissible, propagate right
@@ -2146,11 +2141,11 @@ def _get_direct_sampler(parent, weight):
         return "cofree_coalgebra"
     if isinstance(parent, HadamardProduct.Component):
         return "hadamard"
-    if isinstance(parent, Surjection):
+    if isinstance(parent, Surjection.Component):
         return "surjection"
-    if isinstance(parent, BarrattEccles):
+    if isinstance(parent, BarrattEccles.Component):
         return "barratt_eccles"
-    if isinstance(parent, Lie):
+    if isinstance(parent, Lie.Component):
         return "lie"
 
     return None

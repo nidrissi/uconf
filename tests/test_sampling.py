@@ -10,8 +10,12 @@ from uconf.algebraic.spherical import (
     _extract_concatenated_permutations,
     _sphere_surjection_basis_sign,
 )
+from uconf.models.associative import Associative
+from uconf.models.barratt_eccles import BarrattEccles
+from uconf.models.commutative import Commutative
 from uconf.models.lie import Lie
 from uconf.models.surjection import Surjection
+from uconf.models.surjection_dual import SurjectionDual
 from uconf.sampling import (
     random_bar_element,
     random_barratt_eccles_element,
@@ -243,6 +247,29 @@ class TestSampleOperadBasis:
     def test_basic(self, rng):
         elems = sample_operad_basis(Surjection, 2, 1, 5, QQ, rng)
         assert len(elems) == 2  # exactly 2 basis elems at S(2) deg 1
+
+
+@pytest.mark.parametrize("as_component", [False, True])
+@pytest.mark.parametrize(
+    "factory, expected, sphere_expected",
+    [
+        (Associative, 0, 0),
+        (Commutative, 0, 0),
+        (Lie, 0, 0),
+        (BarrattEccles, 0, 0),
+        (Surjection, 0, 2),
+        (SurjectionDual, None, None),
+        (ShiftedOperad(Surjection, -1), -1, 1),
+        (HadamardProduct(ShiftedOperad(Lie, -1), Surjection), -1, 1),
+    ],
+)
+def test_connectivity_factory_recognition(factory, expected, sphere_expected, as_component):
+    obj = factory(3, QQ) if as_component else factory
+    assert sampling._connectivity_effective(obj) == expected
+    assert (
+        sampling._connectivity_effective(obj, sphere_nontrivial=True, sphere_dim=2)
+        == sphere_expected
+    )
 
 
 class TestSampleBasisEmptyFastFail:
