@@ -59,7 +59,7 @@ dev = [
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "pytest-xdist==3.8.0",
-    "ruff==0.17.3",
+    "ruff==0.17.4",
 ]
 docs = ["myst-parser==5.1.0", "Sphinx==9.1.0"]
 
