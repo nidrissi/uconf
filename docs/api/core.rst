@@ -16,7 +16,6 @@ Modules
    display
    morphism
    operad
-   parented_element
    quasi_planar
    signs
    trees
